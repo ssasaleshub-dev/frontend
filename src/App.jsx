@@ -1,24 +1,36 @@
-import Logo from './components/Logo'
-import logoImg from './assets/logo.png'
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/common/ProtectedRoute';
+import Layout from './components/Layout';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import Leads from './pages/Leads';
+import Customers from './pages/Customers';
+import Campaigns from './pages/Campaigns';
 
 export default function App() {
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-6">
-      <div className="flex flex-col items-center gap-6 text-center max-w-md">
-        <img
-          src={logoImg}
-          alt="SSA Brand Logo"
-          className="w-32 h-32 rounded-3xl shadow-2xl shadow-emerald-500/20 hover:scale-105 transition-transform duration-300"
-        />
-        <div className="space-y-2">
-          <h1 className="text-3xl font-extrabold tracking-tight text-white">
-            SSA Frontend
-          </h1>
-          <p className="text-slate-400 text-sm">
-            Brand logo integrated and ready across your React application.
-          </p>
-        </div>
-      </div>
-    </main>
-  )
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Dashboard />} />
+            <Route path="leads" element={<Leads />} />
+            <Route path="customers" element={<Customers />} />
+            <Route path="campaigns" element={<Campaigns />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
+  );
 }
