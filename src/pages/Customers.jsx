@@ -1,126 +1,315 @@
-import React, { useState, useEffect } from 'react';
-import { crmService } from '../services/api/crmService';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import {
+  Search,
+  Plus,
+  RefreshCw,
+  Phone,
+  MessageCircle,
+  MapPin,
+  Trash2,
+  Edit3,
+  X,
+  AlertCircle
+} from 'lucide-react';
+import crmService from '../services/api/crmService';
 
 export default function Customers() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [page, setPage] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
+  const hasLoadedRef = useRef(false);
+
+  // Modals
   const [showAddModal, setShowAddModal] = useState(false);
-
-  const [newCustomer, setNewCustomer] = useState({
+  const [editingCustomer, setEditingCustomer] = useState(null);
+  const [formData, setFormData] = useState({
     fullName: '',
-    email: '',
     phoneNumber: '',
-    company: '',
+    location: '',
   });
+  const [submitting, setSubmitting] = useState(false);
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await crmService.getCustomers(page, 20);
-      const list = Array.isArray(res) ? res : res?.content || res?.data || [];
+      const res = await crmService.getCustomers(0, 100);
+      const list = Array.isArray(res) ? res : res?.content || [];
       setCustomers(list);
     } catch (err) {
-      setError(err?.message || 'Failed to fetch customers from backend');
+      setError(err?.message || 'Failed to fetch customer directory');
       setCustomers([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchCustomers();
-  }, [page]);
+    if (!hasLoadedRef.current) {
+      hasLoadedRef.current = true;
+      fetchCustomers();
+    }
+  }, [fetchCustomers]);
+
+  const filteredCustomers = useMemo(() => {
+    if (!searchTerm.trim()) return customers;
+    const query = searchTerm.toLowerCase();
+    return customers.filter(
+      (c) =>
+        (c.fullName || '').toLowerCase().includes(query) ||
+        (c.phoneNumber || '').toLowerCase().includes(query) ||
+        (c.location || '').toLowerCase().includes(query) ||
+        String(c.id).includes(query)
+    );
+  }, [customers, searchTerm]);
 
   const handleCreateCustomer = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
-      await crmService.createCustomer(newCustomer);
+      await crmService.createCustomer(formData);
       setShowAddModal(false);
-      setNewCustomer({ fullName: '', email: '', phoneNumber: '', company: '' });
-      fetchCustomers();
+      setFormData({ fullName: '', phoneNumber: '', location: '' });
+      await fetchCustomers();
     } catch (err) {
-      alert(`Error creating customer: ${err?.message || 'Server error'}`);
+      alert(`Failed to add customer: ${err?.message || 'Server error'}`);
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleDeleteCustomer = async (id) => {
-    if (!window.confirm(`Delete customer #${id}?`)) return;
+  const handleUpdateCustomer = async (e) => {
+    e.preventDefault();
+    if (!editingCustomer) return;
+    setSubmitting(true);
+    try {
+      await crmService.updateCustomer(editingCustomer.id, {
+        id: editingCustomer.id,
+        fullName: formData.fullName,
+        phoneNumber: formData.phoneNumber,
+        location: formData.location,
+        createdAt: editingCustomer.createdAt,
+      });
+      setEditingCustomer(null);
+      setFormData({ fullName: '', phoneNumber: '', location: '' });
+      await fetchCustomers();
+    } catch (err) {
+      alert(`Update failed: ${err?.message || 'Server error'}`);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteCustomer = async (id, name) => {
+    if (!window.confirm(`Are you sure you want to delete customer "${name || id}"?`)) return;
     try {
       await crmService.deleteCustomer(id);
-      fetchCustomers();
+      await fetchCustomers();
     } catch (err) {
       alert(`Delete failed: ${err?.message || 'Server error'}`);
     }
   };
 
+  const startEdit = (customer) => {
+    setEditingCustomer(customer);
+    setFormData({
+      fullName: customer.fullName || '',
+      phoneNumber: customer.phoneNumber || '',
+      location: customer.location || '',
+    });
+  };
+
+  const formatDate = (isoStr) => {
+    if (!isoStr) return '—';
+    try {
+      const d = new Date(isoStr);
+      return d.toLocaleDateString('en-IN', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    } catch {
+      return isoStr;
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-lg border border-slate-200">
         <div>
-          <h1 className="text-xl font-bold text-white">Customers & Accounts</h1>
-          <p className="text-xs text-slate-400">Endpoint: /api/customers</p>
+          <h2 className="text-base font-semibold text-slate-900">
+            Customer Directory
+          </h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Managing <strong className="text-slate-800">{customers.length}</strong> customer records
+          </p>
         </div>
+
         <div className="flex items-center gap-2">
           <button
             onClick={fetchCustomers}
             disabled={loading}
-            className="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white hover:bg-slate-50 text-slate-700 rounded-md border border-slate-300 transition-colors"
           >
-            Refresh
+            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+            <span>Refresh</span>
           </button>
+
           <button
-            onClick={() => setShowAddModal(true)}
-            className="px-3 py-1.5 text-xs bg-emerald-700 hover:bg-emerald-600 text-white rounded font-medium"
+            onClick={() => {
+              setFormData({ fullName: '', phoneNumber: '', location: '' });
+              setShowAddModal(true);
+            }}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white rounded-md transition-colors"
           >
-            + New Customer
+            <Plus size={14} />
+            <span>New Customer</span>
           </button>
         </div>
       </div>
 
       {error && (
-        <div className="p-3 bg-rose-950/40 border border-rose-800/60 rounded text-xs text-rose-300">
-          {error}
+        <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertCircle size={16} className="text-rose-600" />
+            <span>{error}</span>
+          </div>
+          <button onClick={fetchCustomers} className="underline font-medium hover:text-rose-900">
+            Retry
+          </button>
         </div>
       )}
 
-      <div className="bg-slate-900 border border-slate-800 rounded-lg overflow-hidden">
+      {/* Search Bar */}
+      <div className="bg-white p-4 rounded-lg border border-slate-200">
+        <div className="relative max-w-md">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+            <Search size={15} />
+          </div>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search customer by name, phone, or location..."
+            className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Customers Table */}
+      <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-950 border-b border-slate-800 text-slate-400 uppercase font-semibold text-[11px]">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase font-semibold text-[11px]">
               <tr>
-                <th className="p-3">ID</th>
-                <th className="p-3">Full Name</th>
-                <th className="p-3">Email</th>
-                <th className="p-3">Phone</th>
-                <th className="p-3">Company</th>
-                <th className="p-3 text-right">Actions</th>
+                <th className="py-3.5 px-4">Customer Name</th>
+                <th className="py-3.5 px-4">Phone Number</th>
+                <th className="py-3.5 px-4">Location</th>
+                <th className="py-3.5 px-4">Account Created</th>
+                <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
-              {customers.length === 0 ? (
+            <tbody className="divide-y divide-slate-100">
+              {filteredCustomers.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="p-6 text-center text-slate-500">
-                    {loading ? 'Loading customers...' : 'No customers in backend database.'}
+                  <td colSpan="5" className="py-12 text-center text-slate-400">
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <RefreshCw size={16} className="animate-spin text-blue-600" />
+                        Loading customers...
+                      </span>
+                    ) : (
+                      <div>
+                        <p className="text-slate-600 font-semibold text-sm">No customers found</p>
+                        <p className="text-slate-400 text-xs mt-1">
+                          Click "New Customer" to register buyers or import Meta leads.
+                        </p>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ) : (
-                customers.map((c) => (
-                  <tr key={c.id} className="hover:bg-slate-800/40">
-                    <td className="p-3 font-mono text-slate-400">#{c.id}</td>
-                    <td className="p-3 font-medium text-white">{c.fullName || c.name || '—'}</td>
-                    <td className="p-3 text-slate-300">{c.email || '—'}</td>
-                    <td className="p-3 text-slate-400">{c.phoneNumber || c.phone || '—'}</td>
-                    <td className="p-3 text-slate-400">{c.company || '—'}</td>
-                    <td className="p-3 text-right">
-                      <button
-                        onClick={() => handleDeleteCustomer(c.id)}
-                        className="text-rose-400 hover:text-rose-300 text-xs px-2 py-1"
-                      >
-                        Delete
-                      </button>
+                filteredCustomers.map((cust) => (
+                  <tr key={cust.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-3.5 px-4">
+                      <div className="font-bold text-slate-900">{cust.fullName}</div>
+                      <div className="text-[11px] text-slate-400 font-mono mt-0.5">
+                        Cust ID: #{cust.id}
+                      </div>
+                    </td>
+
+                    <td className="py-3.5 px-4">
+                      <div className="font-semibold text-slate-800">{cust.phoneNumber}</div>
+                      {cust.rawPhoneNumber && cust.rawPhoneNumber !== cust.phoneNumber && (
+                        <div className="text-[10px] text-slate-400 font-mono">
+                          Raw: {cust.rawPhoneNumber}
+                        </div>
+                      )}
+                    </td>
+
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-1 font-medium text-slate-700 capitalize">
+                        <MapPin size={12} className="text-slate-400" />
+                        <span>{cust.location || '—'}</span>
+                      </div>
+                    </td>
+
+                    <td className="py-3.5 px-4 text-slate-500 text-[11px]">
+                      {formatDate(cust.createdAt)}
+                    </td>
+
+                    <td className="py-3.5 px-4 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {cust.phoneNumber && (
+                          <>
+                            <a
+                              href={`https://wa.me/${cust.phoneNumber.replace(
+                                /\D/g,
+                                ''
+                              )}?text=Hello%20${encodeURIComponent(
+                                cust.fullName || ''
+                              )},%20reaching%20out%20from%20SSA%20Sales%20Hub.`}
+                              target="_blank"
+                              rel="noreferrer"
+                              title="WhatsApp Customer"
+                              className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg border border-emerald-200 transition-colors shadow-2xs"
+                            >
+                              <MessageCircle size={14} />
+                            </a>
+                            <a
+                              href={`tel:${cust.phoneNumber}`}
+                              title="Call Customer"
+                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg border border-blue-200 transition-colors shadow-2xs"
+                            >
+                              <Phone size={14} />
+                            </a>
+                          </>
+                        )}
+                        <button
+                          onClick={() => startEdit(cust)}
+                          title="Edit Customer"
+                          className="p-1.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors shadow-2xs"
+                        >
+                          <Edit3 size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCustomer(cust.id, cust.fullName)}
+                          title="Delete Customer"
+                          className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg border border-rose-200 transition-colors shadow-2xs"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -128,86 +317,83 @@ export default function Customers() {
             </tbody>
           </table>
         </div>
-
-        <div className="p-3 bg-slate-950 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-          <span>Page {page + 1}</span>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={page === 0}
-              className="px-2 py-1 bg-slate-800 rounded disabled:opacity-50"
-            >
-              Previous
-            </button>
-            <button
-              onClick={() => setPage((p) => p + 1)}
-              disabled={customers.length < 20}
-              className="px-2 py-1 bg-slate-800 rounded disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
-        </div>
       </div>
 
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-lg p-5 w-full max-w-md space-y-4">
-            <h2 className="text-sm font-bold text-white">Create Customer (/api/customers)</h2>
-            <form onSubmit={handleCreateCustomer} className="space-y-3 text-xs">
+      {/* Add / Edit Customer Modal */}
+      {(showAddModal || editingCustomer) && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg border border-slate-200 shadow-xl max-w-sm w-full p-6">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="text-sm font-semibold text-slate-900">
+                {editingCustomer ? `Edit Customer #${editingCustomer.id}` : 'Create Customer'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowAddModal(false);
+                  setEditingCustomer(null);
+                }}
+                className="p-1 text-slate-400 hover:text-slate-600"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form
+              onSubmit={editingCustomer ? handleUpdateCustomer : handleCreateCustomer}
+              className="mt-4 space-y-3.5 text-xs"
+            >
               <div>
-                <label className="block text-slate-400 mb-1">Full Name *</label>
+                <label className="block font-medium text-slate-700 mb-1">Full Name *</label>
                 <input
                   type="text"
                   required
-                  value={newCustomer.fullName}
-                  onChange={(e) => setNewCustomer({ ...newCustomer, fullName: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white"
+                  placeholder="Enter customer full name"
+                  value={formData.fullName}
+                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
                 />
-              </div>
-              <div>
-                <label className="block text-slate-400 mb-1">Email</label>
-                <input
-                  type="email"
-                  value={newCustomer.email}
-                  onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-slate-400 mb-1">Phone Number</label>
-                  <input
-                    type="text"
-                    value={newCustomer.phoneNumber}
-                    onChange={(e) => setNewCustomer({ ...newCustomer, phoneNumber: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-400 mb-1">Company</label>
-                  <input
-                    type="text"
-                    value={newCustomer.company}
-                    onChange={(e) => setNewCustomer({ ...newCustomer, company: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white"
-                  />
-                </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+              <div>
+                <label className="block font-medium text-slate-700 mb-1">Phone Number *</label>
+                <input
+                  type="tel"
+                  required
+                  placeholder="Enter phone number"
+                  value={formData.phoneNumber}
+                  onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                />
+              </div>
+
+              <div>
+                <label className="block font-medium text-slate-700 mb-1">Location / District</label>
+                <input
+                  type="text"
+                  placeholder="City / Region (optional)"
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="px-3 py-1.5 bg-slate-800 text-slate-300 rounded"
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setEditingCustomer(null);
+                  }}
+                  className="px-3.5 py-1.5 rounded-md font-medium text-slate-600 hover:bg-slate-100 border border-slate-300"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-3 py-1.5 bg-emerald-700 text-white rounded font-medium"
+                  disabled={submitting}
+                  className="px-4 py-1.5 rounded-md font-medium bg-slate-900 hover:bg-slate-800 text-white disabled:opacity-50"
                 >
-                  Save Customer
+                  {submitting ? 'Saving...' : editingCustomer ? 'Update Customer' : 'Create Customer'}
                 </button>
               </div>
             </form>

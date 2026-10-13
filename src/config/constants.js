@@ -6,31 +6,38 @@ export const STORAGE_KEYS = {
 };
 
 export const API_ENDPOINTS = {
-  // Auth & Account
   AUTHENTICATE: '/api/authenticate',
   ACCOUNT: '/api/account',
   CHANGE_PASSWORD: '/api/account/change-password',
   REGISTER: '/api/register',
-  USERS: '/api/users',
 
-  // Leads & Analytics
   LEADS_ANALYTICS: '/api/leads/analytics',
   LEADS_DETAILED: '/api/leads/detailed',
   LEADS: '/api/leads',
-  LEADS_COUNT: '/api/leads/count',
   LEADS_IMPORT_FILE: '/api/leads/import/file',
   LEADS_IMPORT_RAW: '/api/leads/import/raw',
   LEADS_IMPORT_SAMPLE: '/api/leads/import/sample',
 
-  // Customers
   CUSTOMERS: '/api/customers',
 
-  // Campaigns & Marketing
   CAMPAIGNS: '/api/campaigns',
   AD_SETS: '/api/ad-sets',
   ADS: '/api/ads',
 
-  // Forms & Preferences
   LEAD_FORMS: '/api/lead-forms',
   LEAD_PREFERENCES: '/api/lead-preferences',
+};
+
+export const LEAD_STATUSES = [
+  { value: 'CREATED', label: 'Created', color: 'bg-slate-100 text-slate-700 border-slate-200', dot: 'bg-slate-400' },
+  { value: 'CONTACTED', label: 'Contacted', color: 'bg-slate-100 text-slate-700 border-slate-200', dot: 'bg-slate-500' },
+  { value: 'QUALIFIED', label: 'Qualified', color: 'bg-slate-100 text-slate-800 border-slate-300', dot: 'bg-slate-700' },
+  { value: 'CONVERTED', label: 'Converted', color: 'bg-slate-900 text-white border-slate-900', dot: 'bg-emerald-400' },
+  { value: 'LOST', label: 'Lost', color: 'bg-slate-50 text-slate-500 border-slate-200', dot: 'bg-slate-300' },
+];
+
+export const PLATFORM_CONFIG = {
+  IG: { label: 'Instagram', bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-200', dot: 'bg-slate-500' },
+  FB: { label: 'Facebook', bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-200', dot: 'bg-slate-500' },
+  OTHER: { label: 'Other', bg: 'bg-slate-100', text: 'text-slate-600', border: 'border-slate-200', dot: 'bg-slate-400' },
 };

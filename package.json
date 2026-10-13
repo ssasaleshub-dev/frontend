@@ -9,7 +9,9 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "pages:dev": "wrangler pages dev dist",
-    "deploy": "vite build && wrangler pages deploy dist"
+    "deploy:dev": "vite build && wrangler pages deploy dist --project-name=ssasaleshub",
+    "deploy:prod": "vite build && wrangler pages deploy dist --project-name=ssasaleshub --branch=main",
+    "deploy": "npm run deploy:prod"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",

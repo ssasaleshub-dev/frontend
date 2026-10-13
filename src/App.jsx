@@ -6,6 +6,7 @@ import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Leads from './pages/Leads';
+import ImportLeads from './pages/ImportLeads';
 import Customers from './pages/Customers';
 import Campaigns from './pages/Campaigns';
 
@@ -25,6 +26,7 @@ export default function App() {
           >
             <Route index element={<Dashboard />} />
             <Route path="leads" element={<Leads />} />
+            <Route path="import" element={<ImportLeads />} />
             <Route path="customers" element={<Customers />} />
             <Route path="campaigns" element={<Campaigns />} />
           </Route>

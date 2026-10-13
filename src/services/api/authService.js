@@ -12,8 +12,6 @@ export const authService = {
     const token = res?.id_token || res?.token || (typeof res === 'string' ? res : null);
     if (token) {
       localStorage.setItem(STORAGE_KEYS.TOKEN, token);
-      
-      // Fetch full user profile from /api/account
       try {
         const account = await axiosClient.get(API_ENDPOINTS.ACCOUNT);
         localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(account));
