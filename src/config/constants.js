@@ -26,6 +26,8 @@ export const API_ENDPOINTS = {
 
   LEAD_FORMS: '/api/lead-forms',
   LEAD_PREFERENCES: '/api/lead-preferences',
+
+  MESSAGES: '/api/messages',
 };
 
 export const LEAD_STATUSES = [

@@ -6,6 +6,7 @@ import {
   UserCheck,
   Megaphone,
   UploadCloud,
+  MessageSquare,
   LogOut,
   Menu,
   X,
@@ -30,6 +31,7 @@ export default function Layout() {
     { to: '/import', label: 'Import Leads', icon: UploadCloud },
     { to: '/customers', label: 'Customers', icon: UserCheck },
     { to: '/campaigns', label: 'Campaigns & Ads', icon: Megaphone },
+    { to: '/chat', label: 'Team Chat', icon: MessageSquare },
   ];
 
   const getPageTitle = () => {
@@ -39,6 +41,7 @@ export default function Layout() {
     if (path.startsWith('/import')) return 'Import Leads';
     if (path.startsWith('/customers')) return 'Customer Directory';
     if (path.startsWith('/campaigns')) return 'Marketing Campaigns';
+    if (path.startsWith('/chat')) return 'Team Chat';
     return 'Sales Hub';
   };
 
