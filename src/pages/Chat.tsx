@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import chatService from '../services/api/chatService';
 import { useAuth } from '../context/AuthContext';
+import type { ChatMessage } from '../types';
 
 const CHANNELS = [
   { id: 'general', name: 'general', desc: 'Company announcements and team discussions' },
@@ -28,17 +29,17 @@ const PRESETS = [
 
 export default function Chat() {
   const { user } = useAuth();
-  const [activeChannel, setActiveChannel] = useState('general');
-  const [messages, setMessages] = useState([]);
-  const [inputText, setInputText] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [apiNotice, setApiNotice] = useState(null);
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [activeChannel, setActiveChannel] = useState<string>('general');
+  const [messages, setMessages] = useState<any[]>([]);
+  const [inputText, setInputText] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(true);
+  const [sending, setSending] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [apiNotice, setApiNotice] = useState<string | null>(null);
+  const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
 
-  const messagesEndRef = useRef(null);
-  const inputRef = useRef(null);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   const currentUserId = user?.id || 1;
   const currentUserName = user?.firstName
@@ -49,7 +50,7 @@ export default function Chat() {
     messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
   };
 
-  const parseMessageList = (res) => {
+  const parseMessageList = (res: any): any[] => {
     if (Array.isArray(res)) return res;
     if (Array.isArray(res?.content)) return res.content;
     if (Array.isArray(res?.messages)) return res.messages;
@@ -68,7 +69,7 @@ export default function Chat() {
       if (!isSilent) {
         setTimeout(() => scrollToBottom(false), 80);
       }
-    } catch (err) {
+    } catch (err: any) {
       if (err.message?.includes('404')) {
         setApiNotice('Backend /api/messages endpoint is not yet available on the active server. Running in preview mode.');
       } else {
@@ -91,17 +92,16 @@ export default function Chat() {
     return () => clearInterval(interval);
   }, [autoRefresh, fetchMessages]);
 
-  const handleSendMessage = async (e) => {
+  const handleSendMessage = async (e?: React.FormEvent<HTMLFormElement>) => {
     e?.preventDefault();
     const trimmed = inputText.trim();
     if (!trimmed || sending) return;
 
     setSending(true);
     const tempId = Date.now();
-    const optimisticMessage = {
+    const optimisticMessage: ChatMessage = {
       id: tempId,
       content: trimmed,
-      message: trimmed,
       channel: activeChannel,
       userId: currentUserId,
       userName: currentUserName,
@@ -126,7 +126,7 @@ export default function Chat() {
         );
       }
       setApiNotice(null);
-    } catch (err) {
+    } catch (err: any) {
       if (err.message?.includes('404')) {
         setApiNotice('Message saved locally (Backend /api/messages endpoint is not yet mounted on server).');
       } else {
@@ -138,17 +138,17 @@ export default function Chat() {
     }
   };
 
-  const handleDeleteMessage = async (id) => {
+  const handleDeleteMessage = async (id: number | string) => {
     if (!window.confirm('Delete this message?')) return;
     setMessages((prev) => prev.filter((m) => m.id !== id));
     try {
       await chatService.deleteMessage(id);
-    } catch (err) {
+    } catch (err: any) {
       setApiNotice(`Could not delete message on server: ${err.message}`);
     }
   };
 
-  const formatTimestamp = (val) => {
+  const formatTimestamp = (val?: string) => {
     if (!val) return '';
     const date = new Date(val);
     if (isNaN(date.getTime())) return '';
@@ -226,13 +226,13 @@ export default function Chat() {
           <div className="p-3 border-t border-slate-200 bg-white">
             <div className="flex items-center justify-between text-[11px] text-slate-500">
               <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Live polling active</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
+                <span>Live polling</span>
               </div>
               <button
                 onClick={() => setAutoRefresh(!autoRefresh)}
                 className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${
-                  autoRefresh ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
+                  autoRefresh ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'
                 }`}
               >
                 {autoRefresh ? 'ON' : 'OFF'}

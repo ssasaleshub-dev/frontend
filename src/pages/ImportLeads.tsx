@@ -8,20 +8,20 @@ import {
   AlertCircle,
   RefreshCw,
   FileUp,
-  ArrowRight
+  ArrowRight,
 } from 'lucide-react';
 import crmService from '../services/api/crmService';
 
 export default function ImportLeads() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('file');
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [rawText, setRawText] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState<'file' | 'raw'>('file');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [rawText, setRawText] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
+  const [result, setResult] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleFileUpload = async (e) => {
+  const handleFileUpload = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedFile) return;
     setLoading(true);
@@ -31,14 +31,14 @@ export default function ImportLeads() {
       const res = await crmService.importLeadsFile(selectedFile);
       setResult(res);
       window.dispatchEvent(new CustomEvent('crm-data-updated'));
-    } catch (err) {
+    } catch (err: any) {
       setError(err?.response?.data?.message || err?.message || 'Failed to process file import');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRawUpload = async (e) => {
+  const handleRawUpload = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!rawText.trim()) return;
     setLoading(true);
@@ -48,7 +48,7 @@ export default function ImportLeads() {
       const res = await crmService.importRawLeads(rawText);
       setResult(res);
       window.dispatchEvent(new CustomEvent('crm-data-updated'));
-    } catch (err) {
+    } catch (err: any) {
       setError(err?.response?.data?.message || err?.message || 'Failed to parse raw data stream');
     } finally {
       setLoading(false);
@@ -66,8 +66,8 @@ export default function ImportLeads() {
             </h2>
             <p className="text-xs text-slate-500 mt-1 leading-relaxed">
               Ingest marketing export files from Facebook & Instagram Ads Manager. 
-              The system automatically resolves campaigns, ad sets, ads, creates verified customer profiles, 
-              and links mattress preference survey responses.
+              The system automatically resolves campaigns, ad sets, ads, creates verified candidate profiles, 
+              and links work/study visa preference survey responses.
             </p>
           </div>
           <div className="w-9 h-9 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
@@ -193,8 +193,6 @@ export default function ImportLeads() {
         </div>
       )}
 
-
-
       {/* Ingestion Results Dialog */}
       {result && (
         <div className="bg-white p-6 rounded-lg border border-slate-200 space-y-4">
@@ -242,7 +240,7 @@ export default function ImportLeads() {
                 Imported Meta Lead External IDs:
               </p>
               <div className="flex flex-wrap gap-1.5">
-                {result.importedLeadExternalIds.map((extId) => (
+                {result.importedLeadExternalIds.map((extId: string) => (
                   <span
                     key={extId}
                     className="font-mono text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200"
@@ -258,7 +256,7 @@ export default function ImportLeads() {
             <div className="p-3 rounded-md bg-amber-50 border border-amber-200 text-xs text-amber-800">
               <p className="font-semibold mb-1">Warnings:</p>
               <ul className="list-disc pl-4 space-y-0.5">
-                {result.errors.map((err, i) => (
+                {result.errors.map((err: string, i: number) => (
                   <li key={i}>{err}</li>
                 ))}
               </ul>

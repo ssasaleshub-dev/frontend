@@ -10,6 +10,7 @@ import ImportLeads from './pages/ImportLeads';
 import Customers from './pages/Customers';
 import Campaigns from './pages/Campaigns';
 import Chat from './pages/Chat';
+import Users from './pages/Users';
 
 export default function App() {
   return (
@@ -31,6 +32,7 @@ export default function App() {
             <Route path="customers" element={<Customers />} />
             <Route path="campaigns" element={<Campaigns />} />
             <Route path="chat" element={<Chat />} />
+            <Route path="users" element={<Users />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

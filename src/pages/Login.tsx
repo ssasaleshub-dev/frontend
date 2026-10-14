@@ -5,22 +5,22 @@ import { Lock, User, ArrowRight, AlertCircle } from 'lucide-react';
 import brandLogo from '../assets/brand-logo.jpg';
 
 export default function Login() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(true);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [username, setUsername] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [rememberMe, setRememberMe] = useState<boolean>(true);
+  const [error, setError] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
       await login(username, password, rememberMe);
       navigate('/');
-    } catch (err) {
+    } catch (err: any) {
       setError(
         typeof err === 'string'
           ? err
@@ -42,10 +42,10 @@ export default function Login() {
             className="inline-block w-14 h-14 rounded-xl object-cover shadow-sm mb-3"
           />
           <h1 className="text-xl font-semibold text-slate-900">
-            SSA Sales Hub
+            Overseas Visa CRM
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Mattress CRM & Meta Marketing
+            Work & Study Visa Consultancy
           </p>
         </div>
 

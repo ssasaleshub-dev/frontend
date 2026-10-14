@@ -1,14 +1,24 @@
-import axios from 'axios';
+import axios, { type AxiosRequestConfig } from 'axios';
 import { API_BASE_URL, STORAGE_KEYS } from '../../config/constants';
 
-const axiosClient = axios.create({
+export interface CustomAxiosInstance {
+  get<T = any>(url: string, config?: AxiosRequestConfig): Promise<T>;
+  post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T>;
+  put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T>;
+  patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T>;
+  delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<T>;
+  interceptors: any;
+  [key: string]: any;
+}
+
+const instance = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-axiosClient.interceptors.request.use((config) => {
+instance.interceptors.request.use((config) => {
   const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -16,7 +26,7 @@ axiosClient.interceptors.request.use((config) => {
   return config;
 });
 
-axiosClient.interceptors.response.use(
+instance.interceptors.response.use(
   (response) => response.data,
   (error) => {
     if (error.response?.status === 401) {
@@ -33,13 +43,13 @@ axiosClient.interceptors.response.use(
   }
 );
 
-const inFlightGets = new Map();
-const originalGet = axiosClient.get.bind(axiosClient);
+const inFlightGets = new Map<string, Promise<any>>();
+const originalGet = instance.get.bind(instance);
 
-axiosClient.get = function (url, config = {}) {
+(instance as any).get = function <T = any>(url: string, config: AxiosRequestConfig = {}): Promise<T> {
   const key = `${url}?${JSON.stringify(config?.params || {})}`;
   if (inFlightGets.has(key)) {
-    return inFlightGets.get(key);
+    return inFlightGets.get(key) as Promise<T>;
   }
 
   const promise = originalGet(url, config).finally(() => {
@@ -47,7 +57,8 @@ axiosClient.get = function (url, config = {}) {
   });
 
   inFlightGets.set(key, promise);
-  return promise;
+  return promise as Promise<T>;
 };
 
+const axiosClient = instance as unknown as CustomAxiosInstance;
 export default axiosClient;

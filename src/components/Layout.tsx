@@ -10,8 +10,10 @@ import {
   LogOut,
   Menu,
   X,
+  UserCog,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { USER_ROLES } from '../config/constants';
 import brandLogo from '../assets/brand-logo.jpg';
 
 export default function Layout() {
@@ -25,41 +27,54 @@ export default function Layout() {
     navigate('/login');
   };
 
+  const isAdmin = user?.authorities?.includes(USER_ROLES.ADMIN);
+  const isWorkVisa = user?.authorities?.includes(USER_ROLES.WORK_VISA_COUNSELOR);
+  const isStudyVisa = user?.authorities?.includes(USER_ROLES.STUDY_VISA_COUNSELOR);
+
   const navItems = [
     { to: '/', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-    { to: '/leads', label: 'Leads Pipeline', icon: Users },
-    { to: '/import', label: 'Import Leads', icon: UploadCloud },
-    { to: '/customers', label: 'Customers', icon: UserCheck },
-    { to: '/campaigns', label: 'Campaigns & Ads', icon: Megaphone },
-    { to: '/chat', label: 'Team Chat', icon: MessageSquare },
+    { to: '/leads', label: 'Candidate Leads', icon: Users, exact: false },
+    { to: '/import', label: 'Import Leads', icon: UploadCloud, exact: false },
+    { to: '/customers', label: 'Candidate Directory', icon: UserCheck, exact: false },
+    { to: '/campaigns', label: 'Campaigns & Ads', icon: Megaphone, exact: false },
+    { to: '/chat', label: 'Team Chat', icon: MessageSquare, exact: false },
+    ...(isAdmin ? [{ to: '/users', label: 'User Management', icon: UserCog, exact: false }] : []),
   ];
 
   const getPageTitle = () => {
     const path = location.pathname;
-    if (path === '/') return 'Overview';
-    if (path.startsWith('/leads')) return 'Lead Pipeline';
+    if (path === '/') return 'Dashboard';
+    if (path.startsWith('/leads')) return 'Candidate Leads';
     if (path.startsWith('/import')) return 'Import Leads';
-    if (path.startsWith('/customers')) return 'Customer Directory';
-    if (path.startsWith('/campaigns')) return 'Marketing Campaigns';
-    if (path.startsWith('/chat')) return 'Team Chat';
-    return 'Sales Hub';
+    if (path.startsWith('/customers')) return 'Candidate Directory';
+    if (path.startsWith('/campaigns')) return 'Marketing Attribution';
+    if (path.startsWith('/chat')) return 'Counselor Chat';
+    if (path.startsWith('/users')) return 'Counselor Management';
+    return 'Visa CRM';
   };
 
   const displayName = user?.firstName
     ? `${user.firstName} ${user.lastName || ''}`.trim()
-    : user?.login || 'User';
+    : user?.login || 'Counselor';
 
-  const userInitial = displayName?.[0]?.toUpperCase() || 'U';
+  const userInitial = displayName?.[0]?.toUpperCase() || 'C';
+
+  const getRoleLabel = () => {
+    if (isAdmin) return 'Admin';
+    if (isWorkVisa) return 'Work Visa Desk';
+    if (isStudyVisa) return 'Study Visa Desk';
+    return 'Counselor';
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row font-sans text-slate-800 antialiased">
       {/* Mobile Header */}
       <div className="md:hidden bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-2.5">
-          <img src={brandLogo} alt="SSA Brand Logo" className="w-8 h-8 rounded-md object-cover shadow-2xs" />
+          <img src={brandLogo} alt="Overseas Visa CRM Logo" className="w-8 h-8 rounded-md object-cover shadow-2xs" />
           <div>
-            <h1 className="font-semibold text-sm text-slate-900">SSA Sales Hub</h1>
-            <p className="text-[10px] text-slate-500">Mattress CRM</p>
+            <h1 className="font-semibold text-sm text-slate-900">Overseas Visa CRM</h1>
+            <p className="text-[10px] text-slate-500">Work & Study Visa Consultancy</p>
           </div>
         </div>
         <button
@@ -80,10 +95,10 @@ export default function Layout() {
           {/* Brand Header */}
           <div className="p-5 border-b border-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src={brandLogo} alt="SSA Brand Logo" className="w-9 h-9 rounded-md object-cover shadow-2xs" />
+              <img src={brandLogo} alt="Overseas Visa CRM Logo" className="w-9 h-9 rounded-md object-cover shadow-2xs" />
               <div>
-                <h2 className="font-semibold text-sm text-slate-900">SSA Sales Hub</h2>
-                <p className="text-xs text-slate-500">Mattress CRM</p>
+                <h2 className="font-semibold text-sm text-slate-900">Overseas Visa CRM</h2>
+                <p className="text-xs text-slate-500">Work & Study Consultancy</p>
               </div>
             </div>
           </div>
@@ -125,14 +140,26 @@ export default function Layout() {
                 {userInitial}
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-medium text-slate-900 truncate">
-                  {displayName}
-                </p>
-                {user?.email && (
-                  <p className="text-[11px] text-slate-500 truncate">
-                    {user.email}
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs font-medium text-slate-900 truncate">
+                    {displayName}
                   </p>
-                )}
+                </div>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span
+                    className={`px-1.5 py-0.2 rounded text-[9px] font-semibold tracking-wider uppercase shrink-0 ${
+                      isAdmin
+                        ? 'bg-slate-900 text-white'
+                        : isWorkVisa
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                        : isStudyVisa
+                        ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                        : 'bg-slate-100 text-slate-700'
+                    }`}
+                  >
+                    {getRoleLabel()}
+                  </span>
+                </div>
               </div>
             </div>
             <button
@@ -156,7 +183,7 @@ export default function Layout() {
                 {getPageTitle()}
               </h1>
               <p className="text-xs text-slate-500">
-                Mattress Lead Management & Campaign Attribution
+                Overseas Work & Study Visa Candidate Pipeline
               </p>
             </div>
           </div>

@@ -1,16 +1,16 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
 import authService from '../services/api/authService';
+import type { User, AuthContextType } from '../types';
 
-const AuthContext = createContext(null);
+const AuthContext = createContext<AuthContextType | null>(null);
 
-export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(() => authService.getToken());
-  const [user, setUser] = useState(() => authService.getUser());
-  const [loading, setLoading] = useState(false);
-  const hasFetchedRef = useRef(false);
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [token, setToken] = useState<string | null>(() => authService.getToken());
+  const [user, setUser] = useState<User | null>(() => authService.getUser());
+  const [loading, setLoading] = useState<boolean>(false);
+  const hasFetchedRef = useRef<boolean>(false);
 
   useEffect(() => {
-    // Only fetch account if we have a token and haven't fetched it yet this session
     if (token && !hasFetchedRef.current) {
       hasFetchedRef.current = true;
       authService.getAccount()
@@ -29,8 +29,8 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token]);
 
-  const login = async (username, password, rememberMe = true) => {
-    hasFetchedRef.current = true; // login already fetches account
+  const login = async (username: string, password: string, rememberMe: boolean = true) => {
+    hasFetchedRef.current = true;
     const data = await authService.login(username, password, rememberMe);
     setToken(data.token);
     setUser(data.user);
@@ -60,5 +60,12 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = (): AuthContextType => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
 export default AuthContext;

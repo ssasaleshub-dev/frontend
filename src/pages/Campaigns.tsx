@@ -7,20 +7,25 @@ import {
   X,
 } from 'lucide-react';
 import crmService from '../services/api/crmService';
+import type { Campaign, Ad } from '../types';
 
 export default function Campaigns() {
-  const [campaigns, setCampaigns] = useState([]);
-  const [ads, setAds] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const hasLoadedRef = useRef(false);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [newCampaign, setNewCampaign] = useState({
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [ads, setAds] = useState<Ad[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const hasLoadedRef = useRef<boolean>(false);
+  const [showAddModal, setShowAddModal] = useState<boolean>(false);
+  const [newCampaign, setNewCampaign] = useState<{
+    name: string;
+    externalId: string;
+    status: string;
+  }>({
     name: '',
     externalId: '',
     status: 'ACTIVE',
   });
-  const [submitting, setSubmitting] = useState(false);
+  const [submitting, setSubmitting] = useState<boolean>(false);
 
   const fetchMarketingData = async () => {
     setLoading(true);
@@ -32,12 +37,12 @@ export default function Campaigns() {
       ]);
 
       if (campRes.status === 'fulfilled') {
-        setCampaigns(Array.isArray(campRes.value) ? campRes.value : []);
+        setCampaigns(Array.isArray(campRes.value) ? campRes.value : campRes.value?.content || []);
       }
       if (adsRes.status === 'fulfilled') {
-        setAds(Array.isArray(adsRes.value) ? adsRes.value : []);
+        setAds(Array.isArray(adsRes.value) ? adsRes.value : adsRes.value?.content || []);
       }
-    } catch (err) {
+    } catch (err: any) {
       setError(err?.message || 'Failed to load marketing data');
     } finally {
       setLoading(false);
@@ -55,7 +60,7 @@ export default function Campaigns() {
     return () => window.removeEventListener('crm-data-updated', handleUpdate);
   }, []);
 
-  const handleCreateCampaign = async (e) => {
+  const handleCreateCampaign = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!newCampaign.name.trim()) return;
     setSubmitting(true);
@@ -68,14 +73,14 @@ export default function Campaigns() {
       setShowAddModal(false);
       setNewCampaign({ name: '', externalId: '', status: 'ACTIVE' });
       await fetchMarketingData();
-    } catch (err) {
+    } catch (err: any) {
       alert(`Failed to create campaign: ${err?.message || 'Server error'}`);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const formatDate = (isoStr) => {
+  const formatDate = (isoStr?: string) => {
     if (!isoStr) return '—';
     try {
       const d = new Date(isoStr);
@@ -205,12 +210,12 @@ export default function Campaigns() {
             <tbody className="divide-y divide-slate-100">
               {ads.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="py-8 text-center text-slate-400">
+                  <td colSpan={5} className="py-8 text-center text-slate-400">
                     No ads recorded yet in database.
                   </td>
                 </tr>
               ) : (
-                ads.map((ad) => (
+                ads.map((ad: any) => (
                   <tr key={ad.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="py-3.5 px-4 font-semibold text-slate-900">
                       {ad.name || `Ad #${ad.id}`}

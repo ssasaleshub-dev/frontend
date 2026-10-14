@@ -9,26 +9,31 @@ import {
   Trash2,
   Edit3,
   X,
-  AlertCircle
+  AlertCircle,
 } from 'lucide-react';
 import crmService from '../services/api/crmService';
+import type { Customer } from '../types';
 
 export default function Customers() {
-  const [customers, setCustomers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const hasLoadedRef = useRef(false);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const hasLoadedRef = useRef<boolean>(false);
 
   // Modals
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [editingCustomer, setEditingCustomer] = useState(null);
-  const [formData, setFormData] = useState({
+  const [showAddModal, setShowAddModal] = useState<boolean>(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [formData, setFormData] = useState<{
+    fullName: string;
+    phoneNumber: string;
+    location: string;
+  }>({
     fullName: '',
     phoneNumber: '',
     location: '',
   });
-  const [submitting, setSubmitting] = useState(false);
+  const [submitting, setSubmitting] = useState<boolean>(false);
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
@@ -37,7 +42,7 @@ export default function Customers() {
       const res = await crmService.getCustomers(0, 100);
       const list = Array.isArray(res) ? res : res?.content || [];
       setCustomers(list);
-    } catch (err) {
+    } catch (err: any) {
       setError(err?.message || 'Failed to fetch customer directory');
       setCustomers([]);
     } finally {
@@ -64,7 +69,7 @@ export default function Customers() {
     );
   }, [customers, searchTerm]);
 
-  const handleCreateCustomer = async (e) => {
+  const handleCreateCustomer = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSubmitting(true);
     try {
@@ -72,14 +77,14 @@ export default function Customers() {
       setShowAddModal(false);
       setFormData({ fullName: '', phoneNumber: '', location: '' });
       await fetchCustomers();
-    } catch (err) {
+    } catch (err: any) {
       alert(`Failed to add customer: ${err?.message || 'Server error'}`);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleUpdateCustomer = async (e) => {
+  const handleUpdateCustomer = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!editingCustomer) return;
     setSubmitting(true);
@@ -94,24 +99,24 @@ export default function Customers() {
       setEditingCustomer(null);
       setFormData({ fullName: '', phoneNumber: '', location: '' });
       await fetchCustomers();
-    } catch (err) {
+    } catch (err: any) {
       alert(`Update failed: ${err?.message || 'Server error'}`);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDeleteCustomer = async (id, name) => {
+  const handleDeleteCustomer = async (id: number | string, name?: string) => {
     if (!window.confirm(`Are you sure you want to delete customer "${name || id}"?`)) return;
     try {
       await crmService.deleteCustomer(id);
       await fetchCustomers();
-    } catch (err) {
+    } catch (err: any) {
       alert(`Delete failed: ${err?.message || 'Server error'}`);
     }
   };
 
-  const startEdit = (customer) => {
+  const startEdit = (customer: Customer) => {
     setEditingCustomer(customer);
     setFormData({
       fullName: customer.fullName || '',
@@ -120,7 +125,7 @@ export default function Customers() {
     });
   };
 
-  const formatDate = (isoStr) => {
+  const formatDate = (isoStr?: string) => {
     if (!isoStr) return '—';
     try {
       const d = new Date(isoStr);
@@ -193,7 +198,7 @@ export default function Customers() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search customer by name, phone, or location..."
-            className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+            className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 transition-colors"
           />
           {searchTerm && (
             <button
@@ -222,10 +227,10 @@ export default function Customers() {
             <tbody className="divide-y divide-slate-100">
               {filteredCustomers.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="py-12 text-center text-slate-400">
+                  <td colSpan={5} className="py-12 text-center text-slate-400">
                     {loading ? (
                       <span className="flex items-center justify-center gap-2">
-                        <RefreshCw size={16} className="animate-spin text-blue-600" />
+                        <RefreshCw size={16} className="animate-spin text-slate-600" />
                         Loading customers...
                       </span>
                     ) : (
@@ -282,14 +287,14 @@ export default function Customers() {
                               target="_blank"
                               rel="noreferrer"
                               title="WhatsApp Customer"
-                              className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg border border-emerald-200 transition-colors shadow-2xs"
+                              className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors shadow-2xs"
                             >
                               <MessageCircle size={14} />
                             </a>
                             <a
                               href={`tel:${cust.phoneNumber}`}
                               title="Call Customer"
-                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg border border-blue-200 transition-colors shadow-2xs"
+                              className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors shadow-2xs"
                             >
                               <Phone size={14} />
                             </a>
@@ -305,7 +310,7 @@ export default function Customers() {
                         <button
                           onClick={() => handleDeleteCustomer(cust.id, cust.fullName)}
                           title="Delete Customer"
-                          className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg border border-rose-200 transition-colors shadow-2xs"
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors shadow-2xs"
                         >
                           <Trash2 size={14} />
                         </button>
