@@ -182,40 +182,40 @@ export default function Chat() {
         </div>
       )}
 
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0 ios-card overflow-hidden">
         {/* Left Channels Sidebar */}
-        <div className="w-64 border-r border-slate-200 bg-slate-50 flex flex-col shrink-0">
-          <div className="p-3 border-b border-slate-200 flex items-center justify-between">
+        <div className="w-64 border-r border-black/[0.06] bg-[#f9f9fa] flex flex-col shrink-0">
+          <div className="p-3.5 border-b border-black/[0.05] flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <MessageSquare size={16} className="text-slate-700" />
-              <h2 className="font-semibold text-xs text-slate-800 uppercase tracking-wider">
+              <MessageSquare size={16} className="text-[#007aff]" />
+              <h2 className="font-semibold text-xs text-[#8e8e93] uppercase tracking-wider">
                 Channels
               </h2>
             </div>
             <button
               onClick={() => fetchMessages(false)}
               title="Refresh messages"
-              className="p-1 hover:bg-slate-200 rounded text-slate-500 hover:text-slate-800"
+              className="p-1 hover:bg-black/[0.05] rounded-full text-[#8e8e93] hover:text-[#1c1c1e] transition-colors"
             >
-              <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+              <RefreshCw size={13} className={loading ? 'animate-spin text-[#007aff]' : ''} />
             </button>
           </div>
 
-          <div className="p-2 space-y-1 flex-1 overflow-y-auto">
+          <div className="p-2.5 space-y-1 flex-1 overflow-y-auto">
             {CHANNELS.map((ch) => {
               const isActive = activeChannel === ch.id;
               return (
                 <button
                   key={ch.id}
                   onClick={() => setActiveChannel(ch.id)}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors text-left ${
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all text-left ${
                     isActive
-                      ? 'bg-slate-900 text-white font-medium shadow-2xs'
-                      : 'text-slate-700 hover:bg-slate-200/60'
+                      ? 'bg-[#007aff] text-white font-semibold shadow-[0_2px_8px_rgba(0,122,255,0.3)]'
+                      : 'text-[#3c3c43] hover:bg-black/[0.04]'
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <Hash size={14} className={isActive ? 'text-slate-300' : 'text-slate-400'} />
+                    <Hash size={14} className={isActive ? 'text-white' : 'text-[#8e8e93]'} />
                     <span className="truncate">{ch.name}</span>
                   </div>
                 </button>
@@ -223,16 +223,15 @@ export default function Chat() {
             })}
           </div>
 
-          <div className="p-3 border-t border-slate-200 bg-white">
-            <div className="flex items-center justify-between text-[11px] text-slate-500">
+          <div className="p-3 border-t border-black/[0.05] bg-white">
+            <div className="flex items-center justify-between text-[11px] text-[#8e8e93]">
               <div className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
-                <span>Live polling</span>
+                <span>Auto-Refresh</span>
               </div>
               <button
                 onClick={() => setAutoRefresh(!autoRefresh)}
-                className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${
-                  autoRefresh ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'
+                className={`text-[10px] font-semibold uppercase px-2.5 py-0.5 rounded-full transition-all ${
+                  autoRefresh ? 'bg-[#34c759] text-white shadow-xs' : 'bg-black/[0.06] text-[#8e8e93]'
                 }`}
               >
                 {autoRefresh ? 'ON' : 'OFF'}
@@ -244,45 +243,45 @@ export default function Chat() {
         {/* Right Chat Conversation Area */}
         <div className="flex-1 flex flex-col min-w-0 bg-white">
           {/* Channel Header */}
-          <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between gap-4">
+          <div className="px-5 py-3 border-b border-black/[0.05] flex items-center justify-between gap-4">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <Hash size={16} className="text-slate-500 shrink-0" />
-                <h3 className="font-semibold text-sm text-slate-900 truncate">
+                <Hash size={16} className="text-[#007aff] shrink-0" />
+                <h3 className="font-bold text-sm text-[#1c1c1e] truncate">
                   {activeChannelMeta.name}
                 </h3>
               </div>
-              <p className="text-[11px] text-slate-500 truncate">
+              <p className="text-[11px] text-[#8e8e93] truncate">
                 {activeChannelMeta.desc}
               </p>
             </div>
 
             <div className="relative w-48 shrink-0">
-              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#8e8e93]" />
               <input
                 type="text"
                 placeholder="Search channel..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-3 py-1 bg-slate-50 border border-slate-200 rounded-md text-xs focus:outline-hidden focus:bg-white focus:border-slate-400"
+                className="ios-input w-full pl-8 pr-3 py-1.5 text-xs"
               />
             </div>
           </div>
 
           {/* Messages Scroll Area */}
-          <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-50/50">
+          <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-[#f2f2f7]/35">
             {loading && messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2">
-                <RefreshCw size={20} className="animate-spin text-slate-400" />
+              <div className="flex flex-col items-center justify-center h-full text-[#8e8e93] gap-2">
+                <RefreshCw size={20} className="animate-spin text-[#007aff]" />
                 <span className="text-xs">Loading channel history...</span>
               </div>
             ) : filteredMessages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-slate-400 py-12">
-                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
-                  <MessageSquare size={22} className="text-slate-400" />
+              <div className="flex flex-col items-center justify-center h-full text-[#8e8e93] py-12">
+                <div className="ios-squircle bg-[#007aff]/10 text-[#007aff] mb-3">
+                  <MessageSquare size={20} />
                 </div>
-                <h4 className="text-sm font-semibold text-slate-700">No messages in #{activeChannel}</h4>
-                <p className="text-xs text-slate-500 mt-1 max-w-sm text-center">
+                <h4 className="text-sm font-semibold text-[#1c1c1e]">No messages in #{activeChannel}</h4>
+                <p className="text-xs text-[#8e8e93] mt-1 max-w-sm text-center">
                   Start the conversation! Post an update, tag an order, or ask a question.
                 </p>
               </div>
@@ -301,8 +300,8 @@ export default function Chat() {
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold uppercase shrink-0 ${
                         isMe
-                          ? 'bg-slate-900 text-white'
-                          : 'bg-slate-200 text-slate-700 border border-slate-300'
+                          ? 'bg-[#007aff] text-white shadow-xs'
+                          : 'bg-[#e5e5ea] text-[#3c3c43]'
                       }`}
                     >
                       {author[0] || 'U'}
@@ -310,17 +309,17 @@ export default function Chat() {
 
                     <div className={`max-w-[70%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-semibold text-slate-900">
+                        <span className="text-xs font-semibold text-[#3c3c43]">
                           {isMe ? 'You' : author}
                         </span>
                         {timeStr && (
-                          <span className="text-[10px] text-slate-400">{timeStr}</span>
+                          <span className="text-[10px] text-[#8e8e93]">{timeStr}</span>
                         )}
                         {isMe && (
                           <button
                             onClick={() => handleDeleteMessage(msg.id)}
                             title="Delete message"
-                            className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-600 transition-opacity p-0.5"
+                            className="opacity-0 group-hover:opacity-100 text-[#8e8e93] hover:text-[#ff3b30] transition-opacity p-0.5"
                           >
                             <Trash2 size={12} />
                           </button>
@@ -328,10 +327,10 @@ export default function Chat() {
                       </div>
 
                       <div
-                        className={`rounded-xl px-4 py-2.5 text-xs shadow-2xs leading-relaxed break-words ${
+                        className={`rounded-2xl px-4 py-2.5 text-xs shadow-xs leading-relaxed break-words ${
                           isMe
-                            ? 'bg-slate-900 text-white rounded-tr-xs'
-                            : 'bg-white border border-slate-200 text-slate-800 rounded-tl-xs'
+                            ? 'bg-[#007aff] text-white rounded-br-xs'
+                            : 'bg-[#e5e5ea] text-[#000000] rounded-bl-xs'
                         }`}
                       >
                         {text}
@@ -345,9 +344,9 @@ export default function Chat() {
           </div>
 
           {/* Quick Preset Chips */}
-          <div className="px-4 py-2 bg-slate-50 border-t border-slate-200 flex items-center gap-2 overflow-x-auto">
-            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider shrink-0 flex items-center gap-1">
-              <Sparkles size={11} /> Quick:
+          <div className="px-4 py-2 bg-[#f9f9fa] border-t border-black/[0.05] flex items-center gap-2 overflow-x-auto">
+            <span className="text-[10px] font-semibold text-[#8e8e93] uppercase tracking-wider shrink-0 flex items-center gap-1">
+              <Sparkles size={11} className="text-[#007aff]" /> Quick:
             </span>
             {PRESETS.map((p, idx) => (
               <button
@@ -357,7 +356,7 @@ export default function Chat() {
                   setInputText(p);
                   inputRef.current?.focus();
                 }}
-                className="text-[11px] bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 px-2.5 py-1 rounded-full whitespace-nowrap transition-colors"
+                className="text-[11px] bg-white hover:bg-black/[0.03] border border-black/[0.06] text-[#1c1c1e] px-3 py-1 rounded-full whitespace-nowrap transition-colors shadow-2xs"
               >
                 {p}
               </button>
@@ -367,7 +366,7 @@ export default function Chat() {
           {/* Input Area */}
           <form
             onSubmit={handleSendMessage}
-            className="p-3 bg-white border-t border-slate-200 flex items-center gap-2"
+            className="p-3 bg-white border-t border-black/[0.05] flex items-center gap-2"
           >
             <input
               ref={inputRef}
@@ -375,12 +374,12 @@ export default function Chat() {
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               placeholder={`Message #${activeChannelMeta.name}...`}
-              className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-hidden focus:bg-white focus:border-slate-400 transition-colors"
+              className="ios-input flex-1 py-2 text-xs"
             />
             <button
               type="submit"
               disabled={!inputText.trim() || sending}
-              className="flex items-center gap-1.5 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg text-xs font-semibold shadow-2xs transition-colors shrink-0"
+              className="ios-btn-primary text-xs"
             >
               <Send size={13} className={sending ? 'animate-pulse' : ''} />
               <span>Send</span>

@@ -16,8 +16,9 @@ export interface CreateUserData {
 export const adminService = {
   /**
    * Fetch all users with optional pagination and sorting
+   * Default: page=0, size=20, sort=id,desc as per Admin API specification
    */
-  getUsers: (page: number = 0, size: number = 50, sort: string = 'id,asc'): Promise<User[]> =>
+  getUsers: (page: number = 0, size: number = 20, sort: string = 'id,desc'): Promise<User[]> =>
     axiosClient.get(API_ENDPOINTS.ADMIN_USERS, {
       params: { page, size, sort },
     }),
@@ -29,7 +30,8 @@ export const adminService = {
     axiosClient.get(`${API_ENDPOINTS.ADMIN_USERS}/${encodeURIComponent(login)}`),
 
   /**
-   * Create a new user (Admin API)
+   * Create a new user (Admin API: POST /api/admin/users)
+   * If password is provided, user can log in immediately. If omitted, backend generates a random password.
    */
   createUser: (userData: CreateUserData): Promise<User> => {
     const payload: Record<string, any> = {
@@ -42,38 +44,46 @@ export const adminService = {
       authorities:
         userData.authorities && userData.authorities.length > 0
           ? userData.authorities
-          : ['ROLE_USER'],
+          : ['ROLE_WORK_VISA'],
     };
 
-    if (userData.password) {
-      payload.password = userData.password;
+    if (userData.password && userData.password.trim().length > 0) {
+      payload.password = userData.password.trim();
     }
 
     return axiosClient.post(API_ENDPOINTS.ADMIN_USERS, payload);
   },
 
   /**
-   * Update an existing user (Admin API)
+   * Update an existing user (Admin API: PUT /api/admin/users)
    */
   updateUser: (userData: Partial<User>): Promise<User> => {
-    return axiosClient.put(API_ENDPOINTS.ADMIN_USERS, {
+    const payload: Record<string, any> = {
       ...userData,
       login: userData.login?.trim().toLowerCase(),
       email: userData.email?.trim().toLowerCase(),
-    });
+    };
+    if (userData.firstName !== undefined) payload.firstName = userData.firstName?.trim();
+    if (userData.lastName !== undefined) payload.lastName = userData.lastName?.trim();
+    return axiosClient.put(API_ENDPOINTS.ADMIN_USERS, payload);
   },
 
   /**
-   * Delete a user by username
+   * Delete a user by username (DELETE /api/admin/users/{login})
    */
   deleteUser: (login: string): Promise<any> =>
     axiosClient.delete(`${API_ENDPOINTS.ADMIN_USERS}/${encodeURIComponent(login)}`),
 
   /**
-   * Get available authority roles (e.g. ROLE_ADMIN, ROLE_USER)
+   * Get available authority roles (GET /api/authorities with fallback)
    */
-  getAuthorities: (): Promise<string[]> =>
-    axiosClient.get(API_ENDPOINTS.ADMIN_USER_AUTHORITIES),
+  getAuthorities: async (): Promise<string[]> => {
+    try {
+      return await axiosClient.get(API_ENDPOINTS.AUTHORITIES);
+    } catch {
+      return await axiosClient.get(API_ENDPOINTS.ADMIN_USER_AUTHORITIES);
+    }
+  },
 
   /**
    * Public registration endpoint (Fallback or direct sign up)

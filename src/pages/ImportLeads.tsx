@@ -58,66 +58,59 @@ export default function ImportLeads() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header Banner */}
-      <div className="bg-white p-5 rounded-lg border border-slate-200">
+      <div className="ios-card p-5 sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-base font-semibold text-slate-900">
-              Import Leads & Data Ingestion
+            <h2 className="text-base font-bold text-[#1c1c1e]">
+              Import Candidate Leads & Meta Ingestion
             </h2>
-            <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-              Ingest marketing export files from Facebook & Instagram Ads Manager. 
-              The system automatically resolves campaigns, ad sets, ads, creates verified candidate profiles, 
-              and links work/study visa preference survey responses.
+            <p className="text-xs text-[#8e8e93] mt-1 leading-relaxed max-w-2xl">
+              Ingest marketing export spreadsheets from Meta Ads Manager (Facebook, Instagram) and WhatsApp. 
+              The system resolves campaign telemetry, creates verified candidate profiles, and links work/study visa preference responses.
             </p>
           </div>
-          <div className="w-9 h-9 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
-            <UploadCloud size={18} />
+          <div className="ios-squircle bg-[#007aff]/10 text-[#007aff] shrink-0">
+            <UploadCloud size={20} />
           </div>
         </div>
 
-        {/* Tab switchers */}
-        <div className="flex items-center gap-2 mt-5 border-t border-slate-100 pt-4">
-          <button
-            onClick={() => { setActiveTab('file'); setResult(null); setError(null); }}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
-              activeTab === 'file'
-                ? 'bg-slate-900 text-white'
-                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
-            }`}
-          >
-            <FileSpreadsheet size={14} />
-            <span>Excel / CSV File Upload</span>
-          </button>
+        {/* Tab switchers as iOS Segmented Control */}
+        <div className="mt-5 pt-3.5 border-t border-black/[0.05]">
+          <div className="ios-segmented">
+            <button
+              onClick={() => { setActiveTab('file'); setResult(null); setError(null); }}
+              className={`ios-segmented-btn flex items-center gap-2 ${activeTab === 'file' ? 'active' : ''}`}
+            >
+              <FileSpreadsheet size={14} />
+              <span>Excel / CSV File Upload</span>
+            </button>
 
-          <button
-            onClick={() => { setActiveTab('raw'); setResult(null); setError(null); }}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
-              activeTab === 'raw'
-                ? 'bg-slate-900 text-white'
-                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
-            }`}
-          >
-            <FileText size={14} />
-            <span>Paste Raw CSV / TSV</span>
-          </button>
+            <button
+              onClick={() => { setActiveTab('raw'); setResult(null); setError(null); }}
+              className={`ios-segmented-btn flex items-center gap-2 ${activeTab === 'raw' ? 'active' : ''}`}
+            >
+              <FileText size={14} />
+              <span>Paste Raw CSV / TSV</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {error && (
-        <div className="p-3.5 rounded-md bg-amber-50 border border-amber-200 text-xs text-amber-800 flex items-start gap-2.5">
-          <AlertCircle size={15} className="shrink-0 text-amber-600 mt-0.5" />
+        <div className="p-4 rounded-2xl bg-[#ff9500]/10 border border-[#ff9500]/25 text-xs text-[#ff9500] flex items-start gap-2.5 font-medium">
+          <AlertCircle size={16} className="shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold">Import Error</p>
-            <p className="mt-0.5">{error}</p>
+            <p className="font-semibold text-[#1c1c1e]">Import Error</p>
+            <p className="mt-0.5 text-[#ff9500]">{error}</p>
           </div>
         </div>
       )}
 
       {/* Tab 1: File Upload */}
       {activeTab === 'file' && (
-        <div className="bg-white p-6 rounded-lg border border-slate-200">
+        <div className="ios-card p-6">
           <form onSubmit={handleFileUpload} className="space-y-4">
-            <div className="border border-dashed border-slate-300 rounded-lg p-8 text-center hover:bg-slate-50 transition-colors cursor-pointer relative">
+            <div className="border border-dashed border-black/15 rounded-2xl p-8 text-center hover:bg-[#f2f2f7]/50 transition-colors cursor-pointer relative bg-[#f9f9fa]">
               <input
                 type="file"
                 accept=".xlsx, .xls, .csv"
@@ -125,17 +118,17 @@ export default function ImportLeads() {
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
               <div className="flex flex-col items-center">
-                <div className="w-10 h-10 rounded-md bg-slate-100 text-slate-600 flex items-center justify-center mb-3">
+                <div className="ios-squircle bg-[#007aff]/10 text-[#007aff] mb-3">
                   <FileUp size={20} />
                 </div>
-                <p className="text-xs font-medium text-slate-900">
+                <p className="text-xs font-semibold text-[#1c1c1e]">
                   {selectedFile ? selectedFile.name : 'Click to select or drag & drop Meta spreadsheet'}
                 </p>
-                <p className="text-[11px] text-slate-400 mt-1">
+                <p className="text-[11px] text-[#8e8e93] mt-1">
                   Supports .xlsx, .xls, and .csv export files from Meta Ads
                 </p>
                 {selectedFile && (
-                  <span className="mt-2 text-[11px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                  <span className="mt-2.5 text-[11px] text-[#007aff] bg-[#007aff]/10 px-3 py-1 rounded-full font-semibold">
                     {(selectedFile.size / 1024).toFixed(1)} KB selected
                   </span>
                 )}
@@ -143,13 +136,13 @@ export default function ImportLeads() {
             </div>
 
             <div className="flex items-center justify-between pt-2">
-              <span className="text-[11px] text-slate-400">
-                Supported formats: <strong className="text-slate-600">.xlsx, .xls, .csv</strong>
+              <span className="text-[11px] text-[#8e8e93]">
+                Supported formats: <strong className="text-[#3c3c43]">.xlsx, .xls, .csv</strong>
               </span>
               <button
                 type="submit"
                 disabled={loading || !selectedFile}
-                className="flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-md text-xs font-medium disabled:opacity-50 transition-colors"
+                className="ios-btn-primary text-xs"
               >
                 {loading && <RefreshCw size={13} className="animate-spin" />}
                 <span>{loading ? 'Uploading...' : 'Upload & Process Leads'}</span>
@@ -161,10 +154,10 @@ export default function ImportLeads() {
 
       {/* Tab 2: Raw Text Paste */}
       {activeTab === 'raw' && (
-        <div className="bg-white p-6 rounded-lg border border-slate-200">
+        <div className="ios-card p-6">
           <form onSubmit={handleRawUpload} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1.5">
+              <label className="block text-xs font-semibold text-[#3c3c43] mb-1.5">
                 Paste Tab-Separated or Comma-Separated Values (CSV/TSV)
               </label>
               <textarea
@@ -172,18 +165,18 @@ export default function ImportLeads() {
                 onChange={(e) => setRawText(e.target.value)}
                 rows={8}
                 placeholder="id,created_time,ad_id,ad_name,adset_id,campaign_name,form_id,is_organic,platform,full_name,phone_number,city..."
-                className="w-full p-3 font-mono text-xs bg-slate-50 border border-slate-300 rounded-md text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                className="ios-input w-full p-3 font-mono text-xs rounded-2xl"
               ></textarea>
             </div>
 
             <div className="flex items-center justify-between pt-1">
-              <span className="text-[11px] text-slate-400">
-                Format: <strong className="text-slate-600">CSV or TSV clipboard text</strong>
+              <span className="text-[11px] text-[#8e8e93]">
+                Format: <strong className="text-[#3c3c43]">CSV or TSV clipboard text</strong>
               </span>
               <button
                 type="submit"
                 disabled={loading || !rawText.trim()}
-                className="flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-md text-xs font-medium disabled:opacity-50 transition-colors"
+                className="ios-btn-primary text-xs"
               >
                 {loading && <RefreshCw size={13} className="animate-spin" />}
                 <span>{loading ? 'Processing...' : 'Parse & Ingest Leads'}</span>

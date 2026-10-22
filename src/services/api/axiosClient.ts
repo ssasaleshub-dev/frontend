@@ -19,7 +19,10 @@ const instance = axios.create({
 });
 
 instance.interceptors.request.use((config) => {
-  const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+  const token =
+    localStorage.getItem(STORAGE_KEYS.ID_TOKEN) ||
+    localStorage.getItem(STORAGE_KEYS.TOKEN) ||
+    localStorage.getItem('id_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -33,13 +36,19 @@ instance.interceptors.response.use(
       const isLoginPage = window.location.pathname.includes('/login');
       if (!isLoginPage) {
         localStorage.removeItem(STORAGE_KEYS.TOKEN);
+        localStorage.removeItem(STORAGE_KEYS.ID_TOKEN);
+        localStorage.removeItem('id_token');
         localStorage.removeItem(STORAGE_KEYS.USER);
         window.location.href = '/login';
       }
     }
     const errData = error.response?.data;
     const message = errData?.detail || errData?.message || error.message || 'Request failed';
-    return Promise.reject(new Error(message));
+    const customError: any = new Error(message);
+    customError.status = error.response?.status;
+    customError.response = error.response;
+    customError.data = errData;
+    return Promise.reject(customError);
   }
 );
 

@@ -6,6 +6,7 @@ export const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL || '';
 
 export const STORAGE_KEYS = {
   TOKEN: 'ssa_id_token',
+  ID_TOKEN: 'id_token',
   USER: 'ssa_user',
 } as const;
 
@@ -16,6 +17,7 @@ export const API_ENDPOINTS = {
   REGISTER: '/api/register',
   ADMIN_USERS: '/api/admin/users',
   ADMIN_USER_AUTHORITIES: '/api/admin/users/authorities',
+  AUTHORITIES: '/api/authorities',
 
   LEADS_ANALYTICS: '/api/leads/analytics',
   LEADS_DETAILED: '/api/leads/detailed',
@@ -40,14 +42,20 @@ export const VISA_TYPES = {
   WORK_VISA: {
     key: 'WORK_VISA',
     label: 'Work Visa',
-    badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+    badgeClass: 'bg-indigo-50 text-indigo-700 border-indigo-200',
     description: 'Candidates seeking international employment & work permits',
   },
   STUDY_VISA: {
     key: 'STUDY_VISA',
     label: 'Study Visa',
-    badgeClass: 'bg-indigo-100 text-indigo-800 border-indigo-300',
+    badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     description: 'Students seeking overseas university admissions & study permits',
+  },
+  OTHER_VISA: {
+    key: 'OTHER_VISA',
+    label: 'Other Visa',
+    badgeClass: 'bg-amber-50 text-amber-800 border-amber-200',
+    description: '3rd category / Other Visa inquiries and candidates',
   },
 } as const;
 
@@ -55,14 +63,23 @@ export const USER_ROLES = {
   ADMIN: 'ROLE_ADMIN',
   WORK_VISA_COUNSELOR: 'ROLE_WORK_VISA',
   STUDY_VISA_COUNSELOR: 'ROLE_STUDY_VISA',
+  DOMESTIC_COLLEGE_ADMISSION: 'ROLE_DOMESTIC_COLLEGE_ADMISSION',
+  OTHER_VISA_COUNSELOR: 'ROLE_OTHER_VISA',
   GENERAL_USER: 'ROLE_USER',
 } as const;
 
 export const USER_ROLE_CONFIG = [
-  { value: 'ROLE_ADMIN', label: 'Admin (All Access)', desc: 'Full administrative access across all leads and users' },
-  { value: 'ROLE_WORK_VISA', label: 'Work Visa Counselor', desc: 'Handles international employment & work permit inquiries' },
-  { value: 'ROLE_STUDY_VISA', label: 'Study Visa Counselor', desc: 'Handles student admissions & university study permits' },
-  { value: 'ROLE_USER', label: 'General Counselor', desc: 'General inquiry support and assistance' },
+  { value: 'ROLE_ADMIN', label: 'Admin', desc: 'Super Administrator with global access across all desks and user management' },
+  { value: 'ROLE_WORK_VISA', label: 'Work Visa Staff', desc: 'Handles international employment & work permit inquiries' },
+  { value: 'ROLE_STUDY_VISA', label: 'Study Visa Staff', desc: 'Handles university admissions & study permits' },
+  { value: 'ROLE_DOMESTIC_COLLEGE_ADMISSION', label: 'Domestic College Admission Staff', desc: 'Handles domestic college and university admissions' },
+] as const;
+
+export const KNOWN_STAFF_USERS = [
+  { login: 'work_staff', name: 'Work Visa Staff', role: 'ROLE_WORK_VISA' },
+  { login: 'study_staff', name: 'Study Visa Staff', role: 'ROLE_STUDY_VISA' },
+  { login: 'other_staff', name: 'Other Visa Staff', role: 'ROLE_OTHER_VISA' },
+  { login: 'admin', name: 'Admin Administrator', role: 'ROLE_ADMIN' },
 ] as const;
 
 export const PLATFORMS: Record<string, { label: string; color: string; bg?: string; text?: string; border?: string }> = {
@@ -76,14 +93,22 @@ export const PLATFORMS: Record<string, { label: string; color: string; bg?: stri
 export const PLATFORM_CONFIG = PLATFORMS;
 
 export const LEAD_STATUSES: Record<string, { label: string; color: string }> = {
-  CREATED: { label: 'New Lead', color: 'bg-slate-100 text-slate-700' },
-  CONTACTED: { label: 'Contacted', color: 'bg-sky-100 text-sky-700' },
-  QUALIFIED: { label: 'Qualified', color: 'bg-blue-100 text-blue-700' },
-  PROPOSAL_SENT: { label: 'Docs Requested', color: 'bg-amber-100 text-amber-700' },
-  NEGOTIATION: { label: 'In Process', color: 'bg-purple-100 text-purple-700' },
-  WON: { label: 'Visa Approved / Enrolled', color: 'bg-emerald-100 text-emerald-800' },
-  LOST: { label: 'Not Interested / Rejected', color: 'bg-rose-100 text-rose-700' },
+  CREATED: { label: 'New Lead', color: 'bg-slate-100 text-slate-700 border-slate-200' },
+  CONTACTED: { label: 'Contacted', color: 'bg-sky-100 text-sky-800 border-sky-200' },
+  QUALIFIED: { label: 'Qualified', color: 'bg-blue-100 text-blue-800 border-blue-200' },
+  CONVERTED: { label: 'Converted', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+  PROPOSAL_SENT: { label: 'Docs Requested', color: 'bg-amber-100 text-amber-800 border-amber-200' },
+  NEGOTIATION: { label: 'In Process', color: 'bg-purple-100 text-purple-800 border-purple-200' },
+  WON: { label: 'Visa Approved / Enrolled', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+  LOST: { label: 'Lost / Closed', color: 'bg-rose-100 text-rose-800 border-rose-200' },
 };
+
+export const CANONICAL_LEAD_STATUSES = [
+  { value: 'CONTACTED', label: 'Contacted', color: 'bg-sky-100 text-sky-800 border-sky-200' },
+  { value: 'QUALIFIED', label: 'Qualified', color: 'bg-blue-100 text-blue-800 border-blue-200' },
+  { value: 'CONVERTED', label: 'Converted', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+  { value: 'LOST', label: 'Lost', color: 'bg-rose-100 text-rose-800 border-rose-200' },
+] as const;
 
 export const LEAD_STATUS_LIST = Object.entries(LEAD_STATUSES).map(([value, conf]) => ({
   value,
@@ -107,27 +132,60 @@ export const EDUCATION_QUALIFICATIONS = [
 
 /**
  * Filter leads based on the logged-in counselor's role:
- * - Admin: sees all leads
- * - ROLE_WORK_VISA: sees WORK_VISA leads only
- * - ROLE_STUDY_VISA: sees STUDY_VISA leads only
+ * - Admin: sees all leads across all visa types
+ * - ROLE_WORK_VISA: sees WORK_VISA leads or leads assigned to them
+ * - ROLE_STUDY_VISA: sees STUDY_VISA leads or leads assigned to them
+ * - ROLE_OTHER_VISA: sees 3rd category / OTHER_VISA leads or leads assigned to them
  */
 export function filterLeadsByUserRole(leads: any[] = [], currentUser: any = null): any[] {
   if (!leads || !Array.isArray(leads)) return [];
   if (!currentUser) return leads;
 
   const authorities: string[] = currentUser.authorities || [];
+  const userLogin = (currentUser.login || '').toLowerCase();
+
+  // ROLE_ADMIN: Super Administrator can see all leads
   if (authorities.includes(USER_ROLES.ADMIN)) {
     return leads;
   }
+
+  // ROLE_WORK_VISA: Staff handling Work Visa leads
   if (authorities.includes(USER_ROLES.WORK_VISA_COUNSELOR)) {
-    return leads.filter(
-      (lead) => (lead.visaType || '').toUpperCase() === 'WORK_VISA'
-    );
+    return leads.filter((lead) => {
+      const isWork = (lead.visaType || '').toUpperCase() === 'WORK_VISA';
+      const isAssigned = (lead.assignedTo || '').toLowerCase() === userLogin;
+      return isWork || isAssigned;
+    });
   }
+
+  // ROLE_STUDY_VISA: Staff handling Study Visa leads
   if (authorities.includes(USER_ROLES.STUDY_VISA_COUNSELOR)) {
-    return leads.filter(
-      (lead) => (lead.visaType || '').toUpperCase() === 'STUDY_VISA'
-    );
+    return leads.filter((lead) => {
+      const isStudy = (lead.visaType || '').toUpperCase() === 'STUDY_VISA';
+      const isAssigned = (lead.assignedTo || '').toLowerCase() === userLogin;
+      return isStudy || isAssigned;
+    });
   }
-  return leads;
+
+  // ROLE_DOMESTIC_COLLEGE_ADMISSION: Staff handling domestic college admission leads
+  if (authorities.includes(USER_ROLES.DOMESTIC_COLLEGE_ADMISSION)) {
+    return leads.filter((lead) => {
+      const vt = (lead.visaType || '').toUpperCase();
+      const isDomestic = vt.includes('COLLEGE') || vt.includes('DOMESTIC') || vt.includes('ADMISSION');
+      const isAssigned = (lead.assignedTo || '').toLowerCase() === userLogin;
+      return isDomestic || isAssigned;
+    });
+  }
+
+  // ROLE_OTHER_VISA: Staff handling 3rd category / Other Visa leads
+  if (authorities.includes(USER_ROLES.OTHER_VISA_COUNSELOR)) {
+    return leads.filter((lead) => {
+      const vt = (lead.visaType || '').toUpperCase();
+      const isOther = vt !== 'WORK_VISA' && vt !== 'STUDY_VISA';
+      const isAssigned = (lead.assignedTo || '').toLowerCase() === userLogin;
+      return isOther || isAssigned;
+    });
+  }
+
+  return leads.filter((lead) => (lead.assignedTo || '').toLowerCase() === userLogin);
 }

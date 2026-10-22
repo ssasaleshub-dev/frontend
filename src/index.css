@@ -2,36 +2,299 @@
 
 @layer base {
   :root {
-    --color-bg-app: #f8fafc;
-    --color-bg-card: #ffffff;
-    --color-border: #e2e8f0;
-    --color-text-primary: #0f172a;
-    --color-text-secondary: #475569;
-    --color-text-muted: #94a3b8;
+    --ios-bg: #f2f2f7;
+    --ios-card: #ffffff;
+    --ios-blue: #007aff;
+    --ios-blue-hover: #0071e3;
+    --ios-green: #34c759;
+    --ios-indigo: #5856d6;
+    --ios-orange: #ff9500;
+    --ios-purple: #af52de;
+    --ios-red: #ff3b30;
+    --ios-teal: #30b0c7;
+    --ios-gray-1: #8e8e93;
+    --ios-gray-2: #aeaeb2;
+    --ios-gray-3: #c7c7cc;
+    --ios-gray-4: #d1d1d6;
+    --ios-gray-5: #e5e5ea;
+    --ios-gray-6: #f2f2f7;
+    --ios-label: #000000;
+    --ios-secondary-label: #3c3c43;
+    --ios-tertiary-label: rgba(60, 60, 67, 0.45);
+    --ios-separator: rgba(60, 60, 67, 0.12);
   }
 
   body {
-    background-color: #f8fafc;
-    color: #0f172a;
+    background-color: #f2f2f7;
+    color: #1c1c1e;
     min-height: 100vh;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "SF Pro", -apple-system-subheadline, "Helvetica Neue", Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.015em;
   }
 }
 
-/* Custom crisp scrollbars */
+/* ==========================================================================
+   iOS Human Interface Guidelines (HIG) Design Tokens & Component Styles
+   ========================================================================== */
+
+/* iOS Grouped Background */
+.ios-bg {
+  background-color: #f2f2f7;
+}
+
+/* Apple Squircle / Rounded Inset Card */
+.ios-card {
+  background: #ffffff;
+  border: 1px solid rgba(60, 60, 67, 0.08);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02), 0 4px 16px -2px rgba(0, 0, 0, 0.035);
+  border-radius: 20px;
+}
+
+.ios-card-hover {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ios-card-hover:hover {
+  border-color: rgba(60, 60, 67, 0.15);
+  box-shadow: 0 6px 24px -4px rgba(0, 0, 0, 0.07), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
+  transform: translateY(-1px);
+}
+
+/* Apple Frosted Glass (Ultra-thin Translucent Materials) */
+.ios-glass {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(25px) saturate(190%);
+  -webkit-backdrop-filter: blur(25px) saturate(190%);
+  border-bottom: 0.5px solid rgba(60, 60, 67, 0.12);
+}
+
+.ios-glass-sidebar {
+  background: rgba(246, 246, 248, 0.86);
+  backdrop-filter: blur(25px) saturate(190%);
+  -webkit-backdrop-filter: blur(25px) saturate(190%);
+  border-right: 0.5px solid rgba(60, 60, 67, 0.12);
+}
+
+.ios-glass-modal {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(30px) saturate(200%);
+  -webkit-backdrop-filter: blur(30px) saturate(200%);
+  box-shadow: 0 20px 48px -10px rgba(0, 0, 0, 0.18), 0 1px 3px rgba(0, 0, 0, 0.04);
+  border-radius: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+/* iOS Segmented Control (Signature Apple Slider Switch) */
+.ios-segmented {
+  background: rgba(118, 118, 128, 0.12);
+  padding: 3px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  border: none;
+}
+
+.ios-segmented-btn {
+  padding: 5px 14px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #3c3c43;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  user-select: none;
+}
+
+.ios-segmented-btn:hover {
+  color: #000000;
+}
+
+.ios-segmented-btn.active {
+  background: #ffffff;
+  color: #000000;
+  font-weight: 600;
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.12), 0 0.5px 1.5px rgba(0, 0, 0, 0.04);
+}
+
+/* iOS Interactive Action Buttons */
+.ios-btn-primary {
+  background-color: #007aff;
+  color: #ffffff;
+  font-weight: 600;
+  border-radius: 9999px;
+  padding: 7px 18px;
+  font-size: 13px;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.28);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.ios-btn-primary:hover {
+  background-color: #0071e3;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.35);
+}
+
+.ios-btn-primary:active {
+  transform: scale(0.97);
+}
+
+.ios-btn-secondary {
+  background-color: rgba(0, 122, 255, 0.1);
+  color: #007aff;
+  font-weight: 600;
+  border-radius: 9999px;
+  padding: 7px 16px;
+  font-size: 13px;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.ios-btn-secondary:hover {
+  background-color: rgba(0, 122, 255, 0.16);
+}
+
+.ios-btn-secondary:active {
+  transform: scale(0.97);
+}
+
+.ios-btn-gray {
+  background-color: rgba(118, 118, 128, 0.12);
+  color: #1c1c1e;
+  font-weight: 500;
+  border-radius: 9999px;
+  padding: 7px 14px;
+  font-size: 12px;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.ios-btn-gray:hover {
+  background-color: rgba(118, 118, 128, 0.18);
+}
+
+.ios-btn-gray:active {
+  transform: scale(0.97);
+}
+
+/* iOS Text Inputs & Selects */
+.ios-input {
+  background-color: rgba(118, 118, 128, 0.08);
+  border: 1px solid rgba(60, 60, 67, 0.1);
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #1c1c1e;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ios-input:focus {
+  background-color: #ffffff;
+  border-color: #007aff;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
+  outline: none;
+}
+
+/* iOS Capsule Badges */
+.ios-badge {
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2.5px 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ios-badge-blue {
+  background-color: rgba(0, 122, 255, 0.12);
+  color: #007aff;
+  border: 1px solid rgba(0, 122, 255, 0.22);
+}
+
+.ios-badge-green {
+  background-color: rgba(52, 199, 89, 0.12);
+  color: #34c759;
+  border: 1px solid rgba(52, 199, 89, 0.22);
+}
+
+.ios-badge-indigo {
+  background-color: rgba(88, 86, 214, 0.12);
+  color: #5856d6;
+  border: 1px solid rgba(88, 86, 214, 0.22);
+}
+
+.ios-badge-orange {
+  background-color: rgba(255, 149, 0, 0.12);
+  color: #ff9500;
+  border: 1px solid rgba(255, 149, 0, 0.22);
+}
+
+.ios-badge-purple {
+  background-color: rgba(175, 82, 222, 0.12);
+  color: #af52de;
+  border: 1px solid rgba(175, 82, 222, 0.22);
+}
+
+.ios-badge-red {
+  background-color: rgba(255, 59, 48, 0.12);
+  color: #ff3b30;
+  border: 1px solid rgba(255, 59, 48, 0.22);
+}
+
+.ios-badge-gray {
+  background-color: rgba(142, 142, 147, 0.12);
+  color: #636366;
+  border: 1px solid rgba(142, 142, 147, 0.22);
+}
+
+/* iOS Progress Bars */
+.ios-progress-track {
+  background-color: rgba(118, 118, 128, 0.15);
+  border-radius: 9999px;
+  overflow: hidden;
+  height: 6px;
+}
+
+.ios-progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* iOS Icon Squircles */
+.ios-squircle {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Custom crisp Apple scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 3px;
+  background: rgba(60, 60, 67, 0.18);
+  border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: rgba(60, 60, 67, 0.35);
 }

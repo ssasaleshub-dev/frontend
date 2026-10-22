@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import Layout from './components/Layout';
 import Login from './pages/Login';
+import AdminRoute from './components/common/AdminRoute';
 import Dashboard from './pages/Dashboard';
 import Leads from './pages/Leads';
 import ImportLeads from './pages/ImportLeads';
@@ -11,6 +12,7 @@ import Customers from './pages/Customers';
 import Campaigns from './pages/Campaigns';
 import Chat from './pages/Chat';
 import Users from './pages/Users';
+import CandidateDetail from './pages/CandidateDetail';
 
 export default function App() {
   return (
@@ -28,11 +30,27 @@ export default function App() {
           >
             <Route index element={<Dashboard />} />
             <Route path="leads" element={<Leads />} />
-            <Route path="import" element={<ImportLeads />} />
+            <Route path="leads/:id" element={<CandidateDetail />} />
+            <Route path="candidates/:id" element={<CandidateDetail />} />
+            <Route
+              path="import"
+              element={
+                <AdminRoute>
+                  <ImportLeads />
+                </AdminRoute>
+              }
+            />
             <Route path="customers" element={<Customers />} />
             <Route path="campaigns" element={<Campaigns />} />
             <Route path="chat" element={<Chat />} />
-            <Route path="users" element={<Users />} />
+            <Route
+              path="users"
+              element={
+                <AdminRoute>
+                  <Users />
+                </AdminRoute>
+              }
+            />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

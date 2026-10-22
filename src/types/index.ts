@@ -20,7 +20,7 @@ export interface LeadDetailedDTO {
   createdTime?: string;          // ISO Date
   isOrganic?: boolean;
   platform?: 'IG' | 'FB' | 'WHATSAPP' | string;
-  status?: 'CREATED' | 'CONTACTED' | 'QUALIFIED' | 'PROPOSAL_SENT' | 'NEGOTIATION' | 'WON' | 'LOST' | string;
+  status?: 'CREATED' | 'CONTACTED' | 'QUALIFIED' | 'CONVERTED' | 'PROPOSAL_SENT' | 'NEGOTIATION' | 'WON' | 'LOST' | string;
   notes?: string;
 
   // Candidate Details
@@ -30,7 +30,7 @@ export interface LeadDetailedDTO {
   city?: string;                 // e.g. "Rasipuram", "Namakkal"
 
   // Visa & Candidate Survey Details
-  visaType?: 'WORK_VISA' | 'STUDY_VISA' | string;
+  visaType?: 'WORK_VISA' | 'STUDY_VISA' | 'OTHER_VISA' | string;
   age?: string;                  // e.g. "18 - 35 years"
   educationalQualification?: string; // e.g. "10th / 12th / Diploma / Any Degree"
   areYouInterested?: string;     // e.g. "yes" / "no"
@@ -55,6 +55,7 @@ export interface LeadAnalytics {
   totalAds?: number;
   workVisaCount?: number;
   studyVisaCount?: number;
+  otherVisaCount?: number;
   leadsByStatus?: Record<string, number>;
   leadsByPlatform?: Record<string, number>;
   leadsByVisaType?: Record<string, number>;

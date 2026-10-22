@@ -142,13 +142,13 @@ export default function Customers() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-lg border border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 ios-card p-4 sm:p-5">
         <div>
-          <h2 className="text-base font-semibold text-slate-900">
-            Customer Directory
+          <h2 className="text-base font-bold text-[#1c1c1e]">
+            Candidate Directory
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Managing <strong className="text-slate-800">{customers.length}</strong> customer records
+          <p className="text-xs text-[#8e8e93] mt-0.5">
+            Managing <strong className="text-[#1c1c1e]">{customers.length}</strong> candidate contact records
           </p>
         </div>
 
@@ -156,9 +156,9 @@ export default function Customers() {
           <button
             onClick={fetchCustomers}
             disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white hover:bg-slate-50 text-slate-700 rounded-md border border-slate-300 transition-colors"
+            className="ios-btn-gray text-xs"
           >
-            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={13} className={loading ? 'animate-spin text-[#007aff]' : 'text-[#8e8e93]'} />
             <span>Refresh</span>
           </button>
 
@@ -167,43 +167,43 @@ export default function Customers() {
               setFormData({ fullName: '', phoneNumber: '', location: '' });
               setShowAddModal(true);
             }}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white rounded-md transition-colors"
+            className="ios-btn-primary text-xs"
           >
             <Plus size={14} />
-            <span>New Customer</span>
+            <span>New Candidate</span>
           </button>
         </div>
       </div>
 
       {error && (
-        <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center justify-between">
+        <div className="p-3.5 rounded-2xl bg-[#ff3b30]/10 border border-[#ff3b30]/20 text-xs text-[#ff3b30] flex items-center justify-between font-medium">
           <div className="flex items-center gap-2">
-            <AlertCircle size={16} className="text-rose-600" />
+            <AlertCircle size={16} />
             <span>{error}</span>
           </div>
-          <button onClick={fetchCustomers} className="underline font-medium hover:text-rose-900">
+          <button onClick={fetchCustomers} className="underline font-semibold hover:opacity-80">
             Retry
           </button>
         </div>
       )}
 
       {/* Search Bar */}
-      <div className="bg-white p-4 rounded-lg border border-slate-200">
+      <div className="ios-card p-3 sm:p-4">
         <div className="relative max-w-md">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#8e8e93]">
             <Search size={15} />
           </div>
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search customer by name, phone, or location..."
-            className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 transition-colors"
+            placeholder="Search candidate by name, phone, or location..."
+            className="ios-input w-full pl-9 pr-8 py-2 text-xs"
           />
           {searchTerm && (
             <button
               onClick={() => setSearchTerm('')}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#8e8e93] hover:text-[#1c1c1e]"
             >
               <X size={14} />
             </button>
@@ -212,7 +212,7 @@ export default function Customers() {
       </div>
 
       {/* Customers Table */}
-      <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+      <div className="ios-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase font-semibold text-[11px]">
@@ -326,10 +326,10 @@ export default function Customers() {
 
       {/* Add / Edit Customer Modal */}
       {(showAddModal || editingCustomer) && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg border border-slate-200 shadow-xl max-w-sm w-full p-6">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-sm font-semibold text-slate-900">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="ios-glass-modal max-w-sm w-full p-6 animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3.5 border-b border-black/[0.06]">
+              <h3 className="text-sm font-bold text-[#1c1c1e]">
                 {editingCustomer ? `Edit Customer #${editingCustomer.id}` : 'Create Customer'}
               </h3>
               <button
@@ -337,7 +337,7 @@ export default function Customers() {
                   setShowAddModal(false);
                   setEditingCustomer(null);
                 }}
-                className="p-1 text-slate-400 hover:text-slate-600"
+                className="p-1.5 text-[#8e8e93] hover:text-[#1c1c1e] rounded-full hover:bg-black/[0.05]"
               >
                 <X size={16} />
               </button>
@@ -348,55 +348,55 @@ export default function Customers() {
               className="mt-4 space-y-3.5 text-xs"
             >
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Full Name *</label>
+                <label className="block font-semibold text-[#3c3c43] mb-1.5">Full Name *</label>
                 <input
                   type="text"
                   required
                   placeholder="Enter customer full name"
                   value={formData.fullName}
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                  className="ios-input w-full font-medium"
                 />
               </div>
 
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Phone Number *</label>
+                <label className="block font-semibold text-[#3c3c43] mb-1.5">Phone Number *</label>
                 <input
                   type="tel"
                   required
                   placeholder="Enter phone number"
                   value={formData.phoneNumber}
                   onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                  className="ios-input w-full font-medium"
                 />
               </div>
 
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Location / District</label>
+                <label className="block font-semibold text-[#3c3c43] mb-1.5">Location / District</label>
                 <input
                   type="text"
                   placeholder="City / Region (optional)"
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                  className="ios-input w-full"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-black/[0.06]">
                 <button
                   type="button"
                   onClick={() => {
                     setShowAddModal(false);
                     setEditingCustomer(null);
                   }}
-                  className="px-3.5 py-1.5 rounded-md font-medium text-slate-600 hover:bg-slate-100 border border-slate-300"
+                  className="ios-btn-gray text-xs"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-1.5 rounded-md font-medium bg-slate-900 hover:bg-slate-800 text-white disabled:opacity-50"
+                  className="ios-btn-primary text-xs"
                 >
                   {submitting ? 'Saving...' : editingCustomer ? 'Update Customer' : 'Create Customer'}
                 </button>

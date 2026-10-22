@@ -3,11 +3,20 @@ import { API_ENDPOINTS } from '../../config/constants';
 import type { Lead, Customer, Campaign } from '../../types';
 
 export const crmService = {
-  getLeadAnalytics: (): Promise<any> => axiosClient.get(API_ENDPOINTS.LEADS_ANALYTICS),
+  getLeadAnalytics: (visaType?: string): Promise<any> => {
+    const params = visaType && visaType !== 'ALL' ? { visaType } : undefined;
+    return axiosClient.get(API_ENDPOINTS.LEADS_ANALYTICS, params ? { params } : undefined);
+  },
 
-  getDetailedLeads: (): Promise<Lead[]> => axiosClient.get(API_ENDPOINTS.LEADS_DETAILED),
+  getDetailedLeads: (visaType?: string): Promise<Lead[]> => {
+    const params = visaType && visaType !== 'ALL' ? { visaType } : undefined;
+    return axiosClient.get(API_ENDPOINTS.LEADS_DETAILED, params ? { params } : undefined);
+  },
   getDetailedLeadById: (id: string | number): Promise<Lead> =>
     axiosClient.get(`${API_ENDPOINTS.LEADS_DETAILED}/${id}`),
+
+  assignLead: (id: string | number, assignedTo: string): Promise<any> =>
+    axiosClient.patch(`/api/leads/${id}/assign`, { assignedTo }),
 
   updateLeadStatus: (id: string | number, status: string, notes?: string): Promise<any> =>
     axiosClient.patch(`/api/leads/${id}/status`, { status, notes }),
