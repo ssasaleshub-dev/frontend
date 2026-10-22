@@ -50,18 +50,18 @@ export const getRoleBadgeInfo = (user: User | null | undefined): RoleBadgeInfo =
   if (isAdmin(user)) {
     return {
       label: 'Admin',
-      emoji: '👑',
-      displayText: '👑 Admin',
-      badgeClass: 'ios-badge-indigo rounded-full shadow-2xs font-semibold',
+      emoji: '',
+      displayText: 'Admin',
+      badgeClass: 'text-[#1c1c1e] font-medium',
       deskTitle: 'Super Administrator',
     };
   }
   if (isWorkVisaStaff(user)) {
     return {
       label: 'Work Visa Staff',
-      emoji: '💼',
-      displayText: '💼 Work Visa Staff',
-      badgeClass: 'ios-badge-blue rounded-full font-semibold',
+      emoji: '',
+      displayText: 'Work Visa Staff',
+      badgeClass: 'text-[#1c1c1e] font-medium',
       deskTitle: 'Work Visa Desk',
       permittedVisaType: 'WORK_VISA',
     };
@@ -69,9 +69,9 @@ export const getRoleBadgeInfo = (user: User | null | undefined): RoleBadgeInfo =
   if (isStudyVisaStaff(user)) {
     return {
       label: 'Study Visa Staff',
-      emoji: '🎓',
-      displayText: '🎓 Study Visa Staff',
-      badgeClass: 'ios-badge-green rounded-full font-semibold',
+      emoji: '',
+      displayText: 'Study Visa Staff',
+      badgeClass: 'text-[#1c1c1e] font-medium',
       deskTitle: 'Study Visa Desk',
       permittedVisaType: 'STUDY_VISA',
     };
@@ -79,27 +79,27 @@ export const getRoleBadgeInfo = (user: User | null | undefined): RoleBadgeInfo =
   if (isDomesticCollegeStaff(user)) {
     return {
       label: 'Domestic College Admission Staff',
-      emoji: '🏫',
-      displayText: '🏫 Domestic College Staff',
-      badgeClass: 'ios-badge-orange rounded-full font-semibold',
+      emoji: '',
+      displayText: 'Domestic College Staff',
+      badgeClass: 'text-[#1c1c1e] font-medium',
       deskTitle: 'Domestic College Admission Desk',
     };
   }
   if (isOtherVisaStaff(user)) {
     return {
       label: 'Other Visa Desk',
-      emoji: '🌐',
-      displayText: '🌐 Other Visa Desk',
-      badgeClass: 'ios-badge-orange rounded-full font-semibold',
+      emoji: '',
+      displayText: 'Other Visa Desk',
+      badgeClass: 'text-[#1c1c1e] font-medium',
       deskTitle: 'Other Visa Desk',
       permittedVisaType: 'OTHER_VISA',
     };
   }
   return {
     label: 'Counselor',
-    emoji: '👤',
-    displayText: '👤 Staff Desk',
-    badgeClass: 'ios-badge-gray rounded-full font-medium',
+    emoji: '',
+    displayText: 'Staff Desk',
+    badgeClass: 'text-[#1c1c1e] font-medium',
     deskTitle: 'Counselor',
   };
 };

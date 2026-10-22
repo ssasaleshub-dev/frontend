@@ -4,7 +4,6 @@ import {
   LayoutDashboard,
   Users,
   UserCheck,
-  Megaphone,
   UploadCloud,
   MessageSquare,
   LogOut,
@@ -12,7 +11,6 @@ import {
   X,
   UserCog,
   Plus,
-  Compass,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { isAdmin as checkIsAdmin, getRoleBadgeInfo, getDisplayName } from '../utils/rbac';
@@ -39,7 +37,6 @@ export default function Layout() {
     { to: '/leads', label: 'Candidate Leads', icon: Users, exact: false },
     { to: '/customers', label: 'Candidate Directory', icon: UserCheck, exact: false },
     ...(isAdmin ? [{ to: '/import', label: 'Ingest Excel', icon: UploadCloud, exact: false }] : []),
-    { to: '/campaigns', label: 'Campaign Telemetry', icon: Megaphone, exact: false },
     { to: '/chat', label: 'Counselor Chat', icon: MessageSquare, exact: false },
     ...(isAdmin ? [{ to: '/users', label: 'Team & Roles', icon: UserCog, exact: false }] : []),
   ];
@@ -50,7 +47,6 @@ export default function Layout() {
     if (path.startsWith('/leads')) return { title: 'Candidate Leads Pipeline', subtitle: 'Filter, triage, and contact international visa candidates' };
     if (path.startsWith('/customers')) return { title: 'Candidate Directory', subtitle: 'Verified profiles and historical lead records' };
     if (path.startsWith('/import')) return { title: 'Data Ingestion', subtitle: 'Import Meta ads export spreadsheets & raw lead data' };
-    if (path.startsWith('/campaigns')) return { title: 'Marketing Campaigns', subtitle: 'Meta Instagram & Facebook ad sets and telemetry' };
     if (path.startsWith('/chat')) return { title: 'Counselor Channel', subtitle: 'Internal messaging and lead distribution' };
     if (path.startsWith('/users')) return { title: 'Team & Permissions', subtitle: 'Manage counselor assignments, roles, and access desks' };
     return { title: 'SSA CRM', subtitle: 'Work & Study Visa Consultancy' };
@@ -149,19 +145,6 @@ export default function Layout() {
                 })}
               </nav>
             </div>
-
-            {/* Quick Status Pill */}
-            <div className="p-3 rounded-2xl bg-white/70 border border-black/[0.05] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
-              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#3c3c43]">
-                <Compass size={13} className="text-[#007aff]" />
-                <span>Active Desk Scope</span>
-              </div>
-              <div className="mt-2">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] ${badgeInfo.badgeClass}`}>
-                  {badgeInfo.displayText}
-                </span>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -237,14 +220,6 @@ export default function Layout() {
                   @{user?.login || 'staff'}
                 </span>
               </div>
-
-              {/* Styled Role Badge with Emoji */}
-              <span
-                className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs ${badgeInfo.badgeClass}`}
-                title={badgeInfo.deskTitle}
-              >
-                {badgeInfo.displayText}
-              </span>
 
               {/* Logout Button in Header */}
               <button

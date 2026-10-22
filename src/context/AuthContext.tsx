@@ -44,6 +44,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(null);
   };
 
+  const updateUserAvatar = async (imageUrl: string) => {
+    if (!user) return;
+    const updatedUser: User = { ...user, imageUrl };
+    await authService.updateAccount(updatedUser);
+    setUser(updatedUser);
+    localStorage.setItem('ssa_user', JSON.stringify(updatedUser));
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -53,6 +61,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isAuthenticated: Boolean(token),
         login,
         logout,
+        updateUserAvatar,
       }}
     >
       {children}

@@ -76,28 +76,19 @@ export interface Customer {
   createdAt?: string;
 }
 
-export interface Campaign {
-  id: number | string;
-  name: string;
-  externalId?: string;
-  status?: string;
-  createdAt?: string;
-}
-
-export interface Ad {
-  id: number | string;
-  name: string;
-  externalId?: string;
-  campaignId?: number | string;
-  status?: string;
-}
-
 export interface ChatMessage {
   id?: number | string;
-  content: string;
+  content?: string;
+  message?: string;
   channel?: string;
   userId?: number | string;
   userName?: string;
+  userLogin?: string;
+  userImageUrl?: string;
+  mediaUrl?: string;
+  mediaType?: 'IMAGE' | 'VIDEO' | 'FILE' | string;
+  fileName?: string;
+  fileSize?: number;
   timestamp?: string;
   createdAt?: string;
 }
@@ -109,4 +100,5 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   login: (username: string, password: string, rememberMe?: boolean) => Promise<any>;
   logout: () => void;
+  updateUserAvatar: (imageUrl: string) => Promise<void>;
 }

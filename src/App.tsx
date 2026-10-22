@@ -9,7 +9,6 @@ import Dashboard from './pages/Dashboard';
 import Leads from './pages/Leads';
 import ImportLeads from './pages/ImportLeads';
 import Customers from './pages/Customers';
-import Campaigns from './pages/Campaigns';
 import Chat from './pages/Chat';
 import Users from './pages/Users';
 import CandidateDetail from './pages/CandidateDetail';
@@ -41,7 +40,6 @@ export default function App() {
               }
             />
             <Route path="customers" element={<Customers />} />
-            <Route path="campaigns" element={<Campaigns />} />
             <Route path="chat" element={<Chat />} />
             <Route
               path="users"

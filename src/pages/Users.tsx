@@ -1,13 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   UserPlus,
-  Search,
   RefreshCw,
-  ShieldCheck,
-  User as UserIcon,
-  Briefcase,
-  GraduationCap,
-  School,
   Mail,
   CheckCircle2,
   Trash2,
@@ -32,9 +26,6 @@ export default function Users() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState<string>('');
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [roleFilter, setRoleFilter] = useState<string>('ALL');
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const hasLoadedRef = useRef<boolean>(false);
 
   // Pagination state (default: page=0, size=20, sort=id,desc)
@@ -304,86 +295,23 @@ export default function Users() {
     }
   };
 
-  // Helper to render role badge in table with iOS capsule badge styling
-  const getDepartmentBadge = (authorities: string[] = []) => {
-    if (authorities.includes(USER_ROLES.ADMIN)) {
-      return (
-        <span className="ios-badge ios-badge-indigo">
-          <ShieldCheck size={12} />
-          <span>Admin</span>
-        </span>
-      );
-    }
-    if (authorities.includes(USER_ROLES.WORK_VISA_COUNSELOR)) {
-      return (
-        <span className="ios-badge ios-badge-blue">
-          <Briefcase size={12} />
-          <span>Work Visa Staff</span>
-        </span>
-      );
-    }
-    if (authorities.includes(USER_ROLES.STUDY_VISA_COUNSELOR)) {
-      return (
-        <span className="ios-badge ios-badge-green">
-          <GraduationCap size={12} />
-          <span>Study Visa Staff</span>
-        </span>
-      );
-    }
-    if (authorities.includes(USER_ROLES.DOMESTIC_COLLEGE_ADMISSION)) {
-      return (
-        <span className="ios-badge ios-badge-orange">
-          <School size={12} />
-          <span>Domestic College Admission Staff</span>
-        </span>
-      );
-    }
-    return (
-      <span className="ios-badge ios-badge-gray">
-        <UserIcon size={12} />
-        <span>Staff Desk</span>
-      </span>
-    );
+  // Helper to get role name
+  const getRoleName = (authorities: string[] = []) => {
+    if (authorities.includes(USER_ROLES.ADMIN)) return 'Admin';
+    if (authorities.includes(USER_ROLES.WORK_VISA_COUNSELOR)) return 'Work Visa Staff';
+    if (authorities.includes(USER_ROLES.STUDY_VISA_COUNSELOR)) return 'Study Visa Staff';
+    if (authorities.includes(USER_ROLES.DOMESTIC_COLLEGE_ADMISSION))
+      return 'Domestic College Admission Staff';
+    return 'Staff';
   };
-
-  // Filtered and searched list
-  const filteredUsers = useMemo(() => {
-    return users.filter((u) => {
-      const query = searchTerm.toLowerCase().trim();
-      const matchSearch =
-        !query ||
-        (u.login || '').toLowerCase().includes(query) ||
-        (u.firstName || '').toLowerCase().includes(query) ||
-        (u.lastName || '').toLowerCase().includes(query) ||
-        (u.email || '').toLowerCase().includes(query) ||
-        String(u.id || '').includes(query);
-
-      const matchRole =
-        roleFilter === 'ALL' ||
-        (roleFilter === USER_ROLES.ADMIN && u.authorities?.includes(USER_ROLES.ADMIN)) ||
-        (roleFilter === USER_ROLES.WORK_VISA_COUNSELOR &&
-          u.authorities?.includes(USER_ROLES.WORK_VISA_COUNSELOR)) ||
-        (roleFilter === USER_ROLES.STUDY_VISA_COUNSELOR &&
-          u.authorities?.includes(USER_ROLES.STUDY_VISA_COUNSELOR)) ||
-        (roleFilter === USER_ROLES.DOMESTIC_COLLEGE_ADMISSION &&
-          u.authorities?.includes(USER_ROLES.DOMESTIC_COLLEGE_ADMISSION));
-
-      const matchStatus =
-        statusFilter === 'ALL' ||
-        (statusFilter === 'ACTIVE' && u.activated) ||
-        (statusFilter === 'INACTIVE' && !u.activated);
-
-      return matchSearch && matchRole && matchStatus;
-    });
-  }, [users, searchTerm, roleFilter, statusFilter]);
 
   // Paginated slice
   const paginatedUsers = useMemo(() => {
     const startIndex = page * pageSize;
-    return filteredUsers.slice(startIndex, startIndex + pageSize);
-  }, [filteredUsers, page, pageSize]);
+    return users.slice(startIndex, startIndex + pageSize);
+  }, [users, page, pageSize]);
 
-  const totalPages = Math.ceil(filteredUsers.length / pageSize) || 1;
+  const totalPages = Math.ceil(users.length / pageSize) || 1;
 
   // Statistics
   const stats = useMemo(() => {
@@ -470,130 +398,37 @@ export default function Users() {
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         {/* Total Users */}
         <div className="ios-card ios-card-hover p-4 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium text-[#8e8e93]">Total Staff</span>
-            <div className="w-7 h-7 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
-              <UsersIcon size={14} />
-            </div>
-          </div>
+          <span className="text-[11px] font-medium text-[#8e8e93]">Total Staff</span>
           <p className="text-2xl font-bold tracking-tight text-[#1c1c1e] mt-2">{stats.total}</p>
-          <p className="text-[10px] text-[#34c759] font-medium mt-0.5">{stats.active} active</p>
+          <p className="text-[10px] text-[#8e8e93] mt-0.5">{stats.active} active</p>
         </div>
 
         {/* Work Visa Staff */}
         <div className="ios-card ios-card-hover p-4 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium text-[#8e8e93]">Work Visa Staff</span>
-            <div className="w-7 h-7 rounded-lg bg-[#007aff]/10 text-[#007aff] flex items-center justify-center">
-              <Briefcase size={14} />
-            </div>
-          </div>
+          <span className="text-[11px] font-medium text-[#8e8e93]">Work Visa Staff</span>
           <p className="text-2xl font-bold tracking-tight text-[#1c1c1e] mt-2">{stats.workVisa}</p>
           <p className="text-[10px] text-[#8e8e93] mt-0.5">Overseas jobs</p>
         </div>
 
         {/* Study Visa Staff */}
         <div className="ios-card ios-card-hover p-4 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium text-[#8e8e93]">Study Visa Staff</span>
-            <div className="w-7 h-7 rounded-lg bg-[#34c759]/10 text-[#34c759] flex items-center justify-center">
-              <GraduationCap size={14} />
-            </div>
-          </div>
+          <span className="text-[11px] font-medium text-[#8e8e93]">Study Visa Staff</span>
           <p className="text-2xl font-bold tracking-tight text-[#1c1c1e] mt-2">{stats.studyVisa}</p>
           <p className="text-[10px] text-[#8e8e93] mt-0.5">University desks</p>
         </div>
 
         {/* Domestic College Admission Staff */}
         <div className="ios-card ios-card-hover p-4 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium text-[#8e8e93]">College Admission</span>
-            <div className="w-7 h-7 rounded-lg bg-[#ff9500]/10 text-[#ff9500] flex items-center justify-center">
-              <School size={14} />
-            </div>
-          </div>
+          <span className="text-[11px] font-medium text-[#8e8e93]">College Admission</span>
           <p className="text-2xl font-bold tracking-tight text-[#1c1c1e] mt-2">{stats.domesticCollege}</p>
           <p className="text-[10px] text-[#8e8e93] mt-0.5">Domestic admissions</p>
         </div>
 
         {/* Admins */}
         <div className="ios-card ios-card-hover p-4 flex flex-col justify-between col-span-2 sm:col-span-1">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium text-[#8e8e93]">Administrators</span>
-            <div className="w-7 h-7 rounded-lg bg-[#5856d6]/10 text-[#5856d6] flex items-center justify-center">
-              <ShieldCheck size={14} />
-            </div>
-          </div>
+          <span className="text-[11px] font-medium text-[#8e8e93]">Administrators</span>
           <p className="text-2xl font-bold tracking-tight text-[#1c1c1e] mt-2">{stats.admins}</p>
           <p className="text-[10px] text-[#8e8e93] mt-0.5">Full access</p>
-        </div>
-      </div>
-
-      {/* Filter and Search Bar */}
-      <div className="ios-card p-3 sm:p-4 flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
-        <div className="relative flex-1">
-          <Search
-            size={14}
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8e8e93] pointer-events-none"
-          />
-          <input
-            type="text"
-            placeholder="Search by ID, username, name, or email..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setPage(0);
-            }}
-            className="w-full pl-9 pr-3 py-2 bg-[rgba(118,118,128,0.08)] border border-[rgba(60,60,67,0.1)] rounded-xl text-xs text-[#1c1c1e] placeholder-[#8e8e93] focus:outline-none focus:bg-white focus:border-[#007aff] transition-all"
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Role Filter */}
-          <select
-            value={roleFilter}
-            onChange={(e) => {
-              setRoleFilter(e.target.value);
-              setPage(0);
-            }}
-            className="px-3 py-1.5 bg-white border border-[rgba(60,60,67,0.15)] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:border-[#007aff] shadow-2xs"
-          >
-            <option value="ALL">All Roles</option>
-            <option value={USER_ROLES.WORK_VISA_COUNSELOR}>Work Visa Staff</option>
-            <option value={USER_ROLES.STUDY_VISA_COUNSELOR}>Study Visa Staff</option>
-            <option value={USER_ROLES.DOMESTIC_COLLEGE_ADMISSION}>
-              Domestic College Admission Staff
-            </option>
-            <option value={USER_ROLES.ADMIN}>Administrators</option>
-          </select>
-
-          {/* Status Filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(0);
-            }}
-            className="px-3 py-1.5 bg-white border border-[rgba(60,60,67,0.15)] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:border-[#007aff] shadow-2xs"
-          >
-            <option value="ALL">All Status</option>
-            <option value="ACTIVE">Active</option>
-            <option value="INACTIVE">Inactive</option>
-          </select>
-
-          {(searchTerm || roleFilter !== 'ALL' || statusFilter !== 'ALL') && (
-            <button
-              onClick={() => {
-                setSearchTerm('');
-                setRoleFilter('ALL');
-                setStatusFilter('ALL');
-                setPage(0);
-              }}
-              className="text-xs text-[#007aff] hover:underline px-1 py-1 font-medium"
-            >
-              Reset
-            </button>
-          )}
         </div>
       </div>
 
@@ -607,7 +442,7 @@ export default function Users() {
                 <th className="py-3 px-4">Username</th>
                 <th className="py-3 px-4">Full Name</th>
                 <th className="py-3 px-4">Email</th>
-                <th className="py-3 px-4">Role Badge</th>
+                <th className="py-3 px-4">Role</th>
                 <th className="py-3 px-4">Status</th>
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
@@ -629,9 +464,7 @@ export default function Users() {
                       <UsersIcon size={24} className="text-[#c7c7cc]" />
                       <p className="font-semibold text-[#1c1c1e]">No users found</p>
                       <p className="text-[11px] text-[#8e8e93] max-w-sm">
-                        {searchTerm || roleFilter !== 'ALL' || statusFilter !== 'ALL'
-                          ? 'Try adjusting your search criteria or clearing filters.'
-                          : 'No staff accounts configured. Click "Create New User" to add one.'}
+                        No staff accounts configured. Click "Create New User" to add one.
                       </p>
                     </div>
                   </td>
@@ -666,7 +499,7 @@ export default function Users() {
                               @{item.login}
                             </span>
                             {isCurrent && (
-                              <span className="ml-1.5 px-1.5 py-0.2 bg-[#007aff]/10 text-[#007aff] rounded-full text-[9px] font-semibold">
+                              <span className="ml-1.5 px-1.5 py-0.5 bg-gray-100 text-[#1c1c1e] rounded text-[9px] font-medium">
                                 You
                               </span>
                             )}
@@ -696,24 +529,16 @@ export default function Users() {
                         )}
                       </td>
 
-                      {/* Role Badge */}
-                      <td className="py-3 px-4">
-                        {getDepartmentBadge(item.authorities)}
+                      {/* Role */}
+                      <td className="py-3 px-4 text-[#1c1c1e]">
+                        {getRoleName(item.authorities)}
                       </td>
 
                       {/* Status */}
                       <td className="py-3 px-4">
-                        {item.activated ? (
-                          <span className="ios-badge ios-badge-green">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#34c759] animate-pulse" />
-                            <span>Active</span>
-                          </span>
-                        ) : (
-                          <span className="ios-badge ios-badge-gray">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#8e8e93]" />
-                            <span>Inactive</span>
-                          </span>
-                        )}
+                        <span className={item.activated ? 'text-[#1c1c1e]' : 'text-[#8e8e93]'}>
+                          {item.activated ? 'Active' : 'Inactive'}
+                        </span>
                       </td>
 
                       {/* Actions */}
@@ -753,14 +578,14 @@ export default function Users() {
           <div>
             Showing{' '}
             <span className="font-semibold text-[#1c1c1e]">
-              {filteredUsers.length === 0 ? 0 : page * pageSize + 1}
+              {users.length === 0 ? 0 : page * pageSize + 1}
             </span>{' '}
             to{' '}
             <span className="font-semibold text-[#1c1c1e]">
-              {Math.min((page + 1) * pageSize, filteredUsers.length)}
+              {Math.min((page + 1) * pageSize, users.length)}
             </span>{' '}
             of{' '}
-            <span className="font-semibold text-[#1c1c1e]">{filteredUsers.length}</span> users
+            <span className="font-semibold text-[#1c1c1e]">{users.length}</span> users
           </div>
 
           <div className="flex items-center gap-2">
@@ -843,14 +668,10 @@ export default function Users() {
                     fieldErrors.login ? 'border-[#ff3b30] ring-1 ring-[#ff3b30]' : ''
                   }`}
                 />
-                {fieldErrors.login ? (
+                {fieldErrors.login && (
                   <p className="text-[11px] text-[#ff3b30] font-medium mt-1 flex items-center gap-1">
                     <AlertCircle size={11} />
                     <span>{fieldErrors.login}</span>
-                  </p>
-                ) : (
-                  <p className="text-[10px] text-[#8e8e93] mt-1">
-                    1–50 characters. Letters, numbers, dot, underscore, dash only (automatically lowercased).
                   </p>
                 )}
               </div>
@@ -859,7 +680,7 @@ export default function Users() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-[#1c1c1e] mb-1">
-                    First Name <span className="text-[10px] text-[#8e8e93] font-normal">(Optional)</span>
+                    First Name
                   </label>
                   <input
                     type="text"
@@ -872,7 +693,7 @@ export default function Users() {
                 </div>
                 <div>
                   <label className="block font-semibold text-[#1c1c1e] mb-1">
-                    Last Name <span className="text-[10px] text-[#8e8e93] font-normal">(Optional)</span>
+                    Last Name
                   </label>
                   <input
                     type="text"
@@ -905,25 +726,20 @@ export default function Users() {
                     fieldErrors.email ? 'border-[#ff3b30] ring-1 ring-[#ff3b30]' : ''
                   }`}
                 />
-                {fieldErrors.email ? (
+                {fieldErrors.email && (
                   <p className="text-[11px] text-[#ff3b30] font-medium mt-1 flex items-center gap-1">
                     <AlertCircle size={11} />
                     <span>{fieldErrors.email}</span>
                   </p>
-                ) : (
-                  <p className="text-[10px] text-[#8e8e93] mt-1">
-                    Must be a valid, unique email address (5–254 characters).
-                  </p>
                 )}
               </div>
 
-              {/* Temporary Password */}
+              {/* Password */}
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block font-semibold text-[#1c1c1e]">
-                    Temporary Password
+                    Password
                   </label>
-                  <span className="text-[10px] text-[#8e8e93]">Optional (min 4 characters)</span>
                 </div>
                 <div className="relative">
                   <input
@@ -948,64 +764,32 @@ export default function Users() {
                     {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
                 </div>
-                {fieldErrors.password ? (
+                {fieldErrors.password && (
                   <p className="text-[11px] text-[#ff3b30] font-medium mt-1 flex items-center gap-1">
                     <AlertCircle size={11} />
                     <span>{fieldErrors.password}</span>
                   </p>
-                ) : (
-                  <p className="text-[10px] text-[#8e8e93] mt-1">
-                    If provided, user can log in immediately. If omitted, backend generates a random password.
-                  </p>
                 )}
               </div>
 
-              {/* Role Assignment (4 System Roles) */}
+              {/* Role Assignment Dropdown */}
               <div>
-                <label className="block font-semibold text-[#1c1c1e] mb-1.5">
+                <label className="block font-semibold text-[#1c1c1e] mb-1">
                   Role Assignment <span className="text-[#ff3b30]">*</span>
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {USER_ROLE_CONFIG.map((roleOpt) => {
-                    const isSelected = formData.authorities?.includes(roleOpt.value);
-                    return (
-                      <button
-                        key={roleOpt.value}
-                        type="button"
-                        onClick={() => handleSelectRole(roleOpt.value)}
-                        className={`p-3 rounded-2xl border text-left transition-all flex flex-col justify-between ${
-                          isSelected
-                            ? 'border-[#007aff] bg-[#007aff]/5 ring-1 ring-[#007aff]'
-                            : 'border-[rgba(60,60,67,0.12)] hover:border-[rgba(60,60,67,0.25)] bg-white'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-semibold text-[#1c1c1e] text-xs flex items-center gap-1.5">
-                            {roleOpt.value === USER_ROLES.WORK_VISA_COUNSELOR && (
-                              <Briefcase size={13} className="text-[#007aff]" />
-                            )}
-                            {roleOpt.value === USER_ROLES.STUDY_VISA_COUNSELOR && (
-                              <GraduationCap size={13} className="text-[#34c759]" />
-                            )}
-                            {roleOpt.value === USER_ROLES.DOMESTIC_COLLEGE_ADMISSION && (
-                              <School size={13} className="text-[#ff9500]" />
-                            )}
-                            {roleOpt.value === USER_ROLES.ADMIN && (
-                              <ShieldCheck size={13} className="text-[#5856d6]" />
-                            )}
-                            <span>{roleOpt.label}</span>
-                          </span>
-                          {isSelected && (
-                            <div className="w-4 h-4 rounded-full bg-[#007aff] text-white flex items-center justify-center">
-                              <Check size={10} strokeWidth={3} />
-                            </div>
-                          )}
-                        </div>
-                        <p className="text-[10px] text-[#8e8e93] leading-snug">{roleOpt.desc}</p>
-                      </button>
-                    );
-                  })}
-                </div>
+                <select
+                  value={formData.authorities?.[0] || USER_ROLES.WORK_VISA_COUNSELOR}
+                  onChange={(e) => handleSelectRole(e.target.value)}
+                  className={`w-full ios-input ${
+                    fieldErrors.authorities ? 'border-[#ff3b30] ring-1 ring-[#ff3b30]' : ''
+                  }`}
+                >
+                  {USER_ROLE_CONFIG.map((roleOpt) => (
+                    <option key={roleOpt.value} value={roleOpt.value}>
+                      {roleOpt.label}
+                    </option>
+                  ))}
+                </select>
                 {fieldErrors.authorities && (
                   <p className="text-[11px] text-[#ff3b30] font-medium mt-1 flex items-center gap-1">
                     <AlertCircle size={11} />
@@ -1018,9 +802,6 @@ export default function Users() {
               <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[rgba(118,118,128,0.06)] border border-[rgba(60,60,67,0.08)]">
                 <div>
                   <p className="font-semibold text-[#1c1c1e] text-xs">Account Status (Activated)</p>
-                  <p className="text-[10px] text-[#8e8e93]">
-                    Enables login immediately upon creation
-                  </p>
                 </div>
                 <button
                   type="button"
@@ -1144,59 +925,28 @@ export default function Users() {
                 />
               </div>
 
-              {/* Role Selection */}
+              {/* Role Selection Dropdown */}
               <div>
-                <label className="block font-semibold text-[#1c1c1e] mb-1.5">
+                <label className="block font-semibold text-[#1c1c1e] mb-1">
                   Role Assignment <span className="text-[#ff3b30]">*</span>
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {USER_ROLE_CONFIG.map((roleOpt) => {
-                    const isSelected = formData.authorities?.includes(roleOpt.value);
-                    return (
-                      <button
-                        key={roleOpt.value}
-                        type="button"
-                        onClick={() => handleSelectRole(roleOpt.value)}
-                        className={`p-3 rounded-2xl border text-left transition-all flex flex-col justify-between ${
-                          isSelected
-                            ? 'border-[#007aff] bg-[#007aff]/5 ring-1 ring-[#007aff]'
-                            : 'border-[rgba(60,60,67,0.12)] hover:border-[rgba(60,60,67,0.25)] bg-white'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-semibold text-[#1c1c1e] text-xs flex items-center gap-1.5">
-                            {roleOpt.value === USER_ROLES.WORK_VISA_COUNSELOR && (
-                              <Briefcase size={13} className="text-[#007aff]" />
-                            )}
-                            {roleOpt.value === USER_ROLES.STUDY_VISA_COUNSELOR && (
-                              <GraduationCap size={13} className="text-[#34c759]" />
-                            )}
-                            {roleOpt.value === USER_ROLES.DOMESTIC_COLLEGE_ADMISSION && (
-                              <School size={13} className="text-[#ff9500]" />
-                            )}
-                            {roleOpt.value === USER_ROLES.ADMIN && (
-                              <ShieldCheck size={13} className="text-[#5856d6]" />
-                            )}
-                            <span>{roleOpt.label}</span>
-                          </span>
-                          {isSelected && (
-                            <div className="w-4 h-4 rounded-full bg-[#007aff] text-white flex items-center justify-center">
-                              <Check size={10} strokeWidth={3} />
-                            </div>
-                          )}
-                        </div>
-                        <p className="text-[10px] text-[#8e8e93] leading-snug">{roleOpt.desc}</p>
-                      </button>
-                    );
-                  })}
-                </div>
+                <select
+                  value={formData.authorities?.[0] || USER_ROLES.WORK_VISA_COUNSELOR}
+                  onChange={(e) => handleSelectRole(e.target.value)}
+                  className="w-full ios-input"
+                >
+                  {USER_ROLE_CONFIG.map((roleOpt) => (
+                    <option key={roleOpt.value} value={roleOpt.value}>
+                      {roleOpt.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Status Activated iOS Toggle Switch */}
               <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[rgba(118,118,128,0.06)] border border-[rgba(60,60,67,0.08)]">
                 <div>
                   <p className="font-semibold text-[#1c1c1e] text-xs">Account Status (Activated)</p>
-                  <p className="text-[10px] text-[#8e8e93]">Enable or disable login access</p>
                 </div>
                 <button
                   type="button"

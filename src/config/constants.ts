@@ -28,14 +28,11 @@ export const API_ENDPOINTS = {
 
   CUSTOMERS: '/api/customers',
 
-  CAMPAIGNS: '/api/campaigns',
-  AD_SETS: '/api/ad-sets',
-  ADS: '/api/ads',
-
   LEAD_FORMS: '/api/lead-forms',
   LEAD_PREFERENCES: '/api/lead-preferences',
 
   MESSAGES: '/api/messages',
+  FILES_UPLOAD: '/api/files/upload',
 } as const;
 
 export const VISA_TYPES = {

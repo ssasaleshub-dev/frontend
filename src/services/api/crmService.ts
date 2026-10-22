@@ -1,6 +1,6 @@
 import axiosClient from './axiosClient';
 import { API_ENDPOINTS } from '../../config/constants';
-import type { Lead, Customer, Campaign } from '../../types';
+import type { Lead, Customer } from '../../types';
 
 export const crmService = {
   getLeadAnalytics: (visaType?: string): Promise<any> => {
@@ -57,15 +57,6 @@ export const crmService = {
     axiosClient.put(`${API_ENDPOINTS.CUSTOMERS}/${id}`, customerData),
   deleteCustomer: (id: string | number): Promise<any> =>
     axiosClient.delete(`${API_ENDPOINTS.CUSTOMERS}/${id}`),
-
-  getCampaigns: (page: number = 0, size: number = 50): Promise<any> =>
-    axiosClient.get(API_ENDPOINTS.CAMPAIGNS, { params: { page, size } }),
-  createCampaign: (campaignData: Partial<Campaign>): Promise<Campaign> =>
-    axiosClient.post(API_ENDPOINTS.CAMPAIGNS, campaignData),
-  getAdSets: (page: number = 0, size: number = 50): Promise<any> =>
-    axiosClient.get(API_ENDPOINTS.AD_SETS, { params: { page, size } }),
-  getAds: (page: number = 0, size: number = 50): Promise<any> =>
-    axiosClient.get(API_ENDPOINTS.ADS, { params: { page, size } }),
 
   getLeadForms: (): Promise<any> => axiosClient.get(API_ENDPOINTS.LEAD_FORMS),
   getLeadPreferences: (): Promise<any> => axiosClient.get(API_ENDPOINTS.LEAD_PREFERENCES),
