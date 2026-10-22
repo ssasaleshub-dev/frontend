@@ -1,15 +1,22 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
-  MessageSquare,
-  Send,
+  ArrowUp,
+  Plus,
   Trash2,
   Search,
   RefreshCw,
   AlertCircle,
   Users as UsersIcon,
   User as UserIcon,
+  FileText,
+  X,
+  Loader2,
+  ExternalLink,
+  Info,
 } from 'lucide-react';
 import chatService from '../services/api/chatService';
+import fileService from '../services/api/fileService';
+import authService from '../services/api/authService';
 import axiosClient from '../services/api/axiosClient';
 import { useAuth } from '../context/AuthContext';
 import type { ChatMessage, User } from '../types';
@@ -21,7 +28,7 @@ export default function Chat() {
   const [usersList, setUsersList] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState<boolean>(false);
 
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [sending, setSending] = useState<boolean>(false);
@@ -29,28 +36,28 @@ export default function Chat() {
   const [apiNotice, setApiNotice] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
 
+  // File upload state for attachments
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
+  const [uploadingFile, setUploadingFile] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  const currentUserId = user?.id || 1;
-  const currentLogin = (user?.login || 'user').toLowerCase();
+  const currentUserId = user?.id || authService.getUser()?.id || 1;
+  const currentLogin = (user?.login || authService.getUser()?.login || '').toLowerCase();
   const currentUserName = user?.firstName
     ? `${user.firstName} ${user.lastName || ''}`.trim()
-    : user?.login || 'User';
-
-  // Compute active channel:
-  // - "general" for common group chat with all users
-  // - "dm_userA_userB" (alphabetically sorted) for 1-on-1 P2P chat
-  const activeChannel =
-    chatType === 'group' || !selectedUser
-      ? 'general'
-      : `dm_${[currentLogin, (selectedUser.login || '').toLowerCase()].sort().join('_')}`;
+    : authService.getUser()?.firstName
+    ? `${authService.getUser()?.firstName} ${authService.getUser()?.lastName || ''}`.trim()
+    : user?.login || authService.getUser()?.login || 'User';
 
   const scrollToBottom = (smooth = true) => {
     messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
   };
 
-  const parseMessageList = (res: any): any[] => {
+  const parseMessageList = (res: any): ChatMessage[] => {
     if (Array.isArray(res)) return res;
     if (Array.isArray(res?.content)) return res.content;
     if (Array.isArray(res?.messages)) return res.messages;
@@ -58,15 +65,17 @@ export default function Chat() {
     return [];
   };
 
-  // Fetch staff users for P2P direct messages
+  // Fetch real staff users from database for P2P direct messages (never static)
   const fetchUsers = useCallback(async () => {
     setLoadingUsers(true);
+    const myLogin = (user?.login || authService.getUser()?.login || '').toLowerCase();
     try {
       const res: any = await axiosClient.get('/api/users');
       const list: User[] = Array.isArray(res) ? res : res?.content || [];
-      const others = list.filter(
-        (u) => (u.login || '').toLowerCase() !== currentLogin
-      );
+      const others = list.filter((u) => {
+        const l = (u.login || '').toLowerCase();
+        return l && l !== myLogin;
+      });
       setUsersList(others);
     } catch {
       try {
@@ -74,28 +83,40 @@ export default function Chat() {
           params: { size: 50 },
         });
         const list2: User[] = Array.isArray(res2) ? res2 : res2?.content || [];
-        const others2 = list2.filter(
-          (u) => (u.login || '').toLowerCase() !== currentLogin
-        );
+        const others2 = list2.filter((u) => {
+          const l = (u.login || '').toLowerCase();
+          return l && l !== myLogin;
+        });
         setUsersList(others2);
       } catch {
-        // keep existing list
+        setUsersList([]);
       }
     } finally {
       setLoadingUsers(false);
     }
-  }, [currentLogin]);
+  }, [user]);
 
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
 
-  // Fetch messages for active channel
+  // Fetch messages for active conversation (General group or P2P direct messages)
   const fetchMessages = useCallback(
     async (isSilent = false) => {
+      if (chatType === 'p2p' && !selectedUser) {
+        setMessages([]);
+        setLoading(false);
+        return;
+      }
+
       if (!isSilent) setLoading(true);
       try {
-        const res = await chatService.getMessages(activeChannel);
+        let res: any;
+        if (chatType === 'p2p' && selectedUser?.id) {
+          res = await chatService.getP2pMessages(selectedUser.id);
+        } else {
+          res = await chatService.getMessages('general');
+        }
         const data = parseMessageList(res);
 
         setMessages(data);
@@ -106,7 +127,7 @@ export default function Chat() {
       } catch (err: any) {
         if (err.message?.includes('404')) {
           setApiNotice(
-            'Backend /api/messages endpoint is not yet mounted. Running in offline preview mode.'
+            'Backend messages endpoint is not yet mounted. Running in offline preview mode.'
           );
         } else {
           setApiNotice(`API Notice: ${err.message}`);
@@ -115,7 +136,7 @@ export default function Chat() {
         if (!isSilent) setLoading(false);
       }
     },
-    [activeChannel]
+    [chatType, selectedUser]
   );
 
   useEffect(() => {
@@ -130,32 +151,98 @@ export default function Chat() {
     return () => clearInterval(interval);
   }, [autoRefresh, fetchMessages]);
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPendingFile(file);
+    if (file.type.startsWith('image/')) {
+      const preview = URL.createObjectURL(file);
+      setFilePreviewUrl(preview);
+    } else {
+      setFilePreviewUrl(null);
+    }
+  };
+
+  const clearPendingFile = () => {
+    if (filePreviewUrl) URL.revokeObjectURL(filePreviewUrl);
+    setPendingFile(null);
+    setFilePreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const handleSendMessage = async (e?: React.FormEvent<HTMLFormElement>) => {
     e?.preventDefault();
     const trimmed = inputText.trim();
-    if (!trimmed || sending) return;
+    if ((!trimmed && !pendingFile) || sending || uploadingFile) return;
+    if (chatType === 'p2p' && !selectedUser) return;
 
     setSending(true);
+    let uploadedMediaUrl: string | undefined;
+    let uploadedMediaType: string | undefined;
+    let uploadedFileName: string | undefined;
+    let uploadedFileSize: number | undefined;
+
+    // Upload attachment to Cloudflare R2 if selected
+    if (pendingFile) {
+      setUploadingFile(true);
+      try {
+        const uploadRes = await fileService.uploadFile(pendingFile, 'chat');
+        if (uploadRes?.url) {
+          uploadedMediaUrl = uploadRes.url;
+          uploadedMediaType = uploadRes.mediaType || (pendingFile.type.startsWith('video/') ? 'VIDEO' : 'IMAGE');
+          uploadedFileName = uploadRes.fileName || pendingFile.name;
+          uploadedFileSize = uploadRes.fileSize || pendingFile.size;
+        }
+      } catch (err: any) {
+        alert(`Failed to upload media to R2: ${err?.message || 'Upload error'}`);
+        setSending(false);
+        setUploadingFile(false);
+        return;
+      } finally {
+        setUploadingFile(false);
+      }
+    }
+
+    const isP2p = chatType === 'p2p' && selectedUser;
+    const recipientId = isP2p && selectedUser.id ? Number(selectedUser.id) : undefined;
+    const channel = isP2p ? 'p2p' : 'general';
+
     const tempId = Date.now();
     const optimisticMessage: ChatMessage = {
       id: tempId,
       content: trimmed,
-      channel: activeChannel,
+      channel,
+      recipientId,
+      recipientLogin: isP2p ? selectedUser.login : undefined,
+      recipientName: isP2p ? getTargetUserName(selectedUser) : undefined,
+      isRead: false,
       userId: currentUserId,
       userName: currentUserName,
+      userLogin: currentLogin,
+      userImageUrl: user?.imageUrl,
+      mediaUrl: uploadedMediaUrl,
+      mediaType: uploadedMediaType,
+      fileName: uploadedFileName,
+      fileSize: uploadedFileSize,
       createdAt: new Date().toISOString(),
     };
 
     setMessages((prev) => [...prev, optimisticMessage]);
     setInputText('');
+    clearPendingFile();
     setTimeout(() => scrollToBottom(true), 50);
 
     try {
       const response = await chatService.sendMessage({
         content: trimmed,
-        channel: activeChannel,
+        channel,
+        recipientId,
         userId: currentUserId,
         userName: currentUserName,
+        mediaUrl: uploadedMediaUrl,
+        mediaType: uploadedMediaType,
+        fileName: uploadedFileName,
+        fileSize: uploadedFileSize,
       });
 
       if (response && response.id) {
@@ -190,15 +277,23 @@ export default function Chat() {
     if (!val) return '';
     const date = new Date(val);
     if (isNaN(date.getTime())) return '';
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  };
+
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   const filteredMessages = messages.filter((m) => {
     if (!searchQuery.trim()) return true;
     const text = (m.content || m.message || '').toLowerCase();
-    const author = (m.userName || m.user?.login || '').toLowerCase();
+    const author = (m.userName || m.userLogin || '').toLowerCase();
+    const file = (m.fileName || '').toLowerCase();
     const q = searchQuery.toLowerCase();
-    return text.includes(q) || author.includes(q);
+    return text.includes(q) || author.includes(q) || file.includes(q);
   });
 
   const getTargetUserName = (target: User) => {
@@ -208,8 +303,69 @@ export default function Chat() {
     return target.login;
   };
 
+  // Real database staff users for 1-on-1 P2P, strictly excluding current user
+  const directUsers = useMemo(() => {
+    return usersList.filter((u) => {
+      const l = (u.login || '').toLowerCase();
+      return l && l !== currentLogin;
+    });
+  }, [usersList, currentLogin]);
+
+  const isImageMedia = (msg: ChatMessage) => {
+    if (msg.mediaType === 'IMAGE') return true;
+    if (!msg.mediaUrl) return false;
+    return /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(msg.mediaUrl);
+  };
+
+  const isVideoMedia = (msg: ChatMessage) => {
+    if (msg.mediaType === 'VIDEO') return true;
+    if (!msg.mediaUrl) return false;
+    return /\.(mp4|mov|webm|ogg)$/i.test(msg.mediaUrl);
+  };
+
+  // Center-aligned iOS conversation date divider
+  const renderDateDivider = (currStr?: string, prevStr?: string) => {
+    if (!currStr) return null;
+    const curr = new Date(currStr);
+    if (isNaN(curr.getTime())) return null;
+
+    if (prevStr) {
+      const prev = new Date(prevStr);
+      if (!isNaN(prev.getTime())) {
+        const diffMs = curr.getTime() - prev.getTime();
+        if (diffMs < 20 * 60 * 1000 && curr.toDateString() === prev.toDateString()) {
+          return null;
+        }
+      }
+    }
+
+    const now = new Date();
+    const isToday = curr.toDateString() === now.toDateString();
+    const yesterday = new Date();
+    yesterday.setDate(now.getDate() - 1);
+    const isYesterday = curr.toDateString() === yesterday.toDateString();
+
+    const timeStr = curr.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    let label = '';
+    if (isToday) {
+      label = `Today ${timeStr}`;
+    } else if (isYesterday) {
+      label = `Yesterday ${timeStr}`;
+    } else {
+      label = `${curr.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })} at ${timeStr}`;
+    }
+
+    return (
+      <div className="flex justify-center my-3 select-none">
+        <span className="text-[11px] font-semibold text-[#8e8e93] tracking-tight">
+          {label}
+        </span>
+      </div>
+    );
+  };
+
   return (
-    <div className="flex flex-col h-[calc(100vh-130px)] bg-white rounded-2xl border border-[rgba(60,60,67,0.1)] shadow-xs overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-130px)] bg-white rounded-2xl border border-[rgba(60,60,67,0.12)] shadow-sm overflow-hidden select-none">
       {apiNotice && (
         <div className="bg-[#fff9e6] border-b border-[#ffe699] px-4 py-2 flex items-center justify-between text-xs text-[#806000]">
           <div className="flex items-center gap-2">
@@ -218,7 +374,7 @@ export default function Chat() {
           </div>
           <button
             onClick={() => setApiNotice(null)}
-            className="text-[#806000] hover:text-[#4d3a00] font-bold ml-4"
+            className="text-[#806000] hover:text-[#4d3a00] font-bold ml-4 cursor-pointer"
           >
             ×
           </button>
@@ -226,23 +382,20 @@ export default function Chat() {
       )}
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* Left Sidebar: 1 Common Group Chat + P2P User Chat */}
-        <div className="w-64 border-r border-[rgba(60,60,67,0.1)] bg-[#f9f9fa] flex flex-col shrink-0">
+        {/* Left Sidebar: iOS Messages Style */}
+        <div className="w-72 sm:w-80 border-r border-[rgba(60,60,67,0.12)] bg-[#f6f6f8] flex flex-col shrink-0">
           {/* Header */}
-          <div className="p-3.5 border-b border-[rgba(60,60,67,0.08)] flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <MessageSquare size={16} className="text-[#007aff]" />
-              <h2 className="font-semibold text-xs text-[#1c1c1e]">
-                Conversations
-              </h2>
-            </div>
+          <div className="p-4 border-b border-[rgba(60,60,67,0.08)] flex items-center justify-between">
+            <h1 className="text-[20px] font-bold text-[#000000] tracking-tight">
+              Messages
+            </h1>
             <button
               onClick={() => {
                 fetchUsers();
                 fetchMessages(false);
               }}
-              title="Refresh conversation"
-              className="p-1 hover:bg-black/[0.05] rounded-full text-[#8e8e93] hover:text-[#1c1c1e] transition-colors"
+              title="Refresh messages"
+              className="w-7 h-7 rounded-full bg-black/[0.04] hover:bg-black/[0.08] active:scale-95 text-[#636366] hover:text-[#000000] flex items-center justify-center transition-all cursor-pointer"
             >
               <RefreshCw
                 size={13}
@@ -251,196 +404,260 @@ export default function Chat() {
             </button>
           </div>
 
-          <div className="p-2.5 space-y-4 flex-1 overflow-y-auto">
-            {/* 1. Common Group Chat (All Users) */}
-            <div>
-              <p className="px-2.5 pb-1.5 text-[10px] font-semibold text-[#8e8e93] uppercase tracking-wider">
-                Group Chat
-              </p>
+          {/* Search Bar & Segmented Switch */}
+          <div className="px-3 pt-2.5 pb-2 space-y-2 border-b border-[rgba(60,60,67,0.08)]">
+            <div className="relative">
+              <Search
+                size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8e8e93]"
+              />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-[#e3e3e8] rounded-xl pl-8 pr-3 py-1.5 text-[13px] text-[#1c1c1e] border-none outline-none focus:ring-1 focus:ring-[#007aff]"
+                aria-label="Search conversations"
+              />
+            </div>
+
+            {/* Apple Segmented Control */}
+            <div className="ios-segmented w-full flex">
+              <button
+                type="button"
+                onClick={() => {
+                  setChatType('group');
+                  setSelectedUser(null);
+                }}
+                className={`ios-segmented-btn flex-1 flex items-center justify-center gap-1.5 ${
+                  chatType === 'group' ? 'active' : ''
+                }`}
+              >
+                <UsersIcon size={13} />
+                <span>All Team</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setChatType('p2p');
+                  if (!selectedUser && directUsers.length > 0) {
+                    setSelectedUser(directUsers[0]);
+                  }
+                }}
+                className={`ios-segmented-btn flex-1 flex items-center justify-center gap-1.5 ${
+                  chatType === 'p2p' ? 'active' : ''
+                }`}
+              >
+                <UserIcon size={13} />
+                <span>Direct ({directUsers.length})</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Conversation List */}
+          <div className="flex-1 overflow-y-auto divide-y divide-[rgba(60,60,67,0.06)]">
+            {chatType === 'group' ? (
               <button
                 onClick={() => {
                   setChatType('group');
                   setSelectedUser(null);
                 }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all text-left ${
-                  chatType === 'group'
-                    ? 'bg-[#007aff] text-white font-semibold shadow-[0_2px_8px_rgba(0,122,255,0.25)]'
-                    : 'text-[#1c1c1e] hover:bg-black/[0.04]'
-                }`}
+                className="w-full flex items-center gap-3 px-3.5 py-3 text-left transition-colors bg-white/70 hover:bg-white"
               >
-                <div
-                  className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                    chatType === 'group'
-                      ? 'bg-white/20 text-white'
-                      : 'bg-black/[0.06] text-[#3c3c43]'
-                  }`}
-                >
-                  <UsersIcon size={14} />
+                <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#007aff] to-[#5ac8fa] text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <UsersIcon size={18} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">All Team Chat</p>
-                  <p
-                    className={`text-[10px] truncate ${
-                      chatType === 'group' ? 'text-white/80' : 'text-[#8e8e93]'
-                    }`}
-                  >
-                    Common group chat
+                  <div className="flex items-center justify-between">
+                    <p className="font-semibold text-[14px] text-[#000000] truncate">
+                      All Team Chat
+                    </p>
+                    <span className="text-[11px] text-[#8e8e93]">Group</span>
+                  </div>
+                  <p className="text-[12px] text-[#8e8e93] truncate mt-0.5">
+                    Common group chat for all team members
                   </p>
                 </div>
               </button>
-            </div>
-
-            {/* 2. User Chat (P2P 1-on-1) */}
-            <div>
-              <div className="px-2.5 pb-1.5 flex items-center justify-between text-[10px] font-semibold text-[#8e8e93] uppercase tracking-wider">
-                <span>Direct Messages (P2P)</span>
-                <span>{usersList.length}</span>
+            ) : directUsers.length === 0 ? (
+              <div className="p-8 text-center text-[#8e8e93] text-xs">
+                {loadingUsers ? 'Loading team members...' : 'No other users found'}
               </div>
-              <div className="space-y-1">
-                {usersList.length === 0 ? (
-                  <p className="px-3 py-2 text-[11px] text-[#8e8e93]">
-                    {loadingUsers ? 'Loading team members...' : 'No other users found'}
-                  </p>
-                ) : (
-                  usersList.map((target) => {
-                    const isSelected =
-                      chatType === 'p2p' && selectedUser?.login === target.login;
-                    const name = getTargetUserName(target);
-                    const initial = (target.firstName?.[0] || target.login[0] || 'U').toUpperCase();
+            ) : (
+              directUsers.map((target) => {
+                const isSelected =
+                  chatType === 'p2p' && selectedUser?.login === target.login;
+                const name = getTargetUserName(target);
+                const initial = (target.firstName?.[0] || target.login[0] || 'U').toUpperCase();
 
-                    return (
-                      <button
-                        key={target.login || target.id}
-                        onClick={() => {
-                          setChatType('p2p');
-                          setSelectedUser(target);
-                        }}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all text-left ${
+                return (
+                  <button
+                    key={target.login || target.id}
+                    onClick={() => {
+                      setChatType('p2p');
+                      setSelectedUser(target);
+                    }}
+                    className={`w-full flex items-center gap-3 px-3.5 py-2.5 text-left transition-all ${
+                      isSelected
+                        ? 'bg-[#007aff] text-white'
+                        : 'hover:bg-black/[0.03] text-[#1c1c1e]'
+                    }`}
+                  >
+                    {target.imageUrl ? (
+                      <img
+                        src={target.imageUrl}
+                        alt={name}
+                        className={`w-11 h-11 rounded-full object-cover shrink-0 border ${
+                          isSelected ? 'border-white/30' : 'border-black/10'
+                        }`}
+                      />
+                    ) : (
+                      <div
+                        className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-xs shrink-0 uppercase shadow-2xs ${
                           isSelected
-                            ? 'bg-[#007aff] text-white font-semibold shadow-[0_2px_8px_rgba(0,122,255,0.25)]'
-                            : 'text-[#1c1c1e] hover:bg-black/[0.04]'
+                            ? 'bg-white/25 text-white'
+                            : 'bg-slate-200 text-slate-700'
                         }`}
                       >
-                        <div
-                          className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0 uppercase ${
-                            isSelected
-                              ? 'bg-white/25 text-white'
-                              : 'bg-slate-200 text-slate-700'
+                        {initial}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between">
+                        <p
+                          className={`font-semibold text-[13px] truncate ${
+                            isSelected ? 'text-white' : 'text-[#000000]'
                           }`}
                         >
-                          {initial}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate font-medium">{name}</p>
-                          <p
-                            className={`text-[10px] truncate font-mono ${
-                              isSelected ? 'text-white/80' : 'text-[#8e8e93]'
-                            }`}
-                          >
-                            @{target.login}
-                          </p>
-                        </div>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-            </div>
+                          {name}
+                        </p>
+                        <span
+                          className={`text-[11px] font-mono ${
+                            isSelected ? 'text-white/80' : 'text-[#8e8e93]'
+                          }`}
+                        >
+                          @{target.login}
+                        </span>
+                      </div>
+                      <p
+                        className={`text-[12px] truncate mt-0.5 ${
+                          isSelected ? 'text-white/90' : 'text-[#8e8e93]'
+                        }`}
+                      >
+                        {isSelected ? 'Direct conversation active' : 'Tap to message'}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })
+            )}
           </div>
 
           {/* Auto Refresh Footer */}
-          <div className="p-3 border-t border-[rgba(60,60,67,0.08)] bg-white">
-            <div className="flex items-center justify-between text-[11px] text-[#8e8e93]">
-              <span>Auto-Refresh</span>
-              <button
-                onClick={() => setAutoRefresh(!autoRefresh)}
-                className={`text-[10px] font-semibold px-2 py-0.5 rounded-full transition-all ${
-                  autoRefresh
-                    ? 'bg-[#34c759] text-white'
-                    : 'bg-black/[0.06] text-[#8e8e93]'
-                }`}
-              >
-                {autoRefresh ? 'ON' : 'OFF'}
-              </button>
-            </div>
+          <div className="p-3 border-t border-[rgba(60,60,67,0.08)] bg-white/70 flex items-center justify-between text-[11px] text-[#8e8e93]">
+            <span>Auto-Refresh</span>
+            <button
+              onClick={() => setAutoRefresh(!autoRefresh)}
+              className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full transition-all cursor-pointer ${
+                autoRefresh
+                  ? 'bg-[#34c759] text-white'
+                  : 'bg-black/[0.06] text-[#8e8e93]'
+              }`}
+            >
+              {autoRefresh ? 'ON' : 'OFF'}
+            </button>
           </div>
         </div>
 
-        {/* Right Conversation View */}
+        {/* Right Conversation View: Authentic Apple iMessage Layout */}
         <div className="flex-1 flex flex-col min-w-0 bg-white">
-          {/* Header */}
-          <div className="px-5 py-3 border-b border-[rgba(60,60,67,0.08)] flex items-center justify-between gap-4">
-            <div className="min-w-0 flex items-center gap-3">
-              {chatType === 'group' ? (
-                <div className="w-9 h-9 rounded-xl bg-[#007aff]/10 text-[#007aff] flex items-center justify-center shrink-0">
-                  <UsersIcon size={18} />
-                </div>
-              ) : (
-                <div className="w-9 h-9 rounded-full bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center shrink-0 uppercase">
-                  {(selectedUser?.firstName?.[0] || selectedUser?.login?.[0] || 'U')}
-                </div>
-              )}
-              <div className="min-w-0">
-                <h3 className="font-bold text-sm text-[#1c1c1e] truncate">
+          {/* iOS Top Bar Header (Centered Contact Name & iMessage tag) */}
+          <div className="h-14 px-6 border-b border-[rgba(60,60,67,0.12)] bg-white/90 backdrop-blur-md flex items-center justify-between shrink-0">
+            <div className="flex-1 flex flex-col items-center justify-center text-center">
+              <div className="flex items-center gap-1.5">
+                {chatType === 'group' ? (
+                  <div className="w-5 h-5 rounded-full bg-[#007aff]/15 text-[#007aff] flex items-center justify-center shrink-0">
+                    <UsersIcon size={12} />
+                  </div>
+                ) : selectedUser?.imageUrl ? (
+                  <img
+                    src={selectedUser.imageUrl}
+                    alt={selectedUser.login}
+                    className="w-5 h-5 rounded-full object-cover border border-black/10 shrink-0"
+                  />
+                ) : (
+                  <div className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 font-bold text-[9px] flex items-center justify-center shrink-0 uppercase">
+                    {selectedUser?.firstName?.[0] || selectedUser?.login?.[0] || 'U'}
+                  </div>
+                )}
+                <h2 className="font-semibold text-[13px] text-[#000000] tracking-tight truncate max-w-xs">
                   {chatType === 'group'
                     ? 'All Team Chat'
-                    : getTargetUserName(selectedUser!)}
-                </h3>
-                <p className="text-[11px] text-[#8e8e93] truncate">
-                  {chatType === 'group'
-                    ? 'Common group conversation for all team members'
-                    : `Direct message (P2P) • @${selectedUser?.login}`}
-                </p>
+                    : selectedUser
+                    ? getTargetUserName(selectedUser)
+                    : 'Private Messages'}
+                </h2>
               </div>
+              <p className="text-[11px] text-[#8e8e93] font-normal leading-none mt-0.5">
+                {chatType === 'group'
+                  ? 'Team conversation'
+                  : selectedUser
+                  ? 'iMessage'
+                  : 'Select a conversation'}
+              </p>
             </div>
 
-            {/* Search Filter */}
-            <div className="relative w-48 shrink-0">
-              <Search
-                size={14}
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#8e8e93]"
-              />
-              <input
-                type="text"
-                placeholder="Search messages..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="ios-input w-full pl-8 pr-3 py-1.5 text-xs"
-              />
+            <div className="w-7 flex justify-end">
+              <button
+                onClick={() => fetchMessages(false)}
+                title="Refresh thread"
+                className="text-[#007aff] hover:opacity-75 transition-opacity cursor-pointer p-1"
+              >
+                <Info size={16} />
+              </button>
             </div>
           </div>
 
           {/* Messages Feed */}
-          <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-[#f2f2f7]/35">
+          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2 bg-[#ffffff] select-text">
             {loading && messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-[#8e8e93] gap-2">
+              <div className="flex flex-col items-center justify-center h-full text-[#8e8e93] gap-2 select-none">
                 <RefreshCw size={20} className="animate-spin text-[#007aff]" />
-                <span className="text-xs">Loading messages...</span>
+                <span className="text-xs">Loading iMessage...</span>
               </div>
             ) : filteredMessages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-[#8e8e93] py-12">
-                <div className="w-10 h-10 rounded-2xl bg-black/[0.05] flex items-center justify-center mb-2 text-[#8e8e93]">
+              <div className="flex flex-col items-center justify-center h-full text-[#8e8e93] py-12 select-none">
+                <div className="w-12 h-12 rounded-full bg-[#f2f2f7] flex items-center justify-center mb-2 text-[#8e8e93]">
                   {chatType === 'group' ? (
-                    <UsersIcon size={20} />
+                    <UsersIcon size={22} />
                   ) : (
-                    <UserIcon size={20} />
+                    <UserIcon size={22} />
                   )}
                 </div>
                 <h4 className="text-sm font-semibold text-[#1c1c1e]">
                   {chatType === 'group'
-                    ? 'No messages in All Team Chat'
-                    : `No messages with @${selectedUser?.login}`}
+                    ? 'No messages yet'
+                    : selectedUser
+                    ? `iMessage with @${selectedUser.login}`
+                    : 'Select a conversation'}
                 </h4>
-                <p className="text-xs text-[#8e8e93] mt-1 max-w-sm text-center">
+                <p className="text-xs text-[#8e8e93] mt-1 max-w-xs text-center">
                   {chatType === 'group'
-                    ? 'Say hello to the entire team! Share updates and coordinate.'
-                    : `Start a direct conversation with @${selectedUser?.login}.`}
+                    ? 'Send a message to start communicating with the team.'
+                    : selectedUser
+                    ? `Say hello to @${selectedUser.login} with private 1-on-1 messaging.`
+                    : 'Choose a team member from the list to start chatting.'}
                 </p>
               </div>
             ) : (
-              filteredMessages.map((msg) => {
+              filteredMessages.map((msg, index) => {
+                const prevMsg = index > 0 ? filteredMessages[index - 1] : undefined;
+                const dateDivider = renderDateDivider(
+                  msg.createdAt || msg.timestamp,
+                  prevMsg?.createdAt || prevMsg?.timestamp
+                );
+
                 const isMe =
-                  msg.userId === currentUserId ||
+                  (msg.userId != null && String(msg.userId) === String(currentUserId)) ||
                   (msg.userLogin && msg.userLogin.toLowerCase() === currentLogin) ||
                   msg.userName === currentUserName;
                 const author =
@@ -448,92 +665,254 @@ export default function Chat() {
                   msg.userLogin ||
                   (isMe ? 'You' : `User #${msg.userId || '1'}`);
                 const text = msg.content || msg.message || '';
-                const timeStr = formatTimestamp(msg.createdAt || msg.timestamp);
+                const isImg = isImageMedia(msg);
+                const isVid = isVideoMedia(msg);
 
                 return (
-                  <div
-                    key={msg.id || `${msg.userId}-${msg.createdAt}`}
-                    className={`flex items-start gap-2.5 group ${
-                      isMe ? 'flex-row-reverse' : ''
-                    }`}
-                  >
-                    <div
-                      className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold uppercase shrink-0 ${
-                        isMe
-                          ? 'bg-[#007aff] text-white'
-                          : 'bg-slate-200 text-slate-700'
-                      }`}
-                    >
-                      {author[0] || 'U'}
-                    </div>
+                  <React.Fragment key={msg.id || `${msg.userId}-${msg.createdAt}-${index}`}>
+                    {dateDivider}
 
                     <div
-                      className={`max-w-[70%] flex flex-col ${
+                      className={`flex flex-col ${
                         isMe ? 'items-end' : 'items-start'
-                      }`}
+                      } group my-1`}
                     >
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <span className="text-[11px] font-semibold text-[#3c3c43]">
-                          {isMe ? 'You' : author}
+                      {/* Inbound sender label for group chats */}
+                      {!isMe && chatType === 'group' && (
+                        <span className="text-[11px] font-medium text-[#8e8e93] ml-3 mb-0.5 select-none">
+                          {author}
                         </span>
-                        {timeStr && (
-                          <span className="text-[10px] text-[#8e8e93]">
-                            {timeStr}
-                          </span>
-                        )}
-                        {isMe && (
+                      )}
+
+                      {/* Pure Media: Photo or Video without text (Exact Apple iMessage styling: borderless, flush, rounded bubble) */}
+                      {(isImg || isVid) && !text ? (
+                        <div
+                          className={`max-w-[75%] sm:max-w-[70%] overflow-hidden rounded-[18px] ${
+                            isMe ? 'rounded-br-[4px]' : 'rounded-bl-[4px]'
+                          } shadow-xs select-none`}
+                        >
+                          {isImg && (
+                            <a
+                              href={msg.mediaUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block hover:opacity-95 transition-opacity"
+                              title="Click to view full photo"
+                            >
+                              <img
+                                src={msg.mediaUrl}
+                                alt={msg.fileName || 'Attached photo'}
+                                className="max-w-full max-h-80 object-cover block"
+                              />
+                            </a>
+                          )}
+                          {isVid && (
+                            <div className="bg-black">
+                              <video
+                                src={msg.mediaUrl}
+                                controls
+                                className="max-w-full max-h-80 block"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      ) : (isImg || isVid) && text ? (
+                        /* Media WITH caption: Media is flush to top and sides with zero padding, caption below */
+                        <div
+                          className={`max-w-[75%] sm:max-w-[70%] overflow-hidden rounded-[18px] shadow-2xs select-text ${
+                            isMe ? 'ios-message-sent rounded-br-[4px]' : 'ios-message-received rounded-bl-[4px]'
+                          }`}
+                        >
+                          {isImg && (
+                            <a
+                              href={msg.mediaUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block hover:opacity-95 transition-opacity"
+                              title="Click to view full photo"
+                            >
+                              <img
+                                src={msg.mediaUrl}
+                                alt={msg.fileName || 'Attached photo'}
+                                className="w-full max-h-80 object-cover block"
+                              />
+                            </a>
+                          )}
+                          {isVid && (
+                            <div className="bg-black">
+                              <video
+                                src={msg.mediaUrl}
+                                controls
+                                className="w-full max-h-80 block"
+                              />
+                            </div>
+                          )}
+                          <div className="px-3.5 py-2 text-[14px] leading-relaxed">
+                            <p className="whitespace-pre-wrap break-words font-normal">{text}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        /* Text or Document Bubble */
+                        <div
+                          className={`px-3.5 py-2 text-[14px] leading-relaxed max-w-[75%] sm:max-w-[70%] shadow-2xs space-y-2 select-text ${
+                            isMe ? 'ios-message-sent' : 'ios-message-received'
+                          }`}
+                        >
+                          {/* Media Attachment: Document */}
+                          {msg.mediaUrl && !isImg && !isVid && (
+                            <a
+                              href={msg.mediaUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`flex items-center gap-2 p-2 rounded-xl transition-colors ${
+                                isMe
+                                  ? 'bg-white/15 text-white hover:bg-white/25'
+                                  : 'bg-black/5 text-[#000000] hover:bg-black/10'
+                              }`}
+                            >
+                              <FileText size={16} />
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate font-medium text-[12px]">{msg.fileName || 'Document'}</p>
+                                {msg.fileSize && (
+                                  <p className="text-[10px] opacity-75">{formatFileSize(msg.fileSize)}</p>
+                                )}
+                              </div>
+                              <ExternalLink size={12} className="shrink-0 opacity-70" />
+                            </a>
+                          )}
+
+                          {/* Message Text Content */}
+                          {text && (
+                            <p className="whitespace-pre-wrap break-words font-normal">
+                              {text}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Beneath Outgoing Bubble: Signature Apple Read / Delivered Status */}
+                      {isMe && (
+                        <div className="flex items-center gap-1 mt-0.5 mr-1 text-[11px] text-[#8e8e93] font-normal select-none">
+                          {msg.isRead ? (
+                            <span>Read {formatTimestamp(msg.createdAt || msg.timestamp)}</span>
+                          ) : (
+                            <span>Delivered</span>
+                          )}
+
                           <button
-                            onClick={() => handleDeleteMessage(msg.id)}
+                            onClick={() => handleDeleteMessage(msg.id!)}
                             title="Delete message"
-                            className="opacity-0 group-hover:opacity-100 text-[#8e8e93] hover:text-[#ff3b30] transition-opacity p-0.5"
+                            className="opacity-0 group-hover:opacity-100 text-[#8e8e93] hover:text-[#ff3b30] transition-opacity ml-1.5 p-0.5 cursor-pointer"
                           >
                             <Trash2 size={11} />
                           </button>
-                        )}
-                      </div>
-
-                      <div
-                        className={`rounded-2xl px-3.5 py-2 text-xs leading-relaxed break-words shadow-2xs ${
-                          isMe
-                            ? 'bg-[#007aff] text-white rounded-br-xs'
-                            : 'bg-[#e5e5ea] text-[#000000] rounded-bl-xs'
-                        }`}
-                      >
-                        {text}
-                      </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
+                  </React.Fragment>
                 );
               })
             )}
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input Form */}
+          {/* Authentic Apple iOS iMessage Input Bar */}
           <form
             onSubmit={handleSendMessage}
-            className="p-3 bg-white border-t border-[rgba(60,60,67,0.08)] flex items-center gap-2"
+            className="p-3 bg-[#f6f6f6] border-t border-[rgba(60,60,67,0.12)] flex items-end gap-2.5"
           >
+            {/* Hidden native file picker */}
             <input
-              ref={inputRef}
-              type="text"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              placeholder={
-                chatType === 'group'
-                  ? 'Message all staff in team chat...'
-                  : `Message @${selectedUser?.login || 'user'}...`
-              }
-              className="ios-input flex-1 py-2 text-xs"
+              type="file"
+              ref={fileInputRef}
+              accept="image/*,video/*"
+              className="hidden"
+              onChange={handleFileSelect}
             />
+
+            {/* Apple Circular Plus Button */}
             <button
-              type="submit"
-              disabled={!inputText.trim() || sending}
-              className="ios-btn-primary text-xs"
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingFile || sending}
+              title="Attach photo, video or document"
+              className="w-8 h-8 rounded-full bg-[#e9e9eb] hover:bg-[#dcdce0] active:scale-95 text-[#636366] hover:text-[#000000] flex items-center justify-center transition-all shrink-0 mb-0.5 shadow-2xs disabled:opacity-40 cursor-pointer"
             >
-              <Send size={13} className={sending ? 'animate-pulse' : ''} />
-              <span>Send</span>
+              <Plus size={18} strokeWidth={2.4} />
             </button>
+
+            {/* iOS Capsule Input Pill */}
+            <div className="flex-1 ios-capsule-input px-3.5 py-1.5 flex flex-col justify-center min-h-[38px] transition-all">
+              {/* Attachment Sticker / Pill INSIDE the Capsule */}
+              {pendingFile && (
+                <div className="mb-2 pt-1 select-none">
+                  {filePreviewUrl ? (
+                    <div className="relative inline-block w-16 h-16 rounded-xl overflow-hidden border border-black/10 shadow-xs">
+                      <img
+                        src={filePreviewUrl}
+                        alt="Attachment"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={clearPendingFile}
+                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/75 hover:bg-black text-white flex items-center justify-center shadow-xs transition-colors cursor-pointer"
+                        title="Remove attachment"
+                      >
+                        <X size={11} strokeWidth={2.8} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#f2f2f7] rounded-xl border border-black/5 relative max-w-sm">
+                      <FileText size={16} className="text-[#007aff] shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[12px] font-medium text-[#1c1c1e] truncate">{pendingFile.name}</p>
+                        <p className="text-[10px] text-[#8e8e93]">{formatFileSize(pendingFile.size)}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={clearPendingFile}
+                        className="w-4 h-4 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center shrink-0 ml-1.5 cursor-pointer"
+                        title="Remove file"
+                      >
+                        <X size={9} strokeWidth={2.8} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Text Input Row + Authentic iOS Upward Arrow Send Button */}
+              <div className="flex items-center gap-2 w-full">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  disabled={chatType === 'p2p' && !selectedUser}
+                  className="flex-1 bg-transparent border-none outline-none text-[14px] text-[#000000] py-0.5"
+                  aria-label="Message text"
+                />
+
+                <button
+                  type="submit"
+                  disabled={
+                    (!inputText.trim() && !pendingFile) ||
+                    sending ||
+                    uploadingFile ||
+                    (chatType === 'p2p' && !selectedUser)
+                  }
+                  className="ios-send-btn shrink-0"
+                  title="Send"
+                >
+                  {uploadingFile || sending ? (
+                    <Loader2 size={14} className="animate-spin text-white" />
+                  ) : (
+                    <ArrowUp size={16} strokeWidth={2.8} />
+                  )}
+                </button>
+              </div>
+            </div>
           </form>
         </div>
       </div>

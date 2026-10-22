@@ -29,9 +29,9 @@ import {
   LEAD_STATUSES,
   LEAD_STATUS_LIST,
   CANONICAL_LEAD_STATUSES,
-  KNOWN_STAFF_USERS,
   AGE_BRACKETS,
   EDUCATION_QUALIFICATIONS,
+  filterLeadsByUserRole,
 } from '../config/constants';
 import { isAdmin as checkIsAdmin } from '../utils/rbac';
 import { useAuth } from '../context/AuthContext';
@@ -43,7 +43,7 @@ export default function CandidateDetail() {
   const { user: currentUser } = useAuth();
 
   const isAdmin = checkIsAdmin(currentUser);
-  const [availableStaff, setAvailableStaff] = useState<Array<{ login: string; name?: string }>>([...KNOWN_STAFF_USERS]);
+  const [availableStaff, setAvailableStaff] = useState<Array<{ login: string; name?: string }>>([]);
   const [assigningStaff, setAssigningStaff] = useState<boolean>(false);
 
   const [lead, setLead] = useState<Lead | null>(null);
@@ -85,6 +85,11 @@ export default function CandidateDetail() {
       }
 
       if (candidateData) {
+        // Enforce role-based access for non-admin counselors
+        if (!isAdmin && filterLeadsByUserRole([candidateData], currentUser).length === 0) {
+          throw new Error(`Access restricted: Candidate #${id} belongs to a different visa desk outside your assigned scope.`);
+        }
+
         setLead(candidateData);
         setEditFormData({
           customerName: candidateData.customerName || '',
@@ -125,22 +130,23 @@ export default function CandidateDetail() {
   }, [fetchCandidate]);
 
   useEffect(() => {
-    if (isAdmin) {
-      adminService
-        .getUsers()
-        .then((users) => {
-          if (Array.isArray(users) && users.length > 0) {
-            setAvailableStaff(
-              users.map((u) => ({
-                login: u.login,
-                name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.login,
-              }))
-            );
-          }
-        })
-        .catch(() => {});
-    }
-  }, [isAdmin]);
+    adminService
+      .getUsers(0, 100)
+      .then((users) => {
+        const list = Array.isArray(users) ? users : (users as any)?.content || [];
+        if (Array.isArray(list)) {
+          setAvailableStaff(
+            list.map((u) => ({
+              login: u.login,
+              name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.login,
+            }))
+          );
+        }
+      })
+      .catch(() => {
+        setAvailableStaff([]);
+      });
+  }, []);
 
   const handleAssignStaff = async (newAssignee: string) => {
     if (!lead) return;
@@ -274,35 +280,27 @@ export default function CandidateDetail() {
   const renderVisaBadge = (type?: string) => {
     const isWork = (type || '').toUpperCase() === 'WORK_VISA';
     const isStudy = (type || '').toUpperCase() === 'STUDY_VISA';
-    const isOther = (type || '').toUpperCase() === 'OTHER_VISA';
 
     if (isWork) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-2xs">
-          <Briefcase size={12} className="text-indigo-600" />
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#1c1c1e]">
+          <span className="w-2 h-2 rounded-full bg-[#5856d6] shadow-2xs shrink-0"></span>
           <span>Work Visa</span>
         </span>
       );
     }
     if (isStudy) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
-          <GraduationCap size={12} className="text-emerald-600" />
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#1c1c1e]">
+          <span className="w-2 h-2 rounded-full bg-[#34c759] shadow-2xs shrink-0"></span>
           <span>Study Visa</span>
         </span>
       );
     }
-    if (isOther) {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 shadow-2xs">
-          <Globe size={12} className="text-amber-600" />
-          <span>Other Visa</span>
-        </span>
-      );
-    }
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs">
-        <span>{type || 'General Visa'}</span>
+      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#1c1c1e]">
+        <span className="w-2 h-2 rounded-full bg-[#ff9500] shadow-2xs shrink-0"></span>
+        <span>{type === 'OTHER_VISA' ? 'Other Visa' : type || 'Other Visa'}</span>
       </span>
     );
   };
@@ -715,8 +713,7 @@ export default function CandidateDetail() {
                 value={newNote}
                 onChange={(e) => setNewNote(e.target.value)}
                 rows={3}
-                placeholder="Log notes from candidate call, target country preference, document submission status..."
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:bg-white focus:ring-1 focus:ring-slate-400 transition-all placeholder-slate-400"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:bg-white focus:ring-1 focus:ring-slate-400 transition-all"
               />
               <div className="flex justify-end">
                 <button
@@ -784,73 +781,115 @@ export default function CandidateDetail() {
         </div>
       </div>
 
-      {/* Edit Candidate Dossier Modal */}
+      {/* Edit Candidate Dossier Modal (Zoho CRM Modal & Field UI) */}
       {showEditModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-2xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-lg w-full p-6 my-8 animate-in zoom-in-95">
+        <div className="zoho-modal-backdrop">
+          <div className="zoho-modal-card max-w-lg animate-in zoom-in-95">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900">Edit Candidate Dossier</h3>
-                <p className="text-[11px] text-slate-500">Update verified candidate information</p>
-              </div>
+              <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                Get Candidate Info
+              </h3>
               <button
                 onClick={() => setShowEditModal(false)}
-                className="p-1 text-slate-400 hover:text-slate-600"
+                className="p-1 text-slate-400 hover:text-slate-600 rounded transition-colors"
+                aria-label="Close"
               >
                 <X size={16} />
               </button>
             </div>
 
-            <form onSubmit={handleSaveEdit} className="mt-4 space-y-3.5 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Candidate Full Name</label>
-                <input
-                  type="text"
-                  required
-                  value={editFormData.customerName || ''}
-                  onChange={(e) => setEditFormData({ ...editFormData, customerName: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
-                />
+            <div className="text-xs font-semibold text-slate-500 mt-3 mb-4">
+              Order Information
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="text-xs">
+              {/* Full Name (Required: Red Left Accent Bar) */}
+              <div className="zoho-form-row">
+                <label className="zoho-form-label" title="Name of the Candidate">
+                  Name of the Cus...
+                </label>
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.customerName || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, customerName: e.target.value })}
+                    className="ios-input ios-input-required w-full font-medium"
+                  />
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Phone Number</label>
+              {/* Customer Email */}
+              <div className="zoho-form-row">
+                <label className="zoho-form-label" title="Customer Email">
+                  Customer Email
+                </label>
+                <div className="flex-1">
+                  <input
+                    type="email"
+                    value={editFormData.email || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                    className="ios-input w-full"
+                  />
+                </div>
+              </div>
+
+              {/* Candidate Phone (Required: Red Left Accent Bar) */}
+              <div className="zoho-form-row">
+                <label className="zoho-form-label" title="Candidate Phone">
+                  Candidate Phone
+                </label>
+                <div className="flex-1">
                   <input
                     type="tel"
                     required
                     value={editFormData.phoneNumber || ''}
                     onChange={(e) => setEditFormData({ ...editFormData, phoneNumber: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Email Address</label>
-                  <input
-                    type="email"
-                    value={editFormData.email || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                    className="ios-input ios-input-required w-full font-medium"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">City / Region</label>
+              {/* Order / Candidate ID */}
+              <div className="zoho-form-row">
+                <label className="zoho-form-label" title="Candidate ID">
+                  Candidate ID
+                </label>
+                <div className="flex-1">
                   <input
                     type="text"
-                    value={editFormData.city || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                    disabled
+                    value={lead?.id || '—'}
+                    className="ios-input w-full text-slate-700 opacity-90 cursor-not-allowed font-medium"
                   />
                 </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Visa Program</label>
+              </div>
+
+              {/* Date and Time of Record (Compound Field matching screenshot) */}
+              <div className="zoho-form-row">
+                <label className="zoho-form-label" title="Date and Time">
+                  Date and Time of ...
+                </label>
+                <div className="flex-1 flex rounded-md overflow-hidden border border-[#d0dcf0] bg-[#edf2f9]">
+                  <div className="flex-1 px-3 py-2 border-r border-[#d0dcf0] text-xs text-slate-800 bg-[#edf2f9]">
+                    {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </div>
+                  <div className="w-28 px-3 py-2 text-xs text-slate-800 bg-[#edf2f9] text-center font-medium">
+                    {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Product / Visa Program (Dropdown matching screenshot) */}
+              <div className="zoho-form-row">
+                <label className="zoho-form-label" title="Product / Visa Program">
+                  Product / Visa
+                </label>
+                <div className="flex-1">
                   <select
                     value={editFormData.visaType || 'WORK_VISA'}
                     onChange={(e) => setEditFormData({ ...editFormData, visaType: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                    className="zoho-select font-medium"
                   >
                     <option value="WORK_VISA">Work Visa</option>
                     <option value="STUDY_VISA">Study Visa</option>
@@ -859,47 +898,14 @@ export default function CandidateDetail() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Education</label>
-                  <select
-                    value={editFormData.educationalQualification || EDUCATION_QUALIFICATIONS[0]}
-                    onChange={(e) => setEditFormData({ ...editFormData, educationalQualification: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
-                  >
-                    {EDUCATION_QUALIFICATIONS.map((eq) => (
-                      <option key={eq} value={eq}>{eq}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Age Bracket</label>
-                  <select
-                    value={editFormData.age || AGE_BRACKETS[0]}
-                    onChange={(e) => setEditFormData({ ...editFormData, age: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
-                  >
-                    {AGE_BRACKETS.map((ab) => (
-                      <option key={ab} value={ab}>{ab}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="px-3.5 py-1.5 rounded-xl font-medium text-slate-600 hover:bg-slate-100 border border-slate-300"
-                >
-                  Cancel
-                </button>
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-slate-100">
                 <button
                   type="submit"
                   disabled={savingEdit}
-                  className="px-4 py-1.5 rounded-xl font-semibold bg-slate-900 hover:bg-slate-800 text-white disabled:opacity-50"
+                  className="zoho-btn-done"
                 >
-                  {savingEdit ? 'Saving...' : 'Save Dossier'}
+                  {savingEdit ? 'Saving...' : 'Done'}
                 </button>
               </div>
             </form>

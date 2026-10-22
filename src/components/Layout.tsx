@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -10,21 +10,46 @@ import {
   Menu,
   X,
   UserCog,
-  Plus,
+  Camera,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { isAdmin as checkIsAdmin, getRoleBadgeInfo, getDisplayName } from '../utils/rbac';
+import fileService from '../services/api/fileService';
 import brandLogo from '../assets/brand-logo.jpg';
 
 export default function Layout() {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUserAvatar } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleAvatarSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingAvatar(true);
+    try {
+      const res = await fileService.uploadFile(file, 'avatars');
+      if (res?.url) {
+        await updateUserAvatar(res.url);
+      }
+    } catch (err: any) {
+      alert(`Failed to upload avatar: ${err?.message || 'Server error'}`);
+    } finally {
+      setUploadingAvatar(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
   };
 
   const isAdmin = checkIsAdmin(user);
@@ -32,160 +57,229 @@ export default function Layout() {
   const displayName = getDisplayName(user);
   const userInitial = (displayName?.[0] || 'S').toUpperCase();
 
+  const currentPath = location.pathname;
+
+  // Real navigation items matching actual application routes
   const navItems = [
-    { to: '/', label: 'Overview', icon: LayoutDashboard, exact: true },
-    { to: '/leads', label: 'Candidate Leads', icon: Users, exact: false },
-    { to: '/customers', label: 'Candidate Directory', icon: UserCheck, exact: false },
-    ...(isAdmin ? [{ to: '/import', label: 'Ingest Excel', icon: UploadCloud, exact: false }] : []),
-    { to: '/chat', label: 'Counselor Chat', icon: MessageSquare, exact: false },
-    ...(isAdmin ? [{ to: '/users', label: 'Team & Roles', icon: UserCog, exact: false }] : []),
+    {
+      id: 'dashboards',
+      label: 'Dashboards',
+      icon: LayoutDashboard,
+      to: '/',
+      exact: true,
+    },
+    {
+      id: 'leads',
+      label: 'Candidate Leads',
+      icon: Users,
+      to: '/leads',
+      exact: false,
+    },
+    {
+      id: 'customers',
+      label: 'Contacts',
+      icon: UserCheck,
+      to: '/customers',
+      exact: false,
+    },
+    {
+      id: 'chat',
+      label: 'Team Chat',
+      icon: MessageSquare,
+      to: '/chat',
+      exact: false,
+    },
+    ...(isAdmin
+      ? [
+          {
+            id: 'import',
+            label: 'Data Ingestion',
+            icon: UploadCloud,
+            to: '/import',
+            exact: false,
+          },
+          {
+            id: 'users',
+            label: 'User Management',
+            icon: UserCog,
+            to: '/users',
+            exact: false,
+          },
+        ]
+      : []),
   ];
 
   const getPageInfo = () => {
-    const path = location.pathname;
-    if (path === '/') return { title: 'Executive Overview', subtitle: 'Real-time candidate metrics & counselor pipelines' };
-    if (path.startsWith('/leads')) return { title: 'Candidate Leads Pipeline', subtitle: 'Filter, triage, and contact international visa candidates' };
-    if (path.startsWith('/customers')) return { title: 'Candidate Directory', subtitle: 'Verified profiles and historical lead records' };
-    if (path.startsWith('/import')) return { title: 'Data Ingestion', subtitle: 'Import Meta ads export spreadsheets & raw lead data' };
-    if (path.startsWith('/chat')) return { title: 'Counselor Channel', subtitle: 'Internal messaging and lead distribution' };
-    if (path.startsWith('/users')) return { title: 'Team & Permissions', subtitle: 'Manage counselor assignments, roles, and access desks' };
+    if (currentPath === '/') return { title: 'Executive Overview', subtitle: 'Real-time candidate metrics & counselor pipelines' };
+    if (currentPath.startsWith('/leads')) return { title: 'Candidate Leads Pipeline', subtitle: 'Filter, triage, and contact international visa candidates' };
+    if (currentPath.startsWith('/customers')) return { title: 'Contacts', subtitle: 'Verified contacts and customer records' };
+    if (currentPath.startsWith('/import')) return { title: 'Data Ingestion', subtitle: 'Import Meta ads export spreadsheets & raw lead data' };
+    if (currentPath.startsWith('/chat')) return { title: 'Team Chat', subtitle: 'Internal messaging and staff communication' };
+    if (currentPath.startsWith('/users')) return { title: 'Team & Permissions', subtitle: 'Manage counselor assignments, roles, and access desks' };
     return { title: 'SSA CRM', subtitle: 'Work & Study Visa Consultancy' };
   };
 
   const pageInfo = getPageInfo();
 
   return (
-    <div className="min-h-screen bg-[#f2f2f7] flex flex-col md:flex-row font-sans text-[#1c1c1e] antialiased selection:bg-[#007aff] selection:text-white">
-      {/* Mobile Top Header */}
-      <div className="md:hidden ios-glass border-b border-black/[0.06] px-4 py-3 flex items-center justify-between sticky top-0 z-40">
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col md:flex-row font-sans text-slate-900 antialiased selection:bg-blue-600 selection:text-white">
+      {/* Mobile Top Bar */}
+      <div className="md:hidden bg-[#04162a] text-white border-b border-slate-800 px-4 py-3 flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-2.5">
-          <img src={brandLogo} alt="SSA Logo" className="w-8 h-8 rounded-xl object-cover shadow-xs border border-black/[0.08]" />
-          <h1 className="font-bold text-sm tracking-tight text-[#1c1c1e] leading-tight">SSA CRM</h1>
+          <img src={brandLogo} alt="SSA Logo" className="w-8 h-8 rounded-md object-cover shadow-2xs border border-white/20" />
+          <h1 className="font-bold text-sm tracking-tight text-white leading-tight">SSA CRM</h1>
         </div>
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="p-2 text-[#3c3c43] hover:text-[#000000] rounded-xl hover:bg-black/[0.05] transition-colors"
+          className="p-2 text-slate-300 hover:text-white rounded-md hover:bg-white/10 transition-colors"
           aria-label="Toggle menu"
         >
           {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
       </div>
 
-      {/* Desktop Left Sidebar (iOS / iPadOS HIG Frosted Glass Navigation) */}
+      {/* Zoho CRM Single Navigation Sidebar */}
       <aside
-        className={`fixed md:sticky top-0 z-30 inset-y-0 left-0 w-64 ios-glass-sidebar border-r border-black/[0.06] flex flex-col justify-between transition-transform duration-200 ease-out md:translate-x-0 ${
+        className={`fixed md:sticky top-0 z-30 inset-y-0 left-0 bg-[#04162a] text-white flex flex-col justify-between border-r border-[#021020] transition-all duration-200 ease-out md:translate-x-0 ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-        } shadow-sm md:shadow-none h-screen`}
+        } ${sidebarCollapsed ? 'w-18' : 'w-60'} h-screen shrink-0`}
       >
-        <div className="flex flex-col flex-1 overflow-y-auto">
-          {/* Brand & Workspace Indicator */}
-          <div className="p-4 border-b border-black/[0.05]">
-            <div className="flex items-center gap-3">
+        <div className="flex flex-col flex-1 min-h-0">
+          {/* Brand Header */}
+          <div className={`p-4 border-b border-white/10 flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
+            <button
+              onClick={() => navigate('/')}
+              className="flex items-center gap-3 text-left focus:outline-none group min-w-0"
+              title="SSA CRM - Home"
+            >
               <img
                 src={brandLogo}
                 alt="SSA Logo"
-                className="w-10 h-10 rounded-2xl object-cover shadow-xs border border-black/[0.08] shrink-0"
+                className="w-9 h-9 rounded-lg object-cover shadow-xs border border-white/20 shrink-0 group-hover:scale-102 transition-transform"
               />
-              <div className="min-w-0 flex-1">
-                <h2 className="font-bold text-sm tracking-tight text-[#1c1c1e] truncate">
-                  SSA CRM
-                </h2>
-                <p className="text-[11px] text-[#8e8e93] font-medium truncate">Overseas Visa Portal</p>
-              </div>
-            </div>
+              {!sidebarCollapsed && (
+                <div className="min-w-0">
+                  <h2 className="font-bold text-sm tracking-tight text-white truncate leading-tight">
+                    SSA CRM
+                  </h2>
+                </div>
+              )}
+            </button>
           </div>
 
           {/* Navigation Links */}
-          <div className="p-3 flex-1 space-y-6">
-            <div>
-              <p className="px-3 pt-2 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-[#8e8e93]">
-                Core Operations
-              </p>
-              <nav className="space-y-1">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      end={item.exact}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={({ isActive }) =>
-                        `group flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all ${
-                          isActive
-                            ? 'bg-[#007aff] text-white shadow-[0_2px_8px_rgba(0,122,255,0.32)] font-semibold'
-                            : 'text-[#3c3c43] hover:text-[#1c1c1e] hover:bg-black/[0.04] font-medium'
-                        }`
-                      }
-                    >
-                      {({ isActive }) => (
-                        <>
-                          <div className="flex items-center gap-2.5">
-                            <Icon
-                              size={16}
-                              className={`shrink-0 transition-colors ${
-                                isActive ? 'text-white' : 'text-[#8e8e93] group-hover:text-[#1c1c1e]'
-                              }`}
-                            />
-                            <span>{item.label}</span>
-                          </div>
-                          {item.to === '/leads' && (
-                            <span
-                              className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-                                isActive ? 'bg-white/25 text-white' : 'bg-[#007aff]/10 text-[#007aff]'
-                              }`}
-                            >
-                              Live
-                            </span>
-                          )}
-                        </>
-                      )}
-                    </NavLink>
-                  );
-                })}
-              </nav>
-            </div>
-          </div>
+          <nav className="p-2.5 space-y-1 flex-1 overflow-y-auto">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = item.exact
+                ? currentPath === item.to
+                : currentPath.startsWith(item.to);
+
+              return (
+                <NavLink
+                  key={item.id}
+                  to={item.to}
+                  onClick={() => setMobileMenuOpen(false)}
+                  title={item.label}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-colors ${
+                    sidebarCollapsed ? 'justify-center px-2' : ''
+                  } ${
+                    isActive
+                      ? 'bg-[#0066cc] text-white font-semibold shadow-xs'
+                      : 'text-slate-300 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  <Icon size={18} className={`shrink-0 ${isActive ? 'text-white' : 'text-slate-300'}`} />
+                  {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
+                </NavLink>
+              );
+            })}
+          </nav>
         </div>
 
-        {/* Sidebar Footer: Counselor Card */}
-        <div className="p-3 border-t border-black/[0.05] bg-black/[0.015]">
-          <div className="flex items-center justify-between p-2.5 rounded-2xl bg-white/80 border border-black/[0.05] shadow-[0_1px_4px_rgba(0,0,0,0.03)]">
-            <div className="flex items-center gap-2.5 min-w-0 flex-1">
-              <div className="w-8 h-8 rounded-xl bg-[#007aff]/10 text-[#007aff] font-bold text-xs flex items-center justify-center shrink-0">
-                {userInitial}
-              </div>
+        {/* Bottom Counselor & Control Section */}
+        <div className="p-3 border-t border-white/10 flex flex-col gap-2 shrink-0">
+          {/* Counselor Profile Details */}
+          <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} gap-2.5`}>
+            <div className="relative shrink-0">
+              <input
+                type="file"
+                ref={avatarInputRef}
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarSelect}
+              />
+              <button
+                type="button"
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={uploadingAvatar}
+                title={`Logged in as ${displayName} (${badgeInfo.displayText}) - Click to update photo`}
+                className="relative group w-9 h-9 rounded-full overflow-hidden border-2 border-emerald-400 shadow-sm focus:outline-none"
+              >
+                {uploadingAvatar ? (
+                  <div className="w-full h-full bg-blue-600 flex items-center justify-center text-white">
+                    <Loader2 size={13} className="animate-spin" />
+                  </div>
+                ) : user?.imageUrl ? (
+                  <img src={user.imageUrl} alt={displayName} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-tr from-blue-700 to-indigo-600 text-white font-bold text-xs flex items-center justify-center">
+                    {userInitial}
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity">
+                  <Camera size={11} />
+                </div>
+              </button>
+              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#04162a]"></span>
+            </div>
+
+            {!sidebarCollapsed && (
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-[#1c1c1e] truncate leading-tight">
+                <p className="text-xs font-semibold text-white truncate leading-tight">
                   {displayName}
                 </p>
-                <div className="flex items-center gap-1 mt-0.5">
-                  <span className="text-[10px] text-[#8e8e93] font-medium truncate">
-                    {badgeInfo.displayText}
-                  </span>
-                </div>
+                <p className="text-[10px] text-slate-400 font-mono truncate">
+                  {badgeInfo.displayText}
+                </p>
               </div>
-            </div>
-            <button
-              onClick={handleLogout}
-              title="Sign Out"
-              className="p-1.5 text-[#8e8e93] hover:text-[#ff3b30] hover:bg-[#ff3b30]/10 rounded-full transition-colors shrink-0 ml-1"
-            >
-              <LogOut size={14} />
-            </button>
+            )}
+
+            {!sidebarCollapsed && (
+              <button
+                onClick={handleLogout}
+                title="Log Out"
+                className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-white/10 rounded-md transition-colors shrink-0"
+                aria-label="Logout"
+              >
+                <LogOut size={16} />
+              </button>
+            )}
           </div>
+
+          {/* Sidebar Collapse Toggle Button (Desktop Only) */}
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className={`hidden md:flex items-center ${
+              sidebarCollapsed ? 'justify-center' : 'justify-between'
+            } w-full px-2.5 py-1.5 text-slate-400 hover:text-white hover:bg-white/5 rounded-md text-[11px] font-medium transition-colors`}
+            title={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+          >
+            {!sidebarCollapsed && <span>Collapse Sidebar</span>}
+            {sidebarCollapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
+          </button>
         </div>
       </aside>
 
-      {/* Main Container */}
+      {/* Main App Container */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* iOS-Style Translucent Glass Top Navbar */}
-        <header className="ios-glass border-b border-black/[0.06] px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-20">
+        {/* Zoho CRM Top Navbar */}
+        <header className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-20 shadow-2xs">
           <div className="min-w-0">
-            <h1 className="text-sm font-bold tracking-tight text-[#1c1c1e] leading-tight">
+            <h1 className="text-sm font-bold tracking-tight text-slate-900 leading-tight">
               {pageInfo.title}
             </h1>
-            <p className="text-[11px] text-[#8e8e93] truncate hidden sm:block">
+            <p className="text-[11px] text-slate-500 truncate hidden sm:block">
               {pageInfo.subtitle}
             </p>
           </div>
@@ -194,7 +288,7 @@ export default function Layout() {
             {isAdmin && (
               <button
                 onClick={() => navigate('/import')}
-                className="hidden sm:inline-flex ios-btn-secondary text-xs"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium shadow-2xs transition-colors"
                 title="Excel / Spreadsheet Ingestion"
               >
                 <UploadCloud size={13} />
@@ -202,30 +296,33 @@ export default function Layout() {
               </button>
             )}
 
-            <button
-              onClick={() => navigate('/leads?action=create')}
-              className="ios-btn-primary text-xs"
-            >
-              <Plus size={14} />
-              <span className="hidden sm:inline">New Candidate</span>
-            </button>
-
-            {/* Header User Badge & Logout Section */}
-            <div className="flex items-center gap-2.5 pl-3 border-l border-black/[0.08]">
+            {/* Header User Section */}
+            <div className="flex items-center gap-2.5 pl-3 border-l border-slate-200">
+              {user?.imageUrl ? (
+                <img
+                  src={user.imageUrl}
+                  alt={displayName}
+                  className="w-7 h-7 rounded-full object-cover border border-slate-300 shrink-0"
+                />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-[11px] flex items-center justify-center shrink-0 uppercase">
+                  {userInitial}
+                </div>
+              )}
               <div className="hidden sm:flex flex-col text-right">
-                <span className="text-xs font-semibold text-[#1c1c1e] leading-tight">
+                <span className="text-xs font-semibold text-slate-900 leading-tight">
                   {displayName}
                 </span>
-                <span className="text-[10px] text-[#8e8e93] font-mono">
-                  @{user?.login || 'staff'}
+                <span className="text-[10px] text-slate-500 font-mono">
+                  {badgeInfo.displayText}
                 </span>
               </div>
 
-              {/* Logout Button in Header */}
+              {/* Logout Button */}
               <button
                 onClick={handleLogout}
-                title="Log Out (Clears token and redirects to login)"
-                className="p-1.5 text-[#8e8e93] hover:text-[#ff3b30] hover:bg-[#ff3b30]/10 rounded-full transition-colors ml-1"
+                title="Log Out"
+                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors ml-1"
                 aria-label="Logout"
               >
                 <LogOut size={15} />
@@ -244,9 +341,10 @@ export default function Layout() {
       {mobileMenuOpen && (
         <div
           onClick={() => setMobileMenuOpen(false)}
-          className="fixed inset-0 bg-black/30 backdrop-blur-sm z-20 md:hidden"
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-20 md:hidden"
         />
       )}
     </div>
   );
 }
+

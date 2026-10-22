@@ -145,10 +145,10 @@ export default function Customers() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 ios-card p-4 sm:p-5">
         <div>
           <h2 className="text-base font-bold text-[#1c1c1e]">
-            Candidate Directory
+            Contacts
           </h2>
           <p className="text-xs text-[#8e8e93] mt-0.5">
-            Managing <strong className="text-[#1c1c1e]">{customers.length}</strong> candidate contact records
+            Managing <strong className="text-[#1c1c1e]">{customers.length}</strong> contact records
           </p>
         </div>
 
@@ -170,7 +170,7 @@ export default function Customers() {
             className="ios-btn-primary text-xs"
           >
             <Plus size={14} />
-            <span>New Candidate</span>
+            <span>New Contact</span>
           </button>
         </div>
       </div>
@@ -197,7 +197,6 @@ export default function Customers() {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search candidate by name, phone, or location..."
             className="ios-input w-full pl-9 pr-8 py-2 text-xs"
           />
           {searchTerm && (
@@ -324,81 +323,104 @@ export default function Customers() {
         </div>
       </div>
 
-      {/* Add / Edit Customer Modal */}
+      {/* Add / Edit Customer Modal (Zoho CRM Modal & Field UI) */}
       {(showAddModal || editingCustomer) && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="ios-glass-modal max-w-sm w-full p-6 animate-in zoom-in-95">
-            <div className="flex items-center justify-between pb-3.5 border-b border-black/[0.06]">
-              <h3 className="text-sm font-bold text-[#1c1c1e]">
-                {editingCustomer ? `Edit Customer #${editingCustomer.id}` : 'Create Customer'}
+        <div className="zoho-modal-backdrop">
+          <div className="zoho-modal-card max-w-lg animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                {editingCustomer ? `Edit Customer #${editingCustomer.id}` : 'Customer Information'}
               </h3>
               <button
                 onClick={() => {
                   setShowAddModal(false);
                   setEditingCustomer(null);
                 }}
-                className="p-1.5 text-[#8e8e93] hover:text-[#1c1c1e] rounded-full hover:bg-black/[0.05]"
+                className="p-1 text-slate-400 hover:text-slate-600 rounded transition-colors"
+                aria-label="Close"
               >
                 <X size={16} />
               </button>
             </div>
 
+            <div className="text-xs font-semibold text-slate-500 mt-3 mb-4">
+              Order Information
+            </div>
+
             <form
               onSubmit={editingCustomer ? handleUpdateCustomer : handleCreateCustomer}
-              className="mt-4 space-y-3.5 text-xs"
+              className="text-xs"
             >
-              <div>
-                <label className="block font-semibold text-[#3c3c43] mb-1.5">Full Name *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Enter customer full name"
-                  value={formData.fullName}
-                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                  className="ios-input w-full font-medium"
-                />
+              {/* Full Name (Required: Red Left Accent Bar) */}
+              <div className="zoho-form-row">
+                <label className="zoho-form-label" title="Name of the Customer">
+                  Name of the Cus...
+                </label>
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    required
+                    value={formData.fullName}
+                    onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                    className="ios-input ios-input-required w-full font-medium"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block font-semibold text-[#3c3c43] mb-1.5">Phone Number *</label>
-                <input
-                  type="tel"
-                  required
-                  placeholder="Enter phone number"
-                  value={formData.phoneNumber}
-                  onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                  className="ios-input w-full font-medium"
-                />
+              {/* Customer Phone (Required: Red Left Accent Bar) */}
+              <div className="zoho-form-row">
+                <label className="zoho-form-label" title="Customer Phone">
+                  Customer Phone
+                </label>
+                <div className="flex-1">
+                  <input
+                    type="tel"
+                    required
+                    value={formData.phoneNumber}
+                    onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                    className="ios-input ios-input-required w-full font-medium"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block font-semibold text-[#3c3c43] mb-1.5">Location / District</label>
-                <input
-                  type="text"
-                  placeholder="City / Region (optional)"
-                  value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  className="ios-input w-full"
-                />
+              {/* Location / District */}
+              <div className="zoho-form-row">
+                <label className="zoho-form-label" title="Customer Location">
+                  Location / City
+                </label>
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    className="ios-input w-full"
+                  />
+                </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-black/[0.06]">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAddModal(false);
-                    setEditingCustomer(null);
-                  }}
-                  className="ios-btn-gray text-xs"
-                >
-                  Cancel
-                </button>
+              {/* Date & Time of Record (Compound Field matching screenshot) */}
+              <div className="zoho-form-row">
+                <label className="zoho-form-label" title="Date and Time">
+                  Date and Time of ...
+                </label>
+                <div className="flex-1 flex rounded-md overflow-hidden border border-[#d0dcf0] bg-[#edf2f9]">
+                  <div className="flex-1 px-3 py-2 border-r border-[#d0dcf0] text-xs text-slate-800 bg-[#edf2f9]">
+                    {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </div>
+                  <div className="w-28 px-3 py-2 text-xs text-slate-800 bg-[#edf2f9] text-center font-medium">
+                    {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Action */}
+              <div className="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-slate-100">
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="ios-btn-primary text-xs"
+                  className="zoho-btn-done"
                 >
-                  {submitting ? 'Saving...' : editingCustomer ? 'Update Customer' : 'Create Customer'}
+                  {submitting ? 'Saving...' : 'Done'}
                 </button>
               </div>
             </form>

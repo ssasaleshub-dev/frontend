@@ -85,6 +85,10 @@ export interface ChatMessage {
   userName?: string;
   userLogin?: string;
   userImageUrl?: string;
+  recipientId?: number | string;
+  recipientLogin?: string;
+  recipientName?: string;
+  isRead?: boolean;
   mediaUrl?: string;
   mediaType?: 'IMAGE' | 'VIDEO' | 'FILE' | string;
   fileName?: string;

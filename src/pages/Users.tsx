@@ -491,9 +491,17 @@ export default function Users() {
                       {/* Username */}
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-[11px] uppercase shrink-0 bg-slate-100 text-slate-700 border border-[rgba(60,60,67,0.1)]">
-                            {initial}
-                          </div>
+                          {item.imageUrl ? (
+                            <img
+                              src={item.imageUrl}
+                              alt={item.login}
+                              className="w-7 h-7 rounded-full object-cover shrink-0 border border-[rgba(60,60,67,0.1)]"
+                            />
+                          ) : (
+                            <div className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-[11px] uppercase shrink-0 bg-slate-100 text-slate-700 border border-[rgba(60,60,67,0.1)]">
+                              {initial}
+                            </div>
+                          )}
                           <div>
                             <span className="font-semibold text-[#1c1c1e] font-mono text-xs">
                               @{item.login}
@@ -612,139 +620,137 @@ export default function Users() {
         </div>
       </div>
 
-      {/* CREATE NEW USER MODAL (Apple iOS HIG Frosted Glass) */}
+      {/* CREATE NEW USER MODAL (Zoho CRM Modal & Field UI) */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-black/35 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="ios-glass-modal max-w-lg w-full p-6 my-6 border border-white/60">
+        <div className="zoho-modal-backdrop">
+          <div className="zoho-modal-card max-w-lg animate-in zoom-in-95">
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3.5 border-b border-[rgba(60,60,67,0.1)]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-[#007aff] text-white flex items-center justify-center shadow-md">
-                  <UserPlus size={16} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-[#1c1c1e]">Create New Staff User</h3>
-                  <p className="text-[11px] text-[#8e8e93]">
-                    Configure credentials, desk role, and login authorization
-                  </p>
-                </div>
-              </div>
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                Create Staff User
+              </h3>
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="w-7 h-7 rounded-full bg-[rgba(118,118,128,0.12)] flex items-center justify-center text-[#8e8e93] hover:text-[#1c1c1e] hover:bg-[rgba(118,118,128,0.2)] transition-colors"
+                className="p-1 text-slate-400 hover:text-slate-600 rounded transition-colors"
+                aria-label="Close"
               >
-                <X size={14} />
+                <X size={16} />
               </button>
             </div>
 
             {/* Error Banner */}
             {modalError && (
-              <div className="mt-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-start gap-2">
-                <AlertCircle size={15} className="shrink-0 text-rose-600 mt-0.5" />
+              <div className="mt-3 p-2.5 bg-rose-50 border border-rose-200 rounded-md text-xs text-rose-800 flex items-start gap-2">
+                <AlertCircle size={14} className="shrink-0 text-rose-600 mt-0.5" />
                 <span>{modalError}</span>
               </div>
             )}
 
-            <form onSubmit={handleCreateUser} className="mt-4 space-y-4 text-xs">
-              {/* Username (Login) */}
-              <div>
-                <label className="block font-semibold text-[#1c1c1e] mb-1">
-                  Username (Login) <span className="text-[#ff3b30]">*</span>
+            <div className="text-xs font-semibold text-slate-500 mt-3 mb-4">
+              Order Information
+            </div>
+
+            <form onSubmit={handleCreateUser} className="text-xs">
+              {/* Username (Login) (Required: Red Left Accent Bar) */}
+              <div className="zoho-form-row">
+                <label className="zoho-form-label" title="Username / Login">
+                  Username (Login)
                 </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. staff_work1 or rahul.sharma"
-                  value={formData.login}
-                  onChange={(e) => {
-                    const clean = e.target.value.toLowerCase().replace(/\s+/g, '');
-                    setFormData({ ...formData, login: clean });
-                    if (fieldErrors.login) {
-                      setFieldErrors((prev) => ({ ...prev, login: undefined }));
-                    }
-                  }}
-                  className={`w-full ios-input font-mono ${
-                    fieldErrors.login ? 'border-[#ff3b30] ring-1 ring-[#ff3b30]' : ''
-                  }`}
-                />
-                {fieldErrors.login && (
-                  <p className="text-[11px] text-[#ff3b30] font-medium mt-1 flex items-center gap-1">
-                    <AlertCircle size={11} />
-                    <span>{fieldErrors.login}</span>
-                  </p>
-                )}
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    required
+                    value={formData.login}
+                    onChange={(e) => {
+                      const clean = e.target.value.toLowerCase().replace(/\s+/g, '');
+                      setFormData({ ...formData, login: clean });
+                      if (fieldErrors.login) {
+                        setFieldErrors((prev) => ({ ...prev, login: undefined }));
+                      }
+                    }}
+                    className={`ios-input ios-input-required w-full font-mono ${
+                      fieldErrors.login ? 'border-[#ff3b30] ring-1 ring-[#ff3b30]' : ''
+                    }`}
+                  />
+                  {fieldErrors.login && (
+                    <p className="text-[11px] text-[#ff3b30] font-medium mt-1 flex items-center gap-1">
+                      <AlertCircle size={11} />
+                      <span>{fieldErrors.login}</span>
+                    </p>
+                  )}
+                </div>
               </div>
 
-              {/* First Name & Last Name */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-[#1c1c1e] mb-1">
-                    First Name
-                  </label>
+              {/* Work Email (Required: Red Left Accent Bar) */}
+              <div className="zoho-form-row">
+                <label className="zoho-form-label" title="Customer Email">
+                  Customer Email
+                </label>
+                <div className="flex-1">
+                  <input
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={(e) => {
+                      setFormData({ ...formData, email: e.target.value });
+                      if (fieldErrors.email) {
+                        setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                      }
+                    }}
+                    className={`ios-input ios-input-required w-full ${
+                      fieldErrors.email ? 'border-[#ff3b30] ring-1 ring-[#ff3b30]' : ''
+                    }`}
+                  />
+                  {fieldErrors.email && (
+                    <p className="text-[11px] text-[#ff3b30] font-medium mt-1 flex items-center gap-1">
+                      <AlertCircle size={11} />
+                      <span>{fieldErrors.email}</span>
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* First Name */}
+              <div className="zoho-form-row">
+                <label className="zoho-form-label" title="First Name">
+                  First Name
+                </label>
+                <div className="flex-1">
                   <input
                     type="text"
                     maxLength={50}
-                    placeholder="Rahul"
                     value={formData.firstName}
                     onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    className="w-full ios-input"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-[#1c1c1e] mb-1">
-                    Last Name
-                  </label>
-                  <input
-                    type="text"
-                    maxLength={50}
-                    placeholder="Sharma"
-                    value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    className="w-full ios-input"
+                    className="ios-input w-full"
                   />
                 </div>
               </div>
 
-              {/* Email Address */}
-              <div>
-                <label className="block font-semibold text-[#1c1c1e] mb-1">
-                  Email Address <span className="text-[#ff3b30]">*</span>
+              {/* Last Name */}
+              <div className="zoho-form-row">
+                <label className="zoho-form-label" title="Last Name">
+                  Last Name
                 </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="rahul.work@company.com"
-                  value={formData.email}
-                  onChange={(e) => {
-                    setFormData({ ...formData, email: e.target.value });
-                    if (fieldErrors.email) {
-                      setFieldErrors((prev) => ({ ...prev, email: undefined }));
-                    }
-                  }}
-                  className={`w-full ios-input ${
-                    fieldErrors.email ? 'border-[#ff3b30] ring-1 ring-[#ff3b30]' : ''
-                  }`}
-                />
-                {fieldErrors.email && (
-                  <p className="text-[11px] text-[#ff3b30] font-medium mt-1 flex items-center gap-1">
-                    <AlertCircle size={11} />
-                    <span>{fieldErrors.email}</span>
-                  </p>
-                )}
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    maxLength={50}
+                    value={formData.lastName}
+                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    className="ios-input w-full"
+                  />
+                </div>
               </div>
 
               {/* Password */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block font-semibold text-[#1c1c1e]">
-                    Password
-                  </label>
-                </div>
-                <div className="relative">
+              <div className="zoho-form-row">
+                <label className="zoho-form-label" title="Password">
+                  Password
+                </label>
+                <div className="flex-1 relative">
                   <input
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="Leave blank for auto-generated password"
                     value={formData.password}
                     onChange={(e) => {
                       setFormData({ ...formData, password: e.target.value });
@@ -752,101 +758,71 @@ export default function Users() {
                         setFieldErrors((prev) => ({ ...prev, password: undefined }));
                       }
                     }}
-                    className={`w-full ios-input pr-10 ${
+                    className={`ios-input w-full pr-8 ${
                       fieldErrors.password ? 'border-[#ff3b30] ring-1 ring-[#ff3b30]' : ''
                     }`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#8e8e93] hover:text-[#1c1c1e]"
+                    className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-700"
                   >
-                    {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                    {showPassword ? <EyeOff size={13} /> : <Eye size={13} />}
                   </button>
+                  {fieldErrors.password && (
+                    <p className="text-[11px] text-[#ff3b30] font-medium mt-1 flex items-center gap-1">
+                      <AlertCircle size={11} />
+                      <span>{fieldErrors.password}</span>
+                    </p>
+                  )}
                 </div>
-                {fieldErrors.password && (
-                  <p className="text-[11px] text-[#ff3b30] font-medium mt-1 flex items-center gap-1">
-                    <AlertCircle size={11} />
-                    <span>{fieldErrors.password}</span>
-                  </p>
-                )}
               </div>
 
               {/* Role Assignment Dropdown */}
-              <div>
-                <label className="block font-semibold text-[#1c1c1e] mb-1">
-                  Role Assignment <span className="text-[#ff3b30]">*</span>
+              <div className="zoho-form-row">
+                <label className="zoho-form-label" title="Role Assignment">
+                  Product / Role
                 </label>
-                <select
-                  value={formData.authorities?.[0] || USER_ROLES.WORK_VISA_COUNSELOR}
-                  onChange={(e) => handleSelectRole(e.target.value)}
-                  className={`w-full ios-input ${
-                    fieldErrors.authorities ? 'border-[#ff3b30] ring-1 ring-[#ff3b30]' : ''
-                  }`}
-                >
-                  {USER_ROLE_CONFIG.map((roleOpt) => (
-                    <option key={roleOpt.value} value={roleOpt.value}>
-                      {roleOpt.label}
-                    </option>
-                  ))}
-                </select>
-                {fieldErrors.authorities && (
-                  <p className="text-[11px] text-[#ff3b30] font-medium mt-1 flex items-center gap-1">
-                    <AlertCircle size={11} />
-                    <span>{fieldErrors.authorities}</span>
-                  </p>
-                )}
-              </div>
-
-              {/* Status Activated iOS Toggle Switch */}
-              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[rgba(118,118,128,0.06)] border border-[rgba(60,60,67,0.08)]">
-                <div>
-                  <p className="font-semibold text-[#1c1c1e] text-xs">Account Status (Activated)</p>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={formData.activated}
-                  onClick={() =>
-                    setFormData({ ...formData, activated: !formData.activated })
-                  }
-                  className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    formData.activated ? 'bg-[#34c759]' : 'bg-[#e5e5ea]'
-                  }`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                      formData.activated ? 'translate-x-5' : 'translate-x-0'
+                <div className="flex-1">
+                  <select
+                    value={formData.authorities?.[0] || USER_ROLES.WORK_VISA_COUNSELOR}
+                    onChange={(e) => handleSelectRole(e.target.value)}
+                    className={`zoho-select font-medium ${
+                      fieldErrors.authorities ? 'border-[#ff3b30] ring-1 ring-[#ff3b30]' : ''
                     }`}
-                  />
-                </button>
+                  >
+                    {USER_ROLE_CONFIG.map((roleOpt) => (
+                      <option key={roleOpt.value} value={roleOpt.value}>
+                        {roleOpt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              {/* Actions */}
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-[rgba(60,60,67,0.1)]">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="ios-btn-gray"
-                >
-                  Cancel
-                </button>
+              {/* Date & Time (Compound Input matching screenshot) */}
+              <div className="zoho-form-row">
+                <label className="zoho-form-label" title="Date and Time">
+                  Date and Time of ...
+                </label>
+                <div className="flex-1 flex rounded-md overflow-hidden border border-[#d0dcf0] bg-[#edf2f9]">
+                  <div className="flex-1 px-3 py-2 border-r border-[#d0dcf0] text-xs text-slate-800 bg-[#edf2f9]">
+                    {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </div>
+                  <div className="w-28 px-3 py-2 text-xs text-slate-800 bg-[#edf2f9] text-center font-medium">
+                    {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-slate-100">
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="ios-btn-primary disabled:opacity-50"
+                  className="zoho-btn-done"
                 >
-                  {submitting ? (
-                    <>
-                      <RefreshCw size={13} className="animate-spin" />
-                      <span>Creating...</span>
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus size={14} />
-                      <span>Create Staff User</span>
-                    </>
-                  )}
+                  {submitting ? 'Creating...' : 'Done'}
                 </button>
               </div>
             </form>
@@ -854,134 +830,142 @@ export default function Users() {
         </div>
       )}
 
-      {/* EDIT USER MODAL (Apple iOS HIG Frosted Glass) */}
+      {/* EDIT USER MODAL (Zoho CRM Modal & Field UI) */}
       {editingUser && (
-        <div className="fixed inset-0 z-50 bg-black/35 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="ios-glass-modal max-w-lg w-full p-6 my-6 border border-white/60">
-            <div className="flex items-center justify-between pb-3.5 border-b border-[rgba(60,60,67,0.1)]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-md">
-                  <Edit2 size={15} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-[#1c1c1e]">
-                    Edit User: @{editingUser.login}
-                  </h3>
-                  <p className="text-[11px] text-[#8e8e93]">
-                    Update personal profile, assigned role, or active status
-                  </p>
-                </div>
-              </div>
+        <div className="zoho-modal-backdrop">
+          <div className="zoho-modal-card max-w-lg animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                Edit User: @{editingUser.login}
+              </h3>
               <button
                 type="button"
                 onClick={() => setEditingUser(null)}
-                className="w-7 h-7 rounded-full bg-[rgba(118,118,128,0.12)] flex items-center justify-center text-[#8e8e93] hover:text-[#1c1c1e] hover:bg-[rgba(118,118,128,0.2)] transition-colors"
+                className="p-1 text-slate-400 hover:text-slate-600 rounded transition-colors"
+                aria-label="Close"
               >
-                <X size={14} />
+                <X size={16} />
               </button>
             </div>
 
             {modalError && (
-              <div className="mt-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-start gap-2">
-                <AlertCircle size={15} className="shrink-0 text-rose-600 mt-0.5" />
+              <div className="mt-3 p-2.5 bg-rose-50 border border-rose-200 rounded-md text-xs text-rose-800 flex items-start gap-2">
+                <AlertCircle size={14} className="shrink-0 text-rose-600 mt-0.5" />
                 <span>{modalError}</span>
               </div>
             )}
 
-            <form onSubmit={handleUpdateUser} className="mt-4 space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-[#1c1c1e] mb-1">First Name</label>
+            <div className="text-xs font-semibold text-slate-500 mt-3 mb-4">
+              Order Information
+            </div>
+
+            <form onSubmit={handleUpdateUser} className="text-xs">
+              {/* User Login */}
+              <div className="zoho-form-row">
+                <label className="zoho-form-label" title="User Login">
+                  User ID
+                </label>
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    disabled
+                    value={editingUser.login}
+                    className="ios-input w-full font-mono text-slate-700 opacity-90 cursor-not-allowed"
+                  />
+                </div>
+              </div>
+
+              {/* Customer Email */}
+              <div className="zoho-form-row">
+                <label className="zoho-form-label" title="Customer Email">
+                  Customer Email
+                </label>
+                <div className="flex-1">
+                  <input
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="ios-input ios-input-required w-full"
+                  />
+                </div>
+              </div>
+
+              {/* First Name */}
+              <div className="zoho-form-row">
+                <label className="zoho-form-label" title="First Name">
+                  First Name
+                </label>
+                <div className="flex-1">
                   <input
                     type="text"
                     maxLength={50}
                     value={formData.firstName}
                     onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    className="w-full ios-input"
+                    className="ios-input w-full"
                   />
                 </div>
-                <div>
-                  <label className="block font-semibold text-[#1c1c1e] mb-1">Last Name</label>
+              </div>
+
+              {/* Last Name */}
+              <div className="zoho-form-row">
+                <label className="zoho-form-label" title="Last Name">
+                  Last Name
+                </label>
+                <div className="flex-1">
                   <input
                     type="text"
                     maxLength={50}
                     value={formData.lastName}
                     onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    className="w-full ios-input"
+                    className="ios-input w-full"
                   />
                 </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-[#1c1c1e] mb-1">
-                  Email Address <span className="text-[#ff3b30]">*</span>
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full ios-input"
-                />
               </div>
 
               {/* Role Selection Dropdown */}
-              <div>
-                <label className="block font-semibold text-[#1c1c1e] mb-1">
-                  Role Assignment <span className="text-[#ff3b30]">*</span>
+              <div className="zoho-form-row">
+                <label className="zoho-form-label" title="Role Assignment">
+                  Product / Role
                 </label>
-                <select
-                  value={formData.authorities?.[0] || USER_ROLES.WORK_VISA_COUNSELOR}
-                  onChange={(e) => handleSelectRole(e.target.value)}
-                  className="w-full ios-input"
-                >
-                  {USER_ROLE_CONFIG.map((roleOpt) => (
-                    <option key={roleOpt.value} value={roleOpt.value}>
-                      {roleOpt.label}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex-1">
+                  <select
+                    value={formData.authorities?.[0] || USER_ROLES.WORK_VISA_COUNSELOR}
+                    onChange={(e) => handleSelectRole(e.target.value)}
+                    className="zoho-select font-medium"
+                  >
+                    {USER_ROLE_CONFIG.map((roleOpt) => (
+                      <option key={roleOpt.value} value={roleOpt.value}>
+                        {roleOpt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              {/* Status Activated iOS Toggle Switch */}
-              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[rgba(118,118,128,0.06)] border border-[rgba(60,60,67,0.08)]">
-                <div>
-                  <p className="font-semibold text-[#1c1c1e] text-xs">Account Status (Activated)</p>
+              {/* Date & Time */}
+              <div className="zoho-form-row">
+                <label className="zoho-form-label" title="Date and Time">
+                  Date and Time of ...
+                </label>
+                <div className="flex-1 flex rounded-md overflow-hidden border border-[#d0dcf0] bg-[#edf2f9]">
+                  <div className="flex-1 px-3 py-2 border-r border-[#d0dcf0] text-xs text-slate-800 bg-[#edf2f9]">
+                    {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </div>
+                  <div className="w-28 px-3 py-2 text-xs text-slate-800 bg-[#edf2f9] text-center font-medium">
+                    {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={formData.activated}
-                  onClick={() =>
-                    setFormData({ ...formData, activated: !formData.activated })
-                  }
-                  className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    formData.activated ? 'bg-[#34c759]' : 'bg-[#e5e5ea]'
-                  }`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                      formData.activated ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
               </div>
 
               {/* Actions */}
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-[rgba(60,60,67,0.1)]">
-                <button
-                  type="button"
-                  onClick={() => setEditingUser(null)}
-                  className="ios-btn-gray"
-                >
-                  Cancel
-                </button>
+              <div className="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-slate-100">
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="ios-btn-primary disabled:opacity-50"
+                  className="zoho-btn-done"
                 >
-                  {submitting ? 'Saving...' : 'Save Changes'}
+                  {submitting ? 'Saving...' : 'Done'}
                 </button>
               </div>
             </form>

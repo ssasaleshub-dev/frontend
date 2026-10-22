@@ -60,6 +60,10 @@ export const crmService = {
 
   getLeadForms: (): Promise<any> => axiosClient.get(API_ENDPOINTS.LEAD_FORMS),
   getLeadPreferences: (): Promise<any> => axiosClient.get(API_ENDPOINTS.LEAD_PREFERENCES),
+  createLeadPreference: (prefData: any): Promise<any> =>
+    axiosClient.post(API_ENDPOINTS.LEAD_PREFERENCES, prefData),
+  updateLeadPreference: (id: string | number, prefData: any): Promise<any> =>
+    axiosClient.put(`${API_ENDPOINTS.LEAD_PREFERENCES}/${id}`, prefData),
 };
 
 export default crmService;

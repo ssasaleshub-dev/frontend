@@ -32,6 +32,7 @@ export const API_ENDPOINTS = {
   LEAD_PREFERENCES: '/api/lead-preferences',
 
   MESSAGES: '/api/messages',
+  MESSAGES_P2P: '/api/messages/p2p',
   FILES_UPLOAD: '/api/files/upload',
 } as const;
 
@@ -70,13 +71,6 @@ export const USER_ROLE_CONFIG = [
   { value: 'ROLE_WORK_VISA', label: 'Work Visa Staff', desc: 'Handles international employment & work permit inquiries' },
   { value: 'ROLE_STUDY_VISA', label: 'Study Visa Staff', desc: 'Handles university admissions & study permits' },
   { value: 'ROLE_DOMESTIC_COLLEGE_ADMISSION', label: 'Domestic College Admission Staff', desc: 'Handles domestic college and university admissions' },
-] as const;
-
-export const KNOWN_STAFF_USERS = [
-  { login: 'work_staff', name: 'Work Visa Staff', role: 'ROLE_WORK_VISA' },
-  { login: 'study_staff', name: 'Study Visa Staff', role: 'ROLE_STUDY_VISA' },
-  { login: 'other_staff', name: 'Other Visa Staff', role: 'ROLE_OTHER_VISA' },
-  { login: 'admin', name: 'Admin Administrator', role: 'ROLE_ADMIN' },
 ] as const;
 
 export const PLATFORMS: Record<string, { label: string; color: string; bg?: string; text?: string; border?: string }> = {
@@ -127,11 +121,35 @@ export const EDUCATION_QUALIFICATIONS = [
   'Any Degree',
 ] as const;
 
+export function isStudyVisaType(vt?: string | null): boolean {
+  if (!vt) return false;
+  const upper = vt.toUpperCase();
+  return upper === 'STUDY_VISA' || upper.includes('STUDY') || upper.includes('STUDENT');
+}
+
+export function isWorkVisaType(vt?: string | null): boolean {
+  if (!vt) return false;
+  const upper = vt.toUpperCase();
+  return upper === 'WORK_VISA' || upper.includes('WORK') || upper.includes('EMPLOY');
+}
+
+export function isDomesticAdmissionType(vt?: string | null): boolean {
+  if (!vt) return false;
+  const upper = vt.toUpperCase();
+  return upper.includes('DOMESTIC') || upper.includes('COLLEGE') || upper.includes('ADMISSION');
+}
+
+export function isOtherVisaType(vt?: string | null): boolean {
+  if (!vt) return false;
+  return !isStudyVisaType(vt) && !isWorkVisaType(vt) && !isDomesticAdmissionType(vt);
+}
+
 /**
  * Filter leads based on the logged-in counselor's role:
  * - Admin: sees all leads across all visa types
  * - ROLE_WORK_VISA: sees WORK_VISA leads or leads assigned to them
  * - ROLE_STUDY_VISA: sees STUDY_VISA leads or leads assigned to them
+ * - ROLE_DOMESTIC_COLLEGE_ADMISSION: sees Domestic College Admission leads or leads assigned to them
  * - ROLE_OTHER_VISA: sees 3rd category / OTHER_VISA leads or leads assigned to them
  */
 export function filterLeadsByUserRole(leads: any[] = [], currentUser: any = null): any[] {
@@ -146,29 +164,28 @@ export function filterLeadsByUserRole(leads: any[] = [], currentUser: any = null
     return leads;
   }
 
-  // ROLE_WORK_VISA: Staff handling Work Visa leads
-  if (authorities.includes(USER_ROLES.WORK_VISA_COUNSELOR)) {
-    return leads.filter((lead) => {
-      const isWork = (lead.visaType || '').toUpperCase() === 'WORK_VISA';
-      const isAssigned = (lead.assignedTo || '').toLowerCase() === userLogin;
-      return isWork || isAssigned;
-    });
-  }
-
   // ROLE_STUDY_VISA: Staff handling Study Visa leads
   if (authorities.includes(USER_ROLES.STUDY_VISA_COUNSELOR)) {
     return leads.filter((lead) => {
-      const isStudy = (lead.visaType || '').toUpperCase() === 'STUDY_VISA';
+      const isStudy = isStudyVisaType(lead.visaType);
       const isAssigned = (lead.assignedTo || '').toLowerCase() === userLogin;
       return isStudy || isAssigned;
+    });
+  }
+
+  // ROLE_WORK_VISA: Staff handling Work Visa leads
+  if (authorities.includes(USER_ROLES.WORK_VISA_COUNSELOR)) {
+    return leads.filter((lead) => {
+      const isWork = isWorkVisaType(lead.visaType);
+      const isAssigned = (lead.assignedTo || '').toLowerCase() === userLogin;
+      return isWork || isAssigned;
     });
   }
 
   // ROLE_DOMESTIC_COLLEGE_ADMISSION: Staff handling domestic college admission leads
   if (authorities.includes(USER_ROLES.DOMESTIC_COLLEGE_ADMISSION)) {
     return leads.filter((lead) => {
-      const vt = (lead.visaType || '').toUpperCase();
-      const isDomestic = vt.includes('COLLEGE') || vt.includes('DOMESTIC') || vt.includes('ADMISSION');
+      const isDomestic = isDomesticAdmissionType(lead.visaType);
       const isAssigned = (lead.assignedTo || '').toLowerCase() === userLogin;
       return isDomestic || isAssigned;
     });
@@ -177,8 +194,7 @@ export function filterLeadsByUserRole(leads: any[] = [], currentUser: any = null
   // ROLE_OTHER_VISA: Staff handling 3rd category / Other Visa leads
   if (authorities.includes(USER_ROLES.OTHER_VISA_COUNSELOR)) {
     return leads.filter((lead) => {
-      const vt = (lead.visaType || '').toUpperCase();
-      const isOther = vt !== 'WORK_VISA' && vt !== 'STUDY_VISA';
+      const isOther = isOtherVisaType(lead.visaType);
       const isAssigned = (lead.assignedTo || '').toLowerCase() === userLogin;
       return isOther || isAssigned;
     });

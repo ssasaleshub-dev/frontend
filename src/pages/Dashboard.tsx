@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Users,
   Briefcase,
@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   BarChart3,
   PieChart,
+  X,
 } from 'lucide-react';
 import crmService from '../services/api/crmService';
 import {
@@ -26,6 +27,9 @@ import {
   LEAD_STATUSES,
   LEAD_STATUS_LIST,
   filterLeadsByUserRole,
+  isStudyVisaType,
+  isWorkVisaType,
+  isOtherVisaType,
 } from '../config/constants';
 import {
   isAdmin as checkIsAdmin,
@@ -41,29 +45,41 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
 
-  const [allLeads, setAllLeads] = useState<Lead[]>([]);
-  const [analytics, setAnalytics] = useState<LeadAnalytics | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [deskFilter, setDeskFilter] = useState<'ALL' | 'WORK_VISA' | 'STUDY_VISA' | 'OTHER_VISA'>('ALL');
-  const [statusModalLead, setStatusModalLead] = useState<Lead | null>(null);
-  const [statusForm, setStatusForm] = useState<{ status: string; notes: string }>({
-    status: 'CONTACTED',
-    notes: '',
-  });
-  const hasLoadedRef = useRef<boolean>(false);
-
   const isAdmin = checkIsAdmin(currentUser);
   const isWorkVisa = isWorkVisaStaff(currentUser);
   const isStudyVisa = isStudyVisaStaff(currentUser);
   const isOtherVisa = isOtherVisaStaff(currentUser);
   const roleBadge = getRoleBadgeInfo(currentUser);
 
+  // Initial desk based strictly on counselor role
+  const userInitialDesk: 'ALL' | 'WORK_VISA' | 'STUDY_VISA' | 'OTHER_VISA' = useMemo(() => {
+    if (isAdmin) return 'ALL';
+    if (isStudyVisa) return 'STUDY_VISA';
+    if (isWorkVisa) return 'WORK_VISA';
+    if (isOtherVisa) return 'OTHER_VISA';
+    return 'ALL';
+  }, [isAdmin, isStudyVisa, isWorkVisa, isOtherVisa]);
+
+  const [allLeads, setAllLeads] = useState<Lead[]>([]);
+  const [analytics, setAnalytics] = useState<LeadAnalytics | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [deskFilter, setDeskFilter] = useState<'ALL' | 'WORK_VISA' | 'STUDY_VISA' | 'OTHER_VISA'>(userInitialDesk);
+  const [statusModalLead, setStatusModalLead] = useState<Lead | null>(null);
+  const [statusForm, setStatusForm] = useState<{ status: string; notes: string }>({
+    status: 'CONTACTED',
+    notes: '',
+  });
+  const [searchParams] = useSearchParams();
+  const urlDesk = searchParams.get('desk') as 'ALL' | 'WORK_VISA' | 'STUDY_VISA' | 'OTHER_VISA' | null;
+  const hasLoadedRef = useRef<boolean>(false);
+
   const loadDashboardData = useCallback(async (filterParam?: string) => {
     setLoading(true);
     setError(null);
-    const activeFilter = filterParam !== undefined ? filterParam : deskFilter;
-    const filterToUse = activeFilter !== 'ALL' ? activeFilter : undefined;
+    // Non-admin counselors are strictly locked to their assigned desk parameter
+    const effectiveDesk = !isAdmin ? userInitialDesk : (filterParam !== undefined ? filterParam : deskFilter);
+    const filterToUse = effectiveDesk !== 'ALL' ? effectiveDesk : undefined;
     try {
       const [analyticsRes, leadsRes] = await Promise.allSettled([
         crmService.getLeadAnalytics(filterToUse),
@@ -81,9 +97,20 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, [deskFilter]);
+  }, [deskFilter, isAdmin, userInitialDesk]);
+
+  // Synchronize desk filter when user role or URL param changes
+  useEffect(() => {
+    if (!isAdmin) {
+      setDeskFilter(userInitialDesk);
+    } else if (urlDesk && ['ALL', 'WORK_VISA', 'STUDY_VISA', 'OTHER_VISA'].includes(urlDesk)) {
+      setDeskFilter(urlDesk);
+      loadDashboardData(urlDesk);
+    }
+  }, [isAdmin, userInitialDesk, urlDesk, loadDashboardData]);
 
   const handleDeskChange = (desk: 'ALL' | 'WORK_VISA' | 'STUDY_VISA' | 'OTHER_VISA') => {
+    if (!isAdmin) return; // Non-admin cannot switch away from their desk
     setDeskFilter(desk);
     loadDashboardData(desk);
   };
@@ -99,43 +126,32 @@ export default function Dashboard() {
     return () => window.removeEventListener('crm-data-updated', handleUpdate);
   }, [loadDashboardData]);
 
-  // Set default desk based on staff role
-  useEffect(() => {
-    if (isWorkVisa) setDeskFilter('WORK_VISA');
-    else if (isStudyVisa) setDeskFilter('STUDY_VISA');
-    else if (isOtherVisa) setDeskFilter('OTHER_VISA');
-  }, [isWorkVisa, isStudyVisa, isOtherVisa]);
-
   // 1. Scope leads by logged-in user role
   const roleScopedLeads = useMemo(() => {
     return filterLeadsByUserRole(allLeads, currentUser);
   }, [allLeads, currentUser]);
 
-  // 2. Filter by selected desk tab (if Admin or toggleable)
+  // 2. Filter by selected desk tab (for Admin toggle or active counselor desk)
   const displayLeads = useMemo(() => {
     if (deskFilter === 'ALL') return roleScopedLeads;
-    if (deskFilter === 'OTHER_VISA') {
-      return roleScopedLeads.filter((l) => {
-        const vt = (l.visaType || '').toUpperCase();
-        return vt !== 'WORK_VISA' && vt !== 'STUDY_VISA';
-      });
+    if (deskFilter === 'STUDY_VISA') {
+      return roleScopedLeads.filter((l) => isStudyVisaType(l.visaType));
     }
-    return roleScopedLeads.filter((l) => (l.visaType || '').toUpperCase() === deskFilter);
+    if (deskFilter === 'WORK_VISA') {
+      return roleScopedLeads.filter((l) => isWorkVisaType(l.visaType));
+    }
+    if (deskFilter === 'OTHER_VISA') {
+      return roleScopedLeads.filter((l) => isOtherVisaType(l.visaType));
+    }
+    return roleScopedLeads;
   }, [roleScopedLeads, deskFilter]);
 
   // Derived metrics
   const metrics = useMemo(() => {
     const total = displayLeads.length;
-    const workVisaCount = roleScopedLeads.filter(
-      (l) => (l.visaType || '').toUpperCase() === 'WORK_VISA'
-    ).length;
-    const studyVisaCount = roleScopedLeads.filter(
-      (l) => (l.visaType || '').toUpperCase() === 'STUDY_VISA'
-    ).length;
-    const otherVisaCount = roleScopedLeads.filter((l) => {
-      const vt = (l.visaType || '').toUpperCase();
-      return vt !== 'WORK_VISA' && vt !== 'STUDY_VISA';
-    }).length;
+    const workVisaCount = roleScopedLeads.filter((l) => isWorkVisaType(l.visaType)).length;
+    const studyVisaCount = roleScopedLeads.filter((l) => isStudyVisaType(l.visaType)).length;
+    const otherVisaCount = roleScopedLeads.filter((l) => isOtherVisaType(l.visaType)).length;
 
     // Source Platforms in displayed leads
     const igCount = displayLeads.filter((l) => l.platform === 'IG').length;
@@ -150,6 +166,7 @@ export default function Dashboard() {
 
     const wonCount = (statusCounts.CONVERTED || 0) + (statusCounts.WON || 0);
     const inProcessCount = (statusCounts.NEGOTIATION || 0) + (statusCounts.PROPOSAL_SENT || 0);
+    const contactedOrQualified = (statusCounts.CONTACTED || 0) + (statusCounts.QUALIFIED || 0);
     const conversionRate = total > 0 ? Math.round((wonCount / total) * 100) : 0;
 
     // Education distribution
@@ -177,6 +194,7 @@ export default function Dashboard() {
       statusCounts,
       wonCount,
       inProcessCount,
+      contactedOrQualified,
       conversionRate,
       educationCounts,
       ageCounts,
@@ -233,23 +251,23 @@ export default function Dashboard() {
     const t = (type || '').toUpperCase();
     if (t === 'WORK_VISA') {
       return (
-        <span className="ios-badge ios-badge-blue">
-          <Briefcase size={10} />
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#1c1c1e]">
+          <span className="w-2 h-2 rounded-full bg-[#5856d6] shadow-2xs shrink-0"></span>
           <span>Work Visa</span>
         </span>
       );
     }
     if (t === 'STUDY_VISA') {
       return (
-        <span className="ios-badge ios-badge-green">
-          <GraduationCap size={10} />
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#1c1c1e]">
+          <span className="w-2 h-2 rounded-full bg-[#34c759] shadow-2xs shrink-0"></span>
           <span>Study Visa</span>
         </span>
       );
     }
     return (
-      <span className="ios-badge ios-badge-orange">
-        <Globe size={10} />
+      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#1c1c1e]">
+        <span className="w-2 h-2 rounded-full bg-[#ff9500] shadow-2xs shrink-0"></span>
         <span>{t === 'OTHER_VISA' ? 'Other Visa' : type || 'Other Visa'}</span>
       </span>
     );
@@ -329,7 +347,7 @@ export default function Dashboard() {
       </div>
 
       {error && (
-        <div className="p-3.5 rounded-2xl bg-[#ff9500]/10 border border-[#ff9500]/25 text-xs text-[#ff9500] flex items-center justify-between font-medium">
+        <div className="p-3.5 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 flex items-center justify-between font-medium">
           <div className="flex items-center gap-2">
             <AlertCircle size={15} className="shrink-0" />
             <span>{error}</span>
@@ -343,101 +361,143 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* High-Profile iOS-Style KPI Cards Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
-        {/* KPI 1: Total Inquiries */}
-        <div className="ios-card ios-card-hover p-4 sm:p-5 flex flex-col justify-between">
+      {/* Zoho CRM Metric Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* KPI 1: Desk Total Inquiries */}
+        <div className="bg-white border border-slate-200 border-t-4 border-t-blue-600 rounded-lg p-4 sm:p-5 shadow-2xs flex flex-col justify-between hover:shadow-xs transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-[#8e8e93]">
-              {deskFilter === 'WORK_VISA' ? 'Work Visa Candidates' : deskFilter === 'STUDY_VISA' ? 'Study Visa Students' : 'Total Candidates'}
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
+                ? 'Study Visa Students'
+                : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
+                ? 'Work Visa Candidates'
+                : 'Total Candidates'}
             </span>
-            <div className="ios-squircle bg-[#007aff]/10 text-[#007aff]">
-              <Users size={17} />
+            <div className="w-8 h-8 rounded bg-blue-50 text-blue-600 flex items-center justify-center">
+              {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa) ? (
+                <GraduationCap size={16} />
+              ) : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa) ? (
+                <Briefcase size={16} />
+              ) : (
+                <Users size={16} />
+              )}
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1c1c1e]">
+            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
               {metrics.total}
             </div>
-            <div className="mt-1 flex items-center gap-1.5 text-[11px] text-[#8e8e93] font-medium">
+            <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500 font-medium">
               <span>{metrics.statusCounts.CREATED || 0} awaiting contact</span>
             </div>
           </div>
         </div>
 
-        {/* KPI 2: Work Visa Desk Inquiries */}
-        <div className="ios-card ios-card-hover p-4 sm:p-5 flex flex-col justify-between">
+        {/* KPI 2: Contacted / Screened / Cross-Desk Work */}
+        <div className="bg-white border border-slate-200 border-t-4 border-t-indigo-600 rounded-lg p-4 sm:p-5 shadow-2xs flex flex-col justify-between hover:shadow-xs transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-[#8e8e93]">Work Visa Inquiries</span>
-            <div className="ios-squircle bg-[#5856d6]/10 text-[#5856d6]">
-              <Briefcase size={17} />
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
+                ? 'In Student Counseling'
+                : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
+                ? 'Screened & Qualified'
+                : 'Work Visa Inquiries'}
+            </span>
+            <div className="w-8 h-8 rounded bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              {deskFilter === 'ALL' && isAdmin ? <Briefcase size={16} /> : <Users size={16} />}
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1c1c1e]">
-              {metrics.workVisaCount}
+            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+              {deskFilter === 'ALL' && isAdmin ? metrics.workVisaCount : metrics.contactedOrQualified}
             </div>
-            <div className="mt-1 text-[11px] text-[#8e8e93] font-medium truncate">
-              International job & work permit
+            <div className="mt-1 text-xs text-slate-500 font-medium truncate">
+              {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
+                ? 'Course & eligibility prep'
+                : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
+                ? 'Employer screening pipeline'
+                : 'International job & permits'}
             </div>
           </div>
         </div>
 
-        {/* KPI 3: Study Visa Desk Inquiries */}
-        <div className="ios-card ios-card-hover p-4 sm:p-5 flex flex-col justify-between">
+        {/* KPI 3: In Process / Cross-Desk Study */}
+        <div className="bg-white border border-slate-200 border-t-4 border-t-emerald-600 rounded-lg p-4 sm:p-5 shadow-2xs flex flex-col justify-between hover:shadow-xs transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-[#8e8e93]">Study Visa Inquiries</span>
-            <div className="ios-squircle bg-[#34c759]/10 text-[#34c759]">
-              <GraduationCap size={17} />
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
+                ? 'Applications In Process'
+                : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
+                ? 'Permits In Process'
+                : 'Study Visa Inquiries'}
+            </span>
+            <div className="w-8 h-8 rounded bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa) ? (
+                <GraduationCap size={16} />
+              ) : deskFilter === 'ALL' && isAdmin ? (
+                <GraduationCap size={16} />
+              ) : (
+                <Layers size={16} />
+              )}
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1c1c1e]">
-              {metrics.studyVisaCount}
+            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+              {deskFilter === 'ALL' && isAdmin ? metrics.studyVisaCount : metrics.inProcessCount}
             </div>
-            <div className="mt-1 text-[11px] text-[#8e8e93] font-medium truncate">
-              University & admissions desk
+            <div className="mt-1 text-xs text-slate-500 font-medium truncate">
+              {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
+                ? 'University offers & dossiers'
+                : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
+                ? 'Work contracts & permit filings'
+                : 'University & admissions desk'}
             </div>
           </div>
         </div>
 
         {/* KPI 4: Successful Enrollment / Approval */}
-        <div className="ios-card ios-card-hover p-4 sm:p-5 flex flex-col justify-between">
+        <div className="bg-white border border-slate-200 border-t-4 border-t-amber-500 rounded-lg p-4 sm:p-5 shadow-2xs flex flex-col justify-between hover:shadow-xs transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-[#8e8e93]">Enrolled / Visa Approved</span>
-            <div className="ios-squircle bg-[#ff9500]/10 text-[#ff9500]">
-              <Award size={17} />
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
+                ? 'Admissions & Visas Approved'
+                : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
+                ? 'Work Visas Approved'
+                : 'Enrolled / Visa Approved'}
+            </span>
+            <div className="w-8 h-8 rounded bg-amber-50 text-amber-600 flex items-center justify-center">
+              <Award size={16} />
             </div>
           </div>
           <div className="mt-3">
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1c1c1e]">
+              <span className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
                 {metrics.wonCount}
               </span>
-              <span className="text-xs font-medium text-[#8e8e93]">
+              <span className="text-xs font-medium text-slate-500">
                 ({metrics.conversionRate}% conversion)
               </span>
             </div>
-            <div className="mt-1 text-[11px] text-[#8e8e93] font-medium">
+            <div className="mt-1 text-xs text-slate-500 font-medium">
               {metrics.inProcessCount} dossiers in process
             </div>
           </div>
         </div>
       </div>
 
-      {/* Stepper Pipeline: Continuous Interactive Stage Funnel */}
-      <div className="ios-card p-4 sm:p-5 space-y-3.5">
-        <div className="flex items-center justify-between">
+      {/* Zoho CRM Stepper Pipeline Funnel */}
+      <div className="bg-white border border-slate-200 rounded-lg shadow-2xs p-4 sm:p-5 space-y-3.5">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#8e8e93] flex items-center gap-1.5">
-              <Layers size={13} className="text-[#8e8e93]" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+              <Layers size={14} className="text-blue-600" />
               <span>Counseling Pipeline Funnel</span>
             </h3>
-            <p className="text-[11px] text-[#8e8e93] mt-0.5">Click any stage to filter candidate records</p>
+            <p className="text-xs text-slate-500 mt-0.5">Click any stage to filter candidate records</p>
           </div>
           <button
             onClick={() => navigate('/leads')}
-            className="text-xs font-semibold text-[#007aff] hover:underline flex items-center gap-0.5"
+            className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-0.5"
           >
             <span>Full Pipeline</span>
             <ChevronRight size={13} />
@@ -445,7 +505,7 @@ export default function Dashboard() {
         </div>
 
         {/* Continuous Step Funnel Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 pt-1">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 pt-1">
           {LEAD_STATUS_LIST.map((st, idx) => {
             const count = metrics.statusCounts[st.value] || 0;
             const pct = metrics.total > 0 ? Math.round((count / metrics.total) * 100) : 0;
@@ -453,16 +513,16 @@ export default function Dashboard() {
               <button
                 key={st.value}
                 onClick={() => navigate(`/leads?status=${st.value}`)}
-                className="p-3.5 rounded-2xl border border-black/[0.05] hover:border-[#007aff]/40 hover:bg-white bg-[#f9f9fa] transition-all text-left group shadow-[0_1px_3px_rgba(0,0,0,0.02)] active:scale-[0.98]"
+                className="p-3 rounded border border-slate-200 hover:border-blue-500 hover:bg-blue-50/20 bg-slate-50/60 transition-colors text-left group"
               >
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-[10px] font-mono text-[#8e8e93] font-semibold">0{idx + 1}</span>
-                  <span className="font-semibold text-[#8e8e93] group-hover:text-[#007aff]">{pct}%</span>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-[10px] font-mono text-slate-400 font-semibold">0{idx + 1}</span>
+                  <span className="font-semibold text-slate-500 group-hover:text-blue-600">{pct}%</span>
                 </div>
-                <div className="text-base sm:text-lg font-bold text-[#1c1c1e] mt-1">
+                <div className="text-base sm:text-lg font-bold text-slate-900 mt-1">
                   {count}
                 </div>
-                <p className="text-[11px] font-medium text-[#3c3c43] truncate mt-0.5" title={st.label}>
+                <p className="text-xs font-medium text-slate-700 truncate mt-0.5" title={st.label}>
                   {st.label}
                 </p>
               </button>
@@ -471,141 +531,173 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Role-Based Analytics Charts: leadsByVisaType and leadsByStatus */}
+      {/* Role-Based Analytics Charts: Desk Breakdown and leadsByStatus */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Chart 1: leadsByVisaType (6 Cols) */}
-        <div className="lg:col-span-6 ios-card p-5 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-black/[0.05]">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#8e8e93] flex items-center gap-1.5">
-              <PieChart size={14} className="text-[#007aff]" />
-              <span>Visa Program Distribution</span>
+        {/* Chart 1: Desk Domain Distribution (6 Cols) */}
+        <div className="lg:col-span-6 bg-white border border-slate-200 rounded-lg shadow-2xs overflow-hidden">
+          <div className="px-5 py-3.5 bg-slate-50/70 border-b border-slate-200 flex items-center justify-between">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+              <PieChart size={14} className="text-blue-600" />
+              <span>
+                {isAdmin && deskFilter === 'ALL'
+                  ? 'Visa Program Distribution'
+                  : deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
+                  ? 'Study Visa Academic Profiles'
+                  : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
+                  ? 'Work Visa Candidate Qualifications'
+                  : 'Program Distribution'}
+              </span>
             </h3>
-            <span className="text-[11px] font-semibold text-[#8e8e93]">
-              Total: {metrics.total}
+            <span className="text-xs font-medium text-slate-500 bg-white border border-slate-200 px-2.5 py-0.5 rounded">
+              Total: {metrics.total} leads
             </span>
           </div>
 
-          <div className="space-y-3">
-            {/* Work Visa */}
-            {(() => {
-              const workCnt = leadsByVisaType.WORK_VISA || 0;
-              const totalSum = (leadsByVisaType.WORK_VISA || 0) + (leadsByVisaType.STUDY_VISA || 0) + (leadsByVisaType.OTHER_VISA || 0) || 1;
-              const pct = Math.round((workCnt / totalSum) * 100);
-              return (
-                <div
-                  onClick={() => navigate('/leads?visaType=WORK_VISA')}
-                  className="p-3.5 rounded-2xl bg-[#5856d6]/5 border border-[#5856d6]/15 hover:bg-[#5856d6]/10 cursor-pointer transition-all active:scale-[0.99]"
-                >
-                  <div className="flex items-center justify-between text-xs mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="ios-badge ios-badge-indigo">
-                        <Briefcase size={10} />
-                        Work Visa
-                      </span>
-                      <span className="text-[#8e8e93] text-[11px]">Employment & Permit</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-[#1c1c1e]">{workCnt} leads</span>
-                      <span className="text-xs font-bold text-[#5856d6]">{pct}%</span>
-                    </div>
-                  </div>
-                  <div className="ios-progress-track">
+          <div className="p-4 divide-y divide-slate-100">
+            {isAdmin && deskFilter === 'ALL' ? (
+              <>
+                {/* Admin View: Work Visa */}
+                {(() => {
+                  const workCnt = leadsByVisaType.WORK_VISA || 0;
+                  const totalSum = (leadsByVisaType.WORK_VISA || 0) + (leadsByVisaType.STUDY_VISA || 0) + (leadsByVisaType.OTHER_VISA || 0) || 1;
+                  const pct = Math.round((workCnt / totalSum) * 100);
+                  return (
                     <div
-                      className="ios-progress-fill bg-[#5856d6]"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })()}
+                      onClick={() => handleDeskChange('WORK_VISA')}
+                      className="py-3 px-2 hover:bg-slate-50 rounded cursor-pointer transition-colors"
+                    >
+                      <div className="flex items-center justify-between text-xs mb-1.5">
+                        <div className="flex items-center gap-2.5">
+                          <span className="w-2.5 h-2.5 rounded-sm bg-indigo-600 shrink-0"></span>
+                          <span className="font-semibold text-slate-900">Work Visa</span>
+                          <span className="text-slate-400 text-[11px]">· Employment & Permit</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-slate-900">{workCnt} leads</span>
+                          <span className="text-xs font-semibold text-indigo-600 min-w-[36px] text-right">{pct}%</span>
+                        </div>
+                      </div>
+                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div className="bg-indigo-600 h-full rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })()}
 
-            {/* Study Visa */}
-            {(() => {
-              const studyCnt = leadsByVisaType.STUDY_VISA || 0;
-              const totalSum = (leadsByVisaType.WORK_VISA || 0) + (leadsByVisaType.STUDY_VISA || 0) + (leadsByVisaType.OTHER_VISA || 0) || 1;
-              const pct = Math.round((studyCnt / totalSum) * 100);
-              return (
-                <div
-                  onClick={() => navigate('/leads?visaType=STUDY_VISA')}
-                  className="p-3.5 rounded-2xl bg-[#34c759]/5 border border-[#34c759]/15 hover:bg-[#34c759]/10 cursor-pointer transition-all active:scale-[0.99]"
-                >
-                  <div className="flex items-center justify-between text-xs mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="ios-badge ios-badge-green">
-                        <GraduationCap size={10} />
-                        Study Visa
-                      </span>
-                      <span className="text-[#8e8e93] text-[11px]">University Admissions</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-[#1c1c1e]">{studyCnt} leads</span>
-                      <span className="text-xs font-bold text-[#34c759]">{pct}%</span>
-                    </div>
-                  </div>
-                  <div className="ios-progress-track">
+                {/* Admin View: Study Visa */}
+                {(() => {
+                  const studyCnt = leadsByVisaType.STUDY_VISA || 0;
+                  const totalSum = (leadsByVisaType.WORK_VISA || 0) + (leadsByVisaType.STUDY_VISA || 0) + (leadsByVisaType.OTHER_VISA || 0) || 1;
+                  const pct = Math.round((studyCnt / totalSum) * 100);
+                  return (
                     <div
-                      className="ios-progress-fill bg-[#34c759]"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })()}
+                      onClick={() => handleDeskChange('STUDY_VISA')}
+                      className="py-3 px-2 hover:bg-slate-50 rounded cursor-pointer transition-colors"
+                    >
+                      <div className="flex items-center justify-between text-xs mb-1.5">
+                        <div className="flex items-center gap-2.5">
+                          <span className="w-2.5 h-2.5 rounded-sm bg-emerald-600 shrink-0"></span>
+                          <span className="font-semibold text-slate-900">Study Visa</span>
+                          <span className="text-slate-400 text-[11px]">· University Admissions</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-slate-900">{studyCnt} leads</span>
+                          <span className="text-xs font-semibold text-emerald-600 min-w-[36px] text-right">{pct}%</span>
+                        </div>
+                      </div>
+                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div className="bg-emerald-600 h-full rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })()}
 
-            {/* Other Visa */}
-            {(() => {
-              const otherCnt = leadsByVisaType.OTHER_VISA || 0;
-              const totalSum = (leadsByVisaType.WORK_VISA || 0) + (leadsByVisaType.STUDY_VISA || 0) + (leadsByVisaType.OTHER_VISA || 0) || 1;
-              const pct = Math.round((otherCnt / totalSum) * 100);
-              return (
-                <div
-                  onClick={() => navigate('/leads?visaType=OTHER_VISA')}
-                  className="p-3.5 rounded-2xl bg-[#ff9500]/5 border border-[#ff9500]/15 hover:bg-[#ff9500]/10 cursor-pointer transition-all active:scale-[0.99]"
-                >
-                  <div className="flex items-center justify-between text-xs mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="ios-badge ios-badge-orange">
-                        <Globe size={10} />
-                        Other Visa
-                      </span>
-                      <span className="text-[#8e8e93] text-[11px]">General / 3rd Category</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-[#1c1c1e]">{otherCnt} leads</span>
-                      <span className="text-xs font-bold text-[#ff9500]">{pct}%</span>
-                    </div>
-                  </div>
-                  <div className="ios-progress-track">
+                {/* Admin View: Other Visa */}
+                {(() => {
+                  const otherCnt = leadsByVisaType.OTHER_VISA || 0;
+                  const totalSum = (leadsByVisaType.WORK_VISA || 0) + (leadsByVisaType.STUDY_VISA || 0) + (leadsByVisaType.OTHER_VISA || 0) || 1;
+                  const pct = Math.round((otherCnt / totalSum) * 100);
+                  return (
                     <div
-                      className="ios-progress-fill bg-[#ff9500]"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })()}
+                      onClick={() => handleDeskChange('OTHER_VISA')}
+                      className="py-3 px-2 hover:bg-slate-50 rounded cursor-pointer transition-colors"
+                    >
+                      <div className="flex items-center justify-between text-xs mb-1.5">
+                        <div className="flex items-center gap-2.5">
+                          <span className="w-2.5 h-2.5 rounded-sm bg-amber-500 shrink-0"></span>
+                          <span className="font-semibold text-slate-900">Other Visa</span>
+                          <span className="text-slate-400 text-[11px]">· General / 3rd Category</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-slate-900">{otherCnt} leads</span>
+                          <span className="text-xs font-semibold text-amber-600 min-w-[36px] text-right">{pct}%</span>
+                        </div>
+                      </div>
+                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div className="bg-amber-500 h-full rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })()}
+              </>
+            ) : (
+              /* Scoped Counselor View: Academic / Demographic Streams */
+              <div className="divide-y divide-slate-100">
+                {[
+                  { label: 'Bachelor Degree', color: 'bg-emerald-600', swatch: 'bg-emerald-500' },
+                  { label: 'Master Degree / Post Graduate', color: 'bg-blue-600', swatch: 'bg-blue-500' },
+                  { label: 'Diploma', color: 'bg-indigo-600', swatch: 'bg-indigo-500' },
+                  { label: '10th / 12th', color: 'bg-amber-500', swatch: 'bg-amber-400' },
+                ].map((item) => {
+                  const count = metrics.educationCounts[item.label] || 0;
+                  const pct = metrics.total > 0 ? Math.round((count / metrics.total) * 100) : 0;
+                  return (
+                    <div
+                      key={item.label}
+                      className="py-3 px-2 hover:bg-slate-50 rounded transition-colors"
+                    >
+                      <div className="flex items-center justify-between text-xs mb-1.5">
+                        <div className="flex items-center gap-2.5">
+                          <span className={`w-2.5 h-2.5 rounded-sm ${item.swatch} shrink-0`}></span>
+                          <span className="font-semibold text-slate-800">{item.label}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-slate-900">{count} students</span>
+                          <span className="text-xs font-medium text-slate-500 min-w-[36px] text-right">{pct}%</span>
+                        </div>
+                      </div>
+                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div className={`${item.color} h-full rounded-full transition-all duration-300`} style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
         {/* Chart 2: leadsByStatus (6 Cols) */}
-        <div className="lg:col-span-6 ios-card p-5 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-black/[0.05]">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#8e8e93] flex items-center gap-1.5">
-              <BarChart3 size={14} className="text-[#007aff]" />
+        <div className="lg:col-span-6 bg-white border border-slate-200 rounded-lg shadow-2xs overflow-hidden">
+          <div className="px-5 py-3.5 bg-slate-50/70 border-b border-slate-200 flex items-center justify-between">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+              <BarChart3 size={14} className="text-blue-600" />
               <span>Status Distribution</span>
             </h3>
-            <span className="text-[11px] font-semibold text-[#8e8e93]">
+            <span className="text-xs font-medium text-slate-500 bg-white border border-slate-200 px-2.5 py-0.5 rounded">
               Pipeline Stages
             </span>
           </div>
 
-          <div className="space-y-2.5">
+          <div className="p-4 divide-y divide-slate-100">
             {[
-              { key: 'CONTACTED', label: 'Contacted', color: 'bg-[#007aff]', bg: 'bg-[#007aff]/5', border: 'border-[#007aff]/15', textColor: 'text-[#007aff]' },
-              { key: 'QUALIFIED', label: 'Qualified', color: 'bg-[#5856d6]', bg: 'bg-[#5856d6]/5', border: 'border-[#5856d6]/15', textColor: 'text-[#5856d6]' },
-              { key: 'CONVERTED', label: 'Converted / Won', color: 'bg-[#34c759]', bg: 'bg-[#34c759]/5', border: 'border-[#34c759]/15', textColor: 'text-[#34c759]' },
-              { key: 'LOST', label: 'Lost / Closed', color: 'bg-[#ff3b30]', bg: 'bg-[#ff3b30]/5', border: 'border-[#ff3b30]/15', textColor: 'text-[#ff3b30]' },
-              { key: 'CREATED', label: 'New / Uncontacted', color: 'bg-[#8e8e93]', bg: 'bg-black/[0.03]', border: 'border-black/[0.06]', textColor: 'text-[#636366]' },
+              { key: 'CREATED', label: 'New / Uncontacted', color: 'bg-slate-500', swatch: 'bg-slate-400', textColor: 'text-slate-600' },
+              { key: 'CONTACTED', label: 'Contacted', color: 'bg-blue-600', swatch: 'bg-blue-500', textColor: 'text-blue-600' },
+              { key: 'QUALIFIED', label: 'Qualified', color: 'bg-indigo-600', swatch: 'bg-indigo-500', textColor: 'text-indigo-600' },
+              { key: 'PROPOSAL_SENT', label: 'Docs Requested', color: 'bg-amber-500', swatch: 'bg-amber-400', textColor: 'text-amber-600' },
+              { key: 'NEGOTIATION', label: 'In Process', color: 'bg-purple-600', swatch: 'bg-purple-500', textColor: 'text-purple-600' },
+              { key: 'CONVERTED', label: 'Converted / Won', color: 'bg-emerald-600', swatch: 'bg-emerald-500', textColor: 'text-emerald-600' },
+              { key: 'LOST', label: 'Lost / Closed', color: 'bg-rose-500', swatch: 'bg-rose-400', textColor: 'text-rose-600' },
             ].map((stItem) => {
               const count = leadsByStatus[stItem.key] || 0;
               const totalStatusSum = Object.values(leadsByStatus).reduce((a, b) => a + (Number(b) || 0), 0) || 1;
@@ -614,18 +706,21 @@ export default function Dashboard() {
                 <div
                   key={stItem.key}
                   onClick={() => navigate(`/leads?status=${stItem.key}`)}
-                  className={`p-3 rounded-2xl ${stItem.bg} border ${stItem.border} hover:scale-[1.01] cursor-pointer transition-all active:scale-[0.99]`}
+                  className="py-2.5 px-2 hover:bg-slate-50 rounded cursor-pointer transition-colors"
                 >
                   <div className="flex items-center justify-between text-xs mb-1.5">
-                    <span className="font-semibold text-[#1c1c1e]">{stItem.label}</span>
+                    <div className="flex items-center gap-2.5">
+                      <span className={`w-2.5 h-2.5 rounded-sm ${stItem.swatch} shrink-0`}></span>
+                      <span className="font-semibold text-slate-800">{stItem.label}</span>
+                    </div>
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-[#1c1c1e]">{count}</span>
-                      <span className={`text-[11px] font-bold ${stItem.textColor}`}>{pct}%</span>
+                      <span className="font-semibold text-slate-900">{count}</span>
+                      <span className={`text-xs font-semibold ${stItem.textColor} min-w-[36px] text-right`}>{pct}%</span>
                     </div>
                   </div>
-                  <div className="ios-progress-track">
+                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                     <div
-                      className={`ios-progress-fill ${stItem.color}`}
+                      className={`${stItem.color} h-full rounded-full transition-all duration-300`}
                       style={{ width: `${pct}%` }}
                     />
                   </div>
@@ -639,145 +734,149 @@ export default function Dashboard() {
       {/* Two-Column Analytics: Marketing Sources & Candidate Demographics */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Left: Marketing Attribution Channels (5 Cols) */}
-        <div className="lg:col-span-5 ios-card p-5 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-black/[0.05]">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#8e8e93] flex items-center gap-1.5">
-              <Share2 size={13} className="text-[#007aff]" />
+        <div className="lg:col-span-5 bg-white border border-slate-200 rounded-lg shadow-2xs overflow-hidden">
+          <div className="px-5 py-3.5 bg-slate-50/70 border-b border-slate-200 flex items-center justify-between">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+              <Share2 size={14} className="text-blue-600" />
               <span>Inbound Marketing Sources</span>
             </h3>
-            <span className="text-[11px] text-[#8e8e93] font-medium">Meta & WhatsApp</span>
+            <span className="text-xs font-medium text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded">
+              Meta & WhatsApp
+            </span>
           </div>
 
-          <div className="space-y-3">
+          <div className="p-4 divide-y divide-slate-100">
             {/* Instagram */}
-            <div className="p-3.5 rounded-2xl bg-[#ff2d55]/5 border border-[#ff2d55]/15">
+            <div className="py-3 px-2 hover:bg-slate-50 rounded transition-colors">
               <div className="flex items-center justify-between text-xs mb-1.5">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-semibold text-[#1c1c1e]">Instagram Ads</span>
+                <div className="flex items-center gap-2.5">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-rose-500 shrink-0"></span>
+                  <span className="font-semibold text-slate-800">Instagram Ads</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-[#1c1c1e]">{metrics.igCount} leads</span>
-                  <span className="text-xs font-semibold text-[#ff2d55]">
+                  <span className="font-semibold text-slate-900">{metrics.igCount} leads</span>
+                  <span className="text-xs font-semibold text-rose-600 min-w-[36px] text-right">
                     {metrics.total > 0 ? Math.round((metrics.igCount / metrics.total) * 100) : 0}%
                   </span>
                 </div>
               </div>
-              <div className="ios-progress-track">
+              <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                 <div
-                  className="ios-progress-fill bg-[#ff2d55]"
+                  className="bg-rose-500 h-full rounded-full transition-all duration-300"
                   style={{ width: `${metrics.total > 0 ? (metrics.igCount / metrics.total) * 100 : 0}%` }}
                 />
               </div>
-              <p className="text-[10px] text-[#8e8e93] mt-1.5">Direct message inquiries & instant forms</p>
             </div>
 
             {/* Facebook */}
-            <div className="p-3.5 rounded-2xl bg-[#007aff]/5 border border-[#007aff]/15">
+            <div className="py-3 px-2 hover:bg-slate-50 rounded transition-colors">
               <div className="flex items-center justify-between text-xs mb-1.5">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-semibold text-[#1c1c1e]">Facebook Ads</span>
+                <div className="flex items-center gap-2.5">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-blue-600 shrink-0"></span>
+                  <span className="font-semibold text-slate-800">Facebook Ads</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-[#1c1c1e]">{metrics.fbCount} leads</span>
-                  <span className="text-xs font-semibold text-[#007aff]">
+                  <span className="font-semibold text-slate-900">{metrics.fbCount} leads</span>
+                  <span className="text-xs font-semibold text-blue-600 min-w-[36px] text-right">
                     {metrics.total > 0 ? Math.round((metrics.fbCount / metrics.total) * 100) : 0}%
                   </span>
                 </div>
               </div>
-              <div className="ios-progress-track">
+              <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                 <div
-                  className="ios-progress-fill bg-[#007aff]"
+                  className="bg-blue-600 h-full rounded-full transition-all duration-300"
                   style={{ width: `${metrics.total > 0 ? (metrics.fbCount / metrics.total) * 100 : 0}%` }}
                 />
               </div>
-              <p className="text-[10px] text-[#8e8e93] mt-1.5">Lead generation campaigns & ad sets</p>
             </div>
 
             {/* WhatsApp */}
-            <div className="p-3.5 rounded-2xl bg-[#34c759]/5 border border-[#34c759]/15">
+            <div className="py-3 px-2 hover:bg-slate-50 rounded transition-colors">
               <div className="flex items-center justify-between text-xs mb-1.5">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-semibold text-[#1c1c1e]">WhatsApp Inbound</span>
+                <div className="flex items-center gap-2.5">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-emerald-600 shrink-0"></span>
+                  <span className="font-semibold text-slate-800">WhatsApp Inbound</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-[#1c1c1e]">{metrics.waCount} leads</span>
-                  <span className="text-xs font-semibold text-[#34c759]">
+                  <span className="font-semibold text-slate-900">{metrics.waCount} leads</span>
+                  <span className="text-xs font-semibold text-emerald-600 min-w-[36px] text-right">
                     {metrics.total > 0 ? Math.round((metrics.waCount / metrics.total) * 100) : 0}%
                   </span>
                 </div>
               </div>
-              <div className="ios-progress-track">
+              <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                 <div
-                  className="ios-progress-fill bg-[#34c759]"
+                  className="bg-emerald-600 h-full rounded-full transition-all duration-300"
                   style={{ width: `${metrics.total > 0 ? (metrics.waCount / metrics.total) * 100 : 0}%` }}
                 />
               </div>
-              <p className="text-[10px] text-[#8e8e93] mt-1.5">Direct counselor chat outreach</p>
             </div>
           </div>
         </div>
 
         {/* Right: Candidate Demographics (Education & Age) (7 Cols) */}
-        <div className="lg:col-span-7 ios-card p-5 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-black/[0.05]">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#8e8e93] flex items-center gap-1.5">
-              <Clock size={13} className="text-[#007aff]" />
+        <div className="lg:col-span-7 bg-white border border-slate-200 rounded-lg shadow-2xs overflow-hidden">
+          <div className="px-5 py-3.5 bg-slate-50/70 border-b border-slate-200 flex items-center justify-between">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+              <Clock size={14} className="text-blue-600" />
               <span>Qualification & Demographics</span>
             </h3>
-            <span className="text-[11px] text-[#8e8e93] font-medium">Eligibility Profiles</span>
+            <span className="text-xs font-medium text-slate-500 bg-white border border-slate-200 px-2.5 py-0.5 rounded">
+              Eligibility Profiles
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Education Breakdown */}
-            <div className="space-y-2.5">
-              <p className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-wider">
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider pb-1 border-b border-slate-100">
                 Education Qualification
               </p>
-              <div className="space-y-2">
+              <div className="divide-y divide-slate-100">
                 {Object.keys(metrics.educationCounts).length > 0 ? (
                   Object.entries(metrics.educationCounts).map(([eq, cnt]) => (
-                    <div key={eq} className="p-2.5 rounded-xl bg-[#f2f2f7]/80 border border-black/[0.04]">
-                      <div className="flex items-center justify-between text-xs mb-1.5">
-                        <span className="font-semibold text-[#1c1c1e] truncate max-w-[140px]">{eq}</span>
-                        <span className="font-bold text-[#1c1c1e]">{cnt}</span>
+                    <div key={eq} className="py-2 px-1 hover:bg-slate-50 rounded transition-colors">
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="font-semibold text-slate-800 truncate max-w-[140px]">{eq}</span>
+                        <span className="font-semibold text-slate-900">{cnt}</span>
                       </div>
-                      <div className="ios-progress-track h-1.5">
+                      <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
                         <div
-                          className="ios-progress-fill bg-[#007aff]"
+                          className="bg-blue-600 h-full rounded-full transition-all duration-300"
                           style={{ width: `${metrics.total > 0 ? (cnt / metrics.total) * 100 : 0}%` }}
                         />
                       </div>
                     </div>
                   ))
                 ) : (
-                  <p className="text-xs text-[#8e8e93] py-3">No qualification data yet</p>
+                  <p className="text-xs text-slate-400 py-3">No qualification data yet</p>
                 )}
               </div>
             </div>
 
             {/* Age Breakdown */}
-            <div className="space-y-2.5">
-              <p className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-wider">
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider pb-1 border-b border-slate-100">
                 Age Brackets
               </p>
-              <div className="space-y-2">
+              <div className="divide-y divide-slate-100">
                 {Object.keys(metrics.ageCounts).length > 0 ? (
                   Object.entries(metrics.ageCounts).map(([age, cnt]) => (
-                    <div key={age} className="p-2.5 rounded-xl bg-[#f2f2f7]/80 border border-black/[0.04]">
-                      <div className="flex items-center justify-between text-xs mb-1.5">
-                        <span className="font-semibold text-[#1c1c1e] truncate max-w-[140px]">{age}</span>
-                        <span className="font-bold text-[#1c1c1e]">{cnt}</span>
+                    <div key={age} className="py-2 px-1 hover:bg-slate-50 rounded transition-colors">
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="font-semibold text-slate-800 truncate max-w-[140px]">{age}</span>
+                        <span className="font-semibold text-slate-900">{cnt}</span>
                       </div>
-                      <div className="ios-progress-track h-1.5">
+                      <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
                         <div
-                          className="ios-progress-fill bg-[#5856d6]"
+                          className="bg-indigo-600 h-full rounded-full transition-all duration-300"
                           style={{ width: `${metrics.total > 0 ? (cnt / metrics.total) * 100 : 0}%` }}
                         />
                       </div>
                     </div>
                   ))
                 ) : (
-                  <p className="text-xs text-[#8e8e93] py-3">No age demographics yet</p>
+                  <p className="text-xs text-slate-400 py-3">No age demographics yet</p>
                 )}
               </div>
             </div>
@@ -785,19 +884,16 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Live Candidate Stream Table (iOS Inset Grouped Table) */}
-      <div className="ios-card overflow-hidden">
-        <div className="p-4 sm:p-5 border-b border-black/[0.05] flex items-center justify-between">
+      {/* Recent Candidate Inquiries Table (Zoho CRM Enterprise Table) */}
+      <div className="bg-white border border-slate-200 rounded-lg shadow-2xs overflow-hidden">
+        <div className="px-5 py-3.5 bg-slate-50/70 border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-bold text-[#1c1c1e]">Recent Candidate Inquiries</h3>
-            <span className="text-[10px] px-2.5 py-0.5 rounded-full font-semibold bg-[#007aff]/10 text-[#007aff]">
-              {recentLeads.length} live
-            </span>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Recent Candidate Inquiries</h3>
           </div>
 
           <button
             onClick={() => navigate('/leads')}
-            className="text-xs font-semibold text-[#007aff] hover:underline flex items-center gap-1 transition-colors"
+            className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 transition-colors"
           >
             <span>View All Leads</span>
             <ChevronRight size={14} />
@@ -807,7 +903,7 @@ export default function Dashboard() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="bg-[#f2f2f7]/70 border-b border-black/[0.05] text-[11px] font-semibold text-[#8e8e93] uppercase tracking-wider">
+              <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
                 <th className="py-3 px-4">Candidate</th>
                 <th className="py-3 px-4">Phone & City</th>
                 <th className="py-3 px-4">Visa Program</th>
@@ -817,7 +913,7 @@ export default function Dashboard() {
                 <th className="py-3 px-4 text-right">Quick Contact</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-black/[0.04]">
+            <tbody className="divide-y divide-slate-100">
               {recentLeads.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-[#8e8e93]">
@@ -870,24 +966,22 @@ export default function Dashboard() {
 
                       {/* Source & Campaign */}
                       <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-1.5">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${plat.color}`}>
-                            {plat.label}
-                          </span>
-                          <span className="text-[#3c3c43] font-medium truncate max-w-[120px]" title={lead.campaignName}>
-                            {lead.campaignName || 'Direct'}
-                          </span>
+                        <div className="text-xs font-medium text-[#1c1c1e]">
+                          {plat.label}
+                        </div>
+                        <div className="text-[11px] text-[#8e8e93] truncate max-w-[120px] mt-0.5" title={lead.campaignName}>
+                          {lead.campaignName || 'Direct'}
                         </div>
                       </td>
 
-                      {/* Lifecycle Stage */}
+                      {/* Lifecycle Stage without dot */}
                       <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => {
                             setStatusModalLead(lead);
                             setStatusForm({ status: lead.status || 'CONTACTED', notes: lead.notes || '' });
                           }}
-                          className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-semibold border ${stConfig.color} shadow-xs hover:scale-102 transition-transform`}
+                          className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-[11px] font-semibold border ${stConfig.color} shadow-xs hover:scale-102 transition-transform`}
                         >
                           <span>{stConfig.label}</span>
                         </button>
@@ -927,61 +1021,117 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Quick Status Modal (iOS Dialog Style) */}
+      {/* Quick Status Modal (Zoho CRM Modal & Field UI) */}
       {statusModalLead && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="ios-glass-modal max-w-sm w-full p-6 animate-in zoom-in-95">
-            <h3 className="text-sm font-bold text-[#1c1c1e]">
-              Update Stage: {statusModalLead.customerName || `Candidate #${statusModalLead.id}`}
-            </h3>
-            <p className="text-xs text-[#8e8e93] mt-1">
-              Current stage: <strong className="text-[#1c1c1e]">{statusModalLead.status}</strong>
-            </p>
+        <div className="zoho-modal-backdrop">
+          <div className="zoho-modal-card max-w-lg animate-in zoom-in-95">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                Update Stage
+              </h3>
+              <button
+                type="button"
+                onClick={() => setStatusModalLead(null)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded transition-colors"
+                aria-label="Close"
+              >
+                <X size={16} />
+              </button>
+            </div>
 
-            <form onSubmit={handleQuickStatusUpdate} className="mt-4 space-y-4 text-xs">
-              <div>
-                <label className="block font-semibold text-[#3c3c43] mb-1.5">
-                  Lifecycle Stage
+            <div className="text-xs font-semibold text-slate-500 mt-3 mb-4">
+              Candidate Information
+            </div>
+
+            <form onSubmit={handleQuickStatusUpdate} className="text-xs">
+              {/* Candidate Name */}
+              <div className="zoho-form-row">
+                <label className="zoho-form-label" title="Name of the Candidate">
+                  Name of the Can...
                 </label>
-                <select
-                  value={statusForm.status}
-                  onChange={(e) => setStatusForm({ ...statusForm, status: e.target.value })}
-                  className="ios-input w-full font-medium"
-                >
-                  {LEAD_STATUS_LIST.map((st) => (
-                    <option key={st.value} value={st.value}>
-                      {st.label} ({st.value})
-                    </option>
-                  ))}
-                </select>
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    disabled
+                    value={statusModalLead.customerName || `Candidate #${statusModalLead.id}`}
+                    className="ios-input w-full font-medium text-slate-800 opacity-90 cursor-not-allowed"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block font-semibold text-[#3c3c43] mb-1.5">
-                  Discussion Notes / Follow-up
+              {/* Current Stage */}
+              <div className="zoho-form-row">
+                <label className="zoho-form-label" title="Current Stage">
+                  Current Stage
                 </label>
-                <textarea
-                  value={statusForm.notes}
-                  onChange={(e) => setStatusForm({ ...statusForm, notes: e.target.value })}
-                  rows={3}
-                  placeholder="Record discussion notes or next steps..."
-                  className="ios-input w-full"
-                ></textarea>
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    disabled
+                    value={statusModalLead.status}
+                    className="ios-input w-full text-slate-700 opacity-90 cursor-not-allowed font-medium"
+                  />
+                </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-black/[0.06]">
-                <button
-                  type="button"
-                  onClick={() => setStatusModalLead(null)}
-                  className="ios-btn-gray text-xs"
-                >
-                  Cancel
-                </button>
+              {/* Lifecycle Stage (Required: Red Left Accent Bar) */}
+              <div className="zoho-form-row">
+                <label className="zoho-form-label" title="Lifecycle Stage">
+                  New Stage
+                </label>
+                <div className="flex-1">
+                  <select
+                    value={statusForm.status}
+                    onChange={(e) => setStatusForm({ ...statusForm, status: e.target.value })}
+                    className="zoho-select zoho-input-required font-medium"
+                  >
+                    {LEAD_STATUS_LIST.map((st) => (
+                      <option key={st.value} value={st.value}>
+                        {st.label} ({st.value})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Discussion Notes / Follow-up */}
+              <div className="zoho-form-row items-start">
+                <label className="zoho-form-label pt-2" title="Discussion Notes">
+                  Follow-up Notes
+                </label>
+                <div className="flex-1">
+                  <textarea
+                    value={statusForm.notes}
+                    onChange={(e) => setStatusForm({ ...statusForm, notes: e.target.value })}
+                    rows={3}
+                    className="ios-input w-full resize-none"
+                  ></textarea>
+                </div>
+              </div>
+
+              {/* Date & Time of Intake (Compound Field matching screenshot) */}
+              <div className="zoho-form-row">
+                <label className="zoho-form-label" title="Date and Time">
+                  Date and Time of ...
+                </label>
+                <div className="flex-1 flex rounded-md overflow-hidden border border-[#d0dcf0] bg-[#edf2f9]">
+                  <div className="flex-1 px-3 py-2 border-r border-[#d0dcf0] text-xs text-slate-800 bg-[#edf2f9]">
+                    {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </div>
+                  <div className="w-28 px-3 py-2 text-xs text-slate-800 bg-[#edf2f9] text-center font-medium">
+                    {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-slate-100">
                 <button
                   type="submit"
-                  className="ios-btn-primary text-xs"
+                  className="zoho-btn-done"
                 >
-                  Save Stage
+                  Done
                 </button>
               </div>
             </form>

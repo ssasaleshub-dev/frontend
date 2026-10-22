@@ -164,7 +164,6 @@ export default function ImportLeads() {
                 value={rawText}
                 onChange={(e) => setRawText(e.target.value)}
                 rows={8}
-                placeholder="id,created_time,ad_id,ad_name,adset_id,campaign_name,form_id,is_organic,platform,full_name,phone_number,city..."
                 className="ios-input w-full p-3 font-mono text-xs rounded-2xl"
               ></textarea>
             </div>
