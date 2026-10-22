@@ -309,7 +309,7 @@ export default function Dashboard() {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={loadDashboardData}
+            onClick={() => loadDashboardData()}
             disabled={loading}
             className="ios-btn-gray text-xs"
             title="Reload telemetry"
@@ -335,7 +335,7 @@ export default function Dashboard() {
             <span>{error}</span>
           </div>
           <button
-            onClick={loadDashboardData}
+            onClick={() => loadDashboardData()}
             className="underline font-semibold hover:opacity-80"
           >
             Retry

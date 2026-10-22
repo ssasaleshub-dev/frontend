@@ -92,6 +92,8 @@ export default function Leads() {
   const isWorkVisa = isWorkVisaStaff(currentUser);
   const isStudyVisa = isStudyVisaStaff(currentUser);
   const isOtherVisa = isOtherVisaStaff(currentUser);
+  const isWorkVisaCounselor = !isAdmin && isWorkVisa;
+  const isStudyVisaCounselor = !isAdmin && isStudyVisa;
   const roleBadge = getRoleBadgeInfo(currentUser);
 
   // Available staff for admin inline assignment
@@ -141,28 +143,12 @@ export default function Leads() {
     customerName: string;
     phoneNumber: string;
     email: string;
-    city: string;
     visaType: string;
-    platform: string;
-    age: string;
-    educationalQualification: string;
-    areYouWorking: string;
-    areYouInterested: string;
-    leadConfirm: string;
-    notes: string;
   }>({
     customerName: '',
     phoneNumber: '',
     email: '',
-    city: '',
     visaType: defaultVisaType,
-    platform: 'IG',
-    age: AGE_BRACKETS[0],
-    educationalQualification: EDUCATION_QUALIFICATIONS[2],
-    areYouWorking: 'yes',
-    areYouInterested: 'yes',
-    leadConfirm: 'Confirmed',
-    notes: '',
   });
 
   const [submitting, setSubmitting] = useState<boolean>(false);
@@ -171,7 +157,7 @@ export default function Leads() {
     setLoading(true);
     setError(null);
     try {
-      const activeParam = typeParam !== undefined ? typeParam : visaTypeFilter;
+      const activeParam = typeof typeParam === 'string' ? typeParam : visaTypeFilter;
       const data = await crmService.getDetailedLeads(
         activeParam && activeParam !== 'ALL' ? activeParam : undefined
       );
@@ -402,37 +388,25 @@ export default function Leads() {
       const newCustomer = await crmService.createCustomer({
         fullName: newLeadForm.customerName,
         phoneNumber: newLeadForm.phoneNumber,
-        location: newLeadForm.city,
       });
 
       await crmService.createLead({
-        platform: newLeadForm.platform,
+        platform: 'OTHER',
         status: 'CREATED',
         isOrganic: true,
         visaType: newLeadForm.visaType,
-        age: newLeadForm.age,
-        educationalQualification: newLeadForm.educationalQualification,
-        areYouWorking: newLeadForm.areYouWorking,
-        areYouInterested: newLeadForm.areYouInterested,
-        leadConfirm: newLeadForm.leadConfirm,
-        notes: newLeadForm.notes,
         customer: { id: newCustomer.id },
       });
 
       setShowAddModal(false);
+      if (searchParams.get('action') === 'create') {
+        navigate('/leads', { replace: true });
+      }
       setNewLeadForm({
         customerName: '',
         phoneNumber: '',
         email: '',
-        city: '',
         visaType: defaultVisaType,
-        platform: 'IG',
-        age: AGE_BRACKETS[0],
-        educationalQualification: EDUCATION_QUALIFICATIONS[2],
-        areYouWorking: 'yes',
-        areYouInterested: 'yes',
-        leadConfirm: 'Confirmed',
-        notes: '',
       });
       await fetchLeads();
     } catch (err: any) {
@@ -586,7 +560,7 @@ export default function Leads() {
 
             {/* Refresh */}
             <button
-              onClick={fetchLeads}
+              onClick={() => fetchLeads()}
               disabled={loading}
               className="p-1.5 bg-white hover:bg-slate-50 text-slate-700 rounded-xl border border-slate-200/90 shadow-2xs transition-colors"
               title="Refresh leads"
@@ -674,7 +648,7 @@ export default function Leads() {
             <AlertCircle size={15} className="text-rose-600" />
             <span>{error}</span>
           </div>
-          <button onClick={fetchLeads} className="underline font-semibold hover:text-rose-900">
+          <button onClick={() => fetchLeads()} className="underline font-semibold hover:text-rose-900">
             Retry
           </button>
         </div>
@@ -1309,107 +1283,83 @@ export default function Leads() {
         </div>
       )}
 
-      {/* Create New Candidate Modal */}
+      {/* Create New Candidate Modal (Apple iOS HIG Frosted Glass) */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-2xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-lg w-full p-6 my-8 animate-in zoom-in-95">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 bg-black/35 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="ios-glass-modal max-w-lg w-full p-6 my-6 border border-white/60">
+            <div className="flex items-center justify-between pb-3.5 border-b border-[rgba(60,60,67,0.1)]">
               <div>
-                <h3 className="text-sm font-bold text-slate-900">New Candidate Intake</h3>
-                <p className="text-[11px] text-slate-500">Record an overseas work or study visa candidate</p>
+                <h3 className="text-sm font-bold text-[#1c1c1e]">New Candidate Intake</h3>
+                <p className="text-[11px] text-[#8e8e93]">Record an overseas work or study visa candidate</p>
               </div>
               <button
+                type="button"
                 onClick={() => {
                   setShowAddModal(false);
                   if (searchParams.get('action') === 'create') {
                     navigate('/leads', { replace: true });
                   }
                 }}
-                className="p-1 text-slate-400 hover:text-slate-600"
+                className="w-7 h-7 rounded-full bg-[rgba(118,118,128,0.12)] flex items-center justify-center text-[#8e8e93] hover:text-[#1c1c1e] hover:bg-[rgba(118,118,128,0.2)] transition-colors"
               >
-                <X size={16} />
+                <X size={14} />
               </button>
             </div>
 
             <form onSubmit={handleCreateLead} className="mt-4 space-y-3.5 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Candidate Full Name *</label>
+                <label className="block font-semibold text-[#1c1c1e] mb-1">Candidate Full Name <span className="text-[#ff3b30]">*</span></label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Praveen Selvaraj"
                   value={newLeadForm.customerName}
                   onChange={(e) => setNewLeadForm({ ...newLeadForm, customerName: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                  className="w-full ios-input"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Phone Number *</label>
+                  <label className="block font-semibold text-[#1c1c1e] mb-1">Phone Number <span className="text-[#ff3b30]">*</span></label>
                   <input
                     type="tel"
                     required
                     placeholder="+91 9876543210"
                     value={newLeadForm.phoneNumber}
                     onChange={(e) => setNewLeadForm({ ...newLeadForm, phoneNumber: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                    className="w-full ios-input"
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Email Address</label>
+                  <label className="block font-semibold text-[#1c1c1e] mb-1">Email Address</label>
                   <input
                     type="email"
                     placeholder="candidate@gmail.com"
                     value={newLeadForm.email}
                     onChange={(e) => setNewLeadForm({ ...newLeadForm, email: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                    className="w-full ios-input"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">City / Location</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Namakkal"
-                    value={newLeadForm.city}
-                    onChange={(e) => setNewLeadForm({ ...newLeadForm, city: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Inbound Channel</label>
-                  <select
-                    value={newLeadForm.platform}
-                    onChange={(e) => setNewLeadForm({ ...newLeadForm, platform: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
-                  >
-                    <option value="IG">Instagram Ad</option>
-                    <option value="FB">Facebook Ad</option>
-                    <option value="WHATSAPP">WhatsApp Direct</option>
-                    <option value="OTHER">Referral / Walk-in</option>
-                  </select>
-                </div>
-              </div>
 
               {/* Visa Program Selection */}
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Visa Program *</label>
+                <label className="block font-semibold text-[#1c1c1e] mb-1">Visa Program <span className="text-[#ff3b30]">*</span></label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     disabled={isStudyVisaCounselor}
                     onClick={() => setNewLeadForm({ ...newLeadForm, visaType: 'WORK_VISA' })}
-                    className={`p-2.5 rounded-xl border text-left flex items-center justify-between ${
+                    className={`p-2.5 rounded-2xl border text-left flex items-center justify-between transition-all ${
                       newLeadForm.visaType === 'WORK_VISA'
-                        ? 'border-emerald-600 bg-emerald-50 text-emerald-900 font-semibold'
-                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                        ? 'border-[#007aff] bg-[#007aff]/10 text-[#007aff] font-semibold ring-1 ring-[#007aff]'
+                        : 'border-[rgba(60,60,67,0.12)] hover:border-[rgba(60,60,67,0.25)] bg-white text-[#1c1c1e]'
                     } disabled:opacity-40`}
                   >
                     <div className="flex items-center gap-1.5">
-                      <Briefcase size={14} className="text-emerald-700" />
+                      <Briefcase size={14} className="text-[#007aff]" />
                       <span>Work Visa</span>
                     </div>
                   </button>
@@ -1418,100 +1368,37 @@ export default function Leads() {
                     type="button"
                     disabled={isWorkVisaCounselor}
                     onClick={() => setNewLeadForm({ ...newLeadForm, visaType: 'STUDY_VISA' })}
-                    className={`p-2.5 rounded-xl border text-left flex items-center justify-between ${
+                    className={`p-2.5 rounded-2xl border text-left flex items-center justify-between transition-all ${
                       newLeadForm.visaType === 'STUDY_VISA'
-                        ? 'border-indigo-600 bg-indigo-50 text-indigo-900 font-semibold'
-                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                        ? 'border-[#34c759] bg-[#34c759]/10 text-[#34c759] font-semibold ring-1 ring-[#34c759]'
+                        : 'border-[rgba(60,60,67,0.12)] hover:border-[rgba(60,60,67,0.25)] bg-white text-[#1c1c1e]'
                     } disabled:opacity-40`}
                   >
                     <div className="flex items-center gap-1.5">
-                      <GraduationCap size={14} className="text-indigo-700" />
+                      <GraduationCap size={14} className="text-[#34c759]" />
                       <span>Study Visa</span>
                     </div>
                   </button>
                 </div>
               </div>
 
-              {/* Education and Age Bracket */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Highest Education</label>
-                  <select
-                    value={newLeadForm.educationalQualification}
-                    onChange={(e) => setNewLeadForm({ ...newLeadForm, educationalQualification: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
-                  >
-                    {EDUCATION_QUALIFICATIONS.map((eq) => (
-                      <option key={eq} value={eq}>{eq}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Age Bracket</label>
-                  <select
-                    value={newLeadForm.age}
-                    onChange={(e) => setNewLeadForm({ ...newLeadForm, age: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
-                  >
-                    {AGE_BRACKETS.map((ab) => (
-                      <option key={ab} value={ab}>{ab}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Work Status and Lead Confirmation */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Currently Employed?</label>
-                  <select
-                    value={newLeadForm.areYouWorking}
-                    onChange={(e) => setNewLeadForm({ ...newLeadForm, areYouWorking: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
-                  >
-                    <option value="yes">Yes, currently working</option>
-                    <option value="no">No / Fresher</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Lead Confirmation</label>
-                  <select
-                    value={newLeadForm.leadConfirm}
-                    onChange={(e) => setNewLeadForm({ ...newLeadForm, leadConfirm: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
-                  >
-                    <option value="Confirmed">Confirmed</option>
-                    <option value="Pending">Pending</option>
-                    <option value="Follow-up">Callback Needed</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Counselor Discussion Notes</label>
-                <textarea
-                  value={newLeadForm.notes}
-                  onChange={(e) => setNewLeadForm({ ...newLeadForm, notes: e.target.value })}
-                  rows={2}
-                  placeholder="Record candidate target country or preferences..."
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
-                ></textarea>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-[rgba(60,60,67,0.1)]">
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="px-3.5 py-1.5 rounded-xl font-medium text-slate-600 hover:bg-slate-100 border border-slate-300"
+                  onClick={() => {
+                    setShowAddModal(false);
+                    if (searchParams.get('action') === 'create') {
+                      navigate('/leads', { replace: true });
+                    }
+                  }}
+                  className="ios-btn-gray"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-1.5 rounded-xl font-semibold bg-slate-900 hover:bg-slate-800 text-white disabled:opacity-50"
+                  className="ios-btn-primary disabled:opacity-50"
                 >
                   {submitting ? 'Saving...' : 'Save Candidate'}
                 </button>
