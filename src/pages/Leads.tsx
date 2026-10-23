@@ -79,6 +79,8 @@ export interface ParsedLeadPreview {
   surveyCgpa?: string;
   leadStatus?: string;
   rawNotes?: string;
+  isDuplicate?: boolean;
+  duplicateReason?: string;
   isValid: boolean;
 }
 
@@ -154,10 +156,30 @@ export default function Leads() {
   const [importLoading, setImportLoading] = useState<boolean>(false);
   const [importProgress, setImportProgress] = useState<{ current: number; total: number }>({ current: 0, total: 0 });
   const [importError, setImportError] = useState<string | null>(null);
-  const [excelDefaultVisaType, setExcelDefaultVisaType] = useState<string>('AUTO');
+  const [excelDefaultVisaType, setExcelDefaultVisaType] = useState<string>(() => {
+    if (!isAdmin && roleDesk && roleDesk !== 'ALL') return roleDesk;
+    return 'AUTO';
+  });
   const [importMethod, setImportMethod] = useState<'direct' | 'server'>('direct');
+  const [skipDuplicates, setSkipDuplicates] = useState<boolean>(true);
   const [bulkStatusModal, setBulkStatusModal] = useState<boolean>(false);
   const [bulkStatus, setBulkStatus] = useState<string>('CONTACTED');
+
+  useEffect(() => {
+    if (!isAdmin && roleDesk && roleDesk !== 'ALL') {
+      setExcelDefaultVisaType(roleDesk);
+    }
+  }, [isAdmin, roleDesk]);
+
+  const duplicateStats = useMemo(() => {
+    const duplicates = previewRows.filter((r) => r.isDuplicate);
+    return {
+      duplicateCount: duplicates.length,
+      newCount: previewRows.length - duplicates.length,
+      hasDuplicates: duplicates.length > 0,
+      allDuplicates: previewRows.length > 0 && duplicates.length === previewRows.length,
+    };
+  }, [previewRows]);
 
   useEffect(() => {
     const idParam = searchParams.get('id');
@@ -171,6 +193,7 @@ export default function Leads() {
   const [assigningLeadId, setAssigningLeadId] = useState<number | string | null>(null);
 
   useEffect(() => {
+    if (!isAdmin) return;
     adminService
       .getUsers(0, 100)
       .then((users) => {
@@ -187,7 +210,7 @@ export default function Leads() {
       .catch(() => {
         setAvailableStaff([]);
       });
-  }, []);
+  }, [isAdmin]);
 
   const handleAssignStaff = async (leadId: number | string, assignedTo: string) => {
     setAssigningLeadId(leadId);
@@ -230,7 +253,16 @@ export default function Leads() {
       const data = await crmService.getDetailedLeads(
         activeParam && activeParam !== 'ALL' ? activeParam : undefined
       );
-      setRawLeads(Array.isArray(data) ? data : []);
+      const list = Array.isArray(data) ? data : (data as any)?.content || [];
+      const normalized = list.map((l: any) => ({
+        ...l,
+        customerName: l.customerName || l.customer?.fullName || l.customer?.name || l.name || '',
+        phoneNumber: l.phoneNumber || l.customer?.phoneNumber || l.customer?.rawPhoneNumber || l.customer?.phone || '',
+        email: l.email || l.customer?.email || '',
+        city: l.city || l.location || l.customer?.location || l.customer?.city || '',
+        visaType: l.visaType || l.leadPreference?.visaType || l.preference?.visaType || '',
+      }));
+      setRawLeads(normalized);
     } catch (err: any) {
       setError(err?.message || 'Failed to load candidate leads');
       setRawLeads([]);
@@ -352,62 +384,6 @@ export default function Leads() {
     });
   };
 
-  // Export CSV of currently filtered leads
-  const handleExportCSV = () => {
-    const leadsToExport = selectedLeadIds.size > 0
-      ? filteredLeads.filter((l) => selectedLeadIds.has(l.id))
-      : filteredLeads;
-
-    if (leadsToExport.length === 0) {
-      showAlert({ title: 'App', message: 'No candidate records available to export.' });
-      return;
-    }
-
-    const headers = [
-      'ID',
-      'Candidate Name',
-      'Phone Number',
-      'Email',
-      'City',
-      'Visa Program',
-      'Qualification',
-      'Age',
-      'Employed',
-      'Platform',
-      'Campaign',
-      'Status',
-      'Date',
-      'Notes',
-    ];
-
-    const rows = leadsToExport.map((l) => [
-      `"${l.id}"`,
-      `"${l.customerName || ''}"`,
-      `"${l.phoneNumber || ''}"`,
-      `"${l.email || ''}"`,
-      `"${l.city || l.location || ''}"`,
-      `"${l.visaType || ''}"`,
-      `"${l.educationalQualification || ''}"`,
-      `"${l.age || ''}"`,
-      `"${l.areYouWorking || ''}"`,
-      `"${l.platform || ''}"`,
-      `"${l.campaignName || ''}"`,
-      `"${l.status || ''}"`,
-      `"${l.createdTime || l.createdAt || ''}"`,
-      `"${(l.notes || '').replace(/"/g, '""')}"`,
-    ]);
-
-    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `visa_candidates_export_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   // Bulk Status Update
   const handleExecuteBulkStatus = async () => {
     if (selectedLeadIds.size === 0) return;
@@ -476,6 +452,7 @@ export default function Leads() {
         status: 'CREATED',
         isOrganic: true,
         visaType: newLeadForm.visaType,
+        assignedTo: !isAdmin && currentUser?.login ? currentUser.login : undefined,
         customer: { id: newCustomer.id },
       });
 
@@ -609,11 +586,57 @@ export default function Leads() {
     return fallback || 'WORK_VISA';
   };
 
-  const handleExcelFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const normalizePlatform = (
+    val?: string,
+    context?: string
+  ): 'IG' | 'FB' | 'WHATSAPP' | 'OTHER' => {
+    if (!val) return 'IG';
+    const s = String(val).toUpperCase().trim();
+    if (s === 'IG' || s === 'FB' || s === 'WHATSAPP' || s === 'OTHER') {
+      return s as any;
+    }
+    if (s.includes('IG') || s.includes('INSTA')) return 'IG';
+    if (s.includes('FB') || s.includes('FACEBOOK')) return 'FB';
+    if (s.includes('WHATSAPP') || s.includes('WA')) return 'WHATSAPP';
+    if (s.includes('META') || s.includes('ADS')) {
+      const ctx = (context || '').toLowerCase();
+      if (ctx.includes('ig') || ctx.includes('insta')) return 'IG';
+      return 'FB';
+    }
+    return 'OTHER';
+  };
+
+  const handleExcelFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setImportFile(file);
     setImportError(null);
+
+    // Pre-fetch all existing leads from DB so preview accurately flags duplicates upfront
+    const dbLeads: any[] = [...rawLeads];
+    try {
+      const res = await crmService.getDetailedLeads();
+      const list = Array.isArray(res) ? res : (res as any)?.content || [];
+      if (Array.isArray(list) && list.length > 0) dbLeads.push(...list);
+    } catch {
+      // non-fatal
+    }
+    try {
+      const pageRes = await crmService.getLeads(0, 1000);
+      const pageList = Array.isArray(pageRes) ? pageRes : (pageRes as any)?.content || [];
+      if (Array.isArray(pageList) && pageList.length > 0) dbLeads.push(...pageList);
+    } catch {
+      // non-fatal
+    }
+
+    const dbExtMap = new Map<string, any>();
+    const dbPhoneMap = new Map<string, any>();
+    dbLeads.forEach((l) => {
+      const ext = (l.externalId || '').trim();
+      if (ext) dbExtMap.set(ext, l);
+      const p = (l.phoneNumber || l.customer?.phoneNumber || '').replace(/[^\d]/g, '');
+      if (p.length >= 10) dbPhoneMap.set(p.slice(-10), l);
+    });
 
     const reader = new FileReader();
     reader.onload = (evt) => {
@@ -676,11 +699,8 @@ export default function Leads() {
           const rawOrganic = getVal('is_organic', 'isorganic', 'organic').toLowerCase();
           const isOrganic = rawOrganic === 'true' || rawOrganic === '1';
 
-          let platform = getVal('platform', 'source', 'channel').toUpperCase();
-          if (platform.includes('IG') || platform.includes('INSTA')) platform = 'IG';
-          else if (platform.includes('FB') || platform.includes('FACEBOOK')) platform = 'FB';
-          else if (platform.includes('WHATSAPP') || platform.includes('WA')) platform = 'WHATSAPP';
-          else if (!platform) platform = 'IG';
+          const rawPlat = getVal('platform', 'source', 'channel');
+          const platform = normalizePlatform(rawPlat, `${adSetName} ${campaignName} ${formName}`);
 
           // Custom questionnaire fields from Meta lead forms (matching user's Excel)
           const surveyStatus = getVal(
@@ -725,6 +745,24 @@ export default function Leads() {
           if (formName) notesParts.push(`Form: ${formName}`);
           if (leadStatus) notesParts.push(`Meta Status: ${leadStatus}`);
 
+          const cleanExt = (externalId || '').trim();
+          const cleanP = (phone || '').replace(/[^\d]/g, '');
+          const last10 = cleanP.length >= 10 ? cleanP.slice(-10) : '';
+
+          let matchedLead: any;
+          if (cleanExt && dbExtMap.has(cleanExt)) {
+            matchedLead = dbExtMap.get(cleanExt);
+          } else if (last10 && dbPhoneMap.has(last10)) {
+            matchedLead = dbPhoneMap.get(last10);
+          }
+
+          const isDuplicate = Boolean(matchedLead);
+          const duplicateReason = matchedLead
+            ? matchedLead.externalId && String(matchedLead.externalId).trim() === cleanExt
+              ? `Already saved in CRM (Lead #${matchedLead.id || 'Existing'})`
+              : `Phone matches Lead #${matchedLead.id || 'Existing'}`
+            : undefined;
+
           return {
             id: idx + 1,
             externalId: externalId || undefined,
@@ -750,11 +788,21 @@ export default function Leads() {
             surveyCgpa: surveyCgpa || undefined,
             leadStatus: leadStatus || undefined,
             rawNotes: notesParts.join(' | '),
+            isDuplicate,
+            duplicateReason,
             isValid: Boolean(name || phone),
           };
         });
 
-        const validCandidates = parsed.filter((r) => r.name || r.phone);
+        // Filter out blank/junk Excel rows (candidates must have a phone number or valid contact)
+        const validCandidates = parsed.filter((r) => {
+          const digits = (r.phone || '').replace(/[^\d]/g, '');
+          const hasPhone = digits.length >= 7;
+          const hasEmail = Boolean(r.email && r.email.includes('@'));
+          const hasRealName = Boolean(r.name && !r.name.startsWith('Candidate #') && r.name.trim().length > 1);
+          return hasPhone || (hasRealName && hasEmail);
+        });
+
         if (validCandidates.length === 0) {
           setImportError('No candidate records with valid names or phones found. Please check your Excel headers.');
           setPreviewRows([]);
@@ -876,30 +924,119 @@ export default function Leads() {
       }
     }
 
-    // Option B: Direct Browser-to-DB Ingestion (Fast & Reliable batch creation)
+    // Option B: Direct Browser-to-DB Ingestion with Duplicate Protection
     let successCount = 0;
+    let skippedCount = 0;
     let failCount = 0;
+
+    // Build fresh set of existing external IDs and phone numbers from database
+    const existingExtIds = new Set<string>();
+    const existingPhoneSet = new Set<string>();
+    const phoneToCustomerMap = new Map<string, number>();
+
+    try {
+      const allLeads = await crmService.getDetailedLeads();
+      const list = Array.isArray(allLeads) ? allLeads : (allLeads as any)?.content || [];
+      list.forEach((l: any) => {
+        if (l.externalId) existingExtIds.add(String(l.externalId).trim());
+        const p = (l.phoneNumber || l.customer?.phoneNumber || '').replace(/[^\d]/g, '');
+        if (p.length >= 10) existingPhoneSet.add(p.slice(-10));
+      });
+    } catch {
+      // non-fatal
+    }
+
+    try {
+      const pageRes = await crmService.getLeads(0, 1000);
+      const pageList = Array.isArray(pageRes) ? pageRes : (pageRes as any)?.content || [];
+      pageList.forEach((l: any) => {
+        if (l.externalId) existingExtIds.add(String(l.externalId).trim());
+        const p = (l.phoneNumber || l.customer?.phoneNumber || '').replace(/[^\d]/g, '');
+        if (p.length >= 10) existingPhoneSet.add(p.slice(-10));
+      });
+    } catch {
+      // non-fatal
+    }
+
+    rawLeads.forEach((l: any) => {
+      if (l.externalId) existingExtIds.add(String(l.externalId).trim());
+      const p = (l.phoneNumber || l.customer?.phoneNumber || '').replace(/[^\d]/g, '');
+      if (p.length >= 10) existingPhoneSet.add(p.slice(-10));
+    });
+
+    // Fetch existing customers so we can REUSE existing customer IDs instead of creating duplicate customer records
+    try {
+      const custRes = await crmService.getCustomers(0, 500);
+      const custList = Array.isArray(custRes) ? custRes : (custRes as any)?.content || [];
+      custList.forEach((c: any) => {
+        const p = (c.phoneNumber || c.rawPhoneNumber || c.phone || '').replace(/[^\d]/g, '');
+        if (p.length >= 10 && c.id) {
+          phoneToCustomerMap.set(p.slice(-10), c.id);
+        }
+      });
+    } catch {
+      // non-fatal
+    }
 
     for (let i = 0; i < previewRows.length; i++) {
       const row = previewRows[i];
+      const rowExt = (row.externalId || '').trim();
+      const rowPhone = (row.phone || '').replace(/[^\d]/g, '');
+      const last10 = rowPhone.length >= 10 ? rowPhone.slice(-10) : '';
+
+      const isKnownDuplicate =
+        row.isDuplicate ||
+        Boolean(rowExt && existingExtIds.has(rowExt)) ||
+        Boolean(last10 && existingPhoneSet.has(last10));
+
+      // If user enabled "Skip duplicate records", bypass insert entirely - 0 API calls!
+      if (skipDuplicates && isKnownDuplicate) {
+        skippedCount++;
+        setImportProgress({ current: i + 1, total: previewRows.length });
+        continue;
+      }
+
       try {
         const targetVisaType =
           excelDefaultVisaType === 'AUTO'
             ? row.visaType || 'WORK_VISA'
             : excelDefaultVisaType || row.visaType || 'WORK_VISA';
 
-        const customer = await crmService.createCustomer({
-          fullName: row.name,
-          phoneNumber: row.phone || undefined,
-          email: row.email || undefined,
-          location: row.city || undefined,
-          city: row.city || undefined,
-        });
+        // Effective phone number guaranteed non-null (satisfies backend Customer @NotNull validation)
+        const effectivePhone =
+          (row.phone || '').trim() ||
+          (last10 ? `+91${last10}` : `+910000${String(100000 + i).slice(-6)}`);
+
+        // Check if a customer record with this phone number already exists to avoid redundant createCustomer API calls
+        let customerId: number | undefined = last10 ? phoneToCustomerMap.get(last10) : undefined;
+        if (!customerId) {
+          const customer = await crmService.createCustomer({
+            fullName: row.name || 'Candidate Lead',
+            name: row.name || 'Candidate Lead',
+            phoneNumber: effectivePhone,
+            phone: effectivePhone,
+            rawPhoneNumber: effectivePhone,
+            email: row.email || undefined,
+            location: row.city || undefined,
+            city: row.city || undefined,
+          } as any);
+          customerId = customer.id;
+          if (last10 && customerId) {
+            phoneToCustomerMap.set(last10, customerId);
+          }
+        }
+
+        const targetPlatform = normalizePlatform(
+          row.platform,
+          `${row.adSetName || ''} ${row.campaignName || ''} ${row.formName || ''}`
+        );
+
+        const assignedStaffLogin = !isAdmin && currentUser?.login ? currentUser.login : undefined;
 
         const newLead = await crmService.createLead({
           externalId: row.externalId || ('meta_' + Date.now() + '_' + i),
           createdTime: row.createdTime || new Date().toISOString(),
-          platform: (row.platform as any) || 'IG',
+          platform: targetPlatform,
           status: 'CREATED',
           isOrganic: row.isOrganic ?? false,
           visaType: targetVisaType,
@@ -908,12 +1045,15 @@ export default function Leads() {
           adName: row.adName,
           leadFormName: row.formName,
           notes: row.rawNotes || undefined,
-          customer: { id: customer.id },
-        });
+          assignedTo: assignedStaffLogin,
+          customer: { id: customerId },
+          customerId: customerId,
+        } as any);
 
         try {
           await crmService.createLeadPreference({
             lead: { id: newLead.id },
+            leadId: newLead.id,
             visaType: targetVisaType,
             educationalQualification: row.qualification || EDUCATION_QUALIFICATIONS[2],
             age: row.age || AGE_BRACKETS[0],
@@ -924,8 +1064,29 @@ export default function Leads() {
         }
 
         successCount++;
-      } catch {
-        failCount++;
+        if (rowExt) existingExtIds.add(rowExt);
+        if (last10) existingPhoneSet.add(last10);
+      } catch (rowErr: any) {
+        const errMsg = String(
+          rowErr?.response?.data?.message ||
+          rowErr?.response?.data?.detail ||
+          rowErr?.response?.data?.title ||
+          rowErr?.message ||
+          ''
+        );
+        const isConstraint =
+          errMsg.includes('ux_lead__external_id') ||
+          errMsg.includes('duplicate key') ||
+          errMsg.includes('unique constraint') ||
+          rowErr?.response?.status === 409 ||
+          (rowErr?.response?.status === 500 &&
+            (errMsg.includes('constraint') || errMsg.includes('external_id') || errMsg.includes('Failure during data access')));
+
+        if (isConstraint) {
+          skippedCount++;
+        } else {
+          failCount++;
+        }
       }
       setImportProgress({ current: i + 1, total: previewRows.length });
     }
@@ -936,12 +1097,20 @@ export default function Leads() {
     setImportFile(null);
     window.dispatchEvent(new CustomEvent('crm-data-updated'));
     await fetchLeads();
-    await showAlert({
-      title: 'App',
-      message: `Successfully loaded ${successCount} candidate lead${successCount === 1 ? '' : 's'} into database!${
-        failCount > 0 ? ` (${failCount} entries had errors)` : ''
-      }`,
-    });
+
+    if (successCount === 0 && skippedCount > 0 && failCount === 0) {
+      await showAlert({
+        title: 'App',
+        message: `All ${skippedCount} candidate leads in this spreadsheet already exist in your CRM database.\n\nDuplicate records were safely skipped without any database conflicts.`,
+      });
+    } else {
+      await showAlert({
+        title: 'App',
+        message: `Import Summary:\n• ${successCount} new candidate lead${successCount === 1 ? '' : 's'} created\n• ${skippedCount} duplicate lead${skippedCount === 1 ? '' : 's'} skipped${
+          failCount > 0 ? `\n• ${failCount} entries had unexpected errors` : ''
+        }`,
+      });
+    }
   };
 
   const formatDate = (isoStr?: string): string => {
@@ -963,55 +1132,47 @@ export default function Leads() {
     const t = (type || '').toUpperCase();
     if (t === 'WORK_VISA') {
       return (
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#1c1c1e]">
-          <span className="w-2 h-2 rounded-full bg-[#5856d6] shadow-2xs shrink-0"></span>
-          <span>Work Visa</span>
+        <span className="text-xs font-medium text-[#1c1c1e]">
+          Work Visa
         </span>
       );
     }
     if (t === 'STUDY_VISA') {
       return (
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#1c1c1e]">
-          <span className="w-2 h-2 rounded-full bg-[#34c759] shadow-2xs shrink-0"></span>
-          <span>Study Visa</span>
+        <span className="text-xs font-medium text-[#1c1c1e]">
+          Study Visa
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#1c1c1e]">
-        <span className="w-2 h-2 rounded-full bg-[#ff9500] shadow-2xs shrink-0"></span>
-        <span>{t === 'OTHER_VISA' ? 'Other Visa' : type || 'Other Visa'}</span>
+      <span className="text-xs font-medium text-[#1c1c1e]">
+        {t === 'OTHER_VISA' ? 'Other Visa' : type || 'Other Visa'}
       </span>
     );
   };
 
   const renderStageBadge = (leadItem: Lead) => {
     const s = (leadItem.status || 'CREATED').toUpperCase();
-    let badgeClasses = 'bg-[#007aff]/10 text-[#007aff] hover:bg-[#007aff]/20';
     let label = 'New Lead';
 
     if (s === 'CONTACTED') {
-      badgeClasses = 'bg-[#5856d6]/10 text-[#5856d6] hover:bg-[#5856d6]/20';
       label = 'Contacted';
     } else if (s === 'QUALIFIED') {
-      badgeClasses = 'bg-[#af52de]/10 text-[#af52de] hover:bg-[#af52de]/20';
       label = 'Qualified';
-    } else if (s === 'CONVERTED' || s === 'WON') {
-      badgeClasses = 'bg-[#34c759]/10 text-[#34c759] hover:bg-[#34c759]/20';
-      label = s === 'WON' ? 'Approved' : 'Converted';
+    } else if (s === 'CONVERTED') {
+      label = 'Converted';
+    } else if (s === 'WON') {
+      label = 'Visa Approved';
     } else if (s === 'PROPOSAL_SENT') {
-      badgeClasses = 'bg-[#ff9500]/10 text-[#ff9500] hover:bg-[#ff9500]/20';
       label = 'Docs Requested';
     } else if (s === 'NEGOTIATION') {
-      badgeClasses = 'bg-[#5856d6]/10 text-[#5856d6] hover:bg-[#5856d6]/20';
       label = 'In Process';
     } else if (s === 'LOST') {
-      badgeClasses = 'bg-black/[0.05] text-[#636366] hover:bg-black/[0.08]';
       label = 'Lost / Closed';
     }
 
     return (
-      <button
+      <span
         onClick={(e) => {
           e.stopPropagation();
           setStatusModalLead(leadItem);
@@ -1020,12 +1181,75 @@ export default function Leads() {
             notes: leadItem.notes || '',
           });
         }}
-        className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all hover:scale-102 cursor-pointer ${badgeClasses}`}
-        title="Click to advance stage"
+        className="text-xs text-[#1c1c1e] hover:text-[#007aff] hover:underline cursor-pointer"
+        title="Click to update stage"
       >
-        <span>{label}</span>
-      </button>
+        {label}
+      </span>
     );
+  };
+
+  const getLeadQuality = (leadItem: Lead): string => {
+    if (leadItem.leadQuality) return leadItem.leadQuality;
+    const n = (leadItem.notes || '').toLowerCase();
+    if (n.includes('quality: hot') || n.includes('hot')) return 'Hot';
+    if (n.includes('quality: warm') || n.includes('warm')) return 'Warm';
+    if (n.includes('quality: cold') || n.includes('cold')) return 'Cold';
+    if (leadItem.status === 'QUALIFIED' || leadItem.status === 'CONVERTED' || leadItem.status === 'WON') return 'Hot';
+    if (leadItem.status === 'CONTACTED' || leadItem.status === 'PROPOSAL_SENT') return 'Warm';
+    return '—';
+  };
+
+  const getBudgetReady = (leadItem: Lead): string => {
+    if (leadItem.budgetReady) return leadItem.budgetReady;
+    const n = (leadItem.notes || '').toLowerCase();
+    if (n.includes('budget: no') || n.includes('budget no') || n.includes('budget_ready: no')) return 'No';
+    if (n.includes('budget: yes') || n.includes('budget yes') || n.includes('budget_ready: yes')) return 'Yes';
+    if (leadItem.status === 'CONVERTED' || leadItem.status === 'WON' || leadItem.status === 'QUALIFIED') return 'Yes';
+    return '—';
+  };
+
+  const getCounselorDisplayName = (leadItem: Lead): string => {
+    // 1. If explicitly assigned in lead record, return staff name if matched or the login
+    if (leadItem.assignedTo && leadItem.assignedTo.trim() !== '' && leadItem.assignedTo !== 'Unassigned') {
+      const match = availableStaff.find(
+        (s) => s.login.toLowerCase() === leadItem.assignedTo?.toLowerCase()
+      );
+      return match?.name || leadItem.assignedTo;
+    }
+
+    // 2. If staff/counselor is logged in (!isAdmin), display current counselor's name or role
+    if (!isAdmin && currentUser) {
+      const staffFullName = `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim();
+      if (staffFullName) return staffFullName;
+      if (currentUser.login && currentUser.login !== 'user') return currentUser.login;
+      if (isWorkVisa) return 'Work Visa Counselor';
+      if (isStudyVisa) return 'Study Visa Counselor';
+      if (isOtherVisa) return 'Other Visa Counselor';
+      return roleBadge.label || 'Assigned Counselor';
+    }
+
+    // 3. For Admin view: infer primary counselor from visa program / role desk
+    if (isWorkVisaType(leadItem.visaType)) {
+      const workStaff = availableStaff.find(
+        (s) => s.login.toLowerCase().includes('work') || (s.name || '').toLowerCase().includes('work')
+      );
+      return workStaff?.name || 'Work Visa Counselor';
+    }
+    if (isStudyVisaType(leadItem.visaType)) {
+      const studyStaff = availableStaff.find(
+        (s) => s.login.toLowerCase().includes('study') || (s.name || '').toLowerCase().includes('study')
+      );
+      return studyStaff?.name || 'Study Visa Counselor';
+    }
+    if (isOtherVisaType(leadItem.visaType)) {
+      const otherStaff = availableStaff.find(
+        (s) => s.login.toLowerCase().includes('other') || (s.name || '').toLowerCase().includes('other')
+      );
+      return otherStaff?.name || 'Other Visa Counselor';
+    }
+
+    return 'Unassigned';
   };
 
   const allPageIdsSelected = paginatedLeads.length > 0 && paginatedLeads.every((l) => selectedLeadIds.has(l.id));
@@ -1072,33 +1296,24 @@ export default function Leads() {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 rounded border border-slate-300 text-xs font-medium shadow-2xs transition-colors cursor-pointer"
-            title="Export filtered records to CSV"
-          >
-            <Download size={13} className="text-slate-500" />
-            <span>Export CSV</span>
-          </button>
-
-          <button
             onClick={() => {
               setModalTab('excel');
               setShowAddModal(true);
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 hover:text-[#1e88e5] rounded border border-slate-300 text-xs font-medium shadow-2xs transition-colors cursor-pointer"
+            className="zoho-btn"
             title="Import candidate leads directly from Excel or CSV spreadsheet"
           >
-            <FileSpreadsheet size={13} className="text-[#1e88e5]" />
+            <FileSpreadsheet size={13} className="text-[#1366d9]" />
             <span>Import Excel</span>
           </button>
 
           <button
             onClick={() => fetchLeads()}
             disabled={loading}
-            className="p-1.5 bg-white hover:bg-slate-50 text-slate-600 rounded border border-slate-300 shadow-2xs transition-colors cursor-pointer"
+            className="zoho-btn px-2.5"
             title="Refresh candidates"
           >
-            <RefreshCw size={13} className={loading ? 'animate-spin text-[#1e88e5]' : 'text-slate-500'} />
+            <RefreshCw size={13} className={loading ? 'animate-spin text-[#1366d9]' : 'text-slate-500'} />
           </button>
 
           <button
@@ -1106,7 +1321,7 @@ export default function Leads() {
               setModalTab('manual');
               setShowAddModal(true);
             }}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#1e88e5] hover:bg-[#1565c0] text-white rounded text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+            className="zoho-btn-primary"
           >
             <Plus size={14} />
             <span>New Candidate</span>
@@ -1286,7 +1501,7 @@ export default function Leads() {
       {/* Apple Inset Grouped Candidate Data Table */}
       <div className="ios-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full text-left text-xs border-collapse min-w-[1300px]">
             <thead>
               <tr className="bg-[#fbfbfd] border-b border-black/[0.06] text-[11px] font-semibold text-[#8e8e93] select-none">
                 <th className="py-3 px-3.5 w-8">
@@ -1298,21 +1513,25 @@ export default function Leads() {
                     {allPageIdsSelected ? <CheckSquare size={14} className="text-[#007aff]" /> : <Square size={14} className="text-[#c7c7cc]" />}
                   </button>
                 </th>
-                <th className="py-3 px-3.5">Candidate</th>
-                <th className="py-3 px-3.5">Contact & City</th>
-                <th className="py-3 px-3.5">Visa Program</th>
-                <th className="py-3 px-3.5">Counselor</th>
-                <th className="py-3 px-3.5">Profile</th>
-                <th className="py-3 px-3.5">Source</th>
-                <th className="py-3 px-3.5">Stage</th>
-                <th className="py-3 px-3.5">Inquiry Date</th>
-                <th className="py-3 px-3.5 text-right">Actions</th>
+                <th className="py-3 px-3.5 whitespace-nowrap">Lead Source</th>
+                <th className="py-3 px-3.5 whitespace-nowrap">Campaign Name</th>
+                <th className="py-3 px-3.5 whitespace-nowrap">Candidate Name</th>
+                <th className="py-3 px-3.5 whitespace-nowrap">Mobile Number</th>
+                <th className="py-3 px-3.5 whitespace-nowrap">WhatsApp Number</th>
+                <th className="py-3 px-3.5 whitespace-nowrap">City</th>
+                <th className="py-3 px-3.5 whitespace-nowrap text-center">Budget Ready</th>
+                <th className="py-3 px-3.5 whitespace-nowrap">Lead Quality</th>
+                <th className="py-3 px-3.5 whitespace-nowrap">Follow-up Date</th>
+                <th className="py-3 px-3.5 whitespace-nowrap">Follow-up Status</th>
+                <th className="py-3 px-3.5 whitespace-nowrap">Current Stage</th>
+                <th className="py-3 px-3.5 whitespace-nowrap">Remarks</th>
+                <th className="py-3 px-3.5 text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-black/[0.04]">
               {paginatedLeads.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center text-[#8e8e93]">
+                  <td colSpan={14} className="py-12 text-center text-[#8e8e93]">
                     {loading ? (
                       <span className="flex items-center justify-center gap-2">
                         <RefreshCw size={15} className="animate-spin text-[#1c1c1e]" />
@@ -1355,13 +1574,27 @@ export default function Leads() {
                         </button>
                       </td>
 
-                      {/* Candidate Name & Email */}
+                      {/* Lead Source */}
+                      <td className="py-3 px-3.5 whitespace-nowrap">
+                        <span className="font-semibold text-xs text-[#1c1c1e]">
+                          {plat.label}
+                        </span>
+                      </td>
+
+                      {/* Campaign Name */}
+                      <td className="py-3 px-3.5">
+                        <div className="font-medium text-[#1c1c1e] text-xs truncate max-w-[160px]" title={lead.campaignName || '—'}>
+                          {lead.campaignName || '—'}
+                        </div>
+                      </td>
+
+                      {/* Candidate Name */}
                       <td className="py-3 px-3.5">
                         <div className="font-semibold text-[13px] text-[#1c1c1e] group-hover:text-[#007aff] transition-colors">
                           {lead.customerName || `Candidate #${lead.id}`}
                         </div>
                         <div className="flex items-center gap-1.5 text-[11px] text-[#8e8e93] mt-0.5">
-                          {lead.email && <span className="truncate max-w-[150px]">{lead.email}</span>}
+                          {lead.email && <span className="truncate max-w-[140px]">{lead.email}</span>}
                           {lead.email && <span>·</span>}
                           <span className="font-sf-mono text-[10px]">
                             {lead.externalId ? lead.externalId : `#${lead.id}`}
@@ -1369,92 +1602,57 @@ export default function Leads() {
                         </div>
                       </td>
 
-                      {/* Phone & Location */}
-                      <td className="py-3 px-3.5">
-                        <div className="font-sf-mono text-[12px] text-[#1c1c1e] font-medium tracking-tight">
+                      {/* Mobile Number */}
+                      <td className="py-3 px-3.5 whitespace-nowrap">
+                        <span className="font-sf-mono text-[12px] text-[#1c1c1e] font-medium tracking-tight">
                           {lead.phoneNumber || '—'}
-                        </div>
-                        {(lead.city || lead.location) && (
-                          <div className="text-[11px] text-[#8e8e93] capitalize flex items-center gap-1 mt-0.5">
-                            <MapPin size={10} className="text-[#8e8e93] shrink-0" />
-                            <span>{lead.city || lead.location}</span>
-                          </div>
-                        )}
+                        </span>
                       </td>
 
-                      {/* Visa Type Column with refined Apple dot indicator */}
-                      <td className="py-3 px-3.5">
-                        {renderVisaBadge(lead.visaType)}
-                        {lead.leadConfirm && (
-                          <div className="text-[10px] text-[#8e8e93] mt-0.5">
-                            Status: <span className="font-medium text-[#3c3c43]">{lead.leadConfirm}</span>
-                          </div>
-                        )}
+                      {/* WhatsApp Number */}
+                      <td className="py-3 px-3.5 whitespace-nowrap text-xs text-[#1c1c1e]">
+                        {lead.phoneNumber ? 'Yes' : '—'}
                       </td>
 
-                      {/* Assigned To Column: Admin inline dropdown vs Staff read-only */}
-                      <td className="py-3 px-3.5" onClick={(e) => e.stopPropagation()}>
-                        {isAdmin ? (
-                          <div className="flex items-center gap-1.5">
-                            <select
-                              value={lead.assignedTo || ''}
-                              onChange={(e) => handleAssignStaff(lead.id, e.target.value)}
-                              disabled={assigningLeadId === lead.id}
-                              className="px-2 py-1 bg-black/[0.04] hover:bg-black/[0.07] border-0 rounded-lg text-xs font-medium text-[#1c1c1e] focus:bg-white focus:ring-1 focus:ring-[#007aff]/30 focus:outline-none max-w-[130px] transition-all cursor-pointer"
-                              title="Admin: Reassign staff"
-                            >
-                              <option value="">Unassigned</option>
-                              {availableStaff.map((st) => (
-                                <option key={st.login} value={st.login}>
-                                  {st.name || st.login}
-                                </option>
-                              ))}
-                            </select>
-                            {assigningLeadId === lead.id && (
-                              <RefreshCw size={11} className="animate-spin text-[#8e8e93] shrink-0" />
-                            )}
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1.5">
-                            <div className="w-5 h-5 rounded-full bg-black/[0.05] border border-black/[0.05] flex items-center justify-center text-[10px] font-semibold text-[#1c1c1e] shrink-0">
-                              {(lead.assignedTo?.[0] || '—').toUpperCase()}
-                            </div>
-                            <span className={`text-xs ${lead.assignedTo ? 'font-medium text-[#1c1c1e]' : 'text-[#8e8e93] italic'} truncate max-w-[100px]`}>
-                              {lead.assignedTo || 'Unassigned'}
-                            </span>
-                          </div>
-                        )}
+                      {/* City */}
+                      <td className="py-3 px-3.5 whitespace-nowrap">
+                        <span className="text-xs text-[#1c1c1e] capitalize">
+                          {lead.city || lead.location || '—'}
+                        </span>
                       </td>
 
-                      {/* Qualification & Age */}
-                      <td className="py-3 px-3.5">
-                        <div className="font-medium text-[#1c1c1e] truncate max-w-[140px]" title={lead.educationalQualification}>
-                          {lead.educationalQualification || '—'}
-                        </div>
-                        <div className="text-[11px] text-[#8e8e93] mt-0.5">
-                          {lead.age ? `${lead.age}` : ''}
-                          {lead.areYouWorking ? ` · ${lead.areYouWorking}` : ''}
-                        </div>
+                      {/* Budget Ready */}
+                      <td className="py-3 px-3.5 whitespace-nowrap text-xs text-[#1c1c1e]">
+                        {getBudgetReady(lead)}
                       </td>
 
-                      {/* Source & Attribution (Clean iOS Typography - No loud AI Badges) */}
-                      <td className="py-3 px-3.5">
-                        <div className="text-xs font-medium text-[#1c1c1e]">
-                          {plat.label}
-                        </div>
-                        <div className="text-[11px] text-[#8e8e93] truncate max-w-[120px] mt-0.5" title={lead.campaignName}>
-                          {lead.campaignName || 'Direct'}
-                        </div>
+                      {/* Lead Quality */}
+                      <td className="py-3 px-3.5 whitespace-nowrap text-xs text-[#1c1c1e]">
+                        {getLeadQuality(lead)}
                       </td>
 
-                      {/* Lifecycle Stage without dot */}
-                      <td className="py-3 px-3.5" onClick={(e) => e.stopPropagation()}>
+                      {/* Follow-up Date */}
+                      <td className="py-3 px-3.5 text-[#64748b] text-[11px] whitespace-nowrap font-normal">
+                        {formatDate(lead.followUpDate || lead.createdTime || lead.createdAt)}
+                      </td>
+
+                      {/* Follow-up Status */}
+                      <td className="py-3 px-3.5 whitespace-nowrap">
+                        <span className="text-xs font-medium text-[#1c1c1e]">
+                          {lead.followUpStatus || lead.leadConfirm || (lead.status === 'CREATED' ? 'Pending' : 'Interested')}
+                        </span>
+                      </td>
+
+                      {/* Current Stage */}
+                      <td className="py-3 px-3.5 whitespace-nowrap">
                         {renderStageBadge(lead)}
                       </td>
 
-                      {/* Inquiry Date */}
-                      <td className="py-3 px-3.5 text-[#8e8e93] text-[11px] whitespace-nowrap font-normal">
-                        {formatDate(lead.createdTime || lead.createdAt)}
+                      {/* Remarks */}
+                      <td className="py-3 px-3.5">
+                        <div className="text-[11px] text-[#475569] truncate max-w-[150px]" title={lead.notes || '—'}>
+                          {lead.notes || '—'}
+                        </div>
                       </td>
 
                       {/* Outreach & Actions (Clean macOS Style Icon Buttons) */}
@@ -1964,19 +2162,19 @@ export default function Leads() {
 
       {/* Create New Candidate Modal (Zoho CRM Enterprise Intake & Meta Import) */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-[1px] flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
           <div
-            className={`bg-white rounded-md shadow-2xl border border-slate-300 ${
+            className={`bg-white rounded-[6px] shadow-[0_12px_40px_rgba(0,0,0,0.16)] border border-[#c8d1dc] ${
               modalTab === 'excel' && previewRows.length > 0 ? 'max-w-5xl' : 'max-w-xl'
-            } w-full my-auto transition-all duration-150 overflow-hidden flex flex-col font-sans`}
+            } w-full my-auto transition-all duration-150 overflow-hidden flex flex-col font-zoho`}
           >
             {/* Modal Header */}
-            <div className="bg-[#f8fafc] px-6 py-3.5 border-b border-slate-200 flex items-center justify-between">
+            <div className="bg-white px-6 py-3.5 border-b border-[#e5e7eb] flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+                <h3 className="text-[15px] font-semibold text-[#1e293b] leading-tight">
                   {modalTab === 'manual' ? 'Candidate Intake' : 'Import Leads from Spreadsheet'}
                 </h3>
-                <p className="text-[11px] text-slate-500 mt-0.5">
+                <p className="text-[12px] text-[#64748b] mt-0.5">
                   {modalTab === 'manual'
                     ? 'Record individual candidate lead information'
                     : 'Ingest and map Meta Ads Manager (Facebook, Instagram) lead spreadsheets'}
@@ -1993,7 +2191,7 @@ export default function Leads() {
                     navigate('/leads', { replace: true });
                   }
                 }}
-                className="w-7 h-7 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-200 flex items-center justify-center transition-colors cursor-pointer text-base"
+                className="w-7 h-7 rounded-[4px] text-[#64748b] hover:text-[#1e293b] hover:bg-[#f1f5f9] flex items-center justify-center transition-colors cursor-pointer text-base"
                 title="Close dialog"
               >
                 <X size={16} />
@@ -2001,17 +2199,17 @@ export default function Leads() {
             </div>
 
             {/* Zoho CRM Underline Tabs */}
-            <div className="bg-white border-b border-slate-200 px-6 flex items-center gap-6">
+            <div className="bg-white border-b border-[#e5e7eb] px-6 flex items-center gap-6">
               <button
                 type="button"
                 onClick={() => {
                   setModalTab('manual');
                   setImportError(null);
                 }}
-                className={`py-2.5 text-xs font-semibold border-b-2 transition-colors cursor-pointer ${
+                className={`py-2.5 text-[13px] font-medium border-b-2 transition-colors cursor-pointer ${
                   modalTab === 'manual'
-                    ? 'text-[#1e88e5] border-[#1e88e5]'
-                    : 'text-slate-500 border-transparent hover:text-slate-800'
+                    ? 'text-[#1366d9] border-[#1366d9]'
+                    : 'text-[#64748b] border-transparent hover:text-[#1e293b]'
                 }`}
               >
                 Single Candidate
@@ -2021,13 +2219,13 @@ export default function Leads() {
                 onClick={() => {
                   setModalTab('excel');
                 }}
-                className={`py-2.5 text-xs font-semibold border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
+                className={`py-2.5 text-[13px] font-medium border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
                   modalTab === 'excel'
-                    ? 'text-[#1e88e5] border-[#1e88e5]'
-                    : 'text-slate-500 border-transparent hover:text-slate-800'
+                    ? 'text-[#1366d9] border-[#1366d9]'
+                    : 'text-[#64748b] border-transparent hover:text-[#1e293b]'
                 }`}
               >
-                <FileSpreadsheet size={14} />
+                <FileSpreadsheet size={14} className={modalTab === 'excel' ? 'text-[#1366d9]' : 'text-[#64748b]'} />
                 <span>Import from Excel / Meta Ads</span>
               </button>
             </div>
@@ -2216,23 +2414,23 @@ export default function Leads() {
                   /* State B: Sheet Uploaded -> Clean Zoho CRM Table & Confirmation */
                   <div className="space-y-3.5">
                     {/* File & Mapping Setup Bar */}
-                    <div className="bg-slate-50 border border-slate-200 rounded p-4 space-y-3">
+                    <div className="bg-[#fcfdfd] border border-[#dbe3eb] rounded-[4px] p-3.5 space-y-3">
                       {/* Top row: File info and change button */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-200">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#e5e7eb]">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded bg-blue-100 text-[#1e88e5] flex items-center justify-center shrink-0 border border-blue-200">
+                          <div className="w-8 h-8 rounded-[4px] bg-[#f0f4f9] text-[#475569] flex items-center justify-center shrink-0 border border-[#d6e0ec]">
                             <FileSpreadsheet size={16} />
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="font-semibold text-xs text-slate-900 truncate max-w-sm" title={importFile?.name}>
+                              <span className="font-semibold text-[13px] text-[#1e293b] truncate max-w-sm" title={importFile?.name}>
                                 {importFile?.name || 'Spreadsheet File'}
                               </span>
-                              <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <span className="text-[11px] font-medium px-2 py-0.5 rounded-[3px] bg-[#f0f4f9] text-[#2c3e50] border border-[#cbd5e1]">
                                 {previewRows.length} Records Found
                               </span>
                             </div>
-                            <p className="text-[11px] text-slate-500 mt-0.5">
+                            <p className="text-[11px] text-[#64748b] mt-0.5">
                               Meta Lead Ads headers resolved • Ready for CRM intake
                             </p>
                           </div>
@@ -2244,22 +2442,51 @@ export default function Leads() {
                             setPreviewRows([]);
                             setImportFile(null);
                           }}
-                          className="text-xs text-rose-600 hover:text-rose-800 hover:underline font-medium cursor-pointer self-start sm:self-auto"
+                          className="zoho-btn zoho-btn-sm self-start sm:self-auto"
                         >
                           Change File
                         </button>
                       </div>
 
+                      {/* Duplicate Warning Banner */}
+                      {duplicateStats.hasDuplicates && (
+                        <div className="bg-[#fffbf0] border border-[#f5dfa8] rounded-[4px] p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                          <div className="flex items-start sm:items-center gap-2">
+                            <AlertCircle size={15} className="text-[#b45309] shrink-0 mt-0.5 sm:mt-0" />
+                            <div>
+                              <span className="font-medium text-[#78350f] text-[12px]">
+                                {duplicateStats.duplicateCount} of {previewRows.length} candidates already exist in CRM database
+                              </span>
+                              <p className="text-[11px] text-[#92400e] mt-0.5">
+                                {duplicateStats.allDuplicates
+                                  ? 'All leads in this spreadsheet match existing database entries. Skipping will prevent unique constraint conflicts.'
+                                  : `${duplicateStats.newCount} new records found. Duplicates will be safely skipped.`}
+                              </p>
+                            </div>
+                          </div>
+
+                          <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-1.5 rounded-[4px] border border-[#d9c595] text-[#2c3e50] text-[12px] font-medium shrink-0 shadow-2xs select-none">
+                            <input
+                              type="checkbox"
+                              checked={skipDuplicates}
+                              onChange={(e) => setSkipDuplicates(e.target.checked)}
+                              className="rounded text-[#1366d9] cursor-pointer"
+                            />
+                            <span>Skip duplicate records</span>
+                          </label>
+                        </div>
+                      )}
+
                       {/* Configuration Controls Grid */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         <div>
-                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                          <label className="block text-[11px] font-medium text-[#525f7f] uppercase tracking-wider mb-1">
                             Visa Program Assignment
                           </label>
                           <select
                             value={excelDefaultVisaType}
                             onChange={(e) => setExcelDefaultVisaType(e.target.value)}
-                            className="w-full text-xs bg-white border border-slate-300 rounded px-2.5 py-1.5 text-slate-800 font-medium focus:border-blue-500 focus:outline-none cursor-pointer shadow-2xs"
+                            className="zoho-select w-full cursor-pointer"
                           >
                             <option value="AUTO">Auto-detect from Campaign & AdSet</option>
                             <option value="WORK_VISA">Force Work Visa Desk</option>
@@ -2269,13 +2496,13 @@ export default function Leads() {
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                          <label className="block text-[11px] font-medium text-[#525f7f] uppercase tracking-wider mb-1">
                             Ingestion Pipeline
                           </label>
                           <select
                             value={importMethod}
                             onChange={(e) => setImportMethod(e.target.value as 'direct' | 'server')}
-                            className="w-full text-xs bg-white border border-slate-300 rounded px-2.5 py-1.5 text-slate-800 font-medium focus:border-blue-500 focus:outline-none cursor-pointer shadow-2xs"
+                            className="zoho-select w-full cursor-pointer"
                           >
                             <option value="direct">Direct Database Ingest (Browser Batch API)</option>
                             <option value="server">Server Upload Pipeline (/api/leads/import)</option>
@@ -2283,17 +2510,17 @@ export default function Leads() {
                         </div>
 
                         <div className="sm:col-span-2 lg:col-span-1">
-                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                          <label className="block text-[11px] font-medium text-[#525f7f] uppercase tracking-wider mb-1">
                             Detected Breakdown
                           </label>
-                          <div className="flex items-center gap-1.5 h-[33px]">
-                            <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                          <div className="flex items-center gap-1.5 h-[32px]">
+                            <span className="text-[11px] font-medium px-2 py-0.5 rounded-[3px] bg-[#f0f4f9] text-[#1e40af] border border-[#dbeafe]">
                               Work: <strong>{excelStats.work}</strong>
                             </span>
-                            <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <span className="text-[11px] font-medium px-2 py-0.5 rounded-[3px] bg-[#f0fdf4] text-[#166534] border border-[#bbf7d0]">
                               Study: <strong>{excelStats.study}</strong>
                             </span>
-                            <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-300">
+                            <span className="text-[11px] font-medium px-2 py-0.5 rounded-[3px] bg-[#f1f5f9] text-[#475569] border border-[#e2e8f0]">
                               IG: <strong>{excelStats.ig}</strong>
                             </span>
                           </div>
@@ -2302,79 +2529,89 @@ export default function Leads() {
                     </div>
 
                     {/* Zoho CRM Data Grid Table */}
-                    <div className="border border-slate-200 rounded overflow-hidden bg-white shadow-2xs">
-                      <div className="bg-slate-100/70 px-3.5 py-1.5 border-b border-slate-200 flex items-center justify-between text-[11px] text-slate-600">
-                        <span className="font-semibold text-slate-700">Candidate Records Preview ({previewRows.length} rows)</span>
+                    <div className="border border-[#e2e8f0] rounded-[4px] overflow-hidden bg-white shadow-2xs">
+                      <div className="bg-[#f8fafc] px-3.5 py-2 border-b border-[#e2e8f0] flex items-center justify-between text-[11px] text-[#64748b]">
+                        <span className="font-semibold text-[#334155]">Candidate Records Preview ({previewRows.length} rows)</span>
                         <span>Scroll horizontally to inspect attribution</span>
                       </div>
 
                       <div className="max-h-72 overflow-y-auto overflow-x-auto">
-                        <table className="w-full text-left text-xs border-collapse">
-                          <thead className="bg-[#f4f6f8] border-b border-slate-200 text-[11px] font-semibold text-slate-600 uppercase tracking-wider sticky top-0 z-10">
+                        <table className="w-full text-left text-xs border-collapse font-zoho">
+                          <thead className="bg-[#f8fafc] border-b border-[#e2e8f0] text-[11px] font-semibold text-[#525f7f] uppercase tracking-wider sticky top-0 z-10">
                             <tr>
-                              <th className="py-2.5 px-3 w-10 text-center text-slate-400">#</th>
-                              <th className="py-2.5 px-3 border-l border-slate-200">Candidate Name</th>
-                              <th className="py-2.5 px-3 border-l border-slate-200">Contact Details</th>
-                              <th className="py-2.5 px-3 border-l border-slate-200">Location</th>
-                              <th className="py-2.5 px-3 border-l border-slate-200">Visa Program</th>
-                              <th className="py-2.5 px-3 border-l border-slate-200">Platform</th>
-                              <th className="py-2.5 px-3 border-l border-slate-200">Survey & Status</th>
-                              <th className="py-2.5 px-3 border-l border-slate-200">Campaign / Adset</th>
+                              <th className="py-2.5 px-3 w-10 text-center text-[#64748b]">#</th>
+                              <th className="py-2.5 px-3 border-l border-[#e5e7eb]">Candidate Name</th>
+                              <th className="py-2.5 px-3 border-l border-[#e5e7eb]">Contact Details</th>
+                              <th className="py-2.5 px-3 border-l border-[#e5e7eb]">Location</th>
+                              <th className="py-2.5 px-3 border-l border-[#e5e7eb]">Visa Program</th>
+                              <th className="py-2.5 px-3 border-l border-[#e5e7eb]">Platform</th>
+                              <th className="py-2.5 px-3 border-l border-[#e5e7eb]">Survey & Status</th>
+                              <th className="py-2.5 px-3 border-l border-[#e5e7eb]">Campaign / Adset</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-slate-200 text-slate-700">
+                          <tbody className="divide-y divide-[#edf2f7] text-[#2c3e50]">
                             {previewRows.map((r, i) => {
                               const currentVisa = excelDefaultVisaType === 'AUTO' ? r.visaType : excelDefaultVisaType;
                               return (
-                                <tr key={i} className="hover:bg-blue-50/40 transition-colors">
-                                  <td className="py-2 px-3 text-center text-slate-400 font-mono text-[11px] bg-slate-50/50">
+                                <tr key={i} className="hover:bg-[#f8fafc] transition-colors">
+                                  <td className="py-2 px-3 text-center text-[#94a3b8] font-mono text-[11px] bg-[#fafbfc]">
                                     {i + 1}
                                   </td>
-                                  <td className="py-2 px-3 border-l border-slate-100">
-                                    <div className="font-semibold text-slate-900">{r.name}</div>
+                                  <td className="py-2 px-3 border-l border-[#f1f5f9]">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="font-medium text-[#1e293b] text-[12px]">{r.name}</span>
+                                      {r.isDuplicate && (
+                                        <span
+                                          className="px-1.5 py-0.2 rounded-[2px] text-[10px] font-medium bg-[#fef3c7] text-[#92400e] border border-[#fde68a] shrink-0"
+                                          title={r.duplicateReason}
+                                        >
+                                          Already in CRM
+                                        </span>
+                                      )}
+                                    </div>
                                     {r.externalId && (
-                                      <div className="text-[10px] text-slate-400 font-mono" title={r.externalId}>
+                                      <div className="text-[10px] text-[#94a3b8] font-mono" title={r.externalId}>
                                         ID: {r.externalId}
                                       </div>
                                     )}
                                   </td>
-                                  <td className="py-2 px-3 border-l border-slate-100">
-                                    <div className="font-mono text-slate-800 font-medium">{r.phone || '—'}</div>
-                                    <div className="text-[11px] text-slate-500 truncate max-w-[140px]" title={r.email}>
+                                  <td className="py-2 px-3 border-l border-[#f1f5f9]">
+                                    <div className="font-mono text-[#1e293b] text-[12px]">{r.phone || '—'}</div>
+                                    <div className="text-[11px] text-[#64748b] truncate max-w-[140px]" title={r.email}>
                                       {r.email || '—'}
                                     </div>
                                   </td>
-                                  <td className="py-2 px-3 border-l border-slate-100 text-slate-800">
+                                  <td className="py-2 px-3 border-l border-[#f1f5f9] text-[#1e293b] text-[12px]">
                                     {r.city || '—'}
                                   </td>
-                                  <td className="py-2 px-3 border-l border-slate-100">
-                                    <span className={`inline-block px-2 py-0.5 text-[11px] font-medium rounded border ${
+                                  <td className="py-2 px-3 border-l border-[#f1f5f9]">
+                                    <span className={`inline-block px-2 py-0.5 text-[11px] font-medium rounded-[3px] border ${
                                       currentVisa === 'WORK_VISA'
-                                        ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                        ? 'bg-[#f0f4f9] text-[#1e40af] border-[#dbeafe]'
                                         : currentVisa === 'STUDY_VISA'
-                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                        : 'bg-amber-50 text-amber-800 border-amber-200'
+                                        ? 'bg-[#f0fdf4] text-[#166534] border-[#bbf7d0]'
+                                        : 'bg-[#fffbeb] text-[#92400e] border-[#fde68a]'
                                     }`}>
                                       {currentVisa === 'WORK_VISA' ? 'Work Visa' : currentVisa === 'STUDY_VISA' ? 'Study Visa' : 'Other Visa'}
                                     </span>
                                   </td>
-                                  <td className="py-2 px-3 border-l border-slate-100">
-                                    <span className="inline-block px-1.5 py-0.5 text-[10px] font-bold font-mono rounded bg-slate-100 text-slate-700 border border-slate-300">
+                                  <td className="py-2 px-3 border-l border-[#f1f5f9]">
+                                    <span className="inline-block px-1.5 py-0.5 text-[10px] font-semibold font-mono rounded-[2px] bg-[#f1f5f9] text-[#475569] border border-[#e2e8f0]">
                                       {r.platform}
                                     </span>
                                   </td>
-                                  <td className="py-2 px-3 border-l border-slate-100">
-                                    <div className="text-slate-800 font-medium">{r.qualification}</div>
+                                  <td className="py-2 px-3 border-l border-[#f1f5f9]">
+                                    <div className="text-[#1e293b] text-[12px] font-medium">{r.qualification}</div>
                                     {r.surveyCgpa && (
-                                      <div className="text-[10px] text-slate-500">{r.surveyCgpa}</div>
+                                      <div className="text-[10px] text-[#64748b]">{r.surveyCgpa}</div>
                                     )}
                                   </td>
-                                  <td className="py-2 px-3 border-l border-slate-100">
-                                    <div className="text-slate-800 truncate max-w-[160px]" title={r.campaignName}>
+                                  <td className="py-2 px-3 border-l border-[#f1f5f9]">
+                                    <div className="text-[#1e293b] text-[12px] truncate max-w-[160px]" title={r.campaignName}>
                                       {r.campaignName || 'Meta Lead Gen'}
                                     </div>
                                     {r.adSetName && (
-                                      <div className="text-[10px] text-slate-500 truncate max-w-[160px]" title={r.adSetName}>
+                                      <div className="text-[10px] text-[#64748b] truncate max-w-[160px]" title={r.adSetName}>
                                         {r.adSetName}
                                       </div>
                                     )}
@@ -2389,21 +2626,21 @@ export default function Leads() {
 
                     {/* Progress Bar when Ingesting */}
                     {importLoading && (
-                      <div className="space-y-1.5 p-3 rounded bg-blue-50 border border-blue-200">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-semibold text-[#1e88e5] flex items-center gap-1.5">
+                      <div className="space-y-1.5 p-3 rounded-[4px] bg-[#f8fafc] border border-[#e2e8f0]">
+                        <div className="flex items-center justify-between text-xs font-zoho">
+                          <span className="font-medium text-[#1366d9] flex items-center gap-1.5">
                             <RefreshCw size={13} className="animate-spin" />
                             <span>
                               Writing candidate records ({importProgress.current} of {importProgress.total})...
                             </span>
                           </span>
-                          <span className="font-mono text-[11px] text-[#1e88e5] font-bold">
+                          <span className="font-mono text-[11px] text-[#1366d9] font-semibold">
                             {Math.round((importProgress.current / (importProgress.total || 1)) * 100)}%
                           </span>
                         </div>
-                        <div className="w-full h-2 bg-blue-100 rounded overflow-hidden">
+                        <div className="w-full h-1.5 bg-[#e2e8f0] rounded-[2px] overflow-hidden">
                           <div
-                            className="h-full bg-[#1e88e5] transition-all duration-150 rounded"
+                            className="h-full bg-[#1366d9] transition-all duration-150 rounded-[2px]"
                             style={{
                               width: `${Math.round(
                                 (importProgress.current / (importProgress.total || 1)) * 100
@@ -2415,12 +2652,12 @@ export default function Leads() {
                     )}
 
                     {/* Action Confirmation Footer */}
-                    <div className="bg-[#f8fafc] -mx-6 -mb-6 px-6 py-3.5 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
-                      <div className="text-xs text-slate-600">
+                    <div className="bg-[#fafbfc] -mx-6 -mb-6 px-6 py-3 border-t border-[#e2e8f0] flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
+                      <div className="text-[12px] text-[#64748b]">
                         {importLoading ? (
                           'Creating customer profiles & linking preferences...'
                         ) : (
-                          <span>Ready to import <strong>{previewRows.length}</strong> candidate records into CRM.</span>
+                          <span>Ready to import <strong className="text-[#1e293b]">{previewRows.length}</strong> candidate records into CRM.</span>
                         )}
                       </div>
 
@@ -2432,7 +2669,7 @@ export default function Leads() {
                             setPreviewRows([]);
                             setImportFile(null);
                           }}
-                          className="px-4 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 shadow-2xs transition-colors cursor-pointer"
+                          className="zoho-btn"
                         >
                           Cancel / Clear
                         </button>
@@ -2440,17 +2677,25 @@ export default function Leads() {
                           type="button"
                           disabled={importLoading || previewRows.length === 0}
                           onClick={handleConfirmImport}
-                          className="px-5 py-1.5 text-xs font-semibold text-white bg-[#1e88e5] hover:bg-[#1565c0] rounded shadow-2xs transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-2"
+                          className="zoho-btn-primary"
                         >
                           {importLoading ? (
                             <>
                               <RefreshCw size={13} className="animate-spin" />
                               <span>Importing...</span>
                             </>
+                          ) : duplicateStats.allDuplicates && skipDuplicates ? (
+                            <>
+                              <CheckCircle2 size={14} />
+                              <span>Verify & Skip All {duplicateStats.duplicateCount} Duplicates</span>
+                            </>
                           ) : (
                             <>
                               <CheckCircle2 size={14} />
-                              <span>Confirm & Load {previewRows.length} Candidates</span>
+                              <span>
+                                Confirm & Load {skipDuplicates ? duplicateStats.newCount : previewRows.length} Candidates
+                                {skipDuplicates && duplicateStats.duplicateCount > 0 && ` (${duplicateStats.duplicateCount} skipped)`}
+                              </span>
                             </>
                           )}
                         </button>

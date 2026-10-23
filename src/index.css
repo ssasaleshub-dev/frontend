@@ -28,13 +28,18 @@
 
   body {
     background-color: #f8fafc;
-    color: #0f172a;
+    color: #1e293b;
     min-height: 100vh;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: 'Open Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     letter-spacing: -0.01em;
   }
+}
+
+/* Zoho CRM Enterprise Typography */
+.font-zoho {
+  font-family: 'Open Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 /* ==========================================================================
@@ -130,6 +135,96 @@
   color: #0f172a;
   font-weight: 600;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* ==========================================================================
+   Authentic Zoho CRM Component Tokens (Matching Reference UI)
+   ========================================================================== */
+.zoho-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: 'Open Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.25;
+  padding: 6px 14px;
+  border-radius: 4px;
+  border: 1px solid #c8d1dc;
+  background-color: #ffffff;
+  color: #2c3e50;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+  transition: all 0.15s ease-in-out;
+  cursor: pointer;
+  user-select: none;
+}
+.zoho-btn:hover:not(:disabled) {
+  background-color: #f4f6f8;
+  border-color: #b0bccb;
+  color: #1a2530;
+}
+.zoho-btn:active:not(:disabled) {
+  background-color: #eaeef2;
+  border-color: #9aa9bc;
+}
+.zoho-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.zoho-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: 'Open Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.25;
+  padding: 6px 16px;
+  border-radius: 4px;
+  border: 1px solid #1059bf;
+  background-color: #1366d9;
+  color: #ffffff;
+  box-shadow: 0 1px 2px 0 rgba(19, 102, 217, 0.25);
+  transition: all 0.15s ease-in-out;
+  cursor: pointer;
+  user-select: none;
+}
+.zoho-btn-primary:hover:not(:disabled) {
+  background-color: #0e52b2;
+  border-color: #0c4699;
+}
+.zoho-btn-primary:active:not(:disabled) {
+  background-color: #0c4391;
+}
+.zoho-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.zoho-btn-sm {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 3px;
+}
+
+.zoho-select, .zoho-input {
+  font-family: 'Open Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 12px;
+  color: #2c3e50;
+  background-color: #ffffff;
+  border: 1px solid #c8d1dc;
+  border-radius: 4px;
+  padding: 6px 10px;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.zoho-select:focus, .zoho-input:focus {
+  border-color: #1366d9;
+  box-shadow: 0 0 0 2px rgba(19, 102, 217, 0.15);
 }
 
 /* Zoho CRM Action Buttons */

@@ -251,24 +251,21 @@ export default function Dashboard() {
     const t = (type || '').toUpperCase();
     if (t === 'WORK_VISA') {
       return (
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#1c1c1e]">
-          <span className="w-2 h-2 rounded-full bg-[#5856d6] shadow-2xs shrink-0"></span>
-          <span>Work Visa</span>
+        <span className="text-xs font-medium text-[#1c1c1e]">
+          Work Visa
         </span>
       );
     }
     if (t === 'STUDY_VISA') {
       return (
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#1c1c1e]">
-          <span className="w-2 h-2 rounded-full bg-[#34c759] shadow-2xs shrink-0"></span>
-          <span>Study Visa</span>
+        <span className="text-xs font-medium text-[#1c1c1e]">
+          Study Visa
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#1c1c1e]">
-        <span className="w-2 h-2 rounded-full bg-[#ff9500] shadow-2xs shrink-0"></span>
-        <span>{t === 'OTHER_VISA' ? 'Other Visa' : type || 'Other Visa'}</span>
+      <span className="text-xs font-medium text-[#1c1c1e]">
+        {t === 'OTHER_VISA' ? 'Other Visa' : type || 'Other Visa'}
       </span>
     );
   };
@@ -696,7 +693,8 @@ export default function Dashboard() {
               { key: 'QUALIFIED', label: 'Qualified', color: 'bg-indigo-600', swatch: 'bg-indigo-500', textColor: 'text-indigo-600' },
               { key: 'PROPOSAL_SENT', label: 'Docs Requested', color: 'bg-amber-500', swatch: 'bg-amber-400', textColor: 'text-amber-600' },
               { key: 'NEGOTIATION', label: 'In Process', color: 'bg-purple-600', swatch: 'bg-purple-500', textColor: 'text-purple-600' },
-              { key: 'CONVERTED', label: 'Converted / Won', color: 'bg-emerald-600', swatch: 'bg-emerald-500', textColor: 'text-emerald-600' },
+              { key: 'CONVERTED', label: 'Converted', color: 'bg-teal-600', swatch: 'bg-teal-500', textColor: 'text-teal-600' },
+              { key: 'WON', label: 'Visa Approved / Enrolled', color: 'bg-emerald-600', swatch: 'bg-emerald-500', textColor: 'text-emerald-600' },
               { key: 'LOST', label: 'Lost / Closed', color: 'bg-rose-500', swatch: 'bg-rose-400', textColor: 'text-rose-600' },
             ].map((stItem) => {
               const count = leadsByStatus[stItem.key] || 0;
@@ -974,22 +972,23 @@ export default function Dashboard() {
                         </div>
                       </td>
 
-                      {/* Lifecycle Stage without dot */}
-                      <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
-                        <button
+                      {/* Lifecycle Stage (Simple plain text) */}
+                      <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                        <span
                           onClick={() => {
                             setStatusModalLead(lead);
                             setStatusForm({ status: lead.status || 'CONTACTED', notes: lead.notes || '' });
                           }}
-                          className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-[11px] font-semibold border ${stConfig.color} shadow-xs hover:scale-102 transition-transform`}
+                          className="text-xs text-[#1c1c1e] hover:text-[#007aff] hover:underline cursor-pointer"
+                          title="Click to update stage"
                         >
-                          <span>{stConfig.label}</span>
-                        </button>
+                          {stConfig.label}
+                        </span>
                       </td>
 
-                      {/* Quick Contact Buttons */}
-                      <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1.5">
+                      {/* Quick Contact (Simple clean icons) */}
+                      <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
                           {lead.phoneNumber && (
                             <>
                               <a
@@ -997,16 +996,16 @@ export default function Dashboard() {
                                 target="_blank"
                                 rel="noreferrer"
                                 title="Chat on WhatsApp"
-                                className="p-2 text-[#34c759] hover:bg-[#34c759]/15 bg-[#34c759]/10 rounded-full transition-colors"
+                                className="w-7 h-7 rounded flex items-center justify-center text-slate-400 hover:text-emerald-600 hover:bg-slate-100 transition-colors"
                               >
-                                <MessageCircle size={14} />
+                                <MessageCircle size={15} />
                               </a>
                               <a
                                 href={`tel:${lead.phoneNumber}`}
                                 title="Call candidate"
-                                className="p-2 text-[#007aff] hover:bg-[#007aff]/15 bg-[#007aff]/10 rounded-full transition-colors"
+                                className="w-7 h-7 rounded flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition-colors"
                               >
-                                <Phone size={14} />
+                                <Phone size={15} />
                               </a>
                             </>
                           )}

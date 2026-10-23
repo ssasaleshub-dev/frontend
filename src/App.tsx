@@ -13,6 +13,7 @@ import Customers from './pages/Customers';
 import Chat from './pages/Chat';
 import Users from './pages/Users';
 import CandidateDetail from './pages/CandidateDetail';
+import CalendarPage from './pages/CalendarPage';
 
 export default function App() {
   return (
@@ -42,6 +43,7 @@ export default function App() {
               }
             />
             <Route path="customers" element={<Customers />} />
+            <Route path="calendar" element={<CalendarPage />} />
             <Route path="chat" element={<Chat />} />
             <Route
               path="users"

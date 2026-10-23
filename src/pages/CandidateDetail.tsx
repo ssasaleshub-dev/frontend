@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ChevronLeft,
+  ChevronDown,
   Phone,
   MessageCircle,
   Mail,
@@ -21,6 +22,9 @@ import {
   RefreshCw,
   Globe,
   ShieldCheck,
+  FileText,
+  ThumbsUp,
+  ThumbsDown,
 } from 'lucide-react';
 import crmService from '../services/api/crmService';
 import adminService from '../services/api/adminService';
@@ -106,13 +110,16 @@ export default function CandidateDetail() {
         });
 
         if (candidateData.notes) {
-          setNotesHistory([
-            {
-              note: candidateData.notes,
+          const parts = candidateData.notes.split(/\s*\|\s*/).filter(Boolean);
+          setNotesHistory(
+            parts.map((p: string) => ({
+              note: p,
               date: candidateData.createdTime || candidateData.createdAt || new Date().toISOString(),
               author: candidateData.assignedTo || 'Counselor',
-            },
-          ]);
+            }))
+          );
+        } else {
+          setNotesHistory([]);
         }
       }
     } catch (err: any) {
@@ -130,6 +137,7 @@ export default function CandidateDetail() {
   }, [fetchCandidate]);
 
   useEffect(() => {
+    if (!isAdmin) return;
     adminService
       .getUsers(0, 100)
       .then((users) => {
@@ -146,7 +154,7 @@ export default function CandidateDetail() {
       .catch(() => {
         setAvailableStaff([]);
       });
-  }, []);
+  }, [isAdmin]);
 
   const handleAssignStaff = async (newAssignee: string) => {
     if (!lead) return;
@@ -207,6 +215,27 @@ export default function CandidateDetail() {
       alert(`Failed to record discussion note: ${err?.message || 'Server error'}`);
     } finally {
       setSubmittingNote(false);
+    }
+  };
+
+  const handleDeleteRemark = async (indexToDelete: number) => {
+    if (!lead) return;
+    if (!window.confirm('Delete this remark?')) return;
+
+    const updatedHistory = notesHistory.filter((_, idx) => idx !== indexToDelete);
+    const updatedNotes = updatedHistory.map((item) => item.note).join(' | ');
+
+    try {
+      try {
+        await crmService.updateLeadStatus(lead.id, lead.status || 'CONTACTED', updatedNotes);
+      } catch {
+        await crmService.patchLead(lead.id, { notes: updatedNotes });
+      }
+      setNotesHistory(updatedHistory);
+      setLead({ ...lead, notes: updatedNotes });
+      window.dispatchEvent(new CustomEvent('crm-data-updated'));
+    } catch (err: any) {
+      alert(`Failed to delete remark: ${err?.message || 'Server error'}`);
     }
   };
 
@@ -283,24 +312,21 @@ export default function CandidateDetail() {
 
     if (isWork) {
       return (
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#1c1c1e]">
-          <span className="w-2 h-2 rounded-full bg-[#5856d6] shadow-2xs shrink-0"></span>
-          <span>Work Visa</span>
+        <span className="text-xs font-medium text-[#1c1c1e]">
+          Work Visa
         </span>
       );
     }
     if (isStudy) {
       return (
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#1c1c1e]">
-          <span className="w-2 h-2 rounded-full bg-[#34c759] shadow-2xs shrink-0"></span>
-          <span>Study Visa</span>
+        <span className="text-xs font-medium text-[#1c1c1e]">
+          Study Visa
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#1c1c1e]">
-        <span className="w-2 h-2 rounded-full bg-[#ff9500] shadow-2xs shrink-0"></span>
-        <span>{type === 'OTHER_VISA' ? 'Other Visa' : type || 'Other Visa'}</span>
+      <span className="text-xs font-medium text-[#1c1c1e]">
+        {type === 'OTHER_VISA' ? 'Other Visa' : type || 'Other Visa'}
       </span>
     );
   };
@@ -373,6 +399,29 @@ export default function CandidateDetail() {
 
   // Find index of current stage in funnel
   const currentStageIndex = LEAD_STATUS_LIST.findIndex((s) => s.value === lead.status);
+
+  const formatPipelineDate = (d?: string | null, fallback: string = 'Mar 16, 2026') => {
+    if (!d) return fallback;
+    try {
+      const dt = new Date(d);
+      if (isNaN(dt.getTime())) return fallback;
+      return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch {
+      return fallback;
+    }
+  };
+
+  const getExpectedClosingDate = (startStr?: string | null) => {
+    if ((lead as any)?.closingDate) return formatPipelineDate((lead as any).closingDate);
+    try {
+      const base = startStr ? new Date(startStr) : new Date();
+      if (isNaN(base.getTime())) return 'May 18, 2026';
+      const closing = new Date(base.getTime() + 63 * 24 * 60 * 60 * 1000);
+      return closing.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch {
+      return 'May 18, 2026';
+    }
+  };
 
   return (
     <div className="space-y-5 max-w-6xl mx-auto pb-12">
@@ -485,54 +534,154 @@ export default function CandidateDetail() {
           </div>
         </div>
 
-        {/* Interactive Lifecycle Stage Stepper */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="font-bold uppercase tracking-wider text-slate-500 text-[10px]">
-              Counseling Stage Funnel
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="text-slate-400">Current Stage:</span>
-              <select
-                value={lead.status || 'CREATED'}
-                onChange={(e) => handleStatusChange(e.target.value)}
-                className="px-2.5 py-1 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
-              >
-                {LEAD_STATUS_LIST.map((st) => (
-                  <option key={st.value} value={st.value}>
-                    {st.label} ({st.value})
-                  </option>
-                ))}
-              </select>
+        {/* Zoho CRM Enterprise Pipeline Chevron Bar */}
+        <div className="space-y-1.5 pt-1">
+          {/* Top Metadata Row: START & CLOSING */}
+          <div className="flex items-center justify-between px-0.5">
+            <div>
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                START
+              </div>
+              <div className="text-xs text-slate-700 font-normal mt-0.5">
+                {formatPipelineDate(lead.createdTime || (lead as any).createdAt || (lead as any).createdDate)}
+              </div>
+            </div>
+
+            <div className="text-right">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                CLOSING
+              </div>
+              <div className="flex items-center gap-1.5 mt-0.5 justify-end">
+                {/* Zoho Red Stopwatch Icon */}
+                <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-rose-500 bg-rose-50 text-rose-600 flex-shrink-0">
+                  <svg className="w-2 h-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="13" r="8"/>
+                    <path d="M12 9v4l2 2"/>
+                    <path d="M12 5V2"/>
+                    <path d="M10 2h4"/>
+                  </svg>
+                </span>
+                <span className="text-xs font-semibold text-slate-700">
+                  {getExpectedClosingDate(lead.createdTime || (lead as any).createdAt || (lead as any).createdDate)}
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Stepper Progress Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-1.5 pt-1">
-            {LEAD_STATUS_LIST.map((st, idx) => {
-              const isCurrent = lead.status === st.value;
-              const isPast = currentStageIndex >= 0 && idx < currentStageIndex;
+          {/* Chevron Pipeline Track + Quick Actions */}
+          <div className="flex items-center gap-2 w-full overflow-x-auto pb-1 pt-0.5">
+            <div className="flex-1 min-w-[760px] flex items-stretch h-8 border border-slate-200 rounded-[3px] overflow-hidden bg-white text-xs select-none shadow-2xs">
+              {LEAD_STATUS_LIST.map((st, idx) => {
+                const isCurrent = lead.status === st.value;
+                const isFirst = idx === 0;
+                const isLast = idx === LEAD_STATUS_LIST.length - 1;
+                const nextIsCurrent = idx + 1 === currentStageIndex;
 
-              return (
-                <button
-                  key={st.value}
-                  onClick={() => handleStatusChange(st.value)}
-                  className={`p-2.5 rounded-xl border text-left transition-all text-xs ${
-                    isCurrent
-                      ? 'border-slate-900 bg-slate-900 text-white font-semibold shadow-xs'
-                      : isPast
-                      ? 'border-emerald-200 bg-emerald-50/60 text-emerald-900 font-medium'
-                      : 'border-slate-200/90 bg-slate-50 text-slate-500 hover:border-slate-300'
-                  }`}
-                >
-                  <div className="flex items-center justify-between text-[10px]">
-                    <span className="font-mono opacity-60">0{idx + 1}</span>
-                    {isPast && <CheckCircle2 size={11} className="text-emerald-700" />}
-                  </div>
-                  <p className="truncate mt-0.5" title={st.label}>{st.label}</p>
-                </button>
-              );
-            })}
+                let stageLabel = st.label;
+                if (st.value === 'WON') stageLabel = 'Closed Won';
+                if (st.value === 'LOST') stageLabel = 'Closed Lost';
+
+                return (
+                  <button
+                    key={st.value}
+                    type="button"
+                    onClick={() => handleStatusChange(st.value)}
+                    title={`${st.label} (${st.value})`}
+                    className={`relative flex-1 flex items-center justify-center h-full transition-colors cursor-pointer text-xs ${
+                      isFirst ? 'pl-2 pr-2' : 'pl-3.5 pr-2'
+                    } ${
+                      isCurrent
+                        ? 'bg-[#fef3c7] text-[#92400e] font-medium border-t border-b border-[#f59e0b] z-20'
+                        : 'bg-white text-slate-700 hover:bg-slate-50 font-normal border-t border-b border-transparent z-10'
+                    }`}
+                  >
+                    {/* Left notch border if this is the active stage */}
+                    {isCurrent && !isFirst && (
+                      <svg
+                        className="absolute left-0 top-0 bottom-0 h-full w-2.5 pointer-events-none -translate-x-[0.5px]"
+                        viewBox="0 0 10 32"
+                        preserveAspectRatio="none"
+                      >
+                        <path d="M0 0 L10 16 L0 32" fill="none" stroke="#f59e0b" strokeWidth="1.5" />
+                      </svg>
+                    )}
+
+                    {/* Step Content */}
+                    <div className="flex items-center justify-center gap-1 z-10 truncate">
+                      {st.value === 'WON' && (
+                        <ThumbsUp
+                          size={11}
+                          className={`flex-shrink-0 ${isCurrent ? 'fill-[#92400e] text-[#92400e]' : 'fill-slate-700 text-slate-700'}`}
+                        />
+                      )}
+                      {st.value === 'LOST' && (
+                        <ThumbsDown
+                          size={11}
+                          className={`flex-shrink-0 ${isCurrent ? 'fill-[#92400e] text-[#92400e]' : 'fill-slate-700 text-slate-700'}`}
+                        />
+                      )}
+                      <span className="truncate">{stageLabel}</span>
+                      {isCurrent && <ChevronDown size={11} className="flex-shrink-0 opacity-80" />}
+                    </div>
+
+                    {/* Right Arrow: If current, draw filled golden tip; else if next is not current and not last, draw grey divider */}
+                    {isCurrent && !isLast && (
+                      <svg
+                        className="absolute right-0 top-0 bottom-0 h-full w-2.5 translate-x-full pointer-events-none z-20"
+                        viewBox="0 0 10 32"
+                        preserveAspectRatio="none"
+                      >
+                        <path d="M0 0 L10 16 L0 32 Z" fill="#fef3c7" />
+                        <path d="M0 0 L10 16 L0 32" fill="none" stroke="#f59e0b" strokeWidth="1.5" />
+                      </svg>
+                    )}
+
+                    {!isCurrent && !isLast && !nextIsCurrent && (
+                      <svg
+                        className="absolute right-0 top-0 bottom-0 h-full w-2.5 translate-x-full pointer-events-none z-10"
+                        viewBox="0 0 10 32"
+                        preserveAspectRatio="none"
+                      >
+                        <path d="M0 0 L10 16 L0 32" fill="none" stroke="#e2e8f0" strokeWidth="1" />
+                      </svg>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Quick Action Buttons on Far Right */}
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {/* Closed Won Action Button */}
+              <button
+                type="button"
+                onClick={() => handleStatusChange('WON')}
+                title="Mark as Closed Won"
+                className={`h-8 px-2.5 rounded-[3px] border flex items-center gap-1 text-xs font-semibold transition-colors shadow-2xs ${
+                  lead.status === 'WON'
+                    ? 'bg-[#059669] text-white border-[#059669]'
+                    : 'bg-[#ecfdf5] hover:bg-[#d1fae5] border-[#a7f3d0] text-[#059669]'
+                }`}
+              >
+                <ThumbsUp size={12} className={lead.status === 'WON' ? 'fill-white text-white' : 'fill-[#059669] text-[#059669]'} />
+                <ChevronDown size={11} />
+              </button>
+
+              {/* Closed Lost Action Button */}
+              <button
+                type="button"
+                onClick={() => handleStatusChange('LOST')}
+                title="Mark as Closed Lost"
+                className={`h-8 px-2.5 rounded-[3px] border flex items-center gap-1 text-xs font-semibold transition-colors shadow-2xs ${
+                  lead.status === 'LOST'
+                    ? 'bg-[#dc2626] text-white border-[#dc2626]'
+                    : 'bg-[#fef2f2] hover:bg-[#fee2e2] border-[#fecaca] text-[#dc2626]'
+                }`}
+              >
+                <ThumbsDown size={12} className={lead.status === 'LOST' ? 'fill-white text-white' : 'fill-[#dc2626] text-[#dc2626]'} />
+                <ChevronDown size={11} />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -652,6 +801,29 @@ export default function CandidateDetail() {
                   {lead.leadConfirm || 'Confirmed Candidate'}
                 </p>
               </div>
+
+              {/* Candidate Remarks Card */}
+              <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200/80 col-span-1 sm:col-span-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-amber-900 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                    <FileText size={13} className="text-amber-600" />
+                    <span>Candidate Remarks</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const input = document.getElementById('counselor-remarks-input');
+                      input?.focus();
+                    }}
+                    className="text-[11px] font-semibold text-amber-700 hover:text-amber-900 transition-colors"
+                  >
+                    + Add New Remark
+                  </button>
+                </div>
+                <p className="text-xs font-semibold text-slate-800 mt-1.5 whitespace-pre-line leading-relaxed">
+                  {lead.notes || 'No remarks recorded yet.'}
+                </p>
+              </div>
             </div>
           </div>
 
@@ -703,17 +875,21 @@ export default function CandidateDetail() {
         <div className="lg:col-span-5 space-y-5">
           {/* Counselor Note-Taking Box */}
           <div className="ios-card p-5 space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-              <MessageCircle size={14} className="text-slate-400" />
-              <span>Counselor Discussion Log</span>
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                <MessageCircle size={14} className="text-slate-400" />
+                <span>Remarks & Counselor Log</span>
+              </h3>
+              <span className="text-[10px] text-slate-400 font-medium">Quick Intake</span>
+            </div>
 
             <form onSubmit={handleAddNote} className="space-y-3">
               <textarea
+                id="counselor-remarks-input"
                 value={newNote}
                 onChange={(e) => setNewNote(e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:bg-white focus:ring-1 focus:ring-slate-400 transition-all"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:bg-white focus:ring-1 focus:ring-slate-400 transition-all font-medium"
               />
               <div className="flex justify-end">
                 <button
@@ -722,7 +898,7 @@ export default function CandidateDetail() {
                   className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-2xs transition-colors disabled:opacity-40"
                 >
                   <Send size={12} />
-                  <span>{submittingNote ? 'Recording...' : 'Add Note'}</span>
+                  <span>{submittingNote ? 'Saving Remarks...' : 'Add Remarks / Note'}</span>
                 </button>
               </div>
             </form>
@@ -730,7 +906,7 @@ export default function CandidateDetail() {
             {/* Historical Notes Stream */}
             <div className="pt-3 border-t border-slate-100 space-y-3">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                Discussion History
+                Remarks & Discussion History
               </span>
 
               {notesHistory.length === 0 ? (
@@ -739,12 +915,22 @@ export default function CandidateDetail() {
                 </p>
               ) : (
                 notesHistory.map((item, idx) => (
-                  <div key={idx} className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1 text-xs">
+                  <div key={idx} className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1 text-xs group">
                     <div className="flex items-center justify-between text-[11px] text-slate-400">
                       <span className="font-semibold text-slate-700">{item.author}</span>
-                      <span>{formatDate(item.date)}</span>
+                      <div className="flex items-center gap-2">
+                        <span>{formatDate(item.date)}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteRemark(idx)}
+                          title="Delete this remark"
+                          className="text-slate-400 hover:text-rose-600 p-0.5 rounded transition-colors cursor-pointer"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-slate-800 leading-relaxed pt-0.5">{item.note}</p>
+                    <p className="text-slate-800 leading-relaxed pt-0.5 whitespace-pre-wrap">{item.note}</p>
                   </div>
                 ))
               )}
@@ -895,6 +1081,21 @@ export default function CandidateDetail() {
                     <option value="STUDY_VISA">Study Visa</option>
                     <option value="OTHER_VISA">Other Visa</option>
                   </select>
+                </div>
+              </div>
+
+              {/* Remarks Field */}
+              <div className="zoho-form-row">
+                <label className="zoho-form-label" title="Candidate Remarks">
+                  Remarks
+                </label>
+                <div className="flex-1">
+                  <textarea
+                    value={editFormData.notes || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
+                    rows={2}
+                    className="ios-input w-full text-slate-800 text-xs font-medium"
+                  />
                 </div>
               </div>
 

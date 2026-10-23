@@ -14,7 +14,9 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  Calendar,
 } from 'lucide-react';
+import NotificationBell from './NotificationBell';
 import { useAuth } from '../context/AuthContext';
 import { isAdmin as checkIsAdmin, getRoleBadgeInfo, getDisplayName } from '../utils/rbac';
 import fileService from '../services/api/fileService';
@@ -83,6 +85,13 @@ export default function Layout() {
       exact: false,
     },
     {
+      id: 'calendar',
+      label: 'Calendar & Reminders',
+      icon: Calendar,
+      to: '/calendar',
+      exact: false,
+    },
+    {
       id: 'chat',
       label: 'Team Chat',
       icon: MessageSquare,
@@ -113,6 +122,7 @@ export default function Layout() {
     if (currentPath === '/') return { title: 'Executive Overview', subtitle: 'Real-time candidate metrics & counselor pipelines' };
     if (currentPath.startsWith('/leads')) return { title: 'Candidate Leads Pipeline', subtitle: 'Filter, triage, and contact international visa candidates' };
     if (currentPath.startsWith('/customers')) return { title: 'Contacts', subtitle: 'Verified contacts and customer records' };
+    if (currentPath.startsWith('/calendar')) return { title: 'Calendar & Reminders', subtitle: 'Indian public holidays, counselor callbacks & appointment schedule' };
     if (currentPath.startsWith('/import')) return { title: 'Data Ingestion', subtitle: 'Import Meta ads export spreadsheets & raw lead data' };
     if (currentPath.startsWith('/chat')) return { title: 'Team Chat', subtitle: 'Internal messaging and staff communication' };
     if (currentPath.startsWith('/users')) return { title: 'Team & Permissions', subtitle: 'Manage counselor assignments, roles, and access desks' };
@@ -214,16 +224,16 @@ export default function Layout() {
                 onClick={() => avatarInputRef.current?.click()}
                 disabled={uploadingAvatar}
                 title={`Logged in as ${displayName} (${badgeInfo.displayText}) - Click to update photo`}
-                className="relative group w-9 h-9 rounded-full overflow-hidden border-2 border-emerald-400 shadow-sm focus:outline-none"
+                className="relative group w-8 h-8 rounded-full overflow-hidden bg-white/10 text-white font-medium text-xs flex items-center justify-center border border-white/15 focus:outline-none"
               >
                 {uploadingAvatar ? (
-                  <div className="w-full h-full bg-blue-600 flex items-center justify-center text-white">
+                  <div className="w-full h-full bg-white/20 flex items-center justify-center text-white">
                     <Loader2 size={13} className="animate-spin" />
                   </div>
                 ) : user?.imageUrl ? (
                   <img src={user.imageUrl} alt={displayName} className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-tr from-blue-700 to-indigo-600 text-white font-bold text-xs flex items-center justify-center">
+                  <div className="w-full h-full bg-white/15 text-white font-semibold text-xs flex items-center justify-center">
                     {userInitial}
                   </div>
                 )}
@@ -231,7 +241,6 @@ export default function Layout() {
                   <Camera size={11} />
                 </div>
               </button>
-              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#04162a]"></span>
             </div>
 
             {!sidebarCollapsed && (
@@ -239,7 +248,7 @@ export default function Layout() {
                 <p className="text-xs font-semibold text-white truncate leading-tight">
                   {displayName}
                 </p>
-                <p className="text-[10px] text-slate-400 font-mono truncate">
+                <p className="text-[11px] text-slate-400 truncate">
                   {badgeInfo.displayText}
                 </p>
               </div>
@@ -249,25 +258,13 @@ export default function Layout() {
               <button
                 onClick={handleLogout}
                 title="Log Out"
-                className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-white/10 rounded-md transition-colors shrink-0"
+                className="p-1.5 text-slate-400 hover:text-white rounded-md transition-colors shrink-0"
                 aria-label="Logout"
               >
                 <LogOut size={16} />
               </button>
             )}
           </div>
-
-          {/* Sidebar Collapse Toggle Button (Desktop Only) */}
-          <button
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className={`hidden md:flex items-center ${
-              sidebarCollapsed ? 'justify-center' : 'justify-between'
-            } w-full px-2.5 py-1.5 text-slate-400 hover:text-white hover:bg-white/5 rounded-md text-[11px] font-medium transition-colors`}
-            title={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
-          >
-            {!sidebarCollapsed && <span>Collapse Sidebar</span>}
-            {sidebarCollapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
-          </button>
         </div>
       </aside>
 
@@ -296,24 +293,43 @@ export default function Layout() {
               </button>
             )}
 
+            {/* Header Utility Icons: Calendar & Notification Bell */}
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => navigate('/calendar')}
+                className={`p-2 rounded-lg transition-colors focus:outline-none ${
+                  currentPath.startsWith('/calendar')
+                    ? 'text-blue-600 bg-blue-50'
+                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+                }`}
+                title="Calendar & Indian Holidays"
+                aria-label="Calendar"
+              >
+                <Calendar size={18} />
+              </button>
+
+              <NotificationBell />
+            </div>
+
             {/* Header User Section */}
             <div className="flex items-center gap-2.5 pl-3 border-l border-slate-200">
               {user?.imageUrl ? (
                 <img
                   src={user.imageUrl}
                   alt={displayName}
-                  className="w-7 h-7 rounded-full object-cover border border-slate-300 shrink-0"
+                  className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0"
                 />
               ) : (
-                <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-[11px] flex items-center justify-center shrink-0 uppercase">
+                <div className="w-8 h-8 rounded-full bg-[#eaecf0] text-[#344054] font-semibold text-xs flex items-center justify-center shrink-0 uppercase">
                   {userInitial}
                 </div>
               )}
-              <div className="hidden sm:flex flex-col text-right">
-                <span className="text-xs font-semibold text-slate-900 leading-tight">
+              <div className="hidden sm:flex flex-col text-left">
+                <span className="text-xs font-semibold text-[#1e293b] leading-tight">
                   {displayName}
                 </span>
-                <span className="text-[10px] text-slate-500 font-mono">
+                <span className="text-[11px] text-[#64748b] font-normal leading-tight mt-0.5">
                   {badgeInfo.displayText}
                 </span>
               </div>
@@ -322,10 +338,10 @@ export default function Layout() {
               <button
                 onClick={handleLogout}
                 title="Log Out"
-                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors ml-1"
+                className="p-1 text-slate-400 hover:text-slate-700 rounded transition-colors ml-1"
                 aria-label="Logout"
               >
-                <LogOut size={15} />
+                <LogOut size={16} />
               </button>
             </div>
           </div>

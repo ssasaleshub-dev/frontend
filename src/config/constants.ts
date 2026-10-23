@@ -87,17 +87,21 @@ export const LEAD_STATUSES: Record<string, { label: string; color: string }> = {
   CREATED: { label: 'New Lead', color: 'bg-slate-100 text-slate-700 border-slate-200' },
   CONTACTED: { label: 'Contacted', color: 'bg-sky-100 text-sky-800 border-sky-200' },
   QUALIFIED: { label: 'Qualified', color: 'bg-blue-100 text-blue-800 border-blue-200' },
-  CONVERTED: { label: 'Converted', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
   PROPOSAL_SENT: { label: 'Docs Requested', color: 'bg-amber-100 text-amber-800 border-amber-200' },
   NEGOTIATION: { label: 'In Process', color: 'bg-purple-100 text-purple-800 border-purple-200' },
+  CONVERTED: { label: 'Converted', color: 'bg-teal-100 text-teal-800 border-teal-200' },
   WON: { label: 'Visa Approved / Enrolled', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
   LOST: { label: 'Lost / Closed', color: 'bg-rose-100 text-rose-800 border-rose-200' },
 };
 
 export const CANONICAL_LEAD_STATUSES = [
+  { value: 'CREATED', label: 'New Lead', color: 'bg-slate-100 text-slate-700 border-slate-200' },
   { value: 'CONTACTED', label: 'Contacted', color: 'bg-sky-100 text-sky-800 border-sky-200' },
   { value: 'QUALIFIED', label: 'Qualified', color: 'bg-blue-100 text-blue-800 border-blue-200' },
-  { value: 'CONVERTED', label: 'Converted', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+  { value: 'PROPOSAL_SENT', label: 'Docs Requested', color: 'bg-amber-100 text-amber-800 border-amber-200' },
+  { value: 'NEGOTIATION', label: 'In Process', color: 'bg-purple-100 text-purple-800 border-purple-200' },
+  { value: 'CONVERTED', label: 'Converted', color: 'bg-teal-100 text-teal-800 border-teal-200' },
+  { value: 'WON', label: 'Visa Approved', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
   { value: 'LOST', label: 'Lost', color: 'bg-rose-100 text-rose-800 border-rose-200' },
 ] as const;
 
