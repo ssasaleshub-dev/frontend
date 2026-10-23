@@ -7,10 +7,8 @@ import {
   Trash2,
   Clock,
   Calendar,
-  AlertCircle,
-  ExternalLink,
-  X,
   Volume2,
+  ChevronRight,
 } from 'lucide-react';
 import reminderNotificationService, {
   NotificationItem,
@@ -109,78 +107,88 @@ export default function NotificationBell() {
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      {/* Bell Trigger Button */}
+    <div className="relative font-sf-display" ref={dropdownRef}>
+      {/* Apple iOS Style Bell Trigger Button */}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         title={unreadCount > 0 ? `${unreadCount} unread notifications` : 'Notifications'}
-        className="relative p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors focus:outline-none"
+        className={`relative w-8 h-8 rounded-full flex items-center justify-center transition-all focus:outline-none ${
+          isOpen
+            ? 'bg-black/[0.08] text-[#1d1d1f]'
+            : 'text-[#48484a] hover:text-[#1d1d1f] hover:bg-black/[0.05] active:bg-black/[0.08]'
+        }`}
         aria-label="Notifications"
       >
-        <Bell size={18} />
+        <Bell size={17} strokeWidth={2} />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 min-w-[17px] h-[17px] px-1 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-white animate-pulse">
+          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 bg-[#ff3b30] text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-white shadow-2xs">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
-      {/* Popover Dropdown Panel */}
+      {/* Apple OS Frosted Glass Notification Popover */}
       {isOpen && (
-        <div className="absolute right-0 sm:right-auto sm:left-auto md:right-0 mt-2 w-[340px] sm:w-[380px] bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden flex flex-col max-h-[520px]">
-          {/* Header */}
-          <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+        <div className="absolute right-0 sm:right-0 mt-2.5 w-[360px] sm:w-[380px] bg-white/90 backdrop-blur-2xl rounded-[22px] shadow-[0_20px_50px_rgba(0,0,0,0.12),0_1px_3px_rgba(0,0,0,0.06)] border border-black/[0.06] z-50 overflow-hidden flex flex-col max-h-[520px] animate-in fade-in zoom-in-95 duration-150">
+          
+          {/* iOS Header */}
+          <div className="px-4 pt-3.5 pb-2.5 flex items-center justify-between border-b border-black/[0.04]">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-xs uppercase tracking-wider text-slate-800">
+              <span className="font-semibold text-[14px] text-[#1d1d1f] tracking-tight">
                 Notifications
               </span>
               {unreadCount > 0 && (
-                <span className="px-1.5 py-0.2 bg-rose-100 text-rose-700 text-[10px] font-bold rounded-full">
-                  {unreadCount} new
+                <span className="px-2 py-0.5 bg-black/[0.05] text-[#1d1d1f] text-[11px] font-medium rounded-full">
+                  {unreadCount}
                 </span>
               )}
             </div>
 
-            <div className="flex items-center gap-1.5">
-              {unreadCount > 0 && (
-                <button
-                  type="button"
-                  onClick={handleMarkAllRead}
-                  className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:text-blue-800 transition-colors"
-                  title="Mark all as read"
-                >
-                  <CheckCheck size={13} />
-                  <span>Mark all read</span>
-                </button>
-              )}
-            </div>
+            {unreadCount > 0 && (
+              <button
+                type="button"
+                onClick={handleMarkAllRead}
+                className="text-[12px] font-medium text-[#0071e3] hover:text-[#0077ED] transition-opacity active:opacity-60"
+              >
+                Mark All as Read
+              </button>
+            )}
           </div>
 
-          {/* Browser Notification Permission Banner */}
+          {/* Desktop Alerts Request Pill (Apple iOS Widget Style) */}
           {!hasPermission && (
-            <div className="p-2.5 bg-blue-50/70 border-b border-blue-100 flex items-center justify-between gap-2 text-xs text-blue-900">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <Volume2 size={13} className="text-blue-600 shrink-0" />
-                <span className="truncate text-[11px]">Enable desktop alerts for reminders</span>
+            <div className="mx-3.5 mt-2.5 p-2 bg-[#f5f5f7]/80 border border-black/[0.04] rounded-[14px] flex items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2 min-w-0 pl-1">
+                <div className="w-6 h-6 rounded-full bg-[#0071e3]/10 text-[#0071e3] flex items-center justify-center shrink-0">
+                  <Volume2 size={12} strokeWidth={2.5} />
+                </div>
+                <span className="text-[12px] font-medium text-[#1d1d1f] truncate">
+                  Desktop Alerts
+                </span>
               </div>
               <button
                 type="button"
                 onClick={handleRequestPermission}
-                className="px-2 py-0.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded text-[10px] shrink-0"
+                className="px-3 py-1 bg-[#0071e3] hover:bg-[#0077ED] active:scale-95 text-white font-medium rounded-full text-[11px] shrink-0 shadow-xs transition-all"
               >
-                Enable
+                Turn On
               </button>
             </div>
           )}
 
-          {/* Notification List */}
-          <div className="overflow-y-auto flex-1 divide-y divide-slate-100">
+          {/* Notifications Scroll List */}
+          <div className="overflow-y-auto flex-1 p-2.5 space-y-2">
             {notifications.length === 0 ? (
-              <div className="p-8 text-center text-slate-400">
-                <Bell size={28} className="mx-auto mb-2 opacity-40 text-slate-400" />
-                <p className="text-xs font-medium text-slate-600">No notifications yet</p>
-                <p className="text-[11px] text-slate-400 mt-1">
+              /* Apple iOS Clean Empty State */
+              <div className="py-12 px-6 text-center">
+                <div className="w-13 h-13 rounded-full bg-black/[0.04] flex items-center justify-center text-slate-400 mx-auto mb-3 shadow-inner">
+                  <Bell size={22} strokeWidth={1.5} className="text-[#86868b]" />
+                </div>
+                <p className="text-[14px] font-semibold text-[#1d1d1f] tracking-tight">
+                  No Notifications
+                </p>
+                <p className="text-[12px] text-[#86868b] mt-1 font-normal">
                   Reminders, callbacks, and calendar alerts will appear here.
                 </p>
               </div>
@@ -189,23 +197,25 @@ export default function NotificationBell() {
                 <div
                   key={item.id}
                   onClick={() => handleNotificationClick(item)}
-                  className={`p-3.5 flex items-start gap-3 transition-colors cursor-pointer group ${
-                    item.isRead ? 'bg-white hover:bg-slate-50' : 'bg-blue-50/30 hover:bg-blue-50/50'
+                  className={`p-3 rounded-[16px] transition-all cursor-pointer group border flex items-start gap-3 relative ${
+                    item.isRead
+                      ? 'bg-white/70 hover:bg-white border-black/[0.04] shadow-2xs'
+                      : 'bg-white hover:bg-white border-[#0071e3]/20 shadow-xs ring-1 ring-[#0071e3]/10'
                   }`}
                 >
-                  {/* Category Icon */}
+                  {/* Apple Style Squircle Icon */}
                   <div className="mt-0.5 shrink-0">
                     {item.type === 'REMINDER' ? (
-                      <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center">
-                        <Clock size={14} />
+                      <div className="w-8 h-8 rounded-[10px] bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                        <Clock size={15} strokeWidth={2.2} />
                       </div>
                     ) : item.type === 'LEAD_ASSIGNED' ? (
-                      <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-800 flex items-center justify-center">
-                        <Calendar size={14} />
+                      <div className="w-8 h-8 rounded-[10px] bg-[#0071e3]/10 text-[#0071e3] flex items-center justify-center">
+                        <Calendar size={15} strokeWidth={2.2} />
                       </div>
                     ) : (
-                      <div className="w-7 h-7 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
-                        <Bell size={14} />
+                      <div className="w-8 h-8 rounded-[10px] bg-slate-500/10 text-slate-700 flex items-center justify-center">
+                        <Bell size={15} strokeWidth={2.2} />
                       </div>
                     )}
                   </div>
@@ -213,38 +223,38 @@ export default function NotificationBell() {
                   {/* Notification Content */}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-1.5">
-                      <p className={`text-xs truncate ${item.isRead ? 'font-medium text-slate-800' : 'font-bold text-slate-900'}`}>
+                      <p className={`text-[13px] truncate ${item.isRead ? 'font-medium text-[#1d1d1f]' : 'font-semibold text-[#1d1d1f]'}`}>
                         {item.title}
                       </p>
-                      <span className="text-[10px] text-slate-400 shrink-0">
+                      <span className="text-[10px] text-[#86868b] font-normal shrink-0">
                         {formatTimestamp(item.createdAt)}
                       </span>
                     </div>
 
-                    <p className="text-[11px] text-slate-600 mt-0.5 line-clamp-2 leading-relaxed">
+                    <p className="text-[12px] text-[#515154] mt-0.5 line-clamp-2 leading-relaxed">
                       {item.message}
                     </p>
                   </div>
 
-                  {/* Actions (visible on hover) */}
+                  {/* Actions on hover */}
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                     {!item.isRead && (
                       <button
                         type="button"
                         onClick={(e) => handleMarkAsRead(item.id, e)}
                         title="Mark as read"
-                        className="p-1 text-slate-400 hover:text-blue-600 rounded transition-colors"
+                        className="p-1 text-[#86868b] hover:text-[#0071e3] rounded-full hover:bg-black/[0.05] transition-colors"
                       >
-                        <Check size={12} />
+                        <Check size={13} strokeWidth={2.5} />
                       </button>
                     )}
                     <button
                       type="button"
                       onClick={(e) => handleDelete(item.id, e)}
                       title="Delete"
-                      className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors"
+                      className="p-1 text-[#86868b] hover:text-[#ff3b30] rounded-full hover:bg-black/[0.05] transition-colors"
                     >
-                      <Trash2 size={12} />
+                      <Trash2 size={13} />
                     </button>
                   </div>
                 </div>
@@ -252,30 +262,32 @@ export default function NotificationBell() {
             )}
           </div>
 
-          {/* Footer */}
-          <div className="p-2.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs">
+          {/* Apple Style Footer */}
+          <div className="px-4 py-2.5 bg-[#f5f5f7]/70 border-t border-black/[0.04] flex items-center justify-between text-xs">
             <button
               type="button"
               onClick={() => {
                 setIsOpen(false);
                 navigate('/calendar');
               }}
-              className="text-blue-600 hover:text-blue-800 font-semibold text-[11px] flex items-center gap-1"
+              className="text-[#0071e3] hover:text-[#0077ED] font-medium text-[12px] flex items-center gap-1.5 transition-colors"
             >
-              <Calendar size={12} />
-              <span>Open Calendar & Reminders</span>
+              <Calendar size={13} strokeWidth={2} />
+              <span>Calendar & Reminders</span>
+              <ChevronRight size={12} strokeWidth={2.5} />
             </button>
 
             {notifications.length > 0 && (
               <button
                 type="button"
                 onClick={() => reminderNotificationService.clearAllNotifications()}
-                className="text-slate-400 hover:text-rose-600 text-[11px] font-medium"
+                className="text-[#86868b] hover:text-[#ff3b30] text-[11px] font-normal transition-colors"
               >
-                Clear all
+                Clear All
               </button>
             )}
           </div>
+
         </div>
       )}
     </div>

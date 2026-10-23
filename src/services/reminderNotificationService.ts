@@ -57,58 +57,49 @@ class ReminderNotificationService {
 
   private initDefaultData() {
     try {
-      if (!localStorage.getItem(EVENTS_CACHE_KEY)) {
-        const today = new Date().toISOString().split('T')[0];
-        const initialEvents: CalendarEventDTO[] = [
-          {
-            id: 'evt-1',
-            userId: 'current',
-            title: 'Follow up with Praveen on Work Visa Docs',
-            description: 'Call candidate to collect verified IELTS score and passport copy',
-            eventDate: today,
-            eventTime: '11:30',
-            eventType: 'CALL',
-            priority: 'HIGH',
-            candidateName: 'Praveen Selvaraj',
-            candidateId: '101',
-            isCompleted: false,
-            notificationSent: false,
-            remindBeforeMinutes: 15,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-          {
-            id: 'evt-2',
-            userId: 'current',
-            title: 'Schengen Visa Embassy Slot Verification',
-            description: 'Check appointment availability for Germany intake candidates',
-            eventDate: today,
-            eventTime: '16:00',
-            eventType: 'REMINDER',
-            priority: 'MEDIUM',
-            isCompleted: false,
-            notificationSent: false,
-            remindBeforeMinutes: 30,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-        ];
-        localStorage.setItem(EVENTS_CACHE_KEY, JSON.stringify(initialEvents));
+      // Purge any legacy sample keys
+      ['ssa_calendar_events_v1', 'ssa_notifications_v1'].forEach((key) => {
+        try { localStorage.removeItem(key); } catch {}
+      });
+
+      // Purge any mock/sample events
+      const rawEvents = localStorage.getItem(EVENTS_CACHE_KEY);
+      if (rawEvents) {
+        try {
+          const parsed = JSON.parse(rawEvents);
+          const realOnly = Array.isArray(parsed)
+            ? parsed.filter((e: any) => e.id !== 'evt-1' && e.id !== 'evt-2')
+            : [];
+          localStorage.setItem(EVENTS_CACHE_KEY, JSON.stringify(realOnly));
+        } catch {
+          localStorage.setItem(EVENTS_CACHE_KEY, JSON.stringify([]));
+        }
+      } else {
+        localStorage.setItem(EVENTS_CACHE_KEY, JSON.stringify([]));
       }
 
-      if (!localStorage.getItem(NOTIFICATIONS_CACHE_KEY)) {
-        const initialNotifications: NotificationDTO[] = [
-          {
-            id: 'notif-welcome',
-            userId: 'current',
-            title: 'Internal Notification System Online',
-            message: 'All counselor callback reminders and visa schedule alerts are synchronized in real-time.',
-            type: 'SYSTEM',
-            isRead: false,
-            createdAt: new Date().toISOString(),
-          },
-        ];
-        localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(initialNotifications));
+      // Purge any mock/sample notifications
+      const rawNotifs = localStorage.getItem(NOTIFICATIONS_CACHE_KEY);
+      if (rawNotifs) {
+        try {
+          const parsed = JSON.parse(rawNotifs);
+          const realOnly = Array.isArray(parsed)
+            ? parsed.filter(
+                (n: any) =>
+                  n.id !== 'notif-welcome' &&
+                  n.referenceId !== 'evt-1' &&
+                  n.referenceId !== 'evt-2' &&
+                  !n.title?.includes('Schengen Visa') &&
+                  !n.title?.includes('Follow up with Praveen') &&
+                  !n.title?.includes('Internal Notification System Online')
+              )
+            : [];
+          localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(realOnly));
+        } catch {
+          localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify([]));
+        }
+      } else {
+        localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify([]));
       }
     } catch (e) {
       console.warn('Storage initialization warning:', e);

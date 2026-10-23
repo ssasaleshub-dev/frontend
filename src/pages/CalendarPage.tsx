@@ -53,6 +53,9 @@ export default function CalendarPage() {
     remindBeforeMinutes: 15,
   });
 
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+
   const loadEvents = async () => {
     const list = await reminderNotificationService.fetchEvents({ month: month + 1, year });
     setEvents(list);
@@ -66,9 +69,6 @@ export default function CalendarPage() {
     window.addEventListener('ssa_events_updated', handleUpdate);
     return () => window.removeEventListener('ssa_events_updated', handleUpdate);
   }, [year, month]);
-
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
 
   // Calendar Math
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -171,20 +171,20 @@ export default function CalendarPage() {
   const todayStr = new Date().toISOString().split('T')[0];
 
   return (
-    <div className="space-y-5 max-w-7xl mx-auto pb-12">
+    <div className="space-y-5 max-w-7xl mx-auto pb-12 font-sf-display">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold tracking-tight text-slate-900">
+            <h1 className="text-xl font-bold tracking-tight text-[#1d1d1f]">
               Calendar & Reminders
             </h1>
-            <span className="px-2 py-0.5 bg-amber-100 text-amber-900 border border-amber-200 text-[10px] font-bold rounded-md uppercase tracking-wider flex items-center gap-1">
+            <span className="px-2.5 py-0.5 bg-amber-500/10 text-amber-900 border border-amber-500/20 text-[10px] font-semibold rounded-full uppercase tracking-wider flex items-center gap-1">
               <span>🇮🇳</span> Indian Calendar (IST)
             </span>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Track counselor callback reminders, visa appointments, and Indian public holidays.
+          <p className="text-[12px] text-[#86868b] mt-0.5 font-normal">
+            Counselor callback schedules, appointments, and Indian public holidays.
           </p>
         </div>
 
@@ -192,7 +192,7 @@ export default function CalendarPage() {
           <button
             type="button"
             onClick={goToToday}
-            className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 rounded-lg border border-slate-200 text-xs font-semibold shadow-2xs transition-colors"
+            className="px-3.5 py-1.5 bg-black/[0.05] hover:bg-black/[0.08] text-[#1d1d1f] rounded-full text-[12px] font-medium transition-all active:scale-98"
           >
             Today
           </button>
@@ -200,9 +200,9 @@ export default function CalendarPage() {
           <button
             type="button"
             onClick={() => handleOpenModal()}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#0066cc] hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#0071e3] hover:bg-[#0077ED] text-white rounded-full text-[12px] font-medium shadow-xs transition-all active:scale-98"
           >
-            <Plus size={14} />
+            <Plus size={14} strokeWidth={2.5} />
             <span>New Reminder</span>
           </button>
         </div>
@@ -211,42 +211,42 @@ export default function CalendarPage() {
       {/* Main Grid: 8 Cols Calendar + 4 Cols Sidebar Agenda */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Calendar Grid (8 Cols) */}
-        <div className="lg:col-span-8 bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden flex flex-col">
+        <div className="lg:col-span-8 bg-white/90 backdrop-blur-xl rounded-[22px] border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden flex flex-col">
           {/* Calendar Month Navigation Header */}
-          <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+          <div className="px-5 py-4 border-b border-black/[0.04] flex items-center justify-between bg-[#fbfbfd]">
             <div className="flex items-center gap-3">
-              <h2 className="text-base font-bold text-slate-900">
+              <h2 className="text-[16px] font-semibold text-[#1d1d1f] tracking-tight">
                 {MONTH_NAMES[month]} {year}
               </h2>
-              <span className="text-[11px] font-medium text-slate-500">
+              <span className="text-[11px] font-normal text-[#86868b]">
                 IST (UTC+5:30)
               </span>
             </div>
 
-            <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-0.5">
+            <div className="flex items-center gap-1 bg-black/[0.04] rounded-full p-0.5">
               <button
                 type="button"
                 onClick={prevMonth}
-                className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors"
+                className="w-7 h-7 flex items-center justify-center text-[#1d1d1f] hover:bg-white rounded-full transition-all shadow-2xs"
                 title="Previous Month"
               >
-                <ChevronLeft size={16} />
+                <ChevronLeft size={15} strokeWidth={2.5} />
               </button>
               <button
                 type="button"
                 onClick={nextMonth}
-                className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors"
+                className="w-7 h-7 flex items-center justify-center text-[#1d1d1f] hover:bg-white rounded-full transition-all shadow-2xs"
                 title="Next Month"
               >
-                <ChevronRight size={16} />
+                <ChevronRight size={15} strokeWidth={2.5} />
               </button>
             </div>
           </div>
 
           {/* Weekday Names Header */}
-          <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center text-[11px] font-semibold text-slate-500 py-2">
+          <div className="grid grid-cols-7 border-b border-black/[0.04] bg-[#fbfbfd]/70 text-center text-[11px] font-medium text-[#86868b] py-2">
             {WEEKDAYS.map((day, idx) => (
-              <div key={day} className={idx === 0 ? 'text-rose-600' : ''}>
+              <div key={day} className={idx === 0 ? 'text-[#ff3b30]' : ''}>
                 {day}
               </div>
             ))}
@@ -282,12 +282,12 @@ export default function CalendarPage() {
                 >
                   <div className="flex items-center justify-between">
                     <span
-                      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-[12px] font-semibold transition-all ${
                         isToday
-                          ? 'bg-[#0066cc] text-white'
+                          ? 'bg-[#0071e3] text-white shadow-2xs'
                           : isSelected
-                          ? 'bg-slate-900 text-white'
-                          : 'text-slate-700'
+                          ? 'bg-[#1d1d1f] text-white shadow-2xs'
+                          : 'text-[#1d1d1f]'
                       }`}
                     >
                       {dayNum}
@@ -300,9 +300,9 @@ export default function CalendarPage() {
                         handleOpenModal(dateStr);
                       }}
                       title="Add reminder for this day"
-                      className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-slate-200 rounded text-slate-500 hover:text-slate-900 transition-opacity"
+                      className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center hover:bg-black/[0.06] rounded-full text-[#86868b] hover:text-[#1d1d1f] transition-all"
                     >
-                      <Plus size={12} />
+                      <Plus size={11} strokeWidth={2.5} />
                     </button>
                   </div>
 
@@ -312,7 +312,7 @@ export default function CalendarPage() {
                     {dayHoliday && (
                       <div
                         title={`Indian Holiday: ${dayHoliday.title} (${dayHoliday.description})`}
-                        className="px-1.5 py-0.5 bg-amber-100 text-amber-900 border border-amber-200 rounded text-[9px] font-bold truncate flex items-center gap-0.5"
+                        className="px-1.5 py-0.5 bg-amber-500/10 text-amber-900 border border-amber-500/20 rounded-[6px] text-[9px] font-medium truncate flex items-center gap-1"
                       >
                         <span className="shrink-0">🇮🇳</span>
                         <span className="truncate">{dayHoliday.title}</span>
@@ -356,15 +356,15 @@ export default function CalendarPage() {
         </div>
 
         {/* Right Sidebar: Selected Day Agenda & Indian Holidays (4 Cols) */}
-        <div className="lg:col-span-4 space-y-5">
+        <div className="lg:col-span-4 space-y-4">
           {/* Selected Date Dossier / Reminders */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-2xs p-4 space-y-3.5">
-            <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+          <div className="bg-white/90 backdrop-blur-xl rounded-[22px] border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-4 space-y-3.5">
+            <div className="flex items-center justify-between pb-2.5 border-b border-black/[0.04]">
               <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#86868b]">
                   Daily Agenda
                 </h3>
-                <p className="text-sm font-bold text-slate-900 mt-0.5">
+                <p className="text-[15px] font-semibold text-[#1d1d1f] mt-0.5">
                   {new Date(selectedDateStr).toLocaleDateString('en-IN', {
                     weekday: 'short',
                     day: 'numeric',
@@ -377,24 +377,24 @@ export default function CalendarPage() {
               <button
                 type="button"
                 onClick={() => handleOpenModal(selectedDateStr)}
-                className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-medium transition-colors"
+                className="inline-flex items-center gap-1 px-3 py-1 bg-[#1d1d1f] hover:bg-black text-white rounded-full text-[12px] font-medium transition-all active:scale-95 shadow-2xs"
               >
-                <Plus size={12} />
+                <Plus size={11} strokeWidth={2.5} />
                 <span>Add</span>
               </button>
             </div>
 
             {/* Indian Holiday Notice if on this day */}
             {selectedDateHoliday && (
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
+              <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-[14px]">
+                <div className="flex items-center gap-1.5 text-[12px] font-semibold text-amber-950">
                   <span>🇮🇳</span>
                   <span>{selectedDateHoliday.title}</span>
-                  <span className="px-1.5 py-0.2 bg-amber-200 text-amber-950 rounded text-[9px] font-semibold">
+                  <span className="px-1.5 py-0.2 bg-amber-500/20 text-amber-950 rounded-full text-[9px] font-medium">
                     {selectedDateHoliday.type}
                   </span>
                 </div>
-                <p className="text-[11px] text-amber-800 mt-1 leading-relaxed">
+                <p className="text-[11px] text-amber-900 mt-1 leading-relaxed font-normal">
                   {selectedDateHoliday.description}
                 </p>
               </div>
@@ -403,64 +403,66 @@ export default function CalendarPage() {
             {/* Reminders List for Selected Day */}
             <div className="space-y-2">
               {selectedDateEvents.length === 0 ? (
-                <div className="py-6 text-center text-slate-400">
-                  <CalendarCheck size={28} className="mx-auto mb-1.5 opacity-40 text-slate-400" />
-                  <p className="text-xs font-medium text-slate-600">No events or reminders</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    Click "Add" to schedule a callback, interview or task.
+                <div className="py-7 text-center text-[#86868b]">
+                  <div className="w-10 h-10 rounded-full bg-black/[0.03] flex items-center justify-center mx-auto mb-2 text-[#86868b]">
+                    <CalendarCheck size={18} strokeWidth={1.8} />
+                  </div>
+                  <p className="text-[13px] font-medium text-[#1d1d1f]">No events or reminders</p>
+                  <p className="text-[11px] text-[#86868b] mt-0.5">
+                    Tap "Add" to schedule a callback or task.
                   </p>
                 </div>
               ) : (
                 selectedDateEvents.map((evt) => (
                   <div
                     key={evt.id}
-                    className={`p-3 rounded-lg border transition-all flex items-start gap-2.5 group ${
+                    className={`p-3 rounded-[16px] border transition-all flex items-start gap-2.5 group ${
                       evt.isCompleted
-                        ? 'bg-slate-50 border-slate-200 text-slate-400'
-                        : 'bg-white border-slate-200 shadow-2xs hover:border-slate-300'
+                        ? 'bg-black/[0.02] border-black/[0.04] text-[#86868b]'
+                        : 'bg-white border-black/[0.05] shadow-2xs hover:shadow-xs'
                     }`}
                   >
                     <button
                       type="button"
                       onClick={(e) => handleToggleComplete(evt.id, e)}
-                      className="mt-0.5 text-slate-400 hover:text-emerald-600 transition-colors shrink-0"
+                      className="mt-0.5 text-[#86868b] hover:text-[#34c759] transition-colors shrink-0"
                     >
                       {evt.isCompleted ? (
-                        <CheckCircle2 size={16} className="text-emerald-600" />
+                        <CheckCircle2 size={16} className="text-[#34c759]" strokeWidth={2.2} />
                       ) : (
-                        <Circle size={16} />
+                        <Circle size={16} strokeWidth={1.8} />
                       )}
                     </button>
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-1">
-                        <p className={`text-xs font-semibold truncate ${evt.isCompleted ? 'line-through text-slate-400' : 'text-slate-900'}`}>
+                        <p className={`text-[13px] font-medium truncate ${evt.isCompleted ? 'line-through text-[#86868b]' : 'text-[#1d1d1f]'}`}>
                           {evt.title}
                         </p>
-                        <span className="text-[10px] font-mono text-slate-500 shrink-0">
+                        <span className="text-[10px] font-mono text-[#86868b] shrink-0">
                           {evt.eventTime || 'All Day'}
                         </span>
                       </div>
 
                       {evt.description && (
-                        <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+                        <p className="text-[11px] text-[#515154] mt-0.5 leading-relaxed font-normal">
                           {evt.description}
                         </p>
                       )}
 
                       {evt.candidateName && (
-                        <div className="flex items-center gap-1 mt-1 text-[11px] text-blue-700 font-medium">
-                          <User size={11} />
+                        <div className="flex items-center gap-1 mt-1 text-[11px] text-[#0071e3] font-medium">
+                          <User size={11} strokeWidth={2} />
                           <span>Candidate: {evt.candidateName}</span>
                         </div>
                       )}
 
                       <div className="flex items-center gap-1.5 mt-1.5">
-                        <span className="px-1.5 py-0.2 bg-slate-100 text-slate-600 rounded text-[9px] font-medium uppercase">
+                        <span className="px-2 py-0.2 bg-black/[0.04] text-[#515154] rounded-full text-[9px] font-medium uppercase">
                           {evt.eventType}
                         </span>
                         {evt.priority === 'HIGH' || evt.priority === 'URGENT' ? (
-                          <span className="px-1.5 py-0.2 bg-rose-100 text-rose-700 rounded text-[9px] font-bold uppercase">
+                          <span className="px-2 py-0.2 bg-[#ff3b30]/10 text-[#ff3b30] rounded-full text-[9px] font-semibold uppercase">
                             {evt.priority}
                           </span>
                         ) : null}
@@ -470,7 +472,7 @@ export default function CalendarPage() {
                     <button
                       type="button"
                       onClick={(e) => handleDeleteEvent(evt.id, e)}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-600 rounded transition-opacity shrink-0"
+                      className="opacity-0 group-hover:opacity-100 p-1 text-[#86868b] hover:text-[#ff3b30] rounded-full transition-all shrink-0"
                       title="Delete reminder"
                     >
                       <Trash2 size={13} />
@@ -482,17 +484,17 @@ export default function CalendarPage() {
           </div>
 
           {/* Upcoming Indian Gazetted Holidays this month */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-2xs p-4 space-y-3">
-            <div className="flex items-center gap-1.5 pb-2 border-b border-slate-100">
+          <div className="bg-white/90 backdrop-blur-xl rounded-[22px] border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-4 space-y-3">
+            <div className="flex items-center gap-1.5 pb-2 border-b border-black/[0.04]">
               <span className="text-base">🇮🇳</span>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+              <h3 className="text-[12px] font-semibold uppercase tracking-wider text-[#1d1d1f]">
                 Indian Holidays ({MONTH_NAMES[month]})
               </h3>
             </div>
 
             <div className="space-y-2">
               {monthlyHolidays.length === 0 ? (
-                <p className="text-xs text-slate-400 py-2">
+                <p className="text-[12px] text-[#86868b] py-2 font-normal">
                   No gazetted public holidays in {MONTH_NAMES[month]}.
                 </p>
               ) : (
@@ -500,15 +502,15 @@ export default function CalendarPage() {
                   <div
                     key={h.date}
                     onClick={() => setSelectedDateStr(h.date)}
-                    className="p-2.5 rounded-lg border border-slate-100 hover:border-amber-200 hover:bg-amber-50/30 transition-colors cursor-pointer"
+                    className="p-2.5 rounded-[14px] border border-black/[0.03] hover:border-amber-500/30 hover:bg-amber-500/5 transition-colors cursor-pointer"
                   >
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-slate-800">{h.title}</span>
-                      <span className="text-[10px] font-mono text-amber-800 font-bold">
+                      <span className="font-medium text-[#1d1d1f] text-[12px]">{h.title}</span>
+                      <span className="text-[10px] font-mono text-amber-900 font-semibold">
                         {new Date(h.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                    <p className="text-[11px] text-[#86868b] mt-0.5 leading-snug font-normal">
                       {h.description}
                     </p>
                   </div>
@@ -519,44 +521,46 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* New Reminder / Event Modal */}
+      {/* New Reminder / Event Modal (Apple iOS Sheet Style) */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden">
-            <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in">
+          <div className="bg-white/95 backdrop-blur-2xl rounded-[26px] shadow-[0_25px_60px_rgba(0,0,0,0.18)] border border-black/[0.06] max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-150">
+            <div className="px-5 py-4 border-b border-black/[0.04] flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Bell size={16} className="text-amber-600" />
-                <h3 className="text-sm font-bold text-slate-900">
-                  Create Reminder / Event
+                <div className="w-7 h-7 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                  <Bell size={14} strokeWidth={2.2} />
+                </div>
+                <h3 className="text-[15px] font-semibold text-[#1d1d1f] tracking-tight">
+                  New Reminder / Event
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg transition-colors"
+                className="w-7 h-7 rounded-full bg-black/[0.04] hover:bg-black/[0.08] flex items-center justify-center text-[#86868b] hover:text-[#1d1d1f] transition-colors"
               >
-                <X size={16} />
+                <X size={14} strokeWidth={2.5} />
               </button>
             </div>
 
             <form onSubmit={handleSaveEvent} className="p-5 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1">
                   Reminder Title *
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Call Praveen regarding IELTS certificate"
+                  placeholder="e.g. Call candidate regarding IELTS score"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full px-3.5 py-2 bg-[#f5f5f7] border border-black/[0.04] rounded-[12px] text-[13px] text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                  <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1">
                     Date
                   </label>
                   <input
@@ -564,12 +568,12 @@ export default function CalendarPage() {
                     required
                     value={formData.eventDate}
                     onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
-                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="w-full px-3 py-1.5 bg-[#f5f5f7] border border-black/[0.04] rounded-[12px] text-[12px] text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                  <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1">
                     Time (IST)
                   </label>
                   <input
@@ -577,20 +581,20 @@ export default function CalendarPage() {
                     required
                     value={formData.eventTime}
                     onChange={(e) => setFormData({ ...formData, eventTime: e.target.value })}
-                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="w-full px-3 py-1.5 bg-[#f5f5f7] border border-black/[0.04] rounded-[12px] text-[12px] text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                  <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1">
                     Type
                   </label>
                   <select
                     value={formData.eventType}
                     onChange={(e) => setFormData({ ...formData, eventType: e.target.value as EventType })}
-                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="w-full px-3 py-1.5 bg-[#f5f5f7] border border-black/[0.04] rounded-[12px] text-[12px] text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
                   >
                     <option value="REMINDER">General Reminder</option>
                     <option value="CALL">Candidate Callback</option>
@@ -601,13 +605,13 @@ export default function CalendarPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                  <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1">
                     Priority
                   </label>
                   <select
                     value={formData.priority}
                     onChange={(e) => setFormData({ ...formData, priority: e.target.value as EventPriority })}
-                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="w-full px-3 py-1.5 bg-[#f5f5f7] border border-black/[0.04] rounded-[12px] text-[12px] text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
                   >
                     <option value="LOW">Low</option>
                     <option value="MEDIUM">Medium</option>
@@ -618,7 +622,7 @@ export default function CalendarPage() {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1">
                   Candidate Link (Optional)
                 </label>
                 <input
@@ -626,18 +630,18 @@ export default function CalendarPage() {
                   placeholder="e.g. Praveen Selvaraj / Lead #101"
                   value={formData.candidateName}
                   onChange={(e) => setFormData({ ...formData, candidateName: e.target.value })}
-                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full px-3 py-1.5 bg-[#f5f5f7] border border-black/[0.04] rounded-[12px] text-[12px] text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1">
                   Notify Me Before
                 </label>
                 <select
                   value={formData.remindBeforeMinutes}
                   onChange={(e) => setFormData({ ...formData, remindBeforeMinutes: Number(e.target.value) })}
-                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full px-3 py-1.5 bg-[#f5f5f7] border border-black/[0.04] rounded-[12px] text-[12px] text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
                 >
                   <option value={0}>At time of event</option>
                   <option value={15}>15 minutes before</option>
@@ -648,7 +652,7 @@ export default function CalendarPage() {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1">
                   Notes & Details
                 </label>
                 <textarea
@@ -656,21 +660,21 @@ export default function CalendarPage() {
                   placeholder="Additional notes for this reminder..."
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+                  className="w-full px-3 py-1.5 bg-[#f5f5f7] border border-black/[0.04] rounded-[12px] text-[12px] text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#0071e3]/20 transition-all resize-none"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-black/[0.04]">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-3.5 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                  className="px-4 py-1.5 rounded-full text-[12px] font-medium text-[#515154] hover:bg-black/[0.04] transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 rounded-lg bg-[#0066cc] hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-colors"
+                  className="px-5 py-1.5 rounded-full bg-[#0071e3] hover:bg-[#0077ED] text-white text-[12px] font-medium shadow-xs transition-all active:scale-95"
                 >
                   Save Reminder
                 </button>

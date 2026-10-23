@@ -298,15 +298,15 @@ export default function Layout() {
               <button
                 type="button"
                 onClick={() => navigate('/calendar')}
-                className={`p-2 rounded-lg transition-colors focus:outline-none ${
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all focus:outline-none ${
                   currentPath.startsWith('/calendar')
-                    ? 'text-blue-600 bg-blue-50'
-                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+                    ? 'bg-[#0071e3]/10 text-[#0071e3]'
+                    : 'text-[#48484a] hover:text-[#1d1d1f] hover:bg-black/[0.05] active:bg-black/[0.08]'
                 }`}
                 title="Calendar & Indian Holidays"
                 aria-label="Calendar"
               >
-                <Calendar size={18} />
+                <Calendar size={17} strokeWidth={2} />
               </button>
 
               <NotificationBell />
