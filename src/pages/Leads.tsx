@@ -51,6 +51,7 @@ import {
   getRoleBadgeInfo,
 } from '../utils/rbac';
 import { useAuth } from '../context/AuthContext';
+import { useAlert } from '../context/AlertContext';
 import { Lead } from '../types';
 
 export interface ParsedLeadPreview {
@@ -85,6 +86,7 @@ export default function Leads() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
+  const { showAlert, showConfirm } = useAlert();
 
   const isAdmin = checkIsAdmin(currentUser);
   const isWorkVisa = isWorkVisaStaff(currentUser);
@@ -198,7 +200,7 @@ export default function Leads() {
         setDossierLead((prev) => (prev ? { ...prev, assignedTo } : null));
       }
     } catch (err: any) {
-      alert(`Staff assignment failed: ${err?.message || 'Server error'}`);
+      showAlert({ title: 'App', message: `Staff assignment failed: ${err?.message || 'Server error'}` });
     } finally {
       setAssigningLeadId(null);
     }
@@ -357,7 +359,7 @@ export default function Leads() {
       : filteredLeads;
 
     if (leadsToExport.length === 0) {
-      alert('No candidate records available to export.');
+      showAlert({ title: 'App', message: 'No candidate records available to export.' });
       return;
     }
 
@@ -419,7 +421,7 @@ export default function Leads() {
       setBulkStatusModal(false);
       await fetchLeads();
     } catch (err: any) {
-      alert(`Bulk update completed with some errors: ${err?.message || 'Server error'}`);
+      showAlert({ title: 'App', message: `Bulk update completed with some errors: ${err?.message || 'Server error'}` });
     } finally {
       setSubmitting(false);
     }
@@ -436,18 +438,24 @@ export default function Leads() {
       }
       await fetchLeads();
     } catch (err: any) {
-      alert(`Status update failed: ${err?.message || 'Server error'}`);
+      showAlert({ title: 'App', message: `Status update failed: ${err?.message || 'Server error'}` });
     }
   };
 
   const handleDeleteLead = async (id: number | string, name?: string) => {
-    if (!window.confirm(`Delete candidate lead #${id} (${name || 'record'})? This action cannot be undone.`)) return;
+    const confirmed = await showConfirm({
+      title: 'App',
+      message: `Delete candidate lead #${id} (${name || 'record'})? This action cannot be undone.`,
+      confirmText: 'Delete',
+      isDestructive: true,
+    });
+    if (!confirmed) return;
     try {
       await crmService.deleteLead(id);
       if (dossierLead && dossierLead.id === id) setDossierLead(null);
       await fetchLeads();
     } catch (err: any) {
-      alert(`Delete failed: ${err?.message || 'Server error'}`);
+      showAlert({ title: 'App', message: `Delete failed: ${err?.message || 'Server error'}` });
     }
   };
 
@@ -494,7 +502,7 @@ export default function Leads() {
       });
       await fetchLeads();
     } catch (err: any) {
-      alert(`Failed to save candidate: ${err?.message || 'Server error'}`);
+      showAlert({ title: 'App', message: `Failed to save candidate: ${err?.message || 'Server error'}` });
     } finally {
       setSubmitting(false);
     }
@@ -848,15 +856,18 @@ export default function Leads() {
         setImportFile(null);
         window.dispatchEvent(new CustomEvent('crm-data-updated'));
         await fetchLeads();
-        alert(
-          `Server Ingestion Complete! Processed: ${res.totalRowsProcessed || previewRows.length}, Successful: ${res.successfulRows || previewRows.length}, Failed: ${res.failedRows || 0}`
-        );
+        await showAlert({
+          title: 'App',
+          message: `Server Ingestion Complete!\nProcessed: ${res.totalRowsProcessed || previewRows.length}, Successful: ${res.successfulRows || previewRows.length}, Failed: ${res.failedRows || 0}`,
+        });
         return;
       } catch (serverErr: any) {
         const msg = serverErr?.response?.data?.message || serverErr?.message || 'Server upload failed';
-        const fallbackDirect = window.confirm(
-          `Server upload endpoint returned: "${msg}".\n\nWould you like to proceed with Direct Browser Ingestion directly into your database instead?`
-        );
+        const fallbackDirect = await showConfirm({
+          title: 'App',
+          message: `Server upload endpoint returned:\n"${msg}"\n\nWould you like to proceed with Direct Browser Ingestion directly into your database instead?`,
+          confirmText: 'Continue',
+        });
         if (!fallbackDirect) {
           setImportLoading(false);
           return;
@@ -925,11 +936,12 @@ export default function Leads() {
     setImportFile(null);
     window.dispatchEvent(new CustomEvent('crm-data-updated'));
     await fetchLeads();
-    alert(
-      `Successfully loaded ${successCount} candidate lead${successCount === 1 ? '' : 's'} into database!${
+    await showAlert({
+      title: 'App',
+      message: `Successfully loaded ${successCount} candidate lead${successCount === 1 ? '' : 's'} into database!${
         failCount > 0 ? ` (${failCount} entries had errors)` : ''
-      }`
-    );
+      }`,
+    });
   };
 
   const formatDate = (isoStr?: string): string => {
@@ -1061,10 +1073,10 @@ export default function Leads() {
         <div className="flex items-center gap-2">
           <button
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-[#f2f2f7] text-[#1c1c1e] rounded-xl border border-black/[0.08] text-xs font-medium shadow-2xs transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 rounded border border-slate-300 text-xs font-medium shadow-2xs transition-colors cursor-pointer"
             title="Export filtered records to CSV"
           >
-            <Download size={13} className="text-[#8e8e93]" />
+            <Download size={13} className="text-slate-500" />
             <span>Export CSV</span>
           </button>
 
@@ -1073,20 +1085,20 @@ export default function Leads() {
               setModalTab('excel');
               setShowAddModal(true);
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#007aff]/10 hover:bg-[#007aff]/15 text-[#007aff] hover:text-[#005bb5] rounded-xl border border-[#007aff]/25 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
-            title="Import candidate leads directly from Excel sheet (.xlsx, .xls, .csv)"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 hover:text-[#1e88e5] rounded border border-slate-300 text-xs font-medium shadow-2xs transition-colors cursor-pointer"
+            title="Import candidate leads directly from Excel or CSV spreadsheet"
           >
-            <FileSpreadsheet size={13} />
+            <FileSpreadsheet size={13} className="text-[#1e88e5]" />
             <span>Import Excel</span>
           </button>
 
           <button
             onClick={() => fetchLeads()}
             disabled={loading}
-            className="p-1.5 bg-white hover:bg-[#f2f2f7] text-[#1c1c1e] rounded-xl border border-black/[0.08] shadow-2xs transition-colors cursor-pointer"
+            className="p-1.5 bg-white hover:bg-slate-50 text-slate-600 rounded border border-slate-300 shadow-2xs transition-colors cursor-pointer"
             title="Refresh candidates"
           >
-            <RefreshCw size={13} className={loading ? 'animate-spin text-[#1c1c1e]' : 'text-[#8e8e93]'} />
+            <RefreshCw size={13} className={loading ? 'animate-spin text-[#1e88e5]' : 'text-slate-500'} />
           </button>
 
           <button
@@ -1094,7 +1106,7 @@ export default function Leads() {
               setModalTab('manual');
               setShowAddModal(true);
             }}
-            className="ios-btn-primary"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#1e88e5] hover:bg-[#1565c0] text-white rounded text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
           >
             <Plus size={14} />
             <span>New Candidate</span>
@@ -1950,22 +1962,24 @@ export default function Leads() {
         </div>
       )}
 
-      {/* Create New Candidate Modal (Manual Entry + Excel Sheet Import with Preview) */}
+      {/* Create New Candidate Modal (Zoho CRM Enterprise Intake & Meta Import) */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-black/35 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
           <div
-            className={`ios-glass-modal ${
-              modalTab === 'excel' && previewRows.length > 0 ? 'max-w-5xl' : 'max-w-lg'
-            } w-full p-6 my-6 border border-white/60 transition-all duration-200`}
+            className={`bg-white rounded-md shadow-2xl border border-slate-300 ${
+              modalTab === 'excel' && previewRows.length > 0 ? 'max-w-5xl' : 'max-w-xl'
+            } w-full my-auto transition-all duration-150 overflow-hidden flex flex-col font-sans`}
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3.5 border-b border-[rgba(60,60,67,0.1)]">
+            <div className="bg-[#f8fafc] px-6 py-3.5 border-b border-slate-200 flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-bold text-[#1c1c1e]">New Candidate Intake</h3>
-                <p className="text-[11px] text-[#8e8e93]">
+                <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+                  {modalTab === 'manual' ? 'Candidate Intake' : 'Import Leads from Spreadsheet'}
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">
                   {modalTab === 'manual'
-                    ? 'Record an overseas work or study visa candidate'
-                    : 'Import and preview Meta Ads / Excel candidate spreadsheets'}
+                    ? 'Record individual candidate lead information'
+                    : 'Ingest and map Meta Ads Manager (Facebook, Instagram) lead spreadsheets'}
                 </p>
               </div>
               <button
@@ -1979,24 +1993,25 @@ export default function Leads() {
                     navigate('/leads', { replace: true });
                   }
                 }}
-                className="w-7 h-7 rounded-full bg-[rgba(118,118,128,0.12)] flex items-center justify-center text-[#8e8e93] hover:text-[#1c1c1e] hover:bg-[rgba(118,118,128,0.2)] transition-colors cursor-pointer"
+                className="w-7 h-7 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-200 flex items-center justify-center transition-colors cursor-pointer text-base"
+                title="Close dialog"
               >
-                <X size={14} />
+                <X size={16} />
               </button>
             </div>
 
-            {/* Simple Human Mode Switcher */}
-            <div className="mt-3.5 mb-4 flex items-center gap-1.5 p-1 bg-black/[0.04] rounded-xl">
+            {/* Zoho CRM Underline Tabs */}
+            <div className="bg-white border-b border-slate-200 px-6 flex items-center gap-6">
               <button
                 type="button"
                 onClick={() => {
                   setModalTab('manual');
                   setImportError(null);
                 }}
-                className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                className={`py-2.5 text-xs font-semibold border-b-2 transition-colors cursor-pointer ${
                   modalTab === 'manual'
-                    ? 'bg-white text-[#1c1c1e] shadow-xs'
-                    : 'text-[#8e8e93] hover:text-[#1c1c1e]'
+                    ? 'text-[#1e88e5] border-[#1e88e5]'
+                    : 'text-slate-500 border-transparent hover:text-slate-800'
                 }`}
               >
                 Single Candidate
@@ -2006,132 +2021,134 @@ export default function Leads() {
                 onClick={() => {
                   setModalTab('excel');
                 }}
-                className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`py-2.5 text-xs font-semibold border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
                   modalTab === 'excel'
-                    ? 'bg-white text-[#1c1c1e] shadow-xs'
-                    : 'text-[#8e8e93] hover:text-[#1c1c1e]'
+                    ? 'text-[#1e88e5] border-[#1e88e5]'
+                    : 'text-slate-500 border-transparent hover:text-slate-800'
                 }`}
               >
-                <FileSpreadsheet size={13} />
-                <span>Import Excel Sheet</span>
+                <FileSpreadsheet size={14} />
+                <span>Import from Excel / Meta Ads</span>
               </button>
             </div>
 
             {/* TAB 1: Manual Single Candidate Intake Form (Zoho CRM Modal & Field UI) */}
             {modalTab === 'manual' && (
-              <form onSubmit={handleCreateLead} className="mt-4 text-xs">
-                {/* Section Subheading matching screenshot */}
-                <div className="text-xs font-semibold text-slate-500 mb-4 px-1">
-                  Candidate Information
-                </div>
-
-                {/* Name of the Candidate (Required: Red Left Accent Bar) */}
-                <div className="zoho-form-row">
-                  <label className="zoho-form-label" title="Name of the Candidate">
-                    Name of the Can...
-                  </label>
-                  <div className="flex-1">
-                    <input
-                      type="text"
-                      required
-                      value={newLeadForm.customerName}
-                      onChange={(e) => setNewLeadForm({ ...newLeadForm, customerName: e.target.value })}
-                      className="ios-input ios-input-required w-full font-medium"
-                    />
+              <div className="p-6">
+                <form onSubmit={handleCreateLead} className="text-xs">
+                  {/* Section Subheading matching screenshot */}
+                  <div className="text-xs font-semibold text-slate-500 mb-4 px-1">
+                    Candidate Information
                   </div>
-                </div>
 
-                {/* Customer Email */}
-                <div className="zoho-form-row">
-                  <label className="zoho-form-label" title="Customer Email">
-                    Customer Email
-                  </label>
-                  <div className="flex-1">
-                    <input
-                      type="email"
-                      value={newLeadForm.email}
-                      onChange={(e) => setNewLeadForm({ ...newLeadForm, email: e.target.value })}
-                      className="ios-input w-full"
-                    />
+                  {/* Name of the Candidate (Required: Red Left Accent Bar) */}
+                  <div className="zoho-form-row">
+                    <label className="zoho-form-label" title="Name of the Candidate">
+                      Name of the Can...
+                    </label>
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        required
+                        value={newLeadForm.customerName}
+                        onChange={(e) => setNewLeadForm({ ...newLeadForm, customerName: e.target.value })}
+                        className="ios-input ios-input-required w-full font-medium"
+                      />
+                    </div>
                   </div>
-                </div>
 
-                {/* Phone Number (Required: Red Left Accent Bar) */}
-                <div className="zoho-form-row">
-                  <label className="zoho-form-label" title="Phone Number">
-                    Phone Number
-                  </label>
-                  <div className="flex-1">
-                    <input
-                      type="tel"
-                      required
-                      value={newLeadForm.phoneNumber}
-                      onChange={(e) => setNewLeadForm({ ...newLeadForm, phoneNumber: e.target.value })}
-                      className="ios-input ios-input-required w-full font-medium"
-                    />
+                  {/* Customer Email */}
+                  <div className="zoho-form-row">
+                    <label className="zoho-form-label" title="Customer Email">
+                      Customer Email
+                    </label>
+                    <div className="flex-1">
+                      <input
+                        type="email"
+                        value={newLeadForm.email}
+                        onChange={(e) => setNewLeadForm({ ...newLeadForm, email: e.target.value })}
+                        className="ios-input w-full"
+                      />
+                    </div>
                   </div>
-                </div>
 
-                {/* Visa Program / Product (Dropdown matching screenshot) */}
-                <div className="zoho-form-row">
-                  <label className="zoho-form-label" title="Visa Program">
-                    Visa Program
-                  </label>
-                  <div className="flex-1">
-                    <select
-                      value={newLeadForm.visaType}
-                      onChange={(e) => setNewLeadForm({ ...newLeadForm, visaType: e.target.value })}
-                      className="zoho-select font-medium"
+                  {/* Phone Number (Required: Red Left Accent Bar) */}
+                  <div className="zoho-form-row">
+                    <label className="zoho-form-label" title="Phone Number">
+                      Phone Number
+                    </label>
+                    <div className="flex-1">
+                      <input
+                        type="tel"
+                        required
+                        value={newLeadForm.phoneNumber}
+                        onChange={(e) => setNewLeadForm({ ...newLeadForm, phoneNumber: e.target.value })}
+                        className="ios-input ios-input-required w-full font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Visa Program / Product (Dropdown matching screenshot) */}
+                  <div className="zoho-form-row">
+                    <label className="zoho-form-label" title="Visa Program">
+                      Visa Program
+                    </label>
+                    <div className="flex-1">
+                      <select
+                        value={newLeadForm.visaType}
+                        onChange={(e) => setNewLeadForm({ ...newLeadForm, visaType: e.target.value })}
+                        className="zoho-select font-medium"
+                      >
+                        <option value="WORK_VISA">Work Visa</option>
+                        <option value="STUDY_VISA">Study Visa</option>
+                        <option value="OTHER_VISA">Other Visa / Tourist</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Date and Time of Intake (Compound Field matching screenshot) */}
+                  <div className="zoho-form-row">
+                    <label className="zoho-form-label" title="Date and Time of Intake">
+                      Date and Time of ...
+                    </label>
+                    <div className="flex-1 flex rounded overflow-hidden border border-[#d0dcf0] bg-[#edf2f9]">
+                      <div className="flex-1 px-3 py-2 border-r border-[#d0dcf0] text-xs text-slate-800 bg-[#edf2f9]">
+                        {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </div>
+                      <div className="w-28 px-3 py-2 text-xs text-slate-800 bg-[#edf2f9] text-center font-medium">
+                        {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Confirmation Footer */}
+                  <div className="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-slate-200">
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="zoho-btn-done"
                     >
-                      <option value="WORK_VISA">Work Visa</option>
-                      <option value="STUDY_VISA">Study Visa</option>
-                      <option value="OTHER_VISA">Other Visa / Tourist</option>
-                    </select>
+                      {submitting ? 'Saving...' : 'Done'}
+                    </button>
                   </div>
-                </div>
-
-                {/* Date and Time of Intake (Compound Field matching screenshot) */}
-                <div className="zoho-form-row">
-                  <label className="zoho-form-label" title="Date and Time of Intake">
-                    Date and Time of ...
-                  </label>
-                  <div className="flex-1 flex rounded-md overflow-hidden border border-[#d0dcf0] bg-[#edf2f9]">
-                    <div className="flex-1 px-3 py-2 border-r border-[#d0dcf0] text-xs text-slate-800 bg-[#edf2f9]">
-                      {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </div>
-                    <div className="w-28 px-3 py-2 text-xs text-slate-800 bg-[#edf2f9] text-center font-medium">
-                      {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Confirmation Footer */}
-                <div className="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-slate-100">
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="zoho-btn-done"
-                  >
-                    {submitting ? 'Saving...' : 'Done'}
-                  </button>
-                </div>
-              </form>
+                </form>
+              </div>
             )}
 
             {/* TAB 2: Import from Excel Sheet with Instant Preview */}
             {modalTab === 'excel' && (
-              <div className="space-y-4 text-xs">
+              <div className="p-6 space-y-4 text-xs">
                 {importError && (
-                  <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 flex items-center gap-2">
-                    <AlertCircle size={15} className="shrink-0 text-amber-600" />
+                  <div className="p-3 rounded bg-amber-50 border border-amber-300 text-amber-900 flex items-center gap-2">
+                    <AlertCircle size={15} className="shrink-0 text-amber-700" />
                     <span>{importError}</span>
                   </div>
                 )}
 
-                {/* State A: File not chosen yet -> Simple Human Dropzone */}
+                {/* State A: File not chosen yet -> Clean Enterprise Dropzone */}
                 {previewRows.length === 0 ? (
-                  <div className="space-y-3">
-                    <div className="border border-dashed border-black/15 hover:border-[#007aff]/50 rounded-2xl p-7 text-center bg-[#f9f9fa] hover:bg-[#007aff]/[0.02] transition-colors relative cursor-pointer">
+                  <div className="space-y-4">
+                    <div className="border-2 border-dashed border-slate-300 rounded-md p-8 bg-slate-50/50 hover:bg-blue-50/20 hover:border-blue-400 transition-colors text-center relative cursor-pointer">
                       <input
                         type="file"
                         accept=".xlsx, .xls, .csv"
@@ -2139,23 +2156,23 @@ export default function Leads() {
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                       />
                       <div className="flex flex-col items-center">
-                        <div className="w-13 h-13 rounded-2xl bg-[#007aff]/10 text-[#007aff] flex items-center justify-center mb-3 shadow-2xs">
-                          <FileSpreadsheet size={26} />
+                        <div className="w-11 h-11 rounded bg-blue-50 text-[#1e88e5] border border-blue-100 flex items-center justify-center mb-2.5">
+                          <FileSpreadsheet size={22} />
                         </div>
-                        <p className="font-semibold text-sm text-[#1c1c1e]">
-                          Choose Excel Sheet (.xlsx, .xls, .csv)
+                        <p className="font-semibold text-sm text-slate-900">
+                          Select or Drag & Drop Excel / CSV Spreadsheet
                         </p>
-                        <p className="text-[11px] text-[#8e8e93] mt-1 max-w-sm mx-auto">
-                          Click to browse from your computer or drag and drop your spreadsheet here.
+                        <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                          Supports export files from Meta Ads Manager (Facebook, Instagram) and WhatsApp (.xlsx, .xls, .csv).
                         </p>
                         <div className="flex flex-wrap items-center justify-center gap-1.5 mt-3 max-w-md">
-                          <span className="text-[10px] text-[#007aff] font-medium px-2 py-0.5 rounded-md bg-[#007aff]/10">
-                            Meta Ads Compatible
+                          <span className="text-[11px] text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">
+                            Meta Lead Ads Compatible
                           </span>
-                          <span className="text-[10px] text-[#3c3c43] font-medium px-2 py-0.5 rounded-md bg-black/[0.04]">
+                          <span className="text-[11px] text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">
                             Auto-detects Work / Study Visa
                           </span>
-                          <span className="text-[10px] text-[#3c3c43] font-medium px-2 py-0.5 rounded-md bg-black/[0.04]">
+                          <span className="text-[11px] text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">
                             IG & FB Form Questions
                           </span>
                         </div>
@@ -2163,24 +2180,24 @@ export default function Leads() {
                     </div>
 
                     {/* Template Download Option */}
-                    <div className="flex items-center justify-between p-3.5 rounded-xl bg-black/[0.02] border border-black/[0.05]">
+                    <div className="flex items-center justify-between p-3.5 rounded bg-slate-50 border border-slate-200">
                       <div>
-                        <p className="text-xs font-semibold text-[#1c1c1e]">Need a sample spreadsheet format?</p>
-                        <p className="text-[11px] text-[#8e8e93] mt-0.5">
-                          Download our template with Meta Ads Manager columns (ID, Campaign, Questions, Full Name, Phone, City).
+                        <p className="text-xs font-semibold text-slate-800">Sample Meta Ads Spreadsheet Template</p>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          Download our pre-formatted spreadsheet template with sample candidates and Meta columns.
                         </p>
                       </div>
                       <button
                         type="button"
                         onClick={handleDownloadSampleTemplate}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-[#f2f2f7] text-[#1c1c1e] rounded-lg border border-black/[0.08] text-xs font-semibold shadow-2xs transition-colors cursor-pointer shrink-0 ml-3"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 rounded border border-slate-300 text-xs font-semibold shadow-2xs transition-colors cursor-pointer shrink-0 ml-3"
                       >
-                        <Download size={13} className="text-[#007aff]" />
+                        <Download size={13} className="text-[#1e88e5]" />
                         <span>Download Template</span>
                       </button>
                     </div>
 
-                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-[rgba(60,60,67,0.1)]">
+                    <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
                       <button
                         type="button"
                         onClick={() => {
@@ -2189,181 +2206,204 @@ export default function Leads() {
                             navigate('/leads', { replace: true });
                           }
                         }}
-                        className="ios-btn-gray"
+                        className="px-4 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 shadow-2xs cursor-pointer"
                       >
                         Cancel
                       </button>
                     </div>
                   </div>
                 ) : (
-                  /* State B: Sheet Uploaded -> Clean Preview Table & Confirmation */
-                  <div className="space-y-3 animate-in fade-in">
-                    {/* Preview Summary Bar */}
-                    <div className="p-3.5 bg-black/[0.02] border border-black/[0.06] rounded-xl space-y-2.5">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  /* State B: Sheet Uploaded -> Clean Zoho CRM Table & Confirmation */
+                  <div className="space-y-3.5">
+                    {/* File & Mapping Setup Bar */}
+                    <div className="bg-slate-50 border border-slate-200 rounded p-4 space-y-3">
+                      {/* Top row: File info and change button */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-200">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-lg bg-[#007aff]/10 text-[#007aff] flex items-center justify-center shrink-0">
-                            <FileSpreadsheet size={18} />
+                          <div className="w-8 h-8 rounded bg-blue-100 text-[#1e88e5] flex items-center justify-center shrink-0 border border-blue-200">
+                            <FileSpreadsheet size={16} />
                           </div>
                           <div>
-                            <p className="font-semibold text-xs text-[#1c1c1e] truncate max-w-xs">
-                              {importFile?.name || 'Spreadsheet Data'}
-                            </p>
-                            <p className="text-[11px] text-[#34c759] font-medium flex items-center gap-1.5">
-                              <span className="w-1.5 h-1.5 rounded-full bg-[#34c759]"></span>
-                              <span>{previewRows.length} candidates parsed & ready</span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-xs text-slate-900 truncate max-w-sm" title={importFile?.name}>
+                                {importFile?.name || 'Spreadsheet File'}
+                              </span>
+                              <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                {previewRows.length} Records Found
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-500 mt-0.5">
+                              Meta Lead Ads headers resolved • Ready for CRM intake
                             </p>
                           </div>
                         </div>
 
-                        {/* Top Controls: Desk & Ingestion Mode */}
-                        <div className="flex flex-wrap items-center gap-2">
-                          <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-black/[0.08] shadow-2xs">
-                            <span className="text-[11px] text-[#8e8e93]">Desk:</span>
-                            <select
-                              value={excelDefaultVisaType}
-                              onChange={(e) => setExcelDefaultVisaType(e.target.value)}
-                              className="text-xs font-semibold text-[#1c1c1e] bg-transparent focus:outline-none cursor-pointer"
-                            >
-                              <option value="AUTO">Auto-detect from AdSet / Campaign</option>
-                              <option value="WORK_VISA">Force Work Visa Desk</option>
-                              <option value="STUDY_VISA">Force Study Visa Desk</option>
-                              <option value="OTHER_VISA">Force Other Visa Desk</option>
-                            </select>
-                          </div>
-
-                          <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-black/[0.08] shadow-2xs">
-                            <span className="text-[11px] text-[#8e8e93]">Mode:</span>
-                            <select
-                              value={importMethod}
-                              onChange={(e) => setImportMethod(e.target.value as 'direct' | 'server')}
-                              className="text-xs font-semibold text-[#1c1c1e] bg-transparent focus:outline-none cursor-pointer"
-                            >
-                              <option value="direct">Direct DB Ingest (Browser)</option>
-                              <option value="server">Server Upload (/api/leads/import)</option>
-                            </select>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setPreviewRows([]);
-                              setImportFile(null);
-                            }}
-                            className="text-[11px] text-[#ff3b30] hover:bg-[#ff3b30]/10 px-2.5 py-1 rounded-lg transition-colors cursor-pointer font-medium"
-                          >
-                            Change File
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPreviewRows([]);
+                            setImportFile(null);
+                          }}
+                          className="text-xs text-rose-600 hover:text-rose-800 hover:underline font-medium cursor-pointer self-start sm:self-auto"
+                        >
+                          Change File
+                        </button>
                       </div>
 
-                      {/* Stat Breakdown Pills */}
-                      <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-black/[0.04]">
-                        <span className="text-[10px] font-semibold text-[#5856d6] bg-[#5856d6]/10 px-2 py-0.5 rounded-full">
-                          {excelStats.work} Work Visa
-                        </span>
-                        <span className="text-[10px] font-semibold text-[#34c759] bg-[#34c759]/10 px-2 py-0.5 rounded-full">
-                          {excelStats.study} Study Visa
-                        </span>
-                        {excelStats.other > 0 && (
-                          <span className="text-[10px] font-semibold text-[#ff9500] bg-[#ff9500]/10 px-2 py-0.5 rounded-full">
-                            {excelStats.other} Other
-                          </span>
-                        )}
-                        <span className="text-[10px] font-semibold text-[#e1306c] bg-[#e1306c]/10 px-2 py-0.5 rounded-full">
-                          {excelStats.ig} Instagram
-                        </span>
-                        {excelStats.fb > 0 && (
-                          <span className="text-[10px] font-semibold text-[#1877f2] bg-[#1877f2]/10 px-2 py-0.5 rounded-full">
-                            {excelStats.fb} Facebook
-                          </span>
-                        )}
+                      {/* Configuration Controls Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                            Visa Program Assignment
+                          </label>
+                          <select
+                            value={excelDefaultVisaType}
+                            onChange={(e) => setExcelDefaultVisaType(e.target.value)}
+                            className="w-full text-xs bg-white border border-slate-300 rounded px-2.5 py-1.5 text-slate-800 font-medium focus:border-blue-500 focus:outline-none cursor-pointer shadow-2xs"
+                          >
+                            <option value="AUTO">Auto-detect from Campaign & AdSet</option>
+                            <option value="WORK_VISA">Force Work Visa Desk</option>
+                            <option value="STUDY_VISA">Force Study Visa Desk</option>
+                            <option value="OTHER_VISA">Force Other Visa Desk</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                            Ingestion Pipeline
+                          </label>
+                          <select
+                            value={importMethod}
+                            onChange={(e) => setImportMethod(e.target.value as 'direct' | 'server')}
+                            className="w-full text-xs bg-white border border-slate-300 rounded px-2.5 py-1.5 text-slate-800 font-medium focus:border-blue-500 focus:outline-none cursor-pointer shadow-2xs"
+                          >
+                            <option value="direct">Direct Database Ingest (Browser Batch API)</option>
+                            <option value="server">Server Upload Pipeline (/api/leads/import)</option>
+                          </select>
+                        </div>
+
+                        <div className="sm:col-span-2 lg:col-span-1">
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                            Detected Breakdown
+                          </label>
+                          <div className="flex items-center gap-1.5 h-[33px]">
+                            <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                              Work: <strong>{excelStats.work}</strong>
+                            </span>
+                            <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              Study: <strong>{excelStats.study}</strong>
+                            </span>
+                            <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-300">
+                              IG: <strong>{excelStats.ig}</strong>
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Scrollable Preview Table */}
-                    <div className="border border-black/[0.08] rounded-xl overflow-hidden max-h-72 overflow-y-auto bg-white">
-                      <table className="w-full text-left text-xs border-collapse">
-                        <thead className="bg-[#fbfbfd] border-b border-black/[0.06] text-[11px] font-semibold text-[#8e8e93] sticky top-0 z-10">
-                          <tr>
-                            <th className="py-2.5 px-3 w-8">#</th>
-                            <th className="py-2.5 px-3">Candidate</th>
-                            <th className="py-2.5 px-3">Contact</th>
-                            <th className="py-2.5 px-3">Location</th>
-                            <th className="py-2.5 px-3">Visa Desk</th>
-                            <th className="py-2.5 px-3">Platform</th>
-                            <th className="py-2.5 px-3">Survey & Profile</th>
-                            <th className="py-2.5 px-3">Campaign / Adset</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-black/[0.04]">
-                          {previewRows.map((r, i) => (
-                            <tr key={i} className="hover:bg-black/[0.02]">
-                              <td className="py-2.5 px-3 text-[#8e8e93] text-[10px] font-mono">{i + 1}</td>
-                              <td className="py-2.5 px-3">
-                                <div className="font-semibold text-[#1c1c1e]">{r.name}</div>
-                                {r.externalId && (
-                                  <div className="text-[10px] text-[#8e8e93] font-mono truncate max-w-[110px]" title={r.externalId}>
-                                    ID: {r.externalId}
-                                  </div>
-                                )}
-                              </td>
-                              <td className="py-2.5 px-3">
-                                <div className="font-sf-mono text-[11px] text-[#3c3c43]">{r.phone || '—'}</div>
-                                <div className="text-[10px] text-[#8e8e93] truncate max-w-[130px]">{r.email || '—'}</div>
-                              </td>
-                              <td className="py-2.5 px-3 text-[#3c3c43] font-medium">{r.city || '—'}</td>
-                              <td className="py-2.5 px-3">
-                                {renderVisaBadge(
-                                  excelDefaultVisaType === 'AUTO' ? r.visaType : excelDefaultVisaType
-                                )}
-                              </td>
-                              <td className="py-2.5 px-3">
-                                <span className={`inline-block text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                                  r.platform === 'IG' ? 'bg-pink-100 text-pink-700' : 'bg-blue-100 text-blue-700'
-                                }`}>
-                                  {r.platform}
-                                </span>
-                              </td>
-                              <td className="py-2.5 px-3">
-                                <div className="text-[11px] font-medium text-[#1c1c1e]">{r.qualification}</div>
-                                {r.surveyCgpa && (
-                                  <div className="text-[10px] text-[#8e8e93]">{r.surveyCgpa}</div>
-                                )}
-                              </td>
-                              <td className="py-2.5 px-3">
-                                <div className="text-[11px] font-medium text-[#1c1c1e] truncate max-w-[150px]" title={r.campaignName}>
-                                  {r.campaignName || 'Meta Ads'}
-                                </div>
-                                {r.adSetName && (
-                                  <div className="text-[10px] text-[#8e8e93] truncate max-w-[150px]" title={r.adSetName}>
-                                    {r.adSetName}
-                                  </div>
-                                )}
-                              </td>
+                    {/* Zoho CRM Data Grid Table */}
+                    <div className="border border-slate-200 rounded overflow-hidden bg-white shadow-2xs">
+                      <div className="bg-slate-100/70 px-3.5 py-1.5 border-b border-slate-200 flex items-center justify-between text-[11px] text-slate-600">
+                        <span className="font-semibold text-slate-700">Candidate Records Preview ({previewRows.length} rows)</span>
+                        <span>Scroll horizontally to inspect attribution</span>
+                      </div>
+
+                      <div className="max-h-72 overflow-y-auto overflow-x-auto">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead className="bg-[#f4f6f8] border-b border-slate-200 text-[11px] font-semibold text-slate-600 uppercase tracking-wider sticky top-0 z-10">
+                            <tr>
+                              <th className="py-2.5 px-3 w-10 text-center text-slate-400">#</th>
+                              <th className="py-2.5 px-3 border-l border-slate-200">Candidate Name</th>
+                              <th className="py-2.5 px-3 border-l border-slate-200">Contact Details</th>
+                              <th className="py-2.5 px-3 border-l border-slate-200">Location</th>
+                              <th className="py-2.5 px-3 border-l border-slate-200">Visa Program</th>
+                              <th className="py-2.5 px-3 border-l border-slate-200">Platform</th>
+                              <th className="py-2.5 px-3 border-l border-slate-200">Survey & Status</th>
+                              <th className="py-2.5 px-3 border-l border-slate-200">Campaign / Adset</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody className="divide-y divide-slate-200 text-slate-700">
+                            {previewRows.map((r, i) => {
+                              const currentVisa = excelDefaultVisaType === 'AUTO' ? r.visaType : excelDefaultVisaType;
+                              return (
+                                <tr key={i} className="hover:bg-blue-50/40 transition-colors">
+                                  <td className="py-2 px-3 text-center text-slate-400 font-mono text-[11px] bg-slate-50/50">
+                                    {i + 1}
+                                  </td>
+                                  <td className="py-2 px-3 border-l border-slate-100">
+                                    <div className="font-semibold text-slate-900">{r.name}</div>
+                                    {r.externalId && (
+                                      <div className="text-[10px] text-slate-400 font-mono" title={r.externalId}>
+                                        ID: {r.externalId}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td className="py-2 px-3 border-l border-slate-100">
+                                    <div className="font-mono text-slate-800 font-medium">{r.phone || '—'}</div>
+                                    <div className="text-[11px] text-slate-500 truncate max-w-[140px]" title={r.email}>
+                                      {r.email || '—'}
+                                    </div>
+                                  </td>
+                                  <td className="py-2 px-3 border-l border-slate-100 text-slate-800">
+                                    {r.city || '—'}
+                                  </td>
+                                  <td className="py-2 px-3 border-l border-slate-100">
+                                    <span className={`inline-block px-2 py-0.5 text-[11px] font-medium rounded border ${
+                                      currentVisa === 'WORK_VISA'
+                                        ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                        : currentVisa === 'STUDY_VISA'
+                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                        : 'bg-amber-50 text-amber-800 border-amber-200'
+                                    }`}>
+                                      {currentVisa === 'WORK_VISA' ? 'Work Visa' : currentVisa === 'STUDY_VISA' ? 'Study Visa' : 'Other Visa'}
+                                    </span>
+                                  </td>
+                                  <td className="py-2 px-3 border-l border-slate-100">
+                                    <span className="inline-block px-1.5 py-0.5 text-[10px] font-bold font-mono rounded bg-slate-100 text-slate-700 border border-slate-300">
+                                      {r.platform}
+                                    </span>
+                                  </td>
+                                  <td className="py-2 px-3 border-l border-slate-100">
+                                    <div className="text-slate-800 font-medium">{r.qualification}</div>
+                                    {r.surveyCgpa && (
+                                      <div className="text-[10px] text-slate-500">{r.surveyCgpa}</div>
+                                    )}
+                                  </td>
+                                  <td className="py-2 px-3 border-l border-slate-100">
+                                    <div className="text-slate-800 truncate max-w-[160px]" title={r.campaignName}>
+                                      {r.campaignName || 'Meta Lead Gen'}
+                                    </div>
+                                    {r.adSetName && (
+                                      <div className="text-[10px] text-slate-500 truncate max-w-[160px]" title={r.adSetName}>
+                                        {r.adSetName}
+                                      </div>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
 
                     {/* Progress Bar when Ingesting */}
                     {importLoading && (
-                      <div className="space-y-1.5 p-3 rounded-xl bg-[#007aff]/[0.05] border border-[#007aff]/20">
+                      <div className="space-y-1.5 p-3 rounded bg-blue-50 border border-blue-200">
                         <div className="flex items-center justify-between text-xs">
-                          <span className="font-semibold text-[#007aff] flex items-center gap-1.5">
+                          <span className="font-semibold text-[#1e88e5] flex items-center gap-1.5">
                             <RefreshCw size={13} className="animate-spin" />
                             <span>
-                              Loading {importProgress.current} of {importProgress.total} into CRM database...
+                              Writing candidate records ({importProgress.current} of {importProgress.total})...
                             </span>
                           </span>
-                          <span className="font-mono text-[11px] text-[#007aff] font-bold">
+                          <span className="font-mono text-[11px] text-[#1e88e5] font-bold">
                             {Math.round((importProgress.current / (importProgress.total || 1)) * 100)}%
                           </span>
                         </div>
-                        <div className="w-full h-1.5 bg-black/[0.08] rounded-full overflow-hidden">
+                        <div className="w-full h-2 bg-blue-100 rounded overflow-hidden">
                           <div
-                            className="h-full bg-[#007aff] transition-all duration-150 rounded-full"
+                            className="h-full bg-[#1e88e5] transition-all duration-150 rounded"
                             style={{
                               width: `${Math.round(
                                 (importProgress.current / (importProgress.total || 1)) * 100
@@ -2375,16 +2415,16 @@ export default function Leads() {
                     )}
 
                     {/* Action Confirmation Footer */}
-                    <div className="flex items-center justify-between pt-3 border-t border-[rgba(60,60,67,0.1)]">
-                      <span className="text-[11px] text-[#8e8e93]">
+                    <div className="bg-[#f8fafc] -mx-6 -mb-6 px-6 py-3.5 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
+                      <div className="text-xs text-slate-600">
                         {importLoading ? (
-                          'Writing records and linking candidate preferences...'
+                          'Creating customer profiles & linking preferences...'
                         ) : (
-                          `Verify columns above before confirming intake.`
+                          <span>Ready to import <strong>{previewRows.length}</strong> candidate records into CRM.</span>
                         )}
-                      </span>
+                      </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
                         <button
                           type="button"
                           disabled={importLoading}
@@ -2392,24 +2432,24 @@ export default function Leads() {
                             setPreviewRows([]);
                             setImportFile(null);
                           }}
-                          className="ios-btn-gray disabled:opacity-40"
+                          className="px-4 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 shadow-2xs transition-colors cursor-pointer"
                         >
-                          Clear
+                          Cancel / Clear
                         </button>
                         <button
                           type="button"
                           disabled={importLoading || previewRows.length === 0}
                           onClick={handleConfirmImport}
-                          className="ios-btn-primary disabled:opacity-50"
+                          className="px-5 py-1.5 text-xs font-semibold text-white bg-[#1e88e5] hover:bg-[#1565c0] rounded shadow-2xs transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-2"
                         >
                           {importLoading ? (
                             <>
                               <RefreshCw size={13} className="animate-spin" />
-                              <span>Ingesting...</span>
+                              <span>Importing...</span>
                             </>
                           ) : (
                             <>
-                              <CheckCircle2 size={13} />
+                              <CheckCircle2 size={14} />
                               <span>Confirm & Load {previewRows.length} Candidates</span>
                             </>
                           )}

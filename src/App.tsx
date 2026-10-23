@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { AlertProvider } from './context/AlertContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import Layout from './components/Layout';
 import Login from './pages/Login';
@@ -16,7 +17,8 @@ import CandidateDetail from './pages/CandidateDetail';
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <AlertProvider>
+        <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route
@@ -53,6 +55,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+      </AlertProvider>
     </AuthProvider>
   );
 }
