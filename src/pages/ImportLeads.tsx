@@ -9,7 +9,9 @@ import {
   RefreshCw,
   FileUp,
   ArrowRight,
+  Download,
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import crmService from '../services/api/crmService';
 
 export default function ImportLeads() {
@@ -20,6 +22,57 @@ export default function ImportLeads() {
   const [loading, setLoading] = useState<boolean>(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const handleDownloadTemplate = () => {
+    const sampleRows = [
+      {
+        id: '1282110291197702',
+        created_time: '10-18-24 12:52:17',
+        ad_id: '120203712472010612',
+        ad_name: 'SSA_A01_SSA-01_feed_PVC_G110203712472010612',
+        adset_id: '120203712472010612',
+        adset_name: 'SSA_A01_WorkPermit_20-30_TN',
+        campaign_id: '120203712472010612',
+        campaign_name: 'SSA_LeadGen_USA+UK_TN_12',
+        form_id: '10000017290030499',
+        form_name: 'SSA_Form_A01_UG/USM-CG',
+        is_organic: 'false',
+        platform: 'ig',
+        'what_is_your_current_status?': 'completed_ug',
+        'what_is_your_cgpa_or_current_percentage?': '60-70% /6.0-7.0 CGPA',
+        full_name: 'Bhuvanesh R',
+        email: 'bhuvanesh.sample@gmail.com',
+        phone_number: '+919025099944',
+        city: 'Coimbatore',
+        lead_status: 'complete',
+      },
+      {
+        id: '21773179453315223',
+        created_time: '10-18-24 12:47:20',
+        ad_id: '120203712472010612',
+        ad_name: 'SSA_A01_SSA-01_feed_PVC_G110203712472010612',
+        adset_id: '120203712472010612',
+        adset_name: 'SSA_A01_WorkPermit_20-30_TN',
+        campaign_id: '120203712472010612',
+        campaign_name: 'SSA_LeadGen_USA+UK_TN_12',
+        form_id: '10000017290030499',
+        form_name: 'SSA_Form_A01_UG/USM-CG',
+        is_organic: 'false',
+        platform: 'ig',
+        'what_is_your_current_status?': 'completed_ug',
+        'what_is_your_cgpa_or_current_percentage?': '70% and above /7.0+ cgpa',
+        full_name: 'Kavitha R',
+        email: 'kavitha.sample@gmail.com',
+        phone_number: '+919788057933',
+        city: 'Chennai',
+        lead_status: 'complete',
+      },
+    ];
+    const ws = XLSX.utils.json_to_sheet(sampleRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'MetaLeadAds');
+    XLSX.writeFile(wb, 'meta_lead_ads_import_template.xlsx');
+  };
 
   const handleFileUpload = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -133,6 +186,24 @@ export default function ImportLeads() {
                   </span>
                 )}
               </div>
+            </div>
+
+            {/* Template Download Option */}
+            <div className="flex items-center justify-between p-3.5 rounded-xl bg-black/[0.02] border border-black/[0.05]">
+              <div>
+                <p className="text-xs font-semibold text-[#1c1c1e]">Sample Meta Ads Template</p>
+                <p className="text-[11px] text-[#8e8e93] mt-0.5">
+                  Spreadsheet with sample columns matching Meta Ads Manager exports (ID, Campaign, Questions, Full Name, Phone, City).
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleDownloadTemplate}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-[#f2f2f7] text-[#1c1c1e] rounded-lg border border-black/[0.08] text-xs font-semibold shadow-2xs transition-colors cursor-pointer shrink-0 ml-3"
+              >
+                <Download size={13} className="text-[#007aff]" />
+                <span>Download Template</span>
+              </button>
             </div>
 
             <div className="flex items-center justify-between pt-2">

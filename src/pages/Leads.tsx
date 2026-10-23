@@ -53,6 +53,34 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { Lead } from '../types';
 
+export interface ParsedLeadPreview {
+  id: number;
+  externalId?: string;
+  createdTime?: string;
+  name: string;
+  phone: string;
+  email: string;
+  visaType: string;
+  city: string;
+  qualification: string;
+  age: string;
+  platform: string;
+  isOrganic: boolean;
+  campaignName?: string;
+  campaignId?: string;
+  adSetName?: string;
+  adSetId?: string;
+  adName?: string;
+  adId?: string;
+  formName?: string;
+  formId?: string;
+  surveyStatus?: string;
+  surveyCgpa?: string;
+  leadStatus?: string;
+  rawNotes?: string;
+  isValid: boolean;
+}
+
 export default function Leads() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -113,26 +141,19 @@ export default function Leads() {
     status: 'CONTACTED',
     notes: '',
   });
-  const [showAddModal, setShowAddModal] = useState<boolean>(searchParams.get('action') === 'create');
-  const [modalTab, setModalTab] = useState<'manual' | 'excel'>('manual');
+  const [showAddModal, setShowAddModal] = useState<boolean>(
+    searchParams.get('action') === 'create' || searchParams.get('action') === 'import'
+  );
+  const [modalTab, setModalTab] = useState<'manual' | 'excel'>(
+    searchParams.get('action') === 'import' ? 'excel' : 'manual'
+  );
   const [importFile, setImportFile] = useState<File | null>(null);
-  const [previewRows, setPreviewRows] = useState<
-    Array<{
-      id: number;
-      name: string;
-      phone: string;
-      email: string;
-      visaType: string;
-      city: string;
-      qualification: string;
-      age: string;
-      isValid: boolean;
-    }>
-  >([]);
+  const [previewRows, setPreviewRows] = useState<ParsedLeadPreview[]>([]);
   const [importLoading, setImportLoading] = useState<boolean>(false);
   const [importProgress, setImportProgress] = useState<{ current: number; total: number }>({ current: 0, total: 0 });
   const [importError, setImportError] = useState<string | null>(null);
-  const [excelDefaultVisaType, setExcelDefaultVisaType] = useState<string>('WORK_VISA');
+  const [excelDefaultVisaType, setExcelDefaultVisaType] = useState<string>('AUTO');
+  const [importMethod, setImportMethod] = useState<'direct' | 'server'>('direct');
   const [bulkStatusModal, setBulkStatusModal] = useState<boolean>(false);
   const [bulkStatus, setBulkStatus] = useState<string>('CONTACTED');
 
@@ -479,6 +500,107 @@ export default function Leads() {
     }
   };
 
+  const parseMetaDate = (raw: any): string => {
+    if (!raw) return new Date().toISOString();
+    if (typeof raw === 'number') {
+      const date = new Date(Math.round((raw - 25569) * 86400 * 1000));
+      return !isNaN(date.getTime()) ? date.toISOString() : new Date().toISOString();
+    }
+    const s = String(raw).trim();
+    // Match "10-18-24 12:52:17" or "10/18/24 12:52"
+    const parts = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+    if (parts) {
+      let year = parseInt(parts[3], 10);
+      if (year < 100) year += 2000;
+      const m = parseInt(parts[1], 10) - 1;
+      const d = parseInt(parts[2], 10);
+      const hh = parts[4] ? parseInt(parts[4], 10) : 0;
+      const mm = parts[5] ? parseInt(parts[5], 10) : 0;
+      const ss = parts[6] ? parseInt(parts[6], 10) : 0;
+      const dt = new Date(Date.UTC(year, m, d, hh, mm, ss));
+      if (!isNaN(dt.getTime())) return dt.toISOString();
+    }
+    const direct = new Date(s);
+    if (!isNaN(direct.getTime())) return direct.toISOString();
+    return new Date().toISOString();
+  };
+
+  const formatMetaPhone = (raw: any): string => {
+    if (!raw) return '';
+    let s = String(raw).trim().replace(/[^\d+]/g, '');
+    if (!s.startsWith('+')) {
+      if (s.startsWith('91') && s.length === 12) {
+        s = '+' + s;
+      } else if (s.length === 10) {
+        s = '+91' + s;
+      } else if (s) {
+        s = '+' + s;
+      }
+    }
+    return s;
+  };
+
+  const formatEducation = (currentStatus: string, rawQual: string): string => {
+    const s = (currentStatus || '').toLowerCase().trim();
+    if (s.includes('completed_ug') || s.includes('complete_ug') || s.includes('graduate')) {
+      return 'Bachelor Degree / UG Graduate';
+    }
+    if (s.includes('finallyear') || s.includes('final_year') || s.includes('final year')) {
+      return 'Final Year UG Student';
+    }
+    if (s.includes('master') || s.includes('pg') || s.includes('post_graduate')) {
+      return 'Master Degree / Post Graduate';
+    }
+    if (s.includes('diploma')) {
+      return 'Diploma / Poly';
+    }
+    if (s.includes('12th') || s.includes('hsc')) {
+      return '12th Standard / HSC';
+    }
+    if (s.includes('10th') || s.includes('sslc')) {
+      return '10th Standard';
+    }
+    if (s && s !== 'other') {
+      return s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+    return rawQual || 'Bachelor Degree';
+  };
+
+  const detectVisaType = (
+    adsetName: string,
+    campaignName: string,
+    formName: string,
+    rawVisa: string,
+    fallback: string
+  ): string => {
+    const combined = `${adsetName} ${campaignName} ${formName} ${rawVisa}`.toUpperCase();
+    if (
+      combined.includes('WORK') ||
+      combined.includes('PERMIT') ||
+      combined.includes('EMPLOY') ||
+      combined.includes('JOB')
+    ) {
+      return 'WORK_VISA';
+    }
+    if (
+      combined.includes('STUDY') ||
+      combined.includes('STUDENT') ||
+      combined.includes('ADMISSION') ||
+      combined.includes('COLLEGE') ||
+      combined.includes('UNIV')
+    ) {
+      return 'STUDY_VISA';
+    }
+    if (
+      combined.includes('TOURIST') ||
+      combined.includes('VISIT') ||
+      combined.includes('OTHER')
+    ) {
+      return 'OTHER_VISA';
+    }
+    return fallback || 'WORK_VISA';
+  };
+
   const handleExcelFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -500,16 +622,29 @@ export default function Leads() {
           return;
         }
 
-        const parsed = rawJson.map((row, idx) => {
+        const parsed: ParsedLeadPreview[] = rawJson.map((row, idx) => {
           const getVal = (...keys: string[]) => {
+            // 1. Direct exact key match
             for (const k of keys) {
               if (row[k] !== undefined && String(row[k]).trim() !== '') {
                 return String(row[k]).trim();
               }
-              const cleanTarget = k.toLowerCase().replace(/[^a-z0-9]/g, '');
-              for (const rk of Object.keys(row)) {
-                const cleanRk = rk.toLowerCase().replace(/[^a-z0-9]/g, '');
-                if (cleanRk === cleanTarget && String(row[rk]).trim() !== '') {
+            }
+            // 2. Normalized alphanumeric key match (ignores _, -, spaces, ?, parentheses)
+            const cleanTargets = keys.map((k) => k.toLowerCase().replace(/[^a-z0-9]/g, ''));
+            for (const rk of Object.keys(row)) {
+              const cleanRk = rk.toLowerCase().replace(/[^a-z0-9]/g, '');
+              for (const ct of cleanTargets) {
+                if (cleanRk === ct && String(row[rk]).trim() !== '') {
+                  return String(row[rk]).trim();
+                }
+              }
+            }
+            // 3. Substring matching for questionnaire keys like 'what_is_your_current_status?'
+            for (const rk of Object.keys(row)) {
+              const lowerRk = rk.toLowerCase();
+              for (const k of keys) {
+                if (lowerRk.includes(k.toLowerCase()) && String(row[rk]).trim() !== '') {
                   return String(row[rk]).trim();
                 }
               }
@@ -517,31 +652,96 @@ export default function Leads() {
             return '';
           };
 
-          const name = getVal('fullname', 'full_name', 'name', 'customername', 'candidatename', 'candidate');
-          const phone = getVal('phonenumber', 'phone_number', 'phone', 'mobile', 'contact', 'mobilenumber');
-          const email = getVal('email', 'emailaddress', 'mail');
-          const rawVisa = getVal('visatype', 'visa_type', 'visa', 'visaprogram', 'program');
-          const city = getVal('city', 'location', 'place', 'town');
-          const qual = getVal('educationalqualification', 'educational_qualification', 'qualification', 'education', 'degree');
-          const age = getVal('age', 'agebracket', 'age_bracket');
+          const externalId = getVal('id', 'lead_id', 'leadid', 'external_id');
+          const createdTimeRaw = getVal('created_time', 'createdtime', 'created_at', 'timestamp', 'date');
+          const createdTime = parseMetaDate(createdTimeRaw);
 
-          let visaType = defaultVisaType;
-          if (rawVisa) {
-            const vUpper = rawVisa.toUpperCase();
-            if (vUpper.includes('STUDY') || vUpper.includes('STUDENT')) visaType = 'STUDY_VISA';
-            else if (vUpper.includes('WORK') || vUpper.includes('EMPLOY')) visaType = 'WORK_VISA';
-            else if (vUpper.includes('OTHER')) visaType = 'OTHER_VISA';
-          }
+          const adId = getVal('ad_id', 'adid');
+          const adName = getVal('ad_name', 'adname');
+          const adSetId = getVal('adset_id', 'adsetid');
+          const adSetName = getVal('adset_name', 'adsetname');
+          const campaignId = getVal('campaign_id', 'campaignid');
+          const campaignName = getVal('campaign_name', 'campaignname', 'campaign');
+          const formId = getVal('form_id', 'formid');
+          const formName = getVal('form_name', 'formname', 'leadform');
+
+          const rawOrganic = getVal('is_organic', 'isorganic', 'organic').toLowerCase();
+          const isOrganic = rawOrganic === 'true' || rawOrganic === '1';
+
+          let platform = getVal('platform', 'source', 'channel').toUpperCase();
+          if (platform.includes('IG') || platform.includes('INSTA')) platform = 'IG';
+          else if (platform.includes('FB') || platform.includes('FACEBOOK')) platform = 'FB';
+          else if (platform.includes('WHATSAPP') || platform.includes('WA')) platform = 'WHATSAPP';
+          else if (!platform) platform = 'IG';
+
+          // Custom questionnaire fields from Meta lead forms (matching user's Excel)
+          const surveyStatus = getVal(
+            'what_is_your_current_status',
+            'current_status',
+            'currentstatus',
+            'status_ug'
+          );
+          const surveyCgpa = getVal(
+            'what_is_your_cgpa_or_current_percentage',
+            'cgpa',
+            'current_percentage',
+            'percentage',
+            'marks'
+          );
+
+          const rawQual = getVal(
+            'educationalqualification',
+            'educational_qualification',
+            'qualification',
+            'education',
+            'degree'
+          );
+          const qualification = formatEducation(surveyStatus, rawQual);
+
+          const name = getVal('full_name', 'fullname', 'name', 'customername', 'candidatename', 'candidate');
+          const rawPhone = getVal('phone_number', 'phonenumber', 'phone', 'mobile', 'contact', 'mobilenumber');
+          const phone = formatMetaPhone(rawPhone);
+          const email = getVal('email', 'emailaddress', 'mail');
+          const city = getVal('city', 'location', 'place', 'town', 'district');
+          const age = getVal('age', 'agebracket', 'age_bracket') || AGE_BRACKETS[0];
+          const leadStatus = getVal('lead_status', 'leadstatus', 'status') || 'complete';
+
+          const rawVisa = getVal('visatype', 'visa_type', 'visa', 'visaprogram', 'program');
+          const visaType = detectVisaType(adSetName, campaignName, formName, rawVisa, defaultVisaType);
+
+          const notesParts: string[] = [];
+          if (surveyStatus) notesParts.push(`Status: ${surveyStatus}`);
+          if (surveyCgpa) notesParts.push(`CGPA: ${surveyCgpa}`);
+          if (campaignName) notesParts.push(`Campaign: ${campaignName}`);
+          if (adSetName) notesParts.push(`AdSet: ${adSetName}`);
+          if (formName) notesParts.push(`Form: ${formName}`);
+          if (leadStatus) notesParts.push(`Meta Status: ${leadStatus}`);
 
           return {
             id: idx + 1,
+            externalId: externalId || undefined,
+            createdTime,
             name: name || `Candidate #${idx + 1}`,
             phone: phone || '',
             email: email || '',
-            visaType: visaType,
+            visaType,
             city: city || '',
-            qualification: qual || EDUCATION_QUALIFICATIONS[2],
-            age: age || AGE_BRACKETS[0],
+            qualification,
+            age,
+            platform,
+            isOrganic,
+            campaignName: campaignName || undefined,
+            campaignId: campaignId || undefined,
+            adSetName: adSetName || undefined,
+            adSetId: adSetId || undefined,
+            adName: adName || undefined,
+            adId: adId || undefined,
+            formName: formName || undefined,
+            formId: formId || undefined,
+            surveyStatus: surveyStatus || undefined,
+            surveyCgpa: surveyCgpa || undefined,
+            leadStatus: leadStatus || undefined,
+            rawNotes: notesParts.join(' | '),
             isValid: Boolean(name || phone),
           };
         });
@@ -564,73 +764,149 @@ export default function Leads() {
   const handleDownloadSampleTemplate = () => {
     const sampleRows = [
       {
-        'Full Name': 'Praveen Selvaraj',
-        'Phone Number': '+91 9876543210',
-        'Email': 'praveen.s@example.com',
-        'Visa Program': 'Work Visa',
-        'City': 'Chennai',
-        'Qualification': 'Bachelor Degree',
-        'Age': '26 - 35 years',
+        id: '1282110291197702',
+        created_time: '10-18-24 12:52:17',
+        ad_id: '120203712472010612',
+        ad_name: 'SSA_A01_SSA-01_feed_PVC_G110203712472010612',
+        adset_id: '120203712472010612',
+        adset_name: 'SSA_A01_WorkPermit_20-30_TN',
+        campaign_id: '120203712472010612',
+        campaign_name: 'SSA_LeadGen_USA+UK_TN_12',
+        form_id: '10000017290030499',
+        form_name: 'SSA_Form_A01_UG/USM-CG',
+        is_organic: 'false',
+        platform: 'ig',
+        'what_is_your_current_status?': 'completed_ug',
+        'what_is_your_cgpa_or_current_percentage?': '60-70% /6.0-7.0 CGPA',
+        full_name: 'Bhuvanesh R',
+        email: 'bhuvanesh.sample@gmail.com',
+        phone_number: '+919025099944',
+        city: 'Coimbatore',
+        lead_status: 'complete',
       },
       {
-        'Full Name': 'Ananya Sharma',
-        'Phone Number': '+91 9840123456',
-        'Email': 'ananya.sharma@example.com',
-        'Visa Program': 'Study Visa',
-        'City': 'Bangalore',
-        'Qualification': 'Master Degree / Post Graduate',
-        'Age': '18 - 25 years',
+        id: '21773179453315223',
+        created_time: '10-18-24 12:47:20',
+        ad_id: '120203712472010612',
+        ad_name: 'SSA_A01_SSA-01_feed_PVC_G110203712472010612',
+        adset_id: '120203712472010612',
+        adset_name: 'SSA_A01_WorkPermit_20-30_TN',
+        campaign_id: '120203712472010612',
+        campaign_name: 'SSA_LeadGen_USA+UK_TN_12',
+        form_id: '10000017290030499',
+        form_name: 'SSA_Form_A01_UG/USM-CG',
+        is_organic: 'false',
+        platform: 'ig',
+        'what_is_your_current_status?': 'completed_ug',
+        'what_is_your_cgpa_or_current_percentage?': '70% and above /7.0+ cgpa',
+        full_name: 'Kavitha R',
+        email: 'kavitha.sample@gmail.com',
+        phone_number: '+919788057933',
+        city: 'Chennai',
+        lead_status: 'complete',
       },
       {
-        'Full Name': 'Karthik Raja',
-        'Phone Number': '+91 9712345678',
-        'Email': 'karthik.raja@example.com',
-        'Visa Program': 'Work Visa',
-        'City': 'Coimbatore',
-        'Qualification': 'Diploma',
-        'Age': '18 - 25 years',
+        id: '1810156249179606',
+        created_time: '10-18-24 12:30:15',
+        ad_id: '120203712472010612',
+        ad_name: 'SSA_A02_StudyAbroad_UG',
+        adset_id: '120203712472010612',
+        adset_name: 'SSA_A02_StudyAbroad_18-25_TN',
+        campaign_id: '120203712472010612',
+        campaign_name: 'SSA_LeadGen_Study_Canada+UK',
+        form_id: '10000017290030500',
+        form_name: 'SSA_Form_A02_StudyVisa',
+        is_organic: 'false',
+        platform: 'ig',
+        'what_is_your_current_status?': 'finallyear_ug_student',
+        'what_is_your_cgpa_or_current_percentage?': '70% and above /7.0+ cgpa',
+        full_name: 'Soundaravel V',
+        email: 'soundar.sample@gmail.com',
+        phone_number: '+919840330773',
+        city: 'Madurai',
+        lead_status: 'complete',
       },
     ];
     const ws = XLSX.utils.json_to_sheet(sampleRows);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Candidates');
-    XLSX.writeFile(wb, 'candidate_intake_template.xlsx');
+    XLSX.utils.book_append_sheet(wb, ws, 'MetaLeadAds');
+    XLSX.writeFile(wb, 'meta_lead_ads_import_template.xlsx');
   };
 
   const handleConfirmImport = async () => {
     if (previewRows.length === 0) return;
     setImportLoading(true);
     setImportProgress({ current: 0, total: previewRows.length });
+    setImportError(null);
 
+    // Option A: If server upload mode is explicitly selected and file is present
+    if (importMethod === 'server' && importFile) {
+      try {
+        const res = await crmService.importLeadsFile(importFile);
+        setShowAddModal(false);
+        setPreviewRows([]);
+        setImportFile(null);
+        window.dispatchEvent(new CustomEvent('crm-data-updated'));
+        await fetchLeads();
+        alert(
+          `Server Ingestion Complete! Processed: ${res.totalRowsProcessed || previewRows.length}, Successful: ${res.successfulRows || previewRows.length}, Failed: ${res.failedRows || 0}`
+        );
+        return;
+      } catch (serverErr: any) {
+        const msg = serverErr?.response?.data?.message || serverErr?.message || 'Server upload failed';
+        const fallbackDirect = window.confirm(
+          `Server upload endpoint returned: "${msg}".\n\nWould you like to proceed with Direct Browser Ingestion directly into your database instead?`
+        );
+        if (!fallbackDirect) {
+          setImportLoading(false);
+          return;
+        }
+        // Fall through to direct ingestion
+      }
+    }
+
+    // Option B: Direct Browser-to-DB Ingestion (Fast & Reliable batch creation)
     let successCount = 0;
     let failCount = 0;
 
     for (let i = 0; i < previewRows.length; i++) {
       const row = previewRows[i];
       try {
+        const targetVisaType =
+          excelDefaultVisaType === 'AUTO'
+            ? row.visaType || 'WORK_VISA'
+            : excelDefaultVisaType || row.visaType || 'WORK_VISA';
+
         const customer = await crmService.createCustomer({
           fullName: row.name,
           phoneNumber: row.phone || undefined,
           email: row.email || undefined,
           location: row.city || undefined,
+          city: row.city || undefined,
         });
 
         const newLead = await crmService.createLead({
-          externalId: 'ext_' + Date.now() + '_' + i,
-          createdTime: new Date().toISOString(),
-          platform: 'OTHER',
+          externalId: row.externalId || ('meta_' + Date.now() + '_' + i),
+          createdTime: row.createdTime || new Date().toISOString(),
+          platform: (row.platform as any) || 'IG',
           status: 'CREATED',
-          isOrganic: true,
-          visaType: row.visaType || excelDefaultVisaType,
+          isOrganic: row.isOrganic ?? false,
+          visaType: targetVisaType,
+          campaignName: row.campaignName,
+          adSetName: row.adSetName,
+          adName: row.adName,
+          leadFormName: row.formName,
+          notes: row.rawNotes || undefined,
           customer: { id: customer.id },
         });
 
         try {
           await crmService.createLeadPreference({
             lead: { id: newLead.id },
-            visaType: row.visaType || excelDefaultVisaType,
+            visaType: targetVisaType,
             educationalQualification: row.qualification || EDUCATION_QUALIFICATIONS[2],
             age: row.age || AGE_BRACKETS[0],
+            notes: row.surveyCgpa ? `CGPA: ${row.surveyCgpa}` : undefined,
           });
         } catch {
           // preference non-fatal
@@ -649,7 +925,11 @@ export default function Leads() {
     setImportFile(null);
     window.dispatchEvent(new CustomEvent('crm-data-updated'));
     await fetchLeads();
-    alert(`Successfully loaded ${successCount} candidate${successCount === 1 ? '' : 's'} into database!${failCount > 0 ? ` (${failCount} entries had errors)` : ''}`);
+    alert(
+      `Successfully loaded ${successCount} candidate lead${successCount === 1 ? '' : 's'} into database!${
+        failCount > 0 ? ` (${failCount} entries had errors)` : ''
+      }`
+    );
   };
 
   const formatDate = (isoStr?: string): string => {
@@ -738,6 +1018,21 @@ export default function Leads() {
 
   const allPageIdsSelected = paginatedLeads.length > 0 && paginatedLeads.every((l) => selectedLeadIds.has(l.id));
 
+  const excelStats = useMemo(() => {
+    const work = previewRows.filter(
+      (r) => (excelDefaultVisaType === 'AUTO' ? r.visaType : excelDefaultVisaType) === 'WORK_VISA'
+    ).length;
+    const study = previewRows.filter(
+      (r) => (excelDefaultVisaType === 'AUTO' ? r.visaType : excelDefaultVisaType) === 'STUDY_VISA'
+    ).length;
+    const other = previewRows.filter(
+      (r) => (excelDefaultVisaType === 'AUTO' ? r.visaType : excelDefaultVisaType) === 'OTHER_VISA'
+    ).length;
+    const ig = previewRows.filter((r) => r.platform === 'IG').length;
+    const fb = previewRows.filter((r) => r.platform === 'FB').length;
+    return { work, study, other, ig, fb };
+  }, [previewRows, excelDefaultVisaType]);
+
   return (
     <div className="space-y-4">
       {/* Executive iOS Page Header Bar */}
@@ -766,7 +1061,7 @@ export default function Leads() {
         <div className="flex items-center gap-2">
           <button
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-[#f2f2f7] text-[#1c1c1e] rounded-xl border border-black/[0.08] text-xs font-medium shadow-2xs transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-[#f2f2f7] text-[#1c1c1e] rounded-xl border border-black/[0.08] text-xs font-medium shadow-2xs transition-colors cursor-pointer"
             title="Export filtered records to CSV"
           >
             <Download size={13} className="text-[#8e8e93]" />
@@ -774,16 +1069,31 @@ export default function Leads() {
           </button>
 
           <button
+            onClick={() => {
+              setModalTab('excel');
+              setShowAddModal(true);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#007aff]/10 hover:bg-[#007aff]/15 text-[#007aff] hover:text-[#005bb5] rounded-xl border border-[#007aff]/25 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+            title="Import candidate leads directly from Excel sheet (.xlsx, .xls, .csv)"
+          >
+            <FileSpreadsheet size={13} />
+            <span>Import Excel</span>
+          </button>
+
+          <button
             onClick={() => fetchLeads()}
             disabled={loading}
-            className="p-1.5 bg-white hover:bg-[#f2f2f7] text-[#1c1c1e] rounded-xl border border-black/[0.08] shadow-2xs transition-colors"
+            className="p-1.5 bg-white hover:bg-[#f2f2f7] text-[#1c1c1e] rounded-xl border border-black/[0.08] shadow-2xs transition-colors cursor-pointer"
             title="Refresh candidates"
           >
             <RefreshCw size={13} className={loading ? 'animate-spin text-[#1c1c1e]' : 'text-[#8e8e93]'} />
           </button>
 
           <button
-            onClick={() => setShowAddModal(true)}
+            onClick={() => {
+              setModalTab('manual');
+              setShowAddModal(true);
+            }}
             className="ios-btn-primary"
           >
             <Plus size={14} />
@@ -1645,7 +1955,7 @@ export default function Leads() {
         <div className="fixed inset-0 z-50 bg-black/35 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
           <div
             className={`ios-glass-modal ${
-              modalTab === 'excel' && previewRows.length > 0 ? 'max-w-2xl' : 'max-w-lg'
+              modalTab === 'excel' && previewRows.length > 0 ? 'max-w-5xl' : 'max-w-lg'
             } w-full p-6 my-6 border border-white/60 transition-all duration-200`}
           >
             {/* Modal Header */}
@@ -1655,7 +1965,7 @@ export default function Leads() {
                 <p className="text-[11px] text-[#8e8e93]">
                   {modalTab === 'manual'
                     ? 'Record an overseas work or study visa candidate'
-                    : 'Import and preview candidate records from Excel'}
+                    : 'Import and preview Meta Ads / Excel candidate spreadsheets'}
                 </p>
               </div>
               <button
@@ -1665,11 +1975,11 @@ export default function Leads() {
                   setPreviewRows([]);
                   setImportFile(null);
                   setImportError(null);
-                  if (searchParams.get('action') === 'create') {
+                  if (searchParams.get('action') === 'create' || searchParams.get('action') === 'import') {
                     navigate('/leads', { replace: true });
                   }
                 }}
-                className="w-7 h-7 rounded-full bg-[rgba(118,118,128,0.12)] flex items-center justify-center text-[#8e8e93] hover:text-[#1c1c1e] hover:bg-[rgba(118,118,128,0.2)] transition-colors"
+                className="w-7 h-7 rounded-full bg-[rgba(118,118,128,0.12)] flex items-center justify-center text-[#8e8e93] hover:text-[#1c1c1e] hover:bg-[rgba(118,118,128,0.2)] transition-colors cursor-pointer"
               >
                 <X size={14} />
               </button>
@@ -1821,7 +2131,7 @@ export default function Leads() {
                 {/* State A: File not chosen yet -> Simple Human Dropzone */}
                 {previewRows.length === 0 ? (
                   <div className="space-y-3">
-                    <div className="border border-dashed border-black/15 hover:border-[#007aff]/50 rounded-2xl p-6 text-center bg-[#f9f9fa] hover:bg-[#007aff]/[0.02] transition-colors relative cursor-pointer">
+                    <div className="border border-dashed border-black/15 hover:border-[#007aff]/50 rounded-2xl p-7 text-center bg-[#f9f9fa] hover:bg-[#007aff]/[0.02] transition-colors relative cursor-pointer">
                       <input
                         type="file"
                         accept=".xlsx, .xls, .csv"
@@ -1829,32 +2139,43 @@ export default function Leads() {
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                       />
                       <div className="flex flex-col items-center">
-                        <div className="w-12 h-12 rounded-2xl bg-[#007aff]/10 text-[#007aff] flex items-center justify-center mb-2.5 shadow-2xs">
-                          <FileSpreadsheet size={24} />
+                        <div className="w-13 h-13 rounded-2xl bg-[#007aff]/10 text-[#007aff] flex items-center justify-center mb-3 shadow-2xs">
+                          <FileSpreadsheet size={26} />
                         </div>
                         <p className="font-semibold text-sm text-[#1c1c1e]">
                           Choose Excel Sheet (.xlsx, .xls, .csv)
                         </p>
-                        <p className="text-[11px] text-[#8e8e93] mt-1">
-                          Click to browse from your device or drag and drop spreadsheet here
+                        <p className="text-[11px] text-[#8e8e93] mt-1 max-w-sm mx-auto">
+                          Click to browse from your computer or drag and drop your spreadsheet here.
                         </p>
-                        <span className="mt-2 text-[10px] text-[#8e8e93] font-medium px-2 py-0.5 rounded-full bg-black/[0.04]">
-                          Columns: Name, Phone, Email, Visa Type, City
-                        </span>
+                        <div className="flex flex-wrap items-center justify-center gap-1.5 mt-3 max-w-md">
+                          <span className="text-[10px] text-[#007aff] font-medium px-2 py-0.5 rounded-md bg-[#007aff]/10">
+                            Meta Ads Compatible
+                          </span>
+                          <span className="text-[10px] text-[#3c3c43] font-medium px-2 py-0.5 rounded-md bg-black/[0.04]">
+                            Auto-detects Work / Study Visa
+                          </span>
+                          <span className="text-[10px] text-[#3c3c43] font-medium px-2 py-0.5 rounded-md bg-black/[0.04]">
+                            IG & FB Form Questions
+                          </span>
+                        </div>
                       </div>
                     </div>
 
                     {/* Template Download Option */}
-                    <div className="flex items-center justify-between p-3 rounded-xl bg-black/[0.02] border border-black/[0.05]">
-                      <div className="text-[11px] text-[#8e8e93]">
-                        Need a pre-formatted template with sample columns?
+                    <div className="flex items-center justify-between p-3.5 rounded-xl bg-black/[0.02] border border-black/[0.05]">
+                      <div>
+                        <p className="text-xs font-semibold text-[#1c1c1e]">Need a sample spreadsheet format?</p>
+                        <p className="text-[11px] text-[#8e8e93] mt-0.5">
+                          Download our template with Meta Ads Manager columns (ID, Campaign, Questions, Full Name, Phone, City).
+                        </p>
                       </div>
                       <button
                         type="button"
                         onClick={handleDownloadSampleTemplate}
-                        className="flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-[#f2f2f7] text-[#1c1c1e] rounded-lg border border-black/[0.08] text-xs font-medium shadow-2xs transition-colors cursor-pointer"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-[#f2f2f7] text-[#1c1c1e] rounded-lg border border-black/[0.08] text-xs font-semibold shadow-2xs transition-colors cursor-pointer shrink-0 ml-3"
                       >
-                        <Download size={12} className="text-[#8e8e93]" />
+                        <Download size={13} className="text-[#007aff]" />
                         <span>Download Template</span>
                       </button>
                     </div>
@@ -1864,7 +2185,7 @@ export default function Leads() {
                         type="button"
                         onClick={() => {
                           setShowAddModal(false);
-                          if (searchParams.get('action') === 'create') {
+                          if (searchParams.get('action') === 'create' || searchParams.get('action') === 'import') {
                             navigate('/leads', { replace: true });
                           }
                         }}
@@ -1878,90 +2199,188 @@ export default function Leads() {
                   /* State B: Sheet Uploaded -> Clean Preview Table & Confirmation */
                   <div className="space-y-3 animate-in fade-in">
                     {/* Preview Summary Bar */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-black/[0.02] border border-black/[0.06] rounded-xl">
-                      <div className="flex items-center gap-2">
-                        <FileSpreadsheet size={16} className="text-[#007aff] shrink-0" />
-                        <div>
-                          <p className="font-semibold text-xs text-[#1c1c1e] truncate max-w-[220px]">
-                            {importFile?.name || 'Spreadsheet Data'}
-                          </p>
-                          <p className="text-[11px] text-[#34c759] font-medium flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#34c759]"></span>
-                            <span>{previewRows.length} candidate rows ready to import</span>
-                          </p>
+                    <div className="p-3.5 bg-black/[0.02] border border-black/[0.06] rounded-xl space-y-2.5">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-[#007aff]/10 text-[#007aff] flex items-center justify-center shrink-0">
+                            <FileSpreadsheet size={18} />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-xs text-[#1c1c1e] truncate max-w-xs">
+                              {importFile?.name || 'Spreadsheet Data'}
+                            </p>
+                            <p className="text-[11px] text-[#34c759] font-medium flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#34c759]"></span>
+                              <span>{previewRows.length} candidates parsed & ready</span>
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Top Controls: Desk & Ingestion Mode */}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-black/[0.08] shadow-2xs">
+                            <span className="text-[11px] text-[#8e8e93]">Desk:</span>
+                            <select
+                              value={excelDefaultVisaType}
+                              onChange={(e) => setExcelDefaultVisaType(e.target.value)}
+                              className="text-xs font-semibold text-[#1c1c1e] bg-transparent focus:outline-none cursor-pointer"
+                            >
+                              <option value="AUTO">Auto-detect from AdSet / Campaign</option>
+                              <option value="WORK_VISA">Force Work Visa Desk</option>
+                              <option value="STUDY_VISA">Force Study Visa Desk</option>
+                              <option value="OTHER_VISA">Force Other Visa Desk</option>
+                            </select>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-black/[0.08] shadow-2xs">
+                            <span className="text-[11px] text-[#8e8e93]">Mode:</span>
+                            <select
+                              value={importMethod}
+                              onChange={(e) => setImportMethod(e.target.value as 'direct' | 'server')}
+                              className="text-xs font-semibold text-[#1c1c1e] bg-transparent focus:outline-none cursor-pointer"
+                            >
+                              <option value="direct">Direct DB Ingest (Browser)</option>
+                              <option value="server">Server Upload (/api/leads/import)</option>
+                            </select>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPreviewRows([]);
+                              setImportFile(null);
+                            }}
+                            className="text-[11px] text-[#ff3b30] hover:bg-[#ff3b30]/10 px-2.5 py-1 rounded-lg transition-colors cursor-pointer font-medium"
+                          >
+                            Change File
+                          </button>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        {/* Fallback Visa Desk */}
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[11px] text-[#8e8e93]">Default Desk:</span>
-                          <select
-                            value={excelDefaultVisaType}
-                            onChange={(e) => setExcelDefaultVisaType(e.target.value)}
-                            className="px-2 py-0.5 bg-white border border-black/[0.1] rounded-lg text-xs font-medium text-[#1c1c1e]"
-                          >
-                            <option value="WORK_VISA">Work Visa</option>
-                            <option value="STUDY_VISA">Study Visa</option>
-                            <option value="OTHER_VISA">Other Visa</option>
-                          </select>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setPreviewRows([]);
-                            setImportFile(null);
-                          }}
-                          className="text-[11px] text-[#8e8e93] hover:text-[#ff3b30] px-2 py-1 transition-colors cursor-pointer"
-                        >
-                          Change File
-                        </button>
+                      {/* Stat Breakdown Pills */}
+                      <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-black/[0.04]">
+                        <span className="text-[10px] font-semibold text-[#5856d6] bg-[#5856d6]/10 px-2 py-0.5 rounded-full">
+                          {excelStats.work} Work Visa
+                        </span>
+                        <span className="text-[10px] font-semibold text-[#34c759] bg-[#34c759]/10 px-2 py-0.5 rounded-full">
+                          {excelStats.study} Study Visa
+                        </span>
+                        {excelStats.other > 0 && (
+                          <span className="text-[10px] font-semibold text-[#ff9500] bg-[#ff9500]/10 px-2 py-0.5 rounded-full">
+                            {excelStats.other} Other
+                          </span>
+                        )}
+                        <span className="text-[10px] font-semibold text-[#e1306c] bg-[#e1306c]/10 px-2 py-0.5 rounded-full">
+                          {excelStats.ig} Instagram
+                        </span>
+                        {excelStats.fb > 0 && (
+                          <span className="text-[10px] font-semibold text-[#1877f2] bg-[#1877f2]/10 px-2 py-0.5 rounded-full">
+                            {excelStats.fb} Facebook
+                          </span>
+                        )}
                       </div>
                     </div>
 
                     {/* Scrollable Preview Table */}
-                    <div className="border border-black/[0.08] rounded-xl overflow-hidden max-h-56 overflow-y-auto">
+                    <div className="border border-black/[0.08] rounded-xl overflow-hidden max-h-72 overflow-y-auto bg-white">
                       <table className="w-full text-left text-xs border-collapse">
                         <thead className="bg-[#fbfbfd] border-b border-black/[0.06] text-[11px] font-semibold text-[#8e8e93] sticky top-0 z-10">
                           <tr>
-                            <th className="py-2 px-3 w-8">#</th>
-                            <th className="py-2 px-3">Candidate</th>
-                            <th className="py-2 px-3">Phone</th>
-                            <th className="py-2 px-3">Email</th>
-                            <th className="py-2 px-3">Visa Program</th>
-                            <th className="py-2 px-3">City</th>
+                            <th className="py-2.5 px-3 w-8">#</th>
+                            <th className="py-2.5 px-3">Candidate</th>
+                            <th className="py-2.5 px-3">Contact</th>
+                            <th className="py-2.5 px-3">Location</th>
+                            <th className="py-2.5 px-3">Visa Desk</th>
+                            <th className="py-2.5 px-3">Platform</th>
+                            <th className="py-2.5 px-3">Survey & Profile</th>
+                            <th className="py-2.5 px-3">Campaign / Adset</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-black/[0.04]">
                           {previewRows.map((r, i) => (
                             <tr key={i} className="hover:bg-black/[0.02]">
-                              <td className="py-2 px-3 text-[#8e8e93] text-[10px] font-mono">{i + 1}</td>
-                              <td className="py-2 px-3 font-medium text-[#1c1c1e]">{r.name}</td>
-                              <td className="py-2 px-3 font-sf-mono text-[11px] text-[#3c3c43]">{r.phone || '—'}</td>
-                              <td className="py-2 px-3 text-[#8e8e93] truncate max-w-[130px]">{r.email || '—'}</td>
-                              <td className="py-2 px-3">
-                                {renderVisaBadge(r.visaType || excelDefaultVisaType)}
+                              <td className="py-2.5 px-3 text-[#8e8e93] text-[10px] font-mono">{i + 1}</td>
+                              <td className="py-2.5 px-3">
+                                <div className="font-semibold text-[#1c1c1e]">{r.name}</div>
+                                {r.externalId && (
+                                  <div className="text-[10px] text-[#8e8e93] font-mono truncate max-w-[110px]" title={r.externalId}>
+                                    ID: {r.externalId}
+                                  </div>
+                                )}
                               </td>
-                              <td className="py-2 px-3 text-[#8e8e93]">{r.city || '—'}</td>
+                              <td className="py-2.5 px-3">
+                                <div className="font-sf-mono text-[11px] text-[#3c3c43]">{r.phone || '—'}</div>
+                                <div className="text-[10px] text-[#8e8e93] truncate max-w-[130px]">{r.email || '—'}</div>
+                              </td>
+                              <td className="py-2.5 px-3 text-[#3c3c43] font-medium">{r.city || '—'}</td>
+                              <td className="py-2.5 px-3">
+                                {renderVisaBadge(
+                                  excelDefaultVisaType === 'AUTO' ? r.visaType : excelDefaultVisaType
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <span className={`inline-block text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                  r.platform === 'IG' ? 'bg-pink-100 text-pink-700' : 'bg-blue-100 text-blue-700'
+                                }`}>
+                                  {r.platform}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <div className="text-[11px] font-medium text-[#1c1c1e]">{r.qualification}</div>
+                                {r.surveyCgpa && (
+                                  <div className="text-[10px] text-[#8e8e93]">{r.surveyCgpa}</div>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <div className="text-[11px] font-medium text-[#1c1c1e] truncate max-w-[150px]" title={r.campaignName}>
+                                  {r.campaignName || 'Meta Ads'}
+                                </div>
+                                {r.adSetName && (
+                                  <div className="text-[10px] text-[#8e8e93] truncate max-w-[150px]" title={r.adSetName}>
+                                    {r.adSetName}
+                                  </div>
+                                )}
+                              </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
 
+                    {/* Progress Bar when Ingesting */}
+                    {importLoading && (
+                      <div className="space-y-1.5 p-3 rounded-xl bg-[#007aff]/[0.05] border border-[#007aff]/20">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-semibold text-[#007aff] flex items-center gap-1.5">
+                            <RefreshCw size={13} className="animate-spin" />
+                            <span>
+                              Loading {importProgress.current} of {importProgress.total} into CRM database...
+                            </span>
+                          </span>
+                          <span className="font-mono text-[11px] text-[#007aff] font-bold">
+                            {Math.round((importProgress.current / (importProgress.total || 1)) * 100)}%
+                          </span>
+                        </div>
+                        <div className="w-full h-1.5 bg-black/[0.08] rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-[#007aff] transition-all duration-150 rounded-full"
+                            style={{
+                              width: `${Math.round(
+                                (importProgress.current / (importProgress.total || 1)) * 100
+                              )}%`,
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Action Confirmation Footer */}
                     <div className="flex items-center justify-between pt-3 border-t border-[rgba(60,60,67,0.1)]">
                       <span className="text-[11px] text-[#8e8e93]">
                         {importLoading ? (
-                          <span className="text-[#007aff] font-medium flex items-center gap-1.5">
-                            <RefreshCw size={12} className="animate-spin" />
-                            <span>
-                              Loading {importProgress.current} of {importProgress.total} into DB...
-                            </span>
-                          </span>
+                          'Writing records and linking candidate preferences...'
                         ) : (
-                          `Verify information above before confirming.`
+                          `Verify columns above before confirming intake.`
                         )}
                       </span>
 
@@ -1986,7 +2405,7 @@ export default function Leads() {
                           {importLoading ? (
                             <>
                               <RefreshCw size={13} className="animate-spin" />
-                              <span>Loading into DB...</span>
+                              <span>Ingesting...</span>
                             </>
                           ) : (
                             <>
