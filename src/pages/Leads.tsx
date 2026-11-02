@@ -16,8 +16,6 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
-  CheckSquare,
-  Square,
   FileSpreadsheet,
   Globe,
   Shield,
@@ -135,8 +133,7 @@ export default function Leads() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(25);
 
-  // Selection & Bulk Actions
-  const [selectedLeadIds, setSelectedLeadIds] = useState<Set<number | string>>(new Set());
+
 
   // Slide-over Drawer Dossier & Modals
   const [dossierLead, setDossierLead] = useState<Lead | null>(null);
@@ -162,8 +159,6 @@ export default function Leads() {
   });
   const [importMethod, setImportMethod] = useState<'direct' | 'server'>('direct');
   const [skipDuplicates, setSkipDuplicates] = useState<boolean>(true);
-  const [bulkStatusModal, setBulkStatusModal] = useState<boolean>(false);
-  const [bulkStatus, setBulkStatus] = useState<string>('CONTACTED');
 
   useEffect(() => {
     if (!isAdmin && roleDesk && roleDesk !== 'ALL') {
@@ -359,49 +354,7 @@ export default function Leads() {
     return filteredLeads.slice(start, start + pageSize);
   }, [filteredLeads, currentPage, pageSize]);
 
-  // Selection handlers
-  const handleSelectAllOnPage = () => {
-    const pageIds = paginatedLeads.map((l) => l.id);
-    const allSelected = pageIds.every((id) => selectedLeadIds.has(id));
 
-    setSelectedLeadIds((prev) => {
-      const next = new Set(prev);
-      if (allSelected) {
-        pageIds.forEach((id) => next.delete(id));
-      } else {
-        pageIds.forEach((id) => next.add(id));
-      }
-      return next;
-    });
-  };
-
-  const handleToggleSelectRow = (id: number | string) => {
-    setSelectedLeadIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  // Bulk Status Update
-  const handleExecuteBulkStatus = async () => {
-    if (selectedLeadIds.size === 0) return;
-    setSubmitting(true);
-    try {
-      const promises = Array.from(selectedLeadIds).map((id) =>
-        crmService.updateLeadStatus(id, bulkStatus, `Bulk status update to ${bulkStatus}`)
-      );
-      await Promise.allSettled(promises);
-      setSelectedLeadIds(new Set());
-      setBulkStatusModal(false);
-      await fetchLeads();
-    } catch (err: any) {
-      showAlert({ title: 'App', message: `Bulk update completed with some errors: ${err?.message || 'Server error'}` });
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   const handleUpdateStatus = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -932,7 +885,7 @@ export default function Leads() {
     // Build fresh set of existing external IDs and phone numbers from database
     const existingExtIds = new Set<string>();
     const existingPhoneSet = new Set<string>();
-    const phoneToCustomerMap = new Map<string, number>();
+    const phoneToCustomerMap = new Map<string, any>();
 
     try {
       const allLeads = await crmService.getDetailedLeads();
@@ -1008,7 +961,7 @@ export default function Leads() {
           (last10 ? `+91${last10}` : `+910000${String(100000 + i).slice(-6)}`);
 
         // Check if a customer record with this phone number already exists to avoid redundant createCustomer API calls
-        let customerId: number | undefined = last10 ? phoneToCustomerMap.get(last10) : undefined;
+        let customerId: any = last10 ? phoneToCustomerMap.get(last10) : undefined;
         if (!customerId) {
           const customer = await crmService.createCustomer({
             fullName: row.name || 'Candidate Lead',
@@ -1252,8 +1205,6 @@ export default function Leads() {
     return 'Unassigned';
   };
 
-  const allPageIdsSelected = paginatedLeads.length > 0 && paginatedLeads.every((l) => selectedLeadIds.has(l.id));
-
   const excelStats = useMemo(() => {
     const work = previewRows.filter(
       (r) => (excelDefaultVisaType === 'AUTO' ? r.visaType : excelDefaultVisaType) === 'WORK_VISA'
@@ -1282,15 +1233,8 @@ export default function Leads() {
               {filteredLeads.length}
             </span>
           </div>
-          <p className="text-[12px] text-[#8e8e93] mt-0.5 flex items-center gap-1.5">
-            {isAdmin ? (
-              <span>Overseas Immigration & Admissions Global Directory</span>
-            ) : (
-              <>
-                <span className="w-1.5 h-1.5 rounded-full bg-[#34c759]"></span>
-                <span className="font-medium text-[#3c3c43]">{roleBadge.displayText} Scope</span>
-              </>
-            )}
+          <p className="text-[12px] text-[#8e8e93] mt-0.5">
+            Overseas Immigration & Admissions Global Directory
           </p>
         </div>
 
@@ -1306,6 +1250,7 @@ export default function Leads() {
             <FileSpreadsheet size={13} className="text-[#1366d9]" />
             <span>Import Excel</span>
           </button>
+
 
           <button
             onClick={() => fetchLeads()}
@@ -1453,38 +1398,7 @@ export default function Leads() {
         </div>
       </div>
 
-      {/* Bulk Action Bar (When rows are selected) */}
-      {selectedLeadIds.size > 0 && (
-        <div className="p-3 bg-[#1c1c1e] text-white rounded-2xl flex items-center justify-between shadow-lg animate-in fade-in text-xs">
-          <div className="flex items-center gap-2.5">
-            <span className="w-6 h-6 rounded-lg bg-white/15 flex items-center justify-center font-bold text-[11px]">
-              {selectedLeadIds.size}
-            </span>
-            <span className="font-semibold">candidates selected</span>
-          </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setBulkStatusModal(true)}
-              className="px-3 py-1 bg-white hover:bg-[#f2f2f7] text-[#1c1c1e] font-semibold rounded-lg shadow-xs"
-            >
-              Batch Update Stage
-            </button>
-            <button
-              onClick={handleExportCSV}
-              className="px-3 py-1 bg-white/10 hover:bg-white/15 text-white rounded-lg border border-white/10 font-medium"
-            >
-              Export Selected
-            </button>
-            <button
-              onClick={() => setSelectedLeadIds(new Set())}
-              className="text-[#8e8e93] hover:text-white px-2 py-1"
-            >
-              Deselect All
-            </button>
-          </div>
-        </div>
-      )}
 
       {error && (
         <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center justify-between">
@@ -1504,15 +1418,6 @@ export default function Leads() {
           <table className="w-full text-left text-xs border-collapse min-w-[1300px]">
             <thead>
               <tr className="bg-[#fbfbfd] border-b border-black/[0.06] text-[11px] font-semibold text-[#8e8e93] select-none">
-                <th className="py-3 px-3.5 w-8">
-                  <button
-                    onClick={handleSelectAllOnPage}
-                    className="text-[#8e8e93] hover:text-[#1c1c1e]"
-                    title="Select all on this page"
-                  >
-                    {allPageIdsSelected ? <CheckSquare size={14} className="text-[#007aff]" /> : <Square size={14} className="text-[#c7c7cc]" />}
-                  </button>
-                </th>
                 <th className="py-3 px-3.5 whitespace-nowrap">Lead Source</th>
                 <th className="py-3 px-3.5 whitespace-nowrap">Campaign Name</th>
                 <th className="py-3 px-3.5 whitespace-nowrap">Candidate Name</th>
@@ -1531,7 +1436,7 @@ export default function Leads() {
             <tbody className="divide-y divide-black/[0.04]">
               {paginatedLeads.length === 0 ? (
                 <tr>
-                  <td colSpan={14} className="py-12 text-center text-[#8e8e93]">
+                  <td colSpan={13} className="py-12 text-center text-[#8e8e93]">
                     {loading ? (
                       <span className="flex items-center justify-center gap-2">
                         <RefreshCw size={15} className="animate-spin text-[#1c1c1e]" />
@@ -1549,31 +1454,14 @@ export default function Leads() {
                 </tr>
               ) : (
                 paginatedLeads.map((lead) => {
-                  const isSelected = selectedLeadIds.has(lead.id);
                   const plat = (lead.platform && PLATFORMS[lead.platform]) || PLATFORMS.OTHER;
 
                   return (
                     <tr
                       key={lead.id}
                       onClick={() => navigate(`/leads/${lead.id}`)}
-                      className={`hover:bg-[#007aff]/[0.02] transition-colors cursor-pointer group ${
-                        isSelected ? 'bg-[#007aff]/[0.05]' : ''
-                      }`}
+                      className="hover:bg-[#007aff]/[0.02] transition-colors cursor-pointer group"
                     >
-                      {/* Checkbox */}
-                      <td className="py-3 px-3.5" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          onClick={() => handleToggleSelectRow(lead.id)}
-                          className="text-[#8e8e93] hover:text-[#1c1c1e] transition-colors"
-                        >
-                          {isSelected ? (
-                            <CheckSquare size={14} className="text-[#007aff]" />
-                          ) : (
-                            <Square size={14} className="text-[#c7c7cc]" />
-                          )}
-                        </button>
-                      </td>
-
                       {/* Lead Source */}
                       <td className="py-3 px-3.5 whitespace-nowrap">
                         <span className="font-semibold text-xs text-[#1c1c1e]">
@@ -2073,92 +1961,7 @@ export default function Leads() {
         </div>
       )}
 
-      {/* Bulk Stage Update Modal (Zoho CRM Modal & Field UI) */}
-      {bulkStatusModal && (
-        <div className="zoho-modal-backdrop">
-          <div className="zoho-modal-card max-w-lg animate-in zoom-in-95">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-base font-bold text-slate-900 tracking-tight">
-                Batch Update Stage
-              </h3>
-              <button
-                type="button"
-                onClick={() => setBulkStatusModal(false)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded transition-colors"
-                aria-label="Close"
-              >
-                <X size={16} />
-              </button>
-            </div>
 
-            <div className="text-xs font-semibold text-slate-500 mt-3 mb-4">
-              Order Information
-            </div>
-
-            <div className="text-xs">
-              {/* Selected Candidates Count */}
-              <div className="zoho-form-row">
-                <label className="zoho-form-label" title="Selected Count">
-                  Candidate Count
-                </label>
-                <div className="flex-1">
-                  <input
-                    type="text"
-                    disabled
-                    value={`${selectedLeadIds.size} candidates selected`}
-                    className="ios-input w-full text-slate-700 opacity-90 cursor-not-allowed font-medium"
-                  />
-                </div>
-              </div>
-
-              {/* Target Stage (Dropdown) */}
-              <div className="zoho-form-row">
-                <label className="zoho-form-label" title="Target Stage">
-                  Target Stage
-                </label>
-                <div className="flex-1">
-                  <select
-                    value={bulkStatus}
-                    onChange={(e) => setBulkStatus(e.target.value)}
-                    className="zoho-select font-medium"
-                  >
-                    {LEAD_STATUS_LIST.map((st) => (
-                      <option key={st.value} value={st.value}>{st.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Date and Time */}
-              <div className="zoho-form-row">
-                <label className="zoho-form-label" title="Date and Time">
-                  Date and Time of ...
-                </label>
-                <div className="flex-1 flex rounded-md overflow-hidden border border-[#d0dcf0] bg-[#edf2f9]">
-                  <div className="flex-1 px-3 py-2 border-r border-[#d0dcf0] text-xs text-slate-800 bg-[#edf2f9]">
-                    {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </div>
-                  <div className="w-28 px-3 py-2 text-xs text-slate-800 bg-[#edf2f9] text-center font-medium">
-                    {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={handleExecuteBulkStatus}
-                  disabled={submitting}
-                  className="zoho-btn-done"
-                >
-                  {submitting ? 'Updating...' : 'Done'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Create New Candidate Modal (Zoho CRM Enterprise Intake & Meta Import) */}
       {showAddModal && (

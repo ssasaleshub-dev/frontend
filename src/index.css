@@ -1,6 +1,10 @@
-@import url('https://fonts.cdnfonts.com/css/sf-pro-display');
-@import url('https://db.onlinewebfonts.com/c/8fa3fbe581b8ac8669ed4854f9deda38?family=SF+Arabic');
 @import "tailwindcss";
+
+@theme {
+  --default-font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  --font-sans: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  --font-sf-display: Arial, "Helvetica Neue", Helvetica, sans-serif;
+}
 
 @layer base {
   :root {
@@ -26,39 +30,40 @@
     --ios-separator: rgba(60, 60, 67, 0.12);
   }
 
-  body {
+  html,
+  body,
+  #root {
     background-color: #f8fafc;
     color: #1e293b;
     min-height: 100vh;
-    font-family: 'Open Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: Arial, "Helvetica Neue", Helvetica, sans-serif !important;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    letter-spacing: -0.01em;
+    letter-spacing: normal;
+  }
+
+  *,
+  *::before,
+  *::after {
+    font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  }
+
+  button,
+  input,
+  optgroup,
+  select,
+  textarea {
+    font-family: Arial, "Helvetica Neue", Helvetica, sans-serif !important;
   }
 }
 
-/* Zoho CRM Enterprise Typography */
-.font-zoho {
-  font-family: 'Open Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-}
-
-/* ==========================================================================
-   Apple San Francisco (SF) Typography Tokens
-   ========================================================================== */
-.font-sf-display {
-  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-}
-
-.font-sf-arabic {
-  font-family: 'SF Arabic', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-}
-
-.font-sf-rounded {
-  font-family: 'SF Pro Rounded', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-}
-
+/* Universal Typography Tokens - Default Arial */
+.font-zoho,
+.font-sf-display,
+.font-sf-arabic,
+.font-sf-rounded,
 .font-sf-mono {
-  font-family: 'SF Mono', Menlo, Monaco, Consolas, ui-monospace, monospace;
+  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif !important;
 }
 
 /* ==========================================================================
@@ -145,7 +150,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  font-family: 'Open Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
   font-size: 13px;
   font-weight: 500;
   line-height: 1.25;
@@ -178,7 +183,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  font-family: 'Open Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
   font-size: 13px;
   font-weight: 500;
   line-height: 1.25;
@@ -211,7 +216,7 @@
 }
 
 .zoho-select, .zoho-input {
-  font-family: 'Open Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
   font-size: 12px;
   color: #2c3e50;
   background-color: #ffffff;

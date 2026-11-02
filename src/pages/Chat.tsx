@@ -34,7 +34,6 @@ export default function Chat() {
   const [sending, setSending] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [apiNotice, setApiNotice] = useState<string | null>(null);
-  const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
 
   // File upload state for attachments
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -144,12 +143,11 @@ export default function Chat() {
   }, [fetchMessages]);
 
   useEffect(() => {
-    if (!autoRefresh) return;
     const interval = setInterval(() => {
       fetchMessages(true);
     }, 4000);
     return () => clearInterval(interval);
-  }, [autoRefresh, fetchMessages]);
+  }, [fetchMessages]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -552,20 +550,7 @@ export default function Chat() {
             )}
           </div>
 
-          {/* Auto Refresh Footer */}
-          <div className="p-3 border-t border-[rgba(60,60,67,0.08)] bg-white/70 flex items-center justify-between text-[11px] text-[#8e8e93]">
-            <span>Auto-Refresh</span>
-            <button
-              onClick={() => setAutoRefresh(!autoRefresh)}
-              className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full transition-all cursor-pointer ${
-                autoRefresh
-                  ? 'bg-[#34c759] text-white'
-                  : 'bg-black/[0.06] text-[#8e8e93]'
-              }`}
-            >
-              {autoRefresh ? 'ON' : 'OFF'}
-            </button>
-          </div>
+
         </div>
 
         {/* Right Conversation View: Authentic Apple iMessage Layout */}

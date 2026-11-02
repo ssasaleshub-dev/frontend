@@ -179,9 +179,6 @@ export default function CalendarPage() {
             <h1 className="text-xl font-bold tracking-tight text-[#1d1d1f]">
               Calendar & Reminders
             </h1>
-            <span className="px-2.5 py-0.5 bg-amber-500/10 text-amber-900 border border-amber-500/20 text-[10px] font-semibold rounded-full uppercase tracking-wider flex items-center gap-1">
-              <span>🇮🇳</span> Indian Calendar (IST)
-            </span>
           </div>
           <p className="text-[12px] text-[#86868b] mt-0.5 font-normal">
             Counselor callback schedules, appointments, and Indian public holidays.

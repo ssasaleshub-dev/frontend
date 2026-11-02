@@ -192,6 +192,15 @@ export default function Login() {
                   )}
                 </button>
               </div>
+
+              <div className="text-center pt-2">
+                <a
+                  href="/privacy"
+                  className="text-[11px] text-[#8e8e93] hover:text-[#1c1c1e] transition underline underline-offset-2"
+                >
+                  Privacy Policy
+                </a>
+              </div>
             </form>
           </div>
         </div>

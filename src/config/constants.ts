@@ -1,8 +1,12 @@
+import { Capacitor } from '@capacitor/core';
+
 /**
  * Application Constants for Overseas Work & Study Visa Consultancy CRM
  */
 
-export const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL || '';
+export const API_BASE_URL: string =
+  import.meta.env.VITE_API_BASE_URL ||
+  (Capacitor.isNativePlatform() ? 'http://api.ssasaleshub.cloud:8080' : '');
 
 export const STORAGE_KEYS = {
   TOKEN: 'ssa_id_token',
