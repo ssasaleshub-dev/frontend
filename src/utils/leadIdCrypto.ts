@@ -129,3 +129,4 @@ export function formatMaskedLeadRef(id: number | string | undefined | null): str
   const enc = encryptLeadId(id);
   return `SSA-${enc.replace(/^e_/, '')}`;
 }
+

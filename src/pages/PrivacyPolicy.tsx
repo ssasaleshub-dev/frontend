@@ -119,7 +119,7 @@ export default function PrivacyPolicy() {
               </div>
               <div className="flex items-center gap-2">
                 <Globe className="w-4 h-4 text-blue-600" />
-                <span>https://ssasaleshub.pages.dev</span>
+                <span>https://www.ssasaleshub.cloud</span>
               </div>
             </div>
           </div>
