@@ -106,3 +106,18 @@ export interface AuthContextType {
   logout: () => void;
   updateUserAvatar: (imageUrl: string) => Promise<void>;
 }
+
+export interface LeadActivity {
+  id: string | number;
+  leadId: string | number;
+  userName: string;
+  userRole?: string;
+  actionType: 'STATUS_CHANGE' | 'DATA_MODIFY' | 'REMARKS_ADDED' | 'OUTREACH' | 'ASSIGNMENT' | 'CREATED';
+  title: string;
+  description: string;
+  fieldChanged?: string;
+  oldValue?: string;
+  newValue?: string;
+  timestamp: string;
+  metadata?: Record<string, any>;
+}

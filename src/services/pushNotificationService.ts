@@ -13,6 +13,7 @@ import {
 } from '@capacitor/push-notifications';
 import axiosClient from './api/axiosClient';
 import reminderNotificationService from './reminderNotificationService';
+import { encryptLeadId } from '../utils/leadIdCrypto';
 
 const FCM_TOKEN_STORAGE_KEY = 'ssa_fcm_token';
 
@@ -95,7 +96,7 @@ class PushNotificationService {
           // Dispatch route navigation event for React Router
           if (data.leadId) {
             window.dispatchEvent(
-              new CustomEvent('ssa_navigate_to', { detail: { path: `/leads/${data.leadId}` } })
+              new CustomEvent('ssa_navigate_to', { detail: { path: `/leads/${encryptLeadId(data.leadId)}` } })
             );
           } else if (data.eventId) {
             window.dispatchEvent(
@@ -141,20 +142,32 @@ class PushNotificationService {
   /**
    * Synchronize the FCM token with the backend server
    */
-  public async syncTokenWithBackend(token: string): Promise<void> {
+  public async syncTokenWithBackend(token: string, userId?: string): Promise<void> {
     try {
-      const payload = {
+      const storedUser = localStorage.getItem('ssa_user');
+      let currentUserId = userId;
+      if (!currentUserId && storedUser) {
+        try {
+          const parsed = JSON.parse(storedUser);
+          currentUserId = parsed.login;
+        } catch {}
+      }
+
+      const payload: any = {
         token,
         platform: Capacitor.getPlatform(),
         updatedAt: new Date().toISOString(),
       };
+      if (currentUserId) {
+        payload.userId = currentUserId;
+      }
 
       // Try sending to standard backend FCM registration endpoint if available
       await axiosClient.post('/api/notifications/fcm-token', payload).catch(() => {
         // Fallback for custom backend routes
         return axiosClient.post('/api/account/fcm-token', payload);
       });
-      console.info('[PushNotifications] FCM token successfully synced to backend.');
+      console.info('[PushNotifications] FCM token successfully synced to backend for user:', currentUserId);
     } catch {
       // Backend may not have endpoint ready yet - silent fail gracefully
       console.warn('[PushNotifications] Backend token sync deferred until API endpoint available.');

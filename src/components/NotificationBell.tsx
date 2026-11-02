@@ -13,6 +13,7 @@ import {
 import reminderNotificationService, {
   NotificationItem,
 } from '../services/reminderNotificationService';
+import { encryptLeadId } from '../utils/leadIdCrypto';
 
 export default function NotificationBell() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -85,7 +86,7 @@ export default function NotificationBell() {
     if (item.type === 'REMINDER' || item.referenceType === 'EVENT') {
       navigate('/calendar');
     } else if (item.referenceType === 'LEAD' && item.referenceId) {
-      navigate(`/leads/${item.referenceId}`);
+      navigate(`/leads/${encryptLeadId(item.referenceId)}`);
     }
   };
 

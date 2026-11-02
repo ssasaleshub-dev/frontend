@@ -1,0 +1,299 @@
+/* ==========================================================================
+   Apple Typography System (SF Pro, SF Compact, SF Mono, SF Rounded, New York)
+   Downloaded from Apple Developer Typography Suite
+   ========================================================================== */
+
+/* SF Pro Display - 100 Ultralight */
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('/fonts/sf-pro/SFProDisplay-Ultralight.woff2') format('woff2'),
+       url('/fonts/sf-pro/SFProDisplay-Ultralight.ttf') format('truetype');
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('/fonts/sf-pro/SFProDisplay-UltralightItalic.woff2') format('woff2'),
+       url('/fonts/sf-pro/SFProDisplay-UltralightItalic.ttf') format('truetype');
+  font-weight: 100;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* SF Pro Display - 200 Thin */
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('/fonts/sf-pro/SFProDisplay-Thin.woff2') format('woff2'),
+       url('/fonts/sf-pro/SFProDisplay-Thin.ttf') format('truetype');
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('/fonts/sf-pro/SFProDisplay-ThinItalic.woff2') format('woff2'),
+       url('/fonts/sf-pro/SFProDisplay-ThinItalic.ttf') format('truetype');
+  font-weight: 200;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* SF Pro Display - 300 Light */
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('/fonts/sf-pro/SFProDisplay-Light.woff2') format('woff2'),
+       url('/fonts/sf-pro/SFProDisplay-Light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('/fonts/sf-pro/SFProDisplay-LightItalic.woff2') format('woff2'),
+       url('/fonts/sf-pro/SFProDisplay-LightItalic.ttf') format('truetype');
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* SF Pro Display - 400 Regular (Default) */
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('/fonts/sf-pro/SFProDisplay-Regular.woff2') format('woff2'),
+       url('/fonts/sf-pro/SFProDisplay-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('/fonts/sf-pro/SFProDisplay-RegularItalic.woff2') format('woff2'),
+       url('/fonts/sf-pro/SFProDisplay-RegularItalic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* SF Pro Display - 500 Medium */
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('/fonts/sf-pro/SFProDisplay-Medium.woff2') format('woff2'),
+       url('/fonts/sf-pro/SFProDisplay-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('/fonts/sf-pro/SFProDisplay-MediumItalic.woff2') format('woff2'),
+       url('/fonts/sf-pro/SFProDisplay-MediumItalic.ttf') format('truetype');
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* SF Pro Display - 600 Semibold */
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('/fonts/sf-pro/SFProDisplay-Semibold.woff2') format('woff2'),
+       url('/fonts/sf-pro/SFProDisplay-Semibold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('/fonts/sf-pro/SFProDisplay-SemiboldItalic.woff2') format('woff2'),
+       url('/fonts/sf-pro/SFProDisplay-SemiboldItalic.ttf') format('truetype');
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* SF Pro Display - 700 Bold */
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('/fonts/sf-pro/SFProDisplay-Bold.woff2') format('woff2'),
+       url('/fonts/sf-pro/SFProDisplay-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('/fonts/sf-pro/SFProDisplay-BoldItalic.woff2') format('woff2'),
+       url('/fonts/sf-pro/SFProDisplay-BoldItalic.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* SF Pro Display - 800 Heavy */
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('/fonts/sf-pro/SFProDisplay-Heavy.woff2') format('woff2'),
+       url('/fonts/sf-pro/SFProDisplay-Heavy.ttf') format('truetype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('/fonts/sf-pro/SFProDisplay-HeavyItalic.woff2') format('woff2'),
+       url('/fonts/sf-pro/SFProDisplay-HeavyItalic.ttf') format('truetype');
+  font-weight: 800;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* SF Pro Display - 900 Black */
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('/fonts/sf-pro/SFProDisplay-Black.woff2') format('woff2'),
+       url('/fonts/sf-pro/SFProDisplay-Black.ttf') format('truetype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('/fonts/sf-pro/SFProDisplay-BlackItalic.woff2') format('woff2'),
+       url('/fonts/sf-pro/SFProDisplay-BlackItalic.ttf') format('truetype');
+  font-weight: 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Map 'SF Pro' family name directly to SF Pro Display */
+@font-face {
+  font-family: 'SF Pro';
+  src: url('/fonts/sf-pro/SFProDisplay-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'SF Pro';
+  src: url('/fonts/sf-pro/SFProDisplay-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'SF Pro';
+  src: url('/fonts/sf-pro/SFProDisplay-Semibold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'SF Pro';
+  src: url('/fonts/sf-pro/SFProDisplay-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+}
+
+/* SF Pro Rounded */
+@font-face {
+  font-family: 'SF Pro Rounded';
+  src: url('/fonts/sf-rounded/SF-Pro-Rounded-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SF Pro Rounded';
+  src: url('/fonts/sf-rounded/SF-Pro-Rounded-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SF Pro Rounded';
+  src: url('/fonts/sf-rounded/SF-Pro-Rounded-Semibold.otf') format('opentype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SF Pro Rounded';
+  src: url('/fonts/sf-rounded/SF-Pro-Rounded-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* SF Mono */
+@font-face {
+  font-family: 'SF Mono';
+  src: url('/fonts/sf-mono/SF-Mono-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SF Mono';
+  src: url('/fonts/sf-mono/SF-Mono-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SF Mono';
+  src: url('/fonts/sf-mono/SF-Mono-Semibold.otf') format('opentype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SF Mono';
+  src: url('/fonts/sf-mono/SF-Mono-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* SF Compact */
+@font-face {
+  font-family: 'SF Compact';
+  src: url('/fonts/sf-compact/SF-Compact-Display-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SF Compact';
+  src: url('/fonts/sf-compact/SF-Compact-Display-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SF Compact';
+  src: url('/fonts/sf-compact/SF-Compact-Display-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* New York (Apple Serif Companion) */
+@font-face {
+  font-family: 'New York';
+  src: url('/fonts/new-york/NewYorkMedium-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'New York';
+  src: url('/fonts/new-york/NewYorkMedium-Semibold.otf') format('opentype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'New York';
+  src: url('/fonts/new-york/NewYorkMedium-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+

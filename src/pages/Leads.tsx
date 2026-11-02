@@ -51,6 +51,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useAlert } from '../context/AlertContext';
 import { Lead } from '../types';
+import { encryptLeadId, formatMaskedLeadRef } from '../utils/leadIdCrypto';
 
 export interface ParsedLeadPreview {
   id: number;
@@ -179,7 +180,7 @@ export default function Leads() {
   useEffect(() => {
     const idParam = searchParams.get('id');
     if (idParam) {
-      navigate(`/leads/${idParam}`, { replace: true });
+      navigate(`/leads/${encryptLeadId(idParam)}`, { replace: true });
     }
   }, [searchParams, navigate]);
 
@@ -1459,7 +1460,7 @@ export default function Leads() {
                   return (
                     <tr
                       key={lead.id}
-                      onClick={() => navigate(`/leads/${lead.id}`)}
+                      onClick={() => navigate(`/leads/${encryptLeadId(lead.id)}`)}
                       className="hover:bg-[#007aff]/[0.02] transition-colors cursor-pointer group"
                     >
                       {/* Lead Source */}
@@ -1574,7 +1575,7 @@ export default function Leads() {
                             </>
                           )}
                           <button
-                            onClick={() => navigate(`/leads/${lead.id}`)}
+                            onClick={() => navigate(`/leads/${encryptLeadId(lead.id)}`)}
                             title="Inspect Candidate Dossier"
                             className="w-7 h-7 rounded-lg flex items-center justify-center text-[#8e8e93] hover:text-[#1c1c1e] hover:bg-black/[0.05] transition-colors"
                           >
@@ -1823,7 +1824,7 @@ export default function Leads() {
                     onClick={() => {
                       const cid = dossierLead.id;
                       setDossierLead(null);
-                      navigate(`/leads/${cid}`);
+                      navigate(`/leads/${encryptLeadId(cid)}`);
                     }}
                     className="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 rounded-xl font-semibold border border-slate-300 transition-colors flex items-center gap-1"
                   >

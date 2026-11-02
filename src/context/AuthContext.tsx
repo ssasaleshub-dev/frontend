@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
 import authService from '../services/api/authService';
+import pushNotificationService from '../services/pushNotificationService';
 import type { User, AuthContextType } from '../types';
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -18,6 +19,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           if (account) {
             setUser(account);
             localStorage.setItem('ssa_user', JSON.stringify(account));
+            const storedFcm = pushNotificationService.getStoredToken();
+            if (storedFcm) {
+              pushNotificationService.syncTokenWithBackend(storedFcm, account.login);
+            }
           }
         })
         .catch(() => {
@@ -34,6 +39,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const data = await authService.login(username, password, rememberMe);
     setToken(data.token);
     setUser(data.user);
+    const storedFcm = pushNotificationService.getStoredToken();
+    if (storedFcm) {
+      pushNotificationService.syncTokenWithBackend(storedFcm, data.user?.login);
+    }
     return data;
   };
 

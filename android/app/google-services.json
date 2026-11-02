@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "100000000000",
-    "project_id": "ssa-sales-hub",
-    "storage_bucket": "ssa-sales-hub.appspot.com"
+    "project_number": "1008334698693",
+    "project_id": "ssa-saleshub",
+    "storage_bucket": "ssa-saleshub.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:100000000000:android:0123456789abcdef012345",
+        "mobilesdk_app_id": "1:1008334698693:android:f67d23180c523c1bde98ac",
         "android_client_info": {
           "package_name": "com.ssasaleshub.crm"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDummyKeyReplaceWithYourFirebaseKey123"
+          "current_key": "AIzaSyB_cXNlWPdMGTg7ctsQ6YQfbX5dw_XqPzU"
         }
       ],
       "services": {
@@ -27,4 +27,3 @@
   ],
   "configuration_version": "1"
 }
-

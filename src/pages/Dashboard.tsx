@@ -40,6 +40,7 @@ import {
 } from '../utils/rbac';
 import { useAuth } from '../context/AuthContext';
 import { Lead, LeadAnalytics } from '../types';
+import { encryptLeadId, formatMaskedLeadRef } from '../utils/leadIdCrypto';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -931,12 +932,12 @@ export default function Dashboard() {
                     <tr
                       key={lead.id}
                       className="hover:bg-[#007aff]/[0.03] transition-colors cursor-pointer group"
-                      onClick={() => navigate(`/leads/${lead.id}`)}
+                      onClick={() => navigate(`/leads/${encryptLeadId(lead.id)}`)}
                     >
                       {/* Candidate */}
                       <td className="py-3.5 px-4">
                         <div className="font-semibold text-[#1c1c1e] group-hover:text-[#007aff] transition-colors">
-                          {lead.customerName || `Candidate #${lead.id}`}
+                          {lead.customerName || `Candidate #${formatMaskedLeadRef(lead.id)}`}
                         </div>
                         {lead.email && (
                           <div className="text-[11px] text-[#8e8e93] truncate max-w-[160px]">{lead.email}</div>

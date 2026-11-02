@@ -25,9 +25,13 @@ import {
   FileText,
   ThumbsUp,
   ThumbsDown,
+  History,
+  Clock,
 } from 'lucide-react';
 import crmService from '../services/api/crmService';
 import adminService from '../services/api/adminService';
+import leadActivityService from '../services/api/leadActivityService';
+import CandidateActivityLogsModal from '../components/CandidateActivityLogsModal';
 import {
   PLATFORMS,
   LEAD_STATUSES,
@@ -39,12 +43,25 @@ import {
 } from '../config/constants';
 import { isAdmin as checkIsAdmin } from '../utils/rbac';
 import { useAuth } from '../context/AuthContext';
-import { Lead } from '../types';
+import { Lead, LeadActivity } from '../types';
+import { encryptLeadId, decryptLeadId, formatMaskedLeadRef } from '../utils/leadIdCrypto';
 
 export default function CandidateDetail() {
-  const { id } = useParams<{ id: string }>();
+  const { id: rawParamId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
+
+  const resolvedLeadId = decryptLeadId(rawParamId);
+
+  // Silently and immediately replace open numeric database ID with encrypted token in the URL bar
+  useEffect(() => {
+    if (rawParamId && resolvedLeadId) {
+      const encrypted = encryptLeadId(resolvedLeadId);
+      if (rawParamId !== encrypted) {
+        navigate(`/leads/${encrypted}`, { replace: true });
+      }
+    }
+  }, [rawParamId, resolvedLeadId, navigate]);
 
   const isAdmin = checkIsAdmin(currentUser);
   const [availableStaff, setAvailableStaff] = useState<Array<{ login: string; name?: string }>>([]);
@@ -58,6 +75,10 @@ export default function CandidateDetail() {
   const [newNote, setNewNote] = useState<string>('');
   const [notesHistory, setNotesHistory] = useState<Array<{ note: string; date: string; author: string }>>([]);
 
+  // Activity & Audit Logs
+  const [activities, setActivities] = useState<LeadActivity[]>([]);
+  const [showActivityLogsModal, setShowActivityLogsModal] = useState<boolean>(false);
+
   // Modals
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
   const [showWhatsAppTemplateModal, setShowWhatsAppTemplateModal] = useState<boolean>(false);
@@ -68,30 +89,38 @@ export default function CandidateDetail() {
   const hasLoadedRef = useRef<boolean>(false);
 
   const fetchCandidate = useCallback(async () => {
-    if (!id) return;
+    const targetId = resolvedLeadId;
+    if (!targetId) {
+      setError('Invalid or expired candidate link.');
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
+
+    // Fetch activities in parallel
+    leadActivityService.getActivities(targetId).then(setActivities).catch(() => {});
     try {
       let candidateData: Lead | null = null;
       try {
-        candidateData = await crmService.getDetailedLeadById(id);
+        candidateData = await crmService.getDetailedLeadById(targetId);
       } catch {
         // Fallback: search in detailed leads array
         const all = await crmService.getDetailedLeads();
         const found = (Array.isArray(all) ? all : []).find(
-          (l) => String(l.id) === String(id) || l.externalId === String(id)
+          (l) => Number(l.id) === Number(targetId) || l.externalId === String(targetId)
         );
         if (found) {
           candidateData = found;
         } else {
-          throw new Error(`Candidate #${id} could not be found.`);
+          throw new Error(`Candidate #${formatMaskedLeadRef(targetId)} could not be found.`);
         }
       }
 
       if (candidateData) {
         // Enforce role-based access for non-admin counselors
         if (!isAdmin && filterLeadsByUserRole([candidateData], currentUser).length === 0) {
-          throw new Error(`Access restricted: Candidate #${id} belongs to a different visa desk outside your assigned scope.`);
+          throw new Error(`Access restricted: Candidate belongs to a different visa desk outside your assigned scope.`);
         }
 
         setLead(candidateData);
@@ -127,14 +156,28 @@ export default function CandidateDetail() {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [resolvedLeadId, isAdmin, currentUser]);
 
   useEffect(() => {
-    if (!hasLoadedRef.current) {
-      hasLoadedRef.current = true;
-      fetchCandidate();
-    }
+    fetchCandidate();
   }, [fetchCandidate]);
+
+  useEffect(() => {
+    const handleActivityLogged = (e: any) => {
+      const targetId = resolvedLeadId;
+      if (
+        (String(e.detail?.leadId) === String(targetId) || String(e.detail?.leadId) === String(rawParamId)) &&
+        e.detail?.activity
+      ) {
+        setActivities((prev) => [
+          e.detail.activity,
+          ...prev.filter((a) => a.id !== e.detail.activity.id),
+        ]);
+      }
+    };
+    window.addEventListener('ssa_lead_activity_logged', handleActivityLogged);
+    return () => window.removeEventListener('ssa_lead_activity_logged', handleActivityLogged);
+  }, [resolvedLeadId, rawParamId]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -158,11 +201,25 @@ export default function CandidateDetail() {
 
   const handleAssignStaff = async (newAssignee: string) => {
     if (!lead) return;
+    const oldAssignee = lead.assignedTo || 'Unassigned';
+    if (oldAssignee === newAssignee) return;
+
     setAssigningStaff(true);
     try {
       await crmService.assignLead(lead.id, newAssignee);
       setLead({ ...lead, assignedTo: newAssignee });
       window.dispatchEvent(new CustomEvent('crm-data-updated'));
+
+      leadActivityService.logActivity(lead.id, {
+        userName: currentUser?.login || currentUser?.firstName || 'Admin',
+        userRole: currentUser?.authorities?.[0],
+        actionType: 'ASSIGNMENT',
+        title: 'Counselor Assignment Updated',
+        description: `Candidate dossier reassigned from ${oldAssignee} to ${newAssignee}.`,
+        fieldChanged: 'assignedTo',
+        oldValue: oldAssignee,
+        newValue: newAssignee,
+      });
     } catch (err: any) {
       alert(`Staff assignment failed: ${err?.message || 'Server error'}`);
     } finally {
@@ -179,10 +236,27 @@ export default function CandidateDetail() {
 
   const handleStatusChange = async (newStatus: string) => {
     if (!lead) return;
+    const oldStatus = lead.status || 'CREATED';
+    if (oldStatus === newStatus) return;
+
+    const oldStatusLabel = LEAD_STATUSES[oldStatus]?.label || oldStatus;
+    const newStatusLabel = LEAD_STATUSES[newStatus]?.label || newStatus;
+
     try {
       await crmService.updateLeadStatus(lead.id, newStatus, lead.notes || '');
       setLead({ ...lead, status: newStatus });
       window.dispatchEvent(new CustomEvent('crm-data-updated'));
+
+      leadActivityService.logActivity(lead.id, {
+        userName: currentUser?.login || currentUser?.firstName || 'Counselor',
+        userRole: currentUser?.authorities?.[0],
+        actionType: 'STATUS_CHANGE',
+        title: 'Pipeline Stage Transition',
+        description: `Counselor transitioned candidate stage from "${oldStatusLabel}" to "${newStatusLabel}".`,
+        fieldChanged: 'status',
+        oldValue: oldStatusLabel,
+        newValue: newStatusLabel,
+      });
     } catch (err: any) {
       alert(`Status update failed: ${err?.message || 'Server error'}`);
     }
@@ -191,17 +265,18 @@ export default function CandidateDetail() {
   const handleAddNote = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newNote.trim() || !lead) return;
+    const noteText = newNote.trim();
     setSubmittingNote(true);
     try {
       const combinedNotes = lead.notes
-        ? `${lead.notes} | ${newNote.trim()}`
-        : newNote.trim();
+        ? `${lead.notes} | ${noteText}`
+        : noteText;
 
       await crmService.updateLeadStatus(lead.id, lead.status || 'CONTACTED', combinedNotes);
 
       setNotesHistory((prev) => [
         {
-          note: newNote.trim(),
+          note: noteText,
           date: new Date().toISOString(),
           author: currentUser?.firstName || currentUser?.login || 'You',
         },
@@ -211,6 +286,15 @@ export default function CandidateDetail() {
       setLead({ ...lead, notes: combinedNotes });
       setNewNote('');
       window.dispatchEvent(new CustomEvent('crm-data-updated'));
+
+      leadActivityService.logActivity(lead.id, {
+        userName: currentUser?.login || currentUser?.firstName || 'Counselor',
+        userRole: currentUser?.authorities?.[0],
+        actionType: 'REMARKS_ADDED',
+        title: 'Counselor Remark Recorded',
+        description: noteText,
+        fieldChanged: 'notes',
+      });
     } catch (err: any) {
       alert(`Failed to record discussion note: ${err?.message || 'Server error'}`);
     } finally {
@@ -243,6 +327,36 @@ export default function CandidateDetail() {
     e.preventDefault();
     if (!lead) return;
     setSavingEdit(true);
+
+    // Compute diff of modified fields
+    const changes: string[] = [];
+    if (editFormData.customerName && editFormData.customerName !== lead.customerName) {
+      changes.push(`Name: "${lead.customerName || 'None'}" → "${editFormData.customerName}"`);
+    }
+    if (editFormData.phoneNumber && editFormData.phoneNumber !== lead.phoneNumber) {
+      changes.push(`Phone: "${lead.phoneNumber || 'None'}" → "${editFormData.phoneNumber}"`);
+    }
+    if (editFormData.city !== undefined && editFormData.city !== (lead.city || lead.location)) {
+      changes.push(`Location: "${lead.city || lead.location || 'None'}" → "${editFormData.city}"`);
+    }
+    if (editFormData.visaType && editFormData.visaType !== lead.visaType) {
+      changes.push(`Visa Type: "${lead.visaType}" → "${editFormData.visaType}"`);
+    }
+    if (
+      editFormData.educationalQualification !== undefined &&
+      editFormData.educationalQualification !== lead.educationalQualification
+    ) {
+      changes.push(
+        `Education: "${lead.educationalQualification || 'None'}" → "${editFormData.educationalQualification}"`
+      );
+    }
+    if (editFormData.age !== undefined && editFormData.age !== lead.age) {
+      changes.push(`Age: "${lead.age || 'None'}" → "${editFormData.age}"`);
+    }
+    if (editFormData.leadConfirm !== undefined && editFormData.leadConfirm !== lead.leadConfirm) {
+      changes.push(`Confirmation: "${lead.leadConfirm}" → "${editFormData.leadConfirm}"`);
+    }
+
     try {
       // 1. Update customer profile
       if (lead.customerId) {
@@ -271,6 +385,16 @@ export default function CandidateDetail() {
 
       setShowEditModal(false);
       window.dispatchEvent(new CustomEvent('crm-data-updated'));
+
+      if (changes.length > 0) {
+        leadActivityService.logActivity(lead.id, {
+          userName: currentUser?.login || currentUser?.firstName || 'Counselor',
+          userRole: currentUser?.authorities?.[0],
+          actionType: 'DATA_MODIFY',
+          title: 'Candidate Dossier Modified',
+          description: `Counselor updated ${changes.length} field(s):\n• ` + changes.join('\n• '),
+        });
+      }
     } catch (err: any) {
       alert(`Failed to save candidate changes: ${err?.message || 'Server error'}`);
     } finally {
@@ -280,7 +404,7 @@ export default function CandidateDetail() {
 
   const handleDelete = async () => {
     if (!lead) return;
-    if (!window.confirm(`Permanently delete candidate dossier #${lead.id} (${lead.customerName || 'record'})? This cannot be undone.`)) return;
+    if (!window.confirm(`Permanently delete candidate dossier Ref #${formatMaskedLeadRef(lead.id)} (${lead.customerName || 'record'})? This cannot be undone.`)) return;
     try {
       await crmService.deleteLead(lead.id);
       window.dispatchEvent(new CustomEvent('crm-data-updated'));
@@ -337,6 +461,17 @@ export default function CandidateDetail() {
     const url = `https://wa.me/${cleanNum}?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
     setShowWhatsAppTemplateModal(false);
+
+    leadActivityService.logActivity(lead.id, {
+      userName: currentUser?.login || currentUser?.firstName || 'Counselor',
+      userRole: currentUser?.authorities?.[0],
+      actionType: 'OUTREACH',
+      title: 'WhatsApp Outreach Initiated',
+      description: `Sent personalized message to ${lead.phoneNumber}: "${text.substring(0, 90)}${
+        text.length > 90 ? '...' : ''
+      }"`,
+      metadata: { text, phoneNumber: lead.phoneNumber },
+    });
   };
 
   const getWhatsAppTemplates = () => {
@@ -429,7 +564,7 @@ export default function CandidateDetail() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <button
           onClick={() => navigate('/leads')}
-          className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors w-fit"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 hover:bg-white text-xs font-semibold text-[#007aff] transition-all shadow-xs border border-black/[0.05] active:scale-95 backdrop-blur-md"
         >
           <ChevronLeft size={16} />
           <span>Back to Candidate Pipeline</span>
@@ -438,15 +573,15 @@ export default function CandidateDetail() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowEditModal(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 rounded-xl border border-slate-200 text-xs font-medium shadow-2xs transition-colors"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white/80 hover:bg-white text-slate-800 rounded-xl border border-black/[0.06] text-xs font-semibold shadow-xs transition-all active:scale-95 backdrop-blur-md"
           >
-            <Edit2 size={13} className="text-slate-500" />
+            <Edit2 size={13} className="text-[#007aff]" />
             <span>Edit Dossier</span>
           </button>
 
           <button
             onClick={handleDelete}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-rose-50 text-rose-600 rounded-xl border border-rose-200 text-xs font-medium transition-colors"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-[#ff3b30] rounded-xl border border-rose-200/50 text-xs font-semibold transition-all active:scale-95"
           >
             <Trash2 size={13} />
             <span>Delete</span>
@@ -454,33 +589,33 @@ export default function CandidateDetail() {
         </div>
       </div>
 
-      {/* Candidate Profile Hero Card */}
-      <div className="ios-card p-5 sm:p-6 bg-white space-y-5">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+      {/* Candidate Profile Hero Card - Apple macOS / iOS Inset Card */}
+      <div className="ios-card p-6 bg-white space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 pb-5 border-b border-black/[0.06]">
           {/* Avatar and Primary Identity */}
           <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-bold text-xl shadow-xs shrink-0">
+            <div className="w-16 h-16 rounded-[22px] bg-gradient-to-br from-slate-900 to-slate-700 text-white flex items-center justify-center font-bold text-2xl shadow-md shrink-0 border border-white/10">
               {(lead.customerName?.[0] || 'C').toUpperCase()}
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2.5">
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 leading-tight">
-                  {lead.customerName || `Candidate #${lead.id}`}
+                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#1c1c1e] leading-tight">
+                  {lead.customerName || `Candidate #${formatMaskedLeadRef(lead.id)}`}
                 </h1>
                 {renderVisaBadge(lead.visaType)}
-                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-medium border ${currentStatusConfig.color} border-slate-200/90 shadow-2xs`}>
+                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border ${currentStatusConfig.color} shadow-xs`}>
                   {currentStatusConfig.label}
                 </span>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-slate-500">
+              <div className="flex flex-wrap items-center gap-2.5 mt-2 text-xs text-[#86868b] font-medium">
                 <span className="font-mono text-slate-400">
-                  {lead.externalId ? `ID: ${lead.externalId}` : `Ref #${lead.id}`}
+                  {lead.externalId ? `ID: ${lead.externalId}` : `Ref #${formatMaskedLeadRef(lead.id)}`}
                 </span>
                 <span>·</span>
                 {(lead.city || lead.location) && (
-                  <span className="flex items-center gap-1 capitalize">
-                    <MapPin size={12} className="text-slate-400" />
+                  <span className="flex items-center gap-1 capitalize text-slate-600">
+                    <MapPin size={12} className="text-[#007aff]" />
                     <span>{lead.city || lead.location}</span>
                   </span>
                 )}
@@ -491,7 +626,7 @@ export default function CandidateDetail() {
           </div>
 
           {/* Direct Communication Hub & Stage Selector */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2.5">
             {/* Direct WhatsApp Trigger */}
             {lead.phoneNumber && (
               <button
@@ -503,10 +638,10 @@ export default function CandidateDetail() {
                   );
                   setShowWhatsAppTemplateModal(true);
                 }}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[#34c759] hover:bg-[#30b753] text-white rounded-xl text-xs font-semibold shadow-[0_2px_10px_rgba(52,199,89,0.35)] transition-all active:scale-95"
                 title="Send personalized WhatsApp message"
               >
-                <MessageCircle size={14} />
+                <MessageCircle size={15} />
                 <span>WhatsApp Outreach</span>
               </button>
             )}
@@ -514,7 +649,7 @@ export default function CandidateDetail() {
             {lead.phoneNumber && (
               <a
                 href={`tel:${lead.phoneNumber}`}
-                className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold border border-slate-200 transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[#f2f2f7] hover:bg-[#e5e5ea] text-slate-800 rounded-xl text-xs font-semibold transition-all active:scale-95"
                 title="Call phone number"
               >
                 <Phone size={14} />
@@ -525,218 +660,159 @@ export default function CandidateDetail() {
             {lead.email && (
               <a
                 href={`mailto:${lead.email}`}
-                className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl border border-slate-200 transition-colors"
+                className="p-2.5 bg-[#f2f2f7] hover:bg-[#e5e5ea] text-slate-700 rounded-xl transition-all active:scale-95"
                 title="Send email"
               >
-                <Mail size={14} />
+                <Mail size={15} />
               </a>
             )}
+
+            {/* Apple iOS Activity & Audit Logs Button */}
+            <button
+              onClick={() => setShowActivityLogsModal(true)}
+              className="inline-flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-[#f2f2f7] text-[#1c1c1e] rounded-xl text-xs font-semibold border border-black/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all active:scale-95 cursor-pointer"
+              title="View counselor audit logs and candidate activity history"
+            >
+              <History size={14} className="text-[#007aff]" />
+              <span>Activity Logs</span>
+              {activities.length > 0 && (
+                <span className="px-1.5 py-0.5 text-[10px] font-bold bg-[#007aff]/10 text-[#007aff] rounded-full">
+                  {activities.length}
+                </span>
+              )}
+            </button>
           </div>
         </div>
 
-        {/* Zoho CRM Enterprise Pipeline Chevron Bar */}
-        <div className="space-y-1.5 pt-1">
+        {/* Apple Segmented Pipeline Stage Control */}
+        <div className="space-y-2.5 pt-1">
           {/* Top Metadata Row: START & CLOSING */}
-          <div className="flex items-center justify-between px-0.5">
-            <div>
-              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#86868b]">
                 START
-              </div>
-              <div className="text-xs text-slate-700 font-normal mt-0.5">
+              </span>
+              <span className="text-xs font-medium text-slate-700">
                 {formatPipelineDate(lead.createdTime || (lead as any).createdAt || (lead as any).createdDate)}
-              </div>
+              </span>
             </div>
 
-            <div className="text-right">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#86868b]">
                 CLOSING
-              </div>
-              <div className="flex items-center gap-1.5 mt-0.5 justify-end">
-                {/* Zoho Red Stopwatch Icon */}
-                <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-rose-500 bg-rose-50 text-rose-600 flex-shrink-0">
-                  <svg className="w-2 h-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="13" r="8"/>
-                    <path d="M12 9v4l2 2"/>
-                    <path d="M12 5V2"/>
-                    <path d="M10 2h4"/>
-                  </svg>
+              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-rose-500/10 text-[#ff3b30] flex-shrink-0">
+                  <Clock size={11} />
                 </span>
-                <span className="text-xs font-semibold text-slate-700">
+                <span className="text-xs font-semibold text-slate-800">
                   {getExpectedClosingDate(lead.createdTime || (lead as any).createdAt || (lead as any).createdDate)}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Chevron Pipeline Track + Quick Actions */}
-          <div className="flex items-center gap-2 w-full overflow-x-auto pb-1 pt-0.5">
-            <div className="flex-1 min-w-[760px] flex items-stretch h-8 border border-slate-200 rounded-[3px] overflow-hidden bg-white text-xs select-none shadow-2xs">
-              {LEAD_STATUS_LIST.map((st, idx) => {
-                const isCurrent = lead.status === st.value;
-                const isFirst = idx === 0;
-                const isLast = idx === LEAD_STATUS_LIST.length - 1;
-                const nextIsCurrent = idx + 1 === currentStageIndex;
+          {/* Apple macOS / iOS Segmented Pill Pipeline Bar */}
+          <div className="p-1.5 bg-[#e5e5ea]/80 backdrop-blur-md rounded-2xl flex items-center gap-1 overflow-x-auto shadow-inner border border-black/[0.04]">
+            {LEAD_STATUS_LIST.map((st) => {
+              const isCurrent = lead.status === st.value;
+              const isWon = st.value === 'WON';
+              const isLost = st.value === 'LOST';
 
-                let stageLabel = st.label;
-                if (st.value === 'WON') stageLabel = 'Closed Won';
-                if (st.value === 'LOST') stageLabel = 'Closed Lost';
+              let stageLabel = st.label;
+              if (isWon) stageLabel = 'Closed Won';
+              if (isLost) stageLabel = 'Closed Lost';
 
-                return (
-                  <button
-                    key={st.value}
-                    type="button"
-                    onClick={() => handleStatusChange(st.value)}
-                    title={`${st.label} (${st.value})`}
-                    className={`relative flex-1 flex items-center justify-center h-full transition-colors cursor-pointer text-xs ${
-                      isFirst ? 'pl-2 pr-2' : 'pl-3.5 pr-2'
-                    } ${
-                      isCurrent
-                        ? 'bg-[#fef3c7] text-[#92400e] font-medium border-t border-b border-[#f59e0b] z-20'
-                        : 'bg-white text-slate-700 hover:bg-slate-50 font-normal border-t border-b border-transparent z-10'
-                    }`}
-                  >
-                    {/* Left notch border if this is the active stage */}
-                    {isCurrent && !isFirst && (
-                      <svg
-                        className="absolute left-0 top-0 bottom-0 h-full w-2.5 pointer-events-none -translate-x-[0.5px]"
-                        viewBox="0 0 10 32"
-                        preserveAspectRatio="none"
-                      >
-                        <path d="M0 0 L10 16 L0 32" fill="none" stroke="#f59e0b" strokeWidth="1.5" />
-                      </svg>
-                    )}
+              let activeClasses = 'bg-white text-slate-900 shadow-[0_2px_8px_rgba(0,0,0,0.12),0_1px_2px_rgba(0,0,0,0.04)] font-bold';
+              if (isWon && isCurrent) activeClasses = 'bg-[#34c759] text-white shadow-[0_2px_10px_rgba(52,199,89,0.4)] font-bold';
+              if (isLost && isCurrent) activeClasses = 'bg-[#ff3b30] text-white shadow-[0_2px_10px_rgba(255,59,48,0.4)] font-bold';
 
-                    {/* Step Content */}
-                    <div className="flex items-center justify-center gap-1 z-10 truncate">
-                      {st.value === 'WON' && (
-                        <ThumbsUp
-                          size={11}
-                          className={`flex-shrink-0 ${isCurrent ? 'fill-[#92400e] text-[#92400e]' : 'fill-slate-700 text-slate-700'}`}
-                        />
-                      )}
-                      {st.value === 'LOST' && (
-                        <ThumbsDown
-                          size={11}
-                          className={`flex-shrink-0 ${isCurrent ? 'fill-[#92400e] text-[#92400e]' : 'fill-slate-700 text-slate-700'}`}
-                        />
-                      )}
-                      <span className="truncate">{stageLabel}</span>
-                      {isCurrent && <ChevronDown size={11} className="flex-shrink-0 opacity-80" />}
-                    </div>
-
-                    {/* Right Arrow: If current, draw filled golden tip; else if next is not current and not last, draw grey divider */}
-                    {isCurrent && !isLast && (
-                      <svg
-                        className="absolute right-0 top-0 bottom-0 h-full w-2.5 translate-x-full pointer-events-none z-20"
-                        viewBox="0 0 10 32"
-                        preserveAspectRatio="none"
-                      >
-                        <path d="M0 0 L10 16 L0 32 Z" fill="#fef3c7" />
-                        <path d="M0 0 L10 16 L0 32" fill="none" stroke="#f59e0b" strokeWidth="1.5" />
-                      </svg>
-                    )}
-
-                    {!isCurrent && !isLast && !nextIsCurrent && (
-                      <svg
-                        className="absolute right-0 top-0 bottom-0 h-full w-2.5 translate-x-full pointer-events-none z-10"
-                        viewBox="0 0 10 32"
-                        preserveAspectRatio="none"
-                      >
-                        <path d="M0 0 L10 16 L0 32" fill="none" stroke="#e2e8f0" strokeWidth="1" />
-                      </svg>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Quick Action Buttons on Far Right */}
-            <div className="flex items-center gap-1.5 flex-shrink-0">
-              {/* Closed Won Action Button */}
-              <button
-                type="button"
-                onClick={() => handleStatusChange('WON')}
-                title="Mark as Closed Won"
-                className={`h-8 px-2.5 rounded-[3px] border flex items-center gap-1 text-xs font-semibold transition-colors shadow-2xs ${
-                  lead.status === 'WON'
-                    ? 'bg-[#059669] text-white border-[#059669]'
-                    : 'bg-[#ecfdf5] hover:bg-[#d1fae5] border-[#a7f3d0] text-[#059669]'
-                }`}
-              >
-                <ThumbsUp size={12} className={lead.status === 'WON' ? 'fill-white text-white' : 'fill-[#059669] text-[#059669]'} />
-                <ChevronDown size={11} />
-              </button>
-
-              {/* Closed Lost Action Button */}
-              <button
-                type="button"
-                onClick={() => handleStatusChange('LOST')}
-                title="Mark as Closed Lost"
-                className={`h-8 px-2.5 rounded-[3px] border flex items-center gap-1 text-xs font-semibold transition-colors shadow-2xs ${
-                  lead.status === 'LOST'
-                    ? 'bg-[#dc2626] text-white border-[#dc2626]'
-                    : 'bg-[#fef2f2] hover:bg-[#fee2e2] border-[#fecaca] text-[#dc2626]'
-                }`}
-              >
-                <ThumbsDown size={12} className={lead.status === 'LOST' ? 'fill-white text-white' : 'fill-[#dc2626] text-[#dc2626]'} />
-                <ChevronDown size={11} />
-              </button>
-            </div>
+              return (
+                <button
+                  key={st.value}
+                  type="button"
+                  onClick={() => handleStatusChange(st.value)}
+                  title={`${st.label} (${st.value})`}
+                  className={`flex-1 min-w-[95px] py-2 px-2.5 rounded-xl text-xs transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer select-none ${
+                    isCurrent
+                      ? activeClasses
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/50 font-medium'
+                  }`}
+                >
+                  {isWon && (
+                    <ThumbsUp
+                      size={12}
+                      className={isCurrent ? 'fill-white text-white' : 'text-emerald-600'}
+                    />
+                  )}
+                  {isLost && (
+                    <ThumbsDown
+                      size={12}
+                      className={isCurrent ? 'fill-white text-white' : 'text-rose-600'}
+                    />
+                  )}
+                  <span className="truncate">{stageLabel}</span>
+                  {isCurrent && !isWon && !isLost && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#007aff]" />
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {/* Two-Column Dossier Content */}
+      {/* Two-Column Dossier Content - Apple Inset Grouped Architecture */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Left Column: Candidate Detailed Profile (7 Cols) */}
         <div className="lg:col-span-7 space-y-5">
           {/* Section 1: Contact Information */}
-          <div className="ios-card p-5 space-y-3.5">
-            <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                <UserCheck size={14} className="text-slate-400" />
+          <div className="ios-card p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#86868b] flex items-center gap-2">
+                <UserCheck size={14} className="text-[#007aff]" />
                 <span>Contact Dossier</span>
               </h3>
               <button
                 onClick={handleCopyPhone}
-                className="text-[11px] text-slate-500 hover:text-slate-800 flex items-center gap-1"
+                className="text-xs font-semibold text-[#007aff] hover:text-[#0071e3] flex items-center gap-1 transition-colors"
               >
-                {copiedPhone ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                {copiedPhone ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
                 <span>{copiedPhone ? 'Phone Copied!' : 'Copy Phone'}</span>
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
-                <span className="text-slate-400 text-[11px]">Primary Phone</span>
-                <p className="font-mono text-sm font-semibold text-slate-900 mt-0.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors">
+                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Primary Phone</span>
+                <p className="font-mono text-sm font-bold text-[#1c1c1e] mt-1">
                   {lead.phoneNumber || '—'}
                 </p>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
-                <span className="text-slate-400 text-[11px]">Email Address</span>
-                <p className="text-sm font-semibold text-slate-900 mt-0.5 truncate">
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors">
+                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Email Address</span>
+                <p className="text-sm font-semibold text-[#1c1c1e] mt-1 truncate">
                   {lead.email || '—'}
                 </p>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
-                <span className="text-slate-400 text-[11px]">City / Location</span>
-                <p className="text-sm font-semibold text-slate-900 mt-0.5 capitalize">
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors">
+                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">City / Location</span>
+                <p className="text-sm font-semibold text-[#1c1c1e] mt-1 capitalize">
                   {lead.city || lead.location || '—'}
                 </p>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
-                <span className="text-slate-400 text-[11px] block">Assigned Counselor</span>
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors">
+                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider block">Assigned Counselor</span>
                 {isAdmin ? (
                   <div className="mt-1 flex items-center gap-2">
                     <select
                       value={lead.assignedTo || ''}
                       onChange={(e) => handleAssignStaff(e.target.value)}
                       disabled={assigningStaff}
-                      className="text-xs font-medium text-slate-800 bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                      className="text-xs font-semibold text-slate-800 bg-white border border-black/[0.08] rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 disabled:opacity-50"
                     >
                       <option value="">Unassigned (General Pool)</option>
                       {availableStaff.map((staff) => (
@@ -745,10 +821,10 @@ export default function CandidateDetail() {
                         </option>
                       ))}
                     </select>
-                    {assigningStaff && <RefreshCw size={12} className="animate-spin text-blue-600" />}
+                    {assigningStaff && <RefreshCw size={12} className="animate-spin text-[#007aff]" />}
                   </div>
                 ) : (
-                  <p className="text-sm font-semibold text-slate-900 mt-0.5">
+                  <p className="text-sm font-semibold text-[#1c1c1e] mt-1">
                     {lead.assignedTo || 'General Pool'}
                   </p>
                 )}
@@ -757,53 +833,53 @@ export default function CandidateDetail() {
           </div>
 
           {/* Section 2: Candidate Eligibility & Survey Answers */}
-          <div className="ios-card p-5 space-y-3.5">
-            <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                <GraduationCap size={14} className="text-slate-400" />
+          <div className="ios-card p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#86868b] flex items-center gap-2">
+                <GraduationCap size={14} className="text-[#007aff]" />
                 <span>Eligibility & Survey Responses</span>
               </h3>
-              <span className="text-[11px] text-slate-400 font-medium">Candidate Profile</span>
+              <span className="text-[11px] text-[#86868b] font-medium">Candidate Profile</span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
-                <span className="text-slate-400 text-[11px]">Highest Educational Qualification</span>
-                <p className="font-semibold text-slate-900 text-sm mt-0.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors">
+                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Highest Qualification</span>
+                <p className="font-bold text-[#1c1c1e] text-sm mt-1">
                   {lead.educationalQualification || '—'}
                 </p>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
-                <span className="text-slate-400 text-[11px]">Age Demographic</span>
-                <p className="font-semibold text-slate-900 text-sm mt-0.5">
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors">
+                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Age Demographic</span>
+                <p className="font-bold text-[#1c1c1e] text-sm mt-1">
                   {lead.age || '—'}
                 </p>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
-                <span className="text-slate-400 text-[11px]">Currently Employed?</span>
-                <p className="font-semibold text-slate-900 text-sm mt-0.5 capitalize">
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors">
+                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Currently Employed?</span>
+                <p className="font-bold text-[#1c1c1e] text-sm mt-1 capitalize">
                   {lead.areYouWorking ? (lead.areYouWorking === 'yes' ? 'Yes, Employed' : 'No / Fresher') : '—'}
                 </p>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
-                <span className="text-slate-400 text-[11px]">Interested in Visa Process?</span>
-                <p className="font-semibold text-slate-900 text-sm mt-0.5 capitalize">
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors">
+                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Interested in Visa Process?</span>
+                <p className="font-bold text-[#1c1c1e] text-sm mt-1 capitalize">
                   {lead.areYouInterested ? (lead.areYouInterested === 'yes' ? 'Yes, Ready' : 'Exploring') : '—'}
                 </p>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 col-span-1 sm:col-span-2">
-                <span className="text-slate-400 text-[11px]">Lead Confirmation Status</span>
-                <p className="font-semibold text-slate-900 text-sm mt-0.5">
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors col-span-1 sm:col-span-2">
+                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Lead Confirmation Status</span>
+                <p className="font-bold text-[#1c1c1e] text-sm mt-1">
                   {lead.leadConfirm || 'Confirmed Candidate'}
                 </p>
               </div>
 
               {/* Candidate Remarks Card */}
-              <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200/80 col-span-1 sm:col-span-2">
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 col-span-1 sm:col-span-2 space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-amber-900 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5">
                     <FileText size={13} className="text-amber-600" />
@@ -815,12 +891,12 @@ export default function CandidateDetail() {
                       const input = document.getElementById('counselor-remarks-input');
                       input?.focus();
                     }}
-                    className="text-[11px] font-semibold text-amber-700 hover:text-amber-900 transition-colors"
+                    className="text-xs font-semibold text-amber-800 hover:text-amber-950 transition-colors"
                   >
                     + Add New Remark
                   </button>
                 </div>
-                <p className="text-xs font-semibold text-slate-800 mt-1.5 whitespace-pre-line leading-relaxed">
+                <p className="text-xs font-medium text-slate-800 mt-1.5 whitespace-pre-line leading-relaxed">
                   {lead.notes || 'No remarks recorded yet.'}
                 </p>
               </div>
@@ -828,42 +904,42 @@ export default function CandidateDetail() {
           </div>
 
           {/* Section 3: Marketing Attribution & Origin */}
-          <div className="ios-card p-5 space-y-3.5">
-            <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                <Share2 size={14} className="text-slate-400" />
+          <div className="ios-card p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#86868b] flex items-center gap-2">
+                <Share2 size={14} className="text-[#007aff]" />
                 <span>Marketing Origin Telemetry</span>
               </h3>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${plat.color}`}>
+              <span className={`text-[11px] font-bold px-3 py-1 rounded-full border ${plat.color}`}>
                 {plat.label}
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 col-span-1 sm:col-span-2">
-                <span className="text-slate-400 text-[11px]">Meta Campaign Name</span>
-                <p className="font-semibold text-slate-900 mt-0.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors col-span-1 sm:col-span-2">
+                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Meta Campaign Name</span>
+                <p className="font-bold text-[#1c1c1e] text-sm mt-1">
                   {lead.campaignName || 'Direct / Organic Walk-in'}
                 </p>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
-                <span className="text-slate-400 text-[11px]">Ad Set Name</span>
-                <p className="font-semibold text-slate-900 mt-0.5 truncate">
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors">
+                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Ad Set Name</span>
+                <p className="font-bold text-[#1c1c1e] text-sm mt-1 truncate">
                   {lead.adSetName || '—'}
                 </p>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
-                <span className="text-slate-400 text-[11px]">Ad Creative</span>
-                <p className="font-semibold text-slate-900 mt-0.5 truncate">
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors">
+                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Ad Creative</span>
+                <p className="font-bold text-[#1c1c1e] text-sm mt-1 truncate">
                   {lead.adName || '—'}
                 </p>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 col-span-1 sm:col-span-2">
-                <span className="text-slate-400 text-[11px]">Meta Instant Form Name / ID</span>
-                <p className="font-semibold text-slate-900 mt-0.5">
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors col-span-1 sm:col-span-2">
+                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Meta Instant Form Name / ID</span>
+                <p className="font-bold text-[#1c1c1e] text-sm mt-1">
                   {lead.leadFormName || lead.formId || 'Instant Lead Form'}
                 </p>
               </div>
@@ -874,13 +950,13 @@ export default function CandidateDetail() {
         {/* Right Column: Counselor Discussion Notes & Communication (5 Cols) */}
         <div className="lg:col-span-5 space-y-5">
           {/* Counselor Note-Taking Box */}
-          <div className="ios-card p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                <MessageCircle size={14} className="text-slate-400" />
+          <div className="ios-card p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#86868b] flex items-center gap-2">
+                <MessageCircle size={14} className="text-[#007aff]" />
                 <span>Remarks & Counselor Log</span>
               </h3>
-              <span className="text-[10px] text-slate-400 font-medium">Quick Intake</span>
+              <span className="text-[11px] text-[#86868b] font-medium">Quick Intake</span>
             </div>
 
             <form onSubmit={handleAddNote} className="space-y-3">
@@ -889,13 +965,14 @@ export default function CandidateDetail() {
                 value={newNote}
                 onChange={(e) => setNewNote(e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:bg-white focus:ring-1 focus:ring-slate-400 transition-all font-medium"
+                placeholder="Record candidate conversation notes, eligibility checks, or next steps..."
+                className="w-full px-4 py-3 bg-[#f2f2f7] border border-black/[0.06] rounded-2xl text-xs text-slate-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff] transition-all font-medium placeholder:text-slate-400"
               />
               <div className="flex justify-end">
                 <button
                   type="submit"
                   disabled={submittingNote || !newNote.trim()}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-2xs transition-colors disabled:opacity-40"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#007aff] hover:bg-[#0071e3] text-white rounded-xl text-xs font-semibold shadow-[0_2px_8px_rgba(0,122,255,0.3)] transition-all active:scale-95 disabled:opacity-40"
                 >
                   <Send size={12} />
                   <span>{submittingNote ? 'Saving Remarks...' : 'Add Remarks / Note'}</span>
@@ -904,8 +981,8 @@ export default function CandidateDetail() {
             </form>
 
             {/* Historical Notes Stream */}
-            <div className="pt-3 border-t border-slate-100 space-y-3">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            <div className="pt-3 border-t border-black/[0.06] space-y-3">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#86868b]">
                 Remarks & Discussion History
               </span>
 
@@ -915,22 +992,22 @@ export default function CandidateDetail() {
                 </p>
               ) : (
                 notesHistory.map((item, idx) => (
-                  <div key={idx} className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1 text-xs group">
-                    <div className="flex items-center justify-between text-[11px] text-slate-400">
-                      <span className="font-semibold text-slate-700">{item.author}</span>
+                  <div key={idx} className="p-3.5 rounded-2xl bg-[#f8f9fa] border border-black/[0.04] space-y-1.5 text-xs group hover:border-black/[0.08] transition-all">
+                    <div className="flex items-center justify-between text-[11px] text-[#86868b]">
+                      <span className="font-semibold text-slate-800">{item.author}</span>
                       <div className="flex items-center gap-2">
                         <span>{formatDate(item.date)}</span>
                         <button
                           type="button"
                           onClick={() => handleDeleteRemark(idx)}
                           title="Delete this remark"
-                          className="text-slate-400 hover:text-rose-600 p-0.5 rounded transition-colors cursor-pointer"
+                          className="text-slate-400 hover:text-[#ff3b30] p-1 rounded-full transition-colors cursor-pointer"
                         >
                           <Trash2 size={12} />
                         </button>
                       </div>
                     </div>
-                    <p className="text-slate-800 leading-relaxed pt-0.5 whitespace-pre-wrap">{item.note}</p>
+                    <p className="text-slate-800 leading-relaxed pt-0.5 whitespace-pre-wrap font-medium">{item.note}</p>
                   </div>
                 ))
               )}
@@ -938,12 +1015,12 @@ export default function CandidateDetail() {
           </div>
 
           {/* Quick WhatsApp Templates Card */}
-          <div className="ios-card p-5 space-y-3.5">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-              <MessageCircle size={14} className="text-emerald-600" />
+          <div className="ios-card p-6 space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#86868b] flex items-center gap-2">
+              <MessageCircle size={14} className="text-[#34c759]" />
               <span>WhatsApp Outreach Shortcuts</span>
             </h3>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-[#86868b]">
               One-click preset outreach messages tailored for this candidate:
             </p>
 
@@ -952,9 +1029,9 @@ export default function CandidateDetail() {
                 <button
                   key={tpl.id}
                   onClick={() => openWhatsAppWithText(tpl.text)}
-                  className="w-full p-3 rounded-xl border border-slate-200/90 hover:border-emerald-300 hover:bg-emerald-50/40 text-left transition-all text-xs group bg-white shadow-2xs"
+                  className="w-full p-3.5 rounded-2xl border border-black/[0.06] hover:border-emerald-300 hover:bg-emerald-50/40 text-left transition-all text-xs group bg-white shadow-xs active:scale-[0.99]"
                 >
-                  <p className="font-semibold text-slate-900 group-hover:text-emerald-800">
+                  <p className="font-bold text-[#1c1c1e] group-hover:text-emerald-800">
                     {tpl.title}
                   </p>
                   <p className="text-slate-500 text-[11px] mt-1 line-clamp-2 leading-relaxed">
@@ -1163,6 +1240,17 @@ export default function CandidateDetail() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Candidate Activity & Audit Logs Modal */}
+      {lead && (
+        <CandidateActivityLogsModal
+          isOpen={showActivityLogsModal}
+          onClose={() => setShowActivityLogsModal(false)}
+          activities={activities}
+          candidateName={lead.customerName}
+          leadId={lead.id}
+        />
       )}
     </div>
   );

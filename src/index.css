@@ -1,9 +1,14 @@
+@import "./apple-fonts.css";
 @import "tailwindcss";
 
 @theme {
-  --default-font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
-  --font-sans: Arial, "Helvetica Neue", Helvetica, sans-serif;
-  --font-sf-display: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  --default-font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", sans-serif;
+  --font-sans: "SF Pro Display", -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", sans-serif;
+  --font-sf-display: "SF Pro Display", -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", sans-serif;
+  --font-sf-rounded: "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "SF Pro", sans-serif;
+  --font-sf-mono: "SF Mono", Menlo, Monaco, Consolas, monospace;
+  --font-sf-compact: "SF Compact", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-new-york: "New York", Georgia, serif;
 }
 
 @layer base {
@@ -36,7 +41,7 @@
     background-color: #f8fafc;
     color: #1e293b;
     min-height: 100vh;
-    font-family: Arial, "Helvetica Neue", Helvetica, sans-serif !important;
+    font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", system-ui, sans-serif !important;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     letter-spacing: normal;
@@ -45,7 +50,7 @@
   *,
   *::before,
   *::after {
-    font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+    font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", system-ui, sans-serif;
   }
 
   button,
@@ -53,446 +58,297 @@
   optgroup,
   select,
   textarea {
-    font-family: Arial, "Helvetica Neue", Helvetica, sans-serif !important;
+    font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", system-ui, sans-serif !important;
   }
 }
 
-/* Universal Typography Tokens - Default Arial */
-.font-zoho,
+/* Universal Typography Tokens - Apple Design System */
 .font-sf-display,
-.font-sf-arabic,
-.font-sf-rounded,
+.font-sf,
+.font-zoho {
+  font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", system-ui, sans-serif !important;
+}
+
+.font-sf-rounded {
+  font-family: "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "SF Pro", system-ui, sans-serif !important;
+}
+
 .font-sf-mono {
-  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif !important;
+  font-family: "SF Mono", Menlo, Monaco, Consolas, "Courier New", monospace !important;
+}
+
+.font-sf-compact {
+  font-family: "SF Compact", -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
+}
+
+.font-new-york {
+  font-family: "New York", Georgia, Cambria, "Times New Roman", serif !important;
 }
 
 /* ==========================================================================
-   Zoho CRM Professional Design Tokens & Component Styles
+   Apple iOS & macOS Human Interface System Tokens
    ========================================================================== */
 
-/* Clean CRM Workspace Background */
+/* Apple System Grouped Background */
 .ios-bg {
-  background-color: #f8fafc;
+  background-color: #f2f2f7;
 }
 
-/* Zoho CRM Clean Card */
+/* Apple Inset / Grouped Squircle Card */
 .ios-card {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px 0 rgba(0, 0, 0, 0.02);
-  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+  border-radius: 20px;
 }
 
 .ios-card-hover {
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .ios-card-hover:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.04);
+  transform: translateY(-1.5px);
 }
 
-/* Clean Header / Panel Materials */
+/* Apple Translucent Frosted Glass Materials */
 .ios-glass {
-  background: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
 }
 
 .ios-glass-sidebar {
-  background: #ffffff;
-  border-right: 1px solid #e2e8f0;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-right: 1px solid rgba(0, 0, 0, 0.07);
 }
 
 .ios-glass-modal {
-  background: #ffffff;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.05);
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(30px) saturate(190%);
+  -webkit-backdrop-filter: blur(30px) saturate(190%);
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
-/* Zoho CRM Segmented / Tabs Control */
+/* Apple Segmented / Pill Switcher Control */
 .ios-segmented {
-  background: #f1f5f9;
+  background: rgba(118, 118, 128, 0.12);
   padding: 3px;
-  border-radius: 6px;
+  border-radius: 14px;
   display: inline-flex;
   align-items: center;
-  border: 1px solid #e2e8f0;
+  border: none;
 }
 
 .ios-segmented-btn {
-  padding: 5px 14px;
-  border-radius: 4px;
+  padding: 6px 14px;
+  border-radius: 11px;
   font-size: 12px;
   font-weight: 500;
-  color: #64748b;
-  transition: all 0.15s ease;
+  color: #636366;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
   user-select: none;
 }
 
 .ios-segmented-btn:hover {
-  color: #0f172a;
+  color: #000000;
 }
 
 .ios-segmented-btn.active {
   background: #ffffff;
-  color: #0f172a;
+  color: #000000;
   font-weight: 600;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
-/* ==========================================================================
-   Authentic Zoho CRM Component Tokens (Matching Reference UI)
-   ========================================================================== */
-.zoho-btn {
+/* Apple Pill Buttons */
+.zoho-btn,
+.ios-btn-gray {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", sans-serif;
   font-size: 13px;
   font-weight: 500;
   line-height: 1.25;
-  padding: 6px 14px;
-  border-radius: 4px;
-  border: 1px solid #c8d1dc;
+  padding: 7px 15px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   background-color: #ffffff;
-  color: #2c3e50;
+  color: #1c1c1e;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
-  transition: all 0.15s ease-in-out;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
   user-select: none;
 }
-.zoho-btn:hover:not(:disabled) {
-  background-color: #f4f6f8;
-  border-color: #b0bccb;
-  color: #1a2530;
-}
-.zoho-btn:active:not(:disabled) {
-  background-color: #eaeef2;
-  border-color: #9aa9bc;
-}
-.zoho-btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
+
+.zoho-btn:hover:not(:disabled),
+.ios-btn-gray:hover:not(:disabled) {
+  background-color: #f2f2f7;
+  border-color: rgba(0, 0, 0, 0.12);
+  color: #000000;
 }
 
-.zoho-btn-primary {
+.zoho-btn:active:not(:disabled),
+.ios-btn-gray:active:not(:disabled) {
+  transform: scale(0.97);
+  background-color: #e5e5ea;
+}
+
+.zoho-btn-primary,
+.ios-btn-primary,
+.zoho-btn-done {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", sans-serif;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.25;
-  padding: 6px 16px;
-  border-radius: 4px;
-  border: 1px solid #1059bf;
-  background-color: #1366d9;
+  padding: 8px 18px;
+  border-radius: 12px;
+  border: none;
+  background-color: #007aff;
   color: #ffffff;
-  box-shadow: 0 1px 2px 0 rgba(19, 102, 217, 0.25);
-  transition: all 0.15s ease-in-out;
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
   user-select: none;
 }
-.zoho-btn-primary:hover:not(:disabled) {
-  background-color: #0e52b2;
-  border-color: #0c4699;
-}
-.zoho-btn-primary:active:not(:disabled) {
-  background-color: #0c4391;
-}
-.zoho-btn-primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+
+.zoho-btn-primary:hover:not(:disabled),
+.ios-btn-primary:hover:not(:disabled),
+.zoho-btn-done:hover:not(:disabled) {
+  background-color: #0071e3;
+  box-shadow: 0 4px 14px rgba(0, 122, 255, 0.4);
 }
 
-.zoho-btn-sm {
-  font-size: 12px;
-  padding: 4px 10px;
-  border-radius: 3px;
-}
-
-.zoho-select, .zoho-input {
-  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
-  font-size: 12px;
-  color: #2c3e50;
-  background-color: #ffffff;
-  border: 1px solid #c8d1dc;
-  border-radius: 4px;
-  padding: 6px 10px;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
-  outline: none;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-.zoho-select:focus, .zoho-input:focus {
-  border-color: #1366d9;
-  box-shadow: 0 0 0 2px rgba(19, 102, 217, 0.15);
-}
-
-/* Zoho CRM Action Buttons */
-.ios-btn-primary {
-  background-color: #2563eb;
-  color: #ffffff;
-  font-weight: 500;
-  border-radius: 6px;
-  padding: 7px 16px;
-  font-size: 13px;
-  transition: all 0.15s ease;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-
-.ios-btn-primary:hover {
-  background-color: #1d4ed8;
-}
-
-.ios-btn-primary:active {
-  transform: none;
+.zoho-btn-primary:active:not(:disabled),
+.ios-btn-primary:active:not(:disabled),
+.zoho-btn-done:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .ios-btn-secondary {
-  background-color: #eff6ff;
-  color: #1d4ed8;
-  font-weight: 500;
-  border-radius: 6px;
-  border: 1px solid #bfdbfe;
-  padding: 7px 16px;
-  font-size: 13px;
-  transition: all 0.15s ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-}
-
-.ios-btn-secondary:hover {
-  background-color: #dbeafe;
-}
-
-.ios-btn-secondary:active {
-  transform: none;
-}
-
-.ios-btn-gray {
-  background-color: #f8fafc;
-  color: #334155;
-  font-weight: 500;
-  border-radius: 6px;
-  border: 1px solid #cbd5e1;
-  padding: 7px 14px;
-  font-size: 12px;
-  transition: all 0.15s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-
-.ios-btn-gray:hover {
-  background-color: #f1f5f9;
-}
-
-.ios-btn-gray:active {
-  transform: none;
-}
-
-/* Zoho CRM Text Inputs & Selects (Soft Periwinkle Tint & Red Required Accent) */
-.ios-input {
-  background-color: #edf2f9;
-  border: 1px solid #d0dcf0;
-  border-radius: 6px;
-  padding: 8px 12px;
+  font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", sans-serif;
   font-size: 13px;
-  color: #1e293b;
-  outline: none;
-  transition: all 0.15s ease-in-out;
+  font-weight: 600;
+  line-height: 1.25;
+  padding: 8px 16px;
+  border-radius: 12px;
+  border: none;
+  background-color: rgba(0, 122, 255, 0.1);
+  color: #007aff;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.ios-input-icon-left {
-  padding-left: 2.75rem !important;
+.ios-btn-secondary:hover:not(:disabled) {
+  background-color: rgba(0, 122, 255, 0.16);
 }
 
-.ios-input-icon-both {
-  padding-left: 2.75rem !important;
-  padding-right: 2.75rem !important;
+.ios-btn-secondary:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
-.ios-input:focus {
-  background-color: #ffffff;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-  outline: none;
-}
-
-/* Zoho CRM Red Vertical Accent Bar on Required Fields */
-.ios-input-required,
-.zoho-input-required {
-  border-left-width: 3.5px !important;
-  border-left-color: #f43f5e !important;
-}
-
-/* Zoho CRM Modal Form Grid Tokens (From User Screenshot) */
-.zoho-form-row {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 0.875rem;
-}
-
-.zoho-form-label {
-  width: 9.5rem; /* 152px */
-  flex-shrink: 0;
-  text-align: right;
-  font-size: 0.8125rem; /* 13px */
-  color: #64748b; /* slate-500 */
-  font-weight: 400;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-@media (max-width: 640px) {
-  .zoho-form-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.25rem;
-  }
-  .zoho-form-label {
-    width: 100%;
-    text-align: left;
-    white-space: normal;
-  }
-}
-
-/* Zoho CRM Select Box */
+/* Apple Inset Text Inputs & Selects */
+.ios-input,
+.zoho-input,
 .zoho-select {
-  width: 100%;
-  background-color: #edf2f9;
-  border: 1px solid #d0dcf0;
-  border-radius: 6px;
-  padding: 8px 12px;
+  font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", sans-serif;
   font-size: 13px;
-  color: #1e293b;
+  color: #1c1c1e;
+  background-color: #f2f2f7;
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  border-radius: 12px;
+  padding: 8px 14px;
   outline: none;
-  cursor: pointer;
-  transition: all 0.15s ease-in-out;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.ios-input:focus,
+.zoho-input:focus,
 .zoho-select:focus {
   background-color: #ffffff;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  border-color: #007aff;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
 }
 
-/* Zoho CRM Blue Action Button (Done / Save) */
-.zoho-btn-done {
-  background-color: #3b82f6;
-  color: #ffffff;
-  font-weight: 500;
-  font-size: 13px;
-  padding: 7px 22px;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  transition: background-color 0.15s ease-in-out;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-
-.zoho-btn-done:hover {
-  background-color: #2563eb;
-}
-
-.zoho-btn-done:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Zoho CRM Badges */
+/* Apple Pill Badges */
 .ios-badge {
-  border-radius: 4px;
+  border-radius: 9999px;
   font-size: 11px;
-  font-weight: 500;
-  padding: 2px 8px;
+  font-weight: 600;
+  padding: 3px 10px;
   display: inline-flex;
   align-items: center;
   gap: 4px;
 }
 
 .ios-badge-blue {
-  background-color: #eff6ff;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
+  background-color: rgba(0, 122, 255, 0.1);
+  color: #007aff;
+  border: 1px solid rgba(0, 122, 255, 0.2);
 }
 
 .ios-badge-green {
-  background-color: #f0fdf4;
-  color: #15803d;
-  border: 1px solid #bbf7d0;
+  background-color: rgba(52, 199, 89, 0.1);
+  color: #34c759;
+  border: 1px solid rgba(52, 199, 89, 0.2);
 }
 
 .ios-badge-indigo {
-  background-color: #eef2ff;
-  color: #4338ca;
-  border: 1px solid #c7d2fe;
+  background-color: rgba(88, 86, 214, 0.1);
+  color: #5856d6;
+  border: 1px solid rgba(88, 86, 214, 0.2);
 }
 
 .ios-badge-orange {
-  background-color: #fffbeb;
-  color: #b45309;
-  border: 1px solid #fde68a;
+  background-color: rgba(255, 149, 0, 0.1);
+  color: #ff9500;
+  border: 1px solid rgba(255, 149, 0, 0.2);
 }
 
 .ios-badge-purple {
-  background-color: #faf5ff;
-  color: #7e22ce;
-  border: 1px solid #e9d5ff;
+  background-color: rgba(175, 82, 222, 0.1);
+  color: #af52de;
+  border: 1px solid rgba(175, 82, 222, 0.2);
 }
 
 .ios-badge-red {
-  background-color: #fef2f2;
-  color: #b91c1c;
-  border: 1px solid #fecaca;
+  background-color: rgba(255, 59, 48, 0.1);
+  color: #ff3b30;
+  border: 1px solid rgba(255, 59, 48, 0.2);
 }
 
 .ios-badge-gray {
-  background-color: #f1f5f9;
-  color: #475569;
-  border: 1px solid #cbd5e1;
+  background-color: rgba(142, 142, 147, 0.12);
+  color: #8e8e93;
+  border: 1px solid rgba(142, 142, 147, 0.2);
 }
 
-/* Zoho CRM Progress Bars */
-.ios-progress-track {
-  background-color: #f1f5f9;
-  border-radius: 4px;
-  overflow: hidden;
-  height: 6px;
-}
-
-.ios-progress-fill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.3s ease;
-}
-
-/* Zoho CRM Icon Containers */
+/* Apple Squircle Icon Containers */
 .ios-squircle {
-  width: 36px;
-  height: 36px;
-  border-radius: 6px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
 /* Custom crisp Apple scrollbars */

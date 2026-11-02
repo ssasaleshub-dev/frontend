@@ -132,25 +132,25 @@ export default function Layout() {
   const pageInfo = getPageInfo();
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex flex-col md:flex-row font-sans text-slate-900 antialiased selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-[#f2f2f7] flex flex-col md:flex-row font-sans text-slate-900 antialiased selection:bg-[#007aff] selection:text-white">
       {/* Mobile Top Bar */}
-      <div className="md:hidden bg-[#04162a] text-white border-b border-slate-800 px-4 py-3 flex items-center justify-between sticky top-0 z-40">
+      <div className="md:hidden ios-glass text-slate-900 px-4 py-3 flex items-center justify-between sticky top-0 z-40 border-b border-black/[0.06]">
         <div className="flex items-center gap-2.5">
-          <img src={brandLogo} alt="SSA Logo" className="w-8 h-8 rounded-md object-cover shadow-2xs border border-white/20" />
-          <h1 className="font-bold text-sm tracking-tight text-white leading-tight">SSA CRM</h1>
+          <img src={brandLogo} alt="SSA Logo" className="w-8 h-8 rounded-xl object-cover shadow-xs border border-black/[0.06]" />
+          <h1 className="font-bold text-sm tracking-tight text-slate-900 leading-tight">SSA CRM</h1>
         </div>
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="p-2 text-slate-300 hover:text-white rounded-md hover:bg-white/10 transition-colors"
+          className="p-2 text-slate-700 hover:text-slate-900 rounded-xl hover:bg-black/[0.05] transition-colors"
           aria-label="Toggle menu"
         >
           {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
       </div>
 
-      {/* Zoho CRM Single Navigation Sidebar */}
+      {/* Apple macOS Frosted Sidebar */}
       <aside
-        className={`fixed md:sticky top-0 z-30 inset-y-0 left-0 bg-[#04162a] text-white flex flex-col justify-between border-r border-[#021020] transition-all duration-200 ease-out md:translate-x-0 ${
+        className={`fixed md:sticky top-0 z-30 inset-y-0 left-0 bg-[#0d1627]/95 backdrop-blur-2xl text-white flex flex-col justify-between border-r border-white/5 transition-all duration-200 ease-out md:translate-x-0 ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         } ${sidebarCollapsed ? 'w-18' : 'w-60'} h-screen shrink-0`}
       >
@@ -165,7 +165,7 @@ export default function Layout() {
               <img
                 src={brandLogo}
                 alt="SSA Logo"
-                className="w-9 h-9 rounded-lg object-cover shadow-xs border border-white/20 shrink-0 group-hover:scale-102 transition-transform"
+                className="w-9 h-9 rounded-xl object-cover shadow-xs border border-white/20 shrink-0 group-hover:scale-102 transition-transform"
               />
               {!sidebarCollapsed && (
                 <div className="min-w-0">
@@ -191,11 +191,11 @@ export default function Layout() {
                   to={item.to}
                   onClick={() => setMobileMenuOpen(false)}
                   title={item.label}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-colors ${
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 ${
                     sidebarCollapsed ? 'justify-center px-2' : ''
                   } ${
                     isActive
-                      ? 'bg-[#0066cc] text-white font-semibold shadow-xs'
+                      ? 'bg-[#007aff] text-white shadow-[0_2px_8px_rgba(0,122,255,0.35)]'
                       : 'text-slate-300 hover:text-white hover:bg-white/10'
                   }`}
                 >
@@ -270,8 +270,8 @@ export default function Layout() {
 
       {/* Main App Container */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Zoho CRM Top Navbar */}
-        <header className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-20 shadow-2xs">
+        {/* Apple macOS Translucent Header */}
+        <header className="ios-glass px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-20">
           <div className="min-w-0">
             <h1 className="text-sm font-bold tracking-tight text-slate-900 leading-tight">
               {pageInfo.title}
@@ -285,10 +285,10 @@ export default function Layout() {
             {isAdmin && (
               <button
                 onClick={() => navigate('/import')}
-                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium shadow-2xs transition-colors"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-black/[0.06] bg-white/80 hover:bg-white text-slate-800 text-xs font-semibold shadow-xs transition-all active:scale-95 backdrop-blur-md"
                 title="Excel / Spreadsheet Ingestion"
               >
-                <UploadCloud size={13} />
+                <UploadCloud size={13} className="text-[#007aff]" />
                 <span>Ingest Excel</span>
               </button>
             )}
