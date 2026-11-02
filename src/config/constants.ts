@@ -88,25 +88,25 @@ export const PLATFORMS: Record<string, { label: string; color: string; bg?: stri
 export const PLATFORM_CONFIG = PLATFORMS;
 
 export const LEAD_STATUSES: Record<string, { label: string; color: string }> = {
-  CREATED: { label: 'New Lead', color: 'bg-slate-100 text-slate-700 border-slate-200' },
-  CONTACTED: { label: 'Contacted', color: 'bg-sky-100 text-sky-800 border-sky-200' },
-  QUALIFIED: { label: 'Qualified', color: 'bg-blue-100 text-blue-800 border-blue-200' },
-  PROPOSAL_SENT: { label: 'Docs Requested', color: 'bg-amber-100 text-amber-800 border-amber-200' },
-  NEGOTIATION: { label: 'In Process', color: 'bg-purple-100 text-purple-800 border-purple-200' },
-  CONVERTED: { label: 'Converted', color: 'bg-teal-100 text-teal-800 border-teal-200' },
-  WON: { label: 'Visa Approved / Enrolled', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
-  LOST: { label: 'Lost / Closed', color: 'bg-rose-100 text-rose-800 border-rose-200' },
+  CREATED: { label: 'New Lead', color: 'bg-black/[0.04] text-[#3c3c43] border-black/[0.06]' },
+  CONTACTED: { label: 'Contacted', color: 'bg-[#007aff]/10 text-[#007aff] border-[#007aff]/15' },
+  QUALIFIED: { label: 'Qualified', color: 'bg-[#5856d6]/10 text-[#5856d6] border-[#5856d6]/15' },
+  PROPOSAL_SENT: { label: 'Docs Requested', color: 'bg-[#ff9500]/10 text-[#c96200] border-[#ff9500]/15' },
+  NEGOTIATION: { label: 'In Process', color: 'bg-[#af52de]/10 text-[#8944ab] border-[#af52de]/15' },
+  CONVERTED: { label: 'Converted', color: 'bg-[#34c759]/10 text-[#248a3d] border-[#34c759]/20' },
+  WON: { label: 'Visa Approved / Enrolled', color: 'bg-[#34c759]/15 text-[#1b702e] border-[#34c759]/25' },
+  LOST: { label: 'Lost / Closed', color: 'bg-[#ff3b30]/10 text-[#d70015] border-[#ff3b30]/15' },
 };
 
 export const CANONICAL_LEAD_STATUSES = [
-  { value: 'CREATED', label: 'New Lead', color: 'bg-slate-100 text-slate-700 border-slate-200' },
-  { value: 'CONTACTED', label: 'Contacted', color: 'bg-sky-100 text-sky-800 border-sky-200' },
-  { value: 'QUALIFIED', label: 'Qualified', color: 'bg-blue-100 text-blue-800 border-blue-200' },
-  { value: 'PROPOSAL_SENT', label: 'Docs Requested', color: 'bg-amber-100 text-amber-800 border-amber-200' },
-  { value: 'NEGOTIATION', label: 'In Process', color: 'bg-purple-100 text-purple-800 border-purple-200' },
-  { value: 'CONVERTED', label: 'Converted', color: 'bg-teal-100 text-teal-800 border-teal-200' },
-  { value: 'WON', label: 'Visa Approved', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
-  { value: 'LOST', label: 'Lost', color: 'bg-rose-100 text-rose-800 border-rose-200' },
+  { value: 'CREATED', label: 'New Lead', color: 'bg-black/[0.04] text-[#3c3c43] border-black/[0.06]' },
+  { value: 'CONTACTED', label: 'Contacted', color: 'bg-[#007aff]/10 text-[#007aff] border-[#007aff]/15' },
+  { value: 'QUALIFIED', label: 'Qualified', color: 'bg-[#5856d6]/10 text-[#5856d6] border-[#5856d6]/15' },
+  { value: 'PROPOSAL_SENT', label: 'Docs Requested', color: 'bg-[#ff9500]/10 text-[#c96200] border-[#ff9500]/15' },
+  { value: 'NEGOTIATION', label: 'In Process', color: 'bg-[#af52de]/10 text-[#8944ab] border-[#af52de]/15' },
+  { value: 'CONVERTED', label: 'Converted', color: 'bg-[#34c759]/10 text-[#248a3d] border-[#34c759]/20' },
+  { value: 'WON', label: 'Visa Approved', color: 'bg-[#34c759]/15 text-[#1b702e] border-[#34c759]/25' },
+  { value: 'LOST', label: 'Lost', color: 'bg-[#ff3b30]/10 text-[#d70015] border-[#ff3b30]/15' },
 ] as const;
 
 export const LEAD_STATUS_LIST = Object.entries(LEAD_STATUSES).map(([value, conf]) => ({

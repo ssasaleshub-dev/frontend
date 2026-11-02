@@ -603,7 +603,7 @@ export default function CandidateDetail() {
                   {lead.customerName || `Candidate #${formatMaskedLeadRef(lead.id)}`}
                 </h1>
                 {renderVisaBadge(lead.visaType)}
-                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border ${currentStatusConfig.color} shadow-xs`}>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${currentStatusConfig.color}`}>
                   {currentStatusConfig.label}
                 </span>
               </div>
@@ -712,8 +712,8 @@ export default function CandidateDetail() {
             </div>
           </div>
 
-          {/* Apple macOS / iOS Segmented Pill Pipeline Bar */}
-          <div className="p-1.5 bg-[#e5e5ea]/80 backdrop-blur-md rounded-2xl flex items-center gap-1 overflow-x-auto shadow-inner border border-black/[0.04]">
+          {/* Apple iOS Human Interface Segmented Pipeline Control */}
+          <div className="p-1 bg-[#767680]/12 rounded-xl flex items-center gap-0.5 overflow-x-auto border border-black/[0.04]">
             {LEAD_STATUS_LIST.map((st) => {
               const isCurrent = lead.status === st.value;
               const isWon = st.value === 'WON';
@@ -723,9 +723,9 @@ export default function CandidateDetail() {
               if (isWon) stageLabel = 'Closed Won';
               if (isLost) stageLabel = 'Closed Lost';
 
-              let activeClasses = 'bg-white text-slate-900 shadow-[0_2px_8px_rgba(0,0,0,0.12),0_1px_2px_rgba(0,0,0,0.04)] font-bold';
-              if (isWon && isCurrent) activeClasses = 'bg-[#34c759] text-white shadow-[0_2px_10px_rgba(52,199,89,0.4)] font-bold';
-              if (isLost && isCurrent) activeClasses = 'bg-[#ff3b30] text-white shadow-[0_2px_10px_rgba(255,59,48,0.4)] font-bold';
+              let activeClasses = 'bg-white text-[#1c1c1e] shadow-[0_1px_3px_rgba(0,0,0,0.08),0_1px_1px_rgba(0,0,0,0.04)] font-semibold';
+              if (isWon && isCurrent) activeClasses = 'bg-[#34c759] text-white shadow-sm font-semibold';
+              if (isLost && isCurrent) activeClasses = 'bg-[#ff3b30] text-white shadow-sm font-semibold';
 
               return (
                 <button
@@ -733,28 +733,25 @@ export default function CandidateDetail() {
                   type="button"
                   onClick={() => handleStatusChange(st.value)}
                   title={`${st.label} (${st.value})`}
-                  className={`flex-1 min-w-[95px] py-2 px-2.5 rounded-xl text-xs transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer select-none ${
+                  className={`flex-1 min-w-[90px] py-1.5 px-2.5 rounded-lg text-xs transition-all duration-150 flex items-center justify-center gap-1.5 cursor-pointer select-none ${
                     isCurrent
                       ? activeClasses
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/50 font-medium'
+                      : 'text-[#636366] hover:text-[#1c1c1e] hover:bg-black/[0.03] font-medium'
                   }`}
                 >
                   {isWon && (
                     <ThumbsUp
                       size={12}
-                      className={isCurrent ? 'fill-white text-white' : 'text-emerald-600'}
+                      className={isCurrent ? 'fill-white text-white' : 'text-[#34c759]'}
                     />
                   )}
                   {isLost && (
                     <ThumbsDown
                       size={12}
-                      className={isCurrent ? 'fill-white text-white' : 'text-rose-600'}
+                      className={isCurrent ? 'fill-white text-white' : 'text-[#ff3b30]'}
                     />
                   )}
                   <span className="truncate">{stageLabel}</span>
-                  {isCurrent && !isWon && !isLost && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#007aff]" />
-                  )}
                 </button>
               );
             })}
