@@ -16,6 +16,7 @@ import CandidateDetail from './pages/CandidateDetail';
 import CalendarPage from './pages/CalendarPage';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import DataDeletion from './pages/DataDeletion';
+import TermsOfService from './pages/TermsOfService';
 import pushNotificationService from './services/pushNotificationService';
 
 function PushNotificationListener() {
@@ -51,6 +52,7 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/data-deletion" element={<DataDeletion />} />
+            <Route path="/terms" element={<TermsOfService />} />
             <Route
               path="/"
               element={
