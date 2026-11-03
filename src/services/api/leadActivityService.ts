@@ -19,9 +19,22 @@ export const leadActivityService = {
     let remoteActivities: LeadActivity[] = [];
     try {
       // 1. Attempt fetching from real backend REST endpoint
-      const res = await axiosClient.get<LeadActivity[]>(`/api/leads/${leadId}/activities`);
+      const res = await axiosClient.get<any[]>(`/api/leads/${leadId}/activities`);
       if (Array.isArray(res)) {
-        remoteActivities = res;
+        remoteActivities = res.map((item) => ({
+          id: item.id || `act_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          leadId: item.leadId || leadId,
+          userName: item.userName || 'Counselor',
+          userRole: item.userRole,
+          actionType: item.actionType || 'DATA_MODIFY',
+          title: item.summary || item.title || 'Activity Record',
+          description: item.details || item.description || '',
+          fieldChanged: item.fieldName || item.fieldChanged,
+          oldValue: item.oldValue,
+          newValue: item.newValue,
+          timestamp: item.createdAt || item.timestamp || new Date().toISOString(),
+          metadata: item.metadata,
+        }));
       }
     } catch {
       // Backend may not have endpoint deployed yet; gracefully fallback
@@ -96,17 +109,41 @@ export const leadActivityService = {
     }
 
     // 3. Asynchronously persist to backend endpoint
+    // IMPORTANT: Do NOT include string client ID in post payload so Jackson deserializes cleanly without 400 Bad Request
     try {
-      const serverSaved = await axiosClient.post<LeadActivity>(
+      const numericLeadId = Number(leadId);
+      const postPayload: Record<string, any> = {
+        leadId: !isNaN(numericLeadId) ? numericLeadId : undefined,
+        userName: newActivity.userName,
+        userRole: newActivity.userRole,
+        actionType: newActivity.actionType,
+        summary: newActivity.title || 'Candidate activity',
+        title: newActivity.title,
+        details: newActivity.description || '',
+        description: newActivity.description || '',
+        fieldName: newActivity.fieldChanged || '',
+        fieldChanged: newActivity.fieldChanged || '',
+        oldValue: newActivity.oldValue || '',
+        newValue: newActivity.newValue || '',
+        createdAt: newActivity.timestamp,
+        timestamp: newActivity.timestamp,
+      };
+
+      const serverSaved = await axiosClient.post<any>(
         `/api/leads/${leadId}/activities`,
-        newActivity
+        postPayload
       );
       if (serverSaved && serverSaved.id) {
         // Replace optimistic ID with server ID if available
         const current = this.getLocalActivities(leadId);
-        const replaced = current.map((a) => (a.id === newActivity.id ? serverSaved : a));
+        const replaced = current.map((a) =>
+          a.id === newActivity.id ? { ...a, id: serverSaved.id } : a
+        );
         this.saveLocalActivities(leadId, replaced);
-        return serverSaved;
+        return {
+          ...newActivity,
+          id: serverSaved.id,
+        };
       }
     } catch {
       // Backend sync queued or deferred; local entry remains safe
@@ -144,4 +181,3 @@ export const leadActivityService = {
 };
 
 export default leadActivityService;
-
