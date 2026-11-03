@@ -143,6 +143,12 @@ export default function CandidateDetail() {
           throw new Error(`Access restricted: Candidate belongs to a different visa desk outside your assigned scope.`);
         }
 
+        const cachedClosing = localStorage.getItem(`ssa_lead_closing_date_${candidateData.id}`);
+        const effectiveClosing = candidateData.closingDate || (candidateData as any).purchaseTimeline || cachedClosing || '';
+        if (effectiveClosing && !candidateData.closingDate) {
+          candidateData.closingDate = effectiveClosing;
+        }
+
         setLead(candidateData);
         setEditFormData({
           customerName: candidateData.customerName || '',
@@ -150,6 +156,7 @@ export default function CandidateDetail() {
           email: candidateData.email || '',
           city: candidateData.city || candidateData.location || '',
           visaType: candidateData.visaType || 'WORK_VISA',
+          closingDate: effectiveClosing ? effectiveClosing.substring(0, 10) : '',
           age: candidateData.age || AGE_BRACKETS[0],
           educationalQualification: candidateData.educationalQualification || EDUCATION_QUALIFICATIONS[2],
           areYouWorking: candidateData.areYouWorking || 'yes',
@@ -383,6 +390,14 @@ export default function CandidateDetail() {
     if (editFormData.leadConfirm !== undefined && editFormData.leadConfirm !== lead.leadConfirm) {
       changes.push(`Confirmation: "${lead.leadConfirm}" → "${editFormData.leadConfirm}"`);
     }
+    if (
+      editFormData.closingDate !== undefined &&
+      editFormData.closingDate !== (lead.closingDate || (lead as any).purchaseTimeline)
+    ) {
+      changes.push(
+        `Target Closing Date: "${lead.closingDate || (lead as any).purchaseTimeline || 'Not Set'}" → "${editFormData.closingDate || 'Cleared'}"`
+      );
+    }
 
     try {
       const promises: Promise<any>[] = [];
@@ -414,10 +429,17 @@ export default function CandidateDetail() {
             age: editFormData.age || lead.age,
             educationalQualification: editFormData.educationalQualification || lead.educationalQualification,
             notes: editFormData.notes || lead.notes,
+            purchaseTimeline: editFormData.closingDate || lead.closingDate,
+            closingDate: editFormData.closingDate || lead.closingDate,
           }).catch((err) => {
             console.warn('Lead preference update warning:', err);
           })
         );
+      }
+
+      // Persist to local storage for instant offline resilience
+      if (editFormData.closingDate !== undefined) {
+        localStorage.setItem(`ssa_lead_closing_date_${lead.id}`, editFormData.closingDate);
       }
 
       // 3. Update lead status/notes if changed
@@ -444,6 +466,8 @@ export default function CandidateDetail() {
           city: editFormData.city || prev.city,
           location: editFormData.city || prev.location,
           visaType: editFormData.visaType || prev.visaType,
+          closingDate: editFormData.closingDate !== undefined ? editFormData.closingDate : prev.closingDate,
+          purchaseTimeline: editFormData.closingDate !== undefined ? editFormData.closingDate : (prev as any).purchaseTimeline,
           notes: editFormData.notes !== undefined ? editFormData.notes : prev.notes,
         };
       });
@@ -647,17 +671,50 @@ export default function CandidateDetail() {
     }
   };
 
-  const getExpectedClosingDate = (startStr?: string | null) => {
-    if ((lead as any)?.closingDate) return formatPipelineDate((lead as any).closingDate);
-    try {
-      const base = startStr ? new Date(startStr) : new Date();
-      if (isNaN(base.getTime())) return 'May 18, 2026';
-      const closing = new Date(base.getTime() + 63 * 24 * 60 * 60 * 1000);
-      return closing.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    } catch {
-      return 'May 18, 2026';
+  const getClosingDateInfo = (startStr?: string | null) => {
+    const rawClosing =
+      lead?.closingDate ||
+      (lead as any)?.purchaseTimeline ||
+      (lead?.id ? localStorage.getItem(`ssa_lead_closing_date_${lead.id}`) : null);
+
+    let closingDateDisplay = 'Not Set';
+    let progressPercent: number | null = null;
+    let milestoneBadge: string | null = null;
+
+    if (rawClosing) {
+      closingDateDisplay = formatPipelineDate(rawClosing);
+      try {
+        const start = startStr ? new Date(startStr) : (lead?.createdAt ? new Date(lead.createdAt) : new Date());
+        const end = new Date(rawClosing);
+        if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end.getTime() > start.getTime()) {
+          const total = end.getTime() - start.getTime();
+          const elapsed = Date.now() - start.getTime();
+          const pct = Math.min(Math.max(Math.round((elapsed / total) * 100), 0), 100);
+          progressPercent = pct;
+          if (pct >= 100) milestoneBadge = '100% Target Reached';
+          else if (pct >= 75) milestoneBadge = '75% Elapsed';
+          else if (pct >= 50) milestoneBadge = '50% Midway';
+          else if (pct >= 25) milestoneBadge = '25% Elapsed';
+        }
+      } catch {
+        // fallback
+      }
+    } else {
+      try {
+        const base = startStr ? new Date(startStr) : new Date();
+        if (!isNaN(base.getTime())) {
+          const closing = new Date(base.getTime() + 63 * 24 * 60 * 60 * 1000);
+          closingDateDisplay = formatPipelineDate(closing.toISOString());
+        }
+      } catch {
+        closingDateDisplay = '—';
+      }
     }
+
+    return { closingDateDisplay, progressPercent, milestoneBadge, hasCustomClosing: Boolean(rawClosing) };
   };
+
+  const closingInfo = getClosingDateInfo(lead.createdTime || (lead as any).createdAt || (lead as any).createdDate);
 
   return (
     <div className="space-y-5 max-w-6xl mx-auto pb-12">
@@ -817,12 +874,30 @@ export default function CandidateDetail() {
               <span className="text-[11px] font-bold uppercase tracking-wider text-[#86868b]">
                 CLOSING
               </span>
-              <div className="flex items-center gap-1.5 text-xs font-medium text-slate-800">
-                <Clock size={13} className="text-[#8e8e93]" />
-                <span>
-                  {getExpectedClosingDate(lead.createdTime || (lead as any).createdAt || (lead as any).createdDate)}
+              <button
+                type="button"
+                onClick={() => setShowEditModal(true)}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-800 hover:text-[#007aff] px-2 py-0.5 rounded-lg hover:bg-black/[0.04] transition-colors cursor-pointer group"
+                title="Click to edit target conversion closing date"
+              >
+                <Clock size={13} className="text-[#8e8e93] group-hover:text-[#007aff]" />
+                <span className="font-semibold underline decoration-dotted underline-offset-2">
+                  {closingInfo.closingDateDisplay}
                 </span>
-              </div>
+                {closingInfo.milestoneBadge && lead.status !== 'WON' && lead.status !== 'LOST' && (
+                  <span
+                    className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${
+                      closingInfo.progressPercent && closingInfo.progressPercent >= 100
+                        ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                        : closingInfo.progressPercent && closingInfo.progressPercent >= 75
+                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                        : 'bg-blue-50 text-blue-700 border border-blue-200'
+                    }`}
+                  >
+                    {closingInfo.milestoneBadge}
+                  </span>
+                )}
+              </button>
             </div>
           </div>
 
@@ -1251,6 +1326,22 @@ export default function CandidateDetail() {
                   <option value="STUDY_VISA">Study Visa</option>
                   <option value="OTHER_VISA">Other Visa</option>
                 </select>
+              </div>
+
+              {/* Target Closing Date */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-[#1c1c1e]">
+                    Target Closing Date
+                  </label>
+                  <span className="text-[11px] text-[#8e8e93]">Visa Conversion Deadline</span>
+                </div>
+                <input
+                  type="date"
+                  value={editFormData.closingDate || ''}
+                  onChange={(e) => setEditFormData({ ...editFormData, closingDate: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-[#f2f2f7] hover:bg-[#e5e5ea]/50 focus:bg-white border border-black/[0.06] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff] transition-all font-medium cursor-pointer"
+                />
               </div>
 
               {/* Notes */}

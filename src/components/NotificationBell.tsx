@@ -206,7 +206,17 @@ export default function NotificationBell() {
                 >
                   {/* Apple Style Squircle Icon */}
                   <div className="mt-0.5 shrink-0">
-                    {item.type === 'REMINDER' ? (
+                    {item.type && item.type.startsWith('CLOSING_MILESTONE_') ? (
+                      <div className={`w-8 h-8 rounded-[10px] flex items-center justify-center ${
+                        item.type.includes('100')
+                          ? 'bg-rose-500/10 text-rose-600'
+                          : item.type.includes('75')
+                          ? 'bg-amber-500/10 text-amber-600'
+                          : 'bg-[#0071e3]/10 text-[#0071e3]'
+                      }`}>
+                        <Clock size={15} strokeWidth={2.2} />
+                      </div>
+                    ) : item.type === 'REMINDER' ? (
                       <div className="w-8 h-8 rounded-[10px] bg-amber-500/10 text-amber-600 flex items-center justify-center">
                         <Clock size={15} strokeWidth={2.2} />
                       </div>
