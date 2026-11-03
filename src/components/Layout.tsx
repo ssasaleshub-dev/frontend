@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -15,11 +15,15 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar,
+  Clock,
+  User,
+  CheckCircle2,
 } from 'lucide-react';
 import NotificationBell from './NotificationBell';
 import { useAuth } from '../context/AuthContext';
 import { isAdmin as checkIsAdmin, getRoleBadgeInfo, getDisplayName } from '../utils/rbac';
 import fileService from '../services/api/fileService';
+import attendanceService, { StaffAttendanceRecord } from '../services/api/attendanceService';
 import brandLogo from '../assets/brand-logo.jpg';
 
 export default function Layout() {
@@ -59,6 +63,26 @@ export default function Layout() {
   const displayName = getDisplayName(user);
   const userInitial = (displayName?.[0] || 'S').toUpperCase();
 
+  const [todayAttendance, setTodayAttendance] = useState<StaffAttendanceRecord | null>(null);
+
+  useEffect(() => {
+    const currentUserId = user?.login || (user?.id ? String(user.id) : '');
+    if (!currentUserId) return;
+
+    const fetchAttendance = async () => {
+      try {
+        const res = await attendanceService.getTodayAttendance(currentUserId);
+        setTodayAttendance(res);
+      } catch {
+        // fallback
+      }
+    };
+
+    fetchAttendance();
+    window.addEventListener('ssa_attendance_updated', fetchAttendance);
+    return () => window.removeEventListener('ssa_attendance_updated', fetchAttendance);
+  }, [user]);
+
   const currentPath = location.pathname;
 
   // Real navigation items matching actual application routes
@@ -92,10 +116,24 @@ export default function Layout() {
       exact: false,
     },
     {
+      id: 'attendance',
+      label: 'Staff Attendance',
+      icon: Clock,
+      to: '/attendance',
+      exact: false,
+    },
+    {
       id: 'chat',
       label: 'Team Chat',
       icon: MessageSquare,
       to: '/chat',
+      exact: false,
+    },
+    {
+      id: 'profile',
+      label: 'My Profile Desk',
+      icon: User,
+      to: '/profile',
       exact: false,
     },
     ...(isAdmin
@@ -123,6 +161,8 @@ export default function Layout() {
     if (currentPath.startsWith('/leads')) return { title: 'Candidate Leads Pipeline', subtitle: 'Filter, triage, and contact international visa candidates' };
     if (currentPath.startsWith('/customers')) return { title: 'Contacts', subtitle: 'Verified contacts and customer records' };
     if (currentPath.startsWith('/calendar')) return { title: 'Calendar & Reminders', subtitle: 'Indian public holidays, counselor callbacks & appointment schedule' };
+    if (currentPath.startsWith('/attendance')) return { title: 'Staff Attendance & Roster', subtitle: 'Daily check-in, check-out punches, duration tracking, and corporate register' };
+    if (currentPath.startsWith('/profile')) return { title: 'Staff Profile & Shift Desk', subtitle: 'Counselor credentials, shift records, and personal attendance history' };
     if (currentPath.startsWith('/import')) return { title: 'Data Ingestion', subtitle: 'Import Meta ads export spreadsheets & raw lead data' };
     if (currentPath.startsWith('/chat')) return { title: 'Team Chat', subtitle: 'Internal messaging and staff communication' };
     if (currentPath.startsWith('/users')) return { title: 'Team & Permissions', subtitle: 'Manage counselor assignments, roles, and access desks' };
@@ -244,14 +284,19 @@ export default function Layout() {
             </div>
 
             {!sidebarCollapsed && (
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-white truncate leading-tight">
+              <button
+                type="button"
+                onClick={() => navigate('/profile')}
+                className="min-w-0 flex-1 text-left focus:outline-none group"
+                title="View Staff Profile & Shift Desk"
+              >
+                <p className="text-xs font-semibold text-white truncate leading-tight group-hover:text-blue-300 transition-colors">
                   {displayName}
                 </p>
                 <p className="text-[11px] text-slate-400 truncate">
                   {badgeInfo.displayText}
                 </p>
-              </div>
+              </button>
             )}
 
             {!sidebarCollapsed && (
@@ -282,6 +327,39 @@ export default function Layout() {
           </div>
 
           <div className="flex items-center gap-2.5">
+            {/* Quick Attendance Punch Pill */}
+            {todayAttendance?.checkInTime && !todayAttendance?.checkOutTime ? (
+              <button
+                type="button"
+                onClick={() => navigate('/attendance')}
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs font-semibold shadow-xs hover:bg-emerald-100 transition-all active:scale-95"
+                title="Shift in progress - View attendance"
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Working</span>
+              </button>
+            ) : todayAttendance?.checkOutTime ? (
+              <button
+                type="button"
+                onClick={() => navigate('/attendance')}
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 text-xs font-semibold shadow-xs hover:bg-slate-100 transition-all active:scale-95"
+                title="Shift completed for today"
+              >
+                <CheckCircle2 size={13} className="text-emerald-600" />
+                <span>Shift Done ({todayAttendance.totalHoursFormatted || 'Done'})</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => navigate('/attendance')}
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-xs font-semibold shadow-xs hover:bg-amber-100 transition-all active:scale-95"
+                title="Punch in for today's shift"
+              >
+                <Clock size={13} className="text-amber-600" />
+                <span>Punch In</span>
+              </button>
+            )}
+
             {isAdmin && (
               <button
                 onClick={() => navigate('/import')}
@@ -312,27 +390,34 @@ export default function Layout() {
               <NotificationBell />
             </div>
 
-            {/* Header User Section */}
+            {/* Header User Section - Click to go to Profile */}
             <div className="flex items-center gap-2.5 pl-3 border-l border-slate-200">
-              {user?.imageUrl ? (
-                <img
-                  src={user.imageUrl}
-                  alt={displayName}
-                  className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-[#eaecf0] text-[#344054] font-semibold text-xs flex items-center justify-center shrink-0 uppercase">
-                  {userInitial}
+              <button
+                type="button"
+                onClick={() => navigate('/profile')}
+                className="flex items-center gap-2.5 text-left focus:outline-none group"
+                title="View Staff Profile & Shift Records"
+              >
+                {user?.imageUrl ? (
+                  <img
+                    src={user.imageUrl}
+                    alt={displayName}
+                    className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0 group-hover:ring-2 group-hover:ring-[#007aff]/30 transition-all"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-[#eaecf0] text-[#344054] font-semibold text-xs flex items-center justify-center shrink-0 uppercase group-hover:ring-2 group-hover:ring-[#007aff]/30 transition-all">
+                    {userInitial}
+                  </div>
+                )}
+                <div className="hidden sm:flex flex-col text-left">
+                  <span className="text-xs font-semibold text-[#1e293b] leading-tight group-hover:text-[#007aff] transition-colors">
+                    {displayName}
+                  </span>
+                  <span className="text-[11px] text-[#64748b] font-normal leading-tight mt-0.5">
+                    {badgeInfo.displayText}
+                  </span>
                 </div>
-              )}
-              <div className="hidden sm:flex flex-col text-left">
-                <span className="text-xs font-semibold text-[#1e293b] leading-tight">
-                  {displayName}
-                </span>
-                <span className="text-[11px] text-[#64748b] font-normal leading-tight mt-0.5">
-                  {badgeInfo.displayText}
-                </span>
-              </div>
+              </button>
 
               {/* Logout Button */}
               <button
