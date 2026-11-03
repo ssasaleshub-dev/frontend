@@ -44,19 +44,19 @@ export const VISA_TYPES = {
   WORK_VISA: {
     key: 'WORK_VISA',
     label: 'Work Visa',
-    badgeClass: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    badgeClass: 'bg-black/[0.04] text-[#1c1c1e] border-black/[0.06]',
     description: 'Candidates seeking international employment & work permits',
   },
   STUDY_VISA: {
     key: 'STUDY_VISA',
     label: 'Study Visa',
-    badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    badgeClass: 'bg-black/[0.04] text-[#1c1c1e] border-black/[0.06]',
     description: 'Students seeking overseas university admissions & study permits',
   },
   OTHER_VISA: {
     key: 'OTHER_VISA',
     label: 'Other Visa',
-    badgeClass: 'bg-amber-50 text-amber-800 border-amber-200',
+    badgeClass: 'bg-black/[0.04] text-[#1c1c1e] border-black/[0.06]',
     description: '3rd category / Other Visa inquiries and candidates',
   },
 } as const;
@@ -78,35 +78,35 @@ export const USER_ROLE_CONFIG = [
 ] as const;
 
 export const PLATFORMS: Record<string, { label: string; color: string; bg?: string; text?: string; border?: string }> = {
-  IG: { label: 'Instagram', color: 'bg-pink-50 text-pink-700 border-pink-200', bg: 'bg-pink-50', text: 'text-pink-700', border: 'border-pink-200' },
-  FB: { label: 'Facebook', color: 'bg-blue-50 text-blue-700 border-blue-200', bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
-  WHATSAPP: { label: 'WhatsApp', color: 'bg-emerald-50 text-emerald-700 border-emerald-200', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
-  OTHER: { label: 'Direct / Walk-in', color: 'bg-slate-50 text-slate-700 border-slate-200', bg: 'bg-slate-50', text: 'text-slate-700', border: 'border-slate-200' },
+  IG: { label: 'Instagram', color: 'bg-black/[0.04] text-[#1c1c1e] border-black/[0.06]', bg: 'bg-black/[0.04]', text: 'text-[#1c1c1e]', border: 'border-black/[0.06]' },
+  FB: { label: 'Facebook', color: 'bg-black/[0.04] text-[#1c1c1e] border-black/[0.06]', bg: 'bg-black/[0.04]', text: 'text-[#1c1c1e]', border: 'border-black/[0.06]' },
+  WHATSAPP: { label: 'WhatsApp', color: 'bg-black/[0.04] text-[#1c1c1e] border-black/[0.06]', bg: 'bg-black/[0.04]', text: 'text-[#1c1c1e]', border: 'border-black/[0.06]' },
+  OTHER: { label: 'Direct / Walk-in', color: 'bg-black/[0.04] text-[#1c1c1e] border-black/[0.06]', bg: 'bg-black/[0.04]', text: 'text-[#1c1c1e]', border: 'border-black/[0.06]' },
 };
 
 // Backward-compatible alias
 export const PLATFORM_CONFIG = PLATFORMS;
 
 export const LEAD_STATUSES: Record<string, { label: string; color: string }> = {
-  CREATED: { label: 'New Lead', color: 'bg-black/[0.04] text-[#3c3c43] border-black/[0.06]' },
-  CONTACTED: { label: 'Contacted', color: 'bg-[#007aff]/10 text-[#007aff] border-[#007aff]/15' },
-  QUALIFIED: { label: 'Qualified', color: 'bg-[#5856d6]/10 text-[#5856d6] border-[#5856d6]/15' },
-  PROPOSAL_SENT: { label: 'Docs Requested', color: 'bg-[#ff9500]/10 text-[#c96200] border-[#ff9500]/15' },
-  NEGOTIATION: { label: 'In Process', color: 'bg-[#af52de]/10 text-[#8944ab] border-[#af52de]/15' },
-  CONVERTED: { label: 'Converted', color: 'bg-[#34c759]/10 text-[#248a3d] border-[#34c759]/20' },
-  WON: { label: 'Visa Approved / Enrolled', color: 'bg-[#34c759]/15 text-[#1b702e] border-[#34c759]/25' },
-  LOST: { label: 'Lost / Closed', color: 'bg-[#ff3b30]/10 text-[#d70015] border-[#ff3b30]/15' },
+  CREATED: { label: 'New Lead', color: 'bg-black/[0.04] text-[#1c1c1e] border-black/[0.06]' },
+  CONTACTED: { label: 'Contacted', color: 'bg-black/[0.04] text-[#1c1c1e] border-black/[0.06]' },
+  QUALIFIED: { label: 'Qualified', color: 'bg-black/[0.04] text-[#1c1c1e] border-black/[0.06]' },
+  PROPOSAL_SENT: { label: 'Docs Requested', color: 'bg-black/[0.04] text-[#1c1c1e] border-black/[0.06]' },
+  NEGOTIATION: { label: 'In Process', color: 'bg-black/[0.04] text-[#1c1c1e] border-black/[0.06]' },
+  CONVERTED: { label: 'Converted', color: 'bg-black/[0.04] text-[#1c1c1e] border-black/[0.06]' },
+  WON: { label: 'Visa Approved / Enrolled', color: 'bg-black/[0.04] text-[#1c1c1e] border-black/[0.06]' },
+  LOST: { label: 'Lost / Closed', color: 'bg-black/[0.04] text-[#8e8e93] border-black/[0.06]' },
 };
 
 export const CANONICAL_LEAD_STATUSES = [
-  { value: 'CREATED', label: 'New Lead', color: 'bg-black/[0.04] text-[#3c3c43] border-black/[0.06]' },
-  { value: 'CONTACTED', label: 'Contacted', color: 'bg-[#007aff]/10 text-[#007aff] border-[#007aff]/15' },
-  { value: 'QUALIFIED', label: 'Qualified', color: 'bg-[#5856d6]/10 text-[#5856d6] border-[#5856d6]/15' },
-  { value: 'PROPOSAL_SENT', label: 'Docs Requested', color: 'bg-[#ff9500]/10 text-[#c96200] border-[#ff9500]/15' },
-  { value: 'NEGOTIATION', label: 'In Process', color: 'bg-[#af52de]/10 text-[#8944ab] border-[#af52de]/15' },
-  { value: 'CONVERTED', label: 'Converted', color: 'bg-[#34c759]/10 text-[#248a3d] border-[#34c759]/20' },
-  { value: 'WON', label: 'Visa Approved', color: 'bg-[#34c759]/15 text-[#1b702e] border-[#34c759]/25' },
-  { value: 'LOST', label: 'Lost', color: 'bg-[#ff3b30]/10 text-[#d70015] border-[#ff3b30]/15' },
+  { value: 'CREATED', label: 'New Lead', color: 'bg-black/[0.04] text-[#1c1c1e] border-black/[0.06]' },
+  { value: 'CONTACTED', label: 'Contacted', color: 'bg-black/[0.04] text-[#1c1c1e] border-black/[0.06]' },
+  { value: 'QUALIFIED', label: 'Qualified', color: 'bg-black/[0.04] text-[#1c1c1e] border-black/[0.06]' },
+  { value: 'PROPOSAL_SENT', label: 'Docs Requested', color: 'bg-black/[0.04] text-[#1c1c1e] border-black/[0.06]' },
+  { value: 'NEGOTIATION', label: 'In Process', color: 'bg-black/[0.04] text-[#1c1c1e] border-black/[0.06]' },
+  { value: 'CONVERTED', label: 'Converted', color: 'bg-black/[0.04] text-[#1c1c1e] border-black/[0.06]' },
+  { value: 'WON', label: 'Visa Approved', color: 'bg-black/[0.04] text-[#1c1c1e] border-black/[0.06]' },
+  { value: 'LOST', label: 'Lost', color: 'bg-black/[0.04] text-[#8e8e93] border-black/[0.06]' },
 ] as const;
 
 export const LEAD_STATUS_LIST = Object.entries(LEAD_STATUSES).map(([value, conf]) => ({

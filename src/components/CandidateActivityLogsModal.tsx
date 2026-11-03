@@ -77,16 +77,16 @@ export default function CandidateActivityLogsModal({
         {/* Apple iOS Frosted Header */}
         <div className="px-6 py-4.5 border-b border-black/[0.06] bg-white/95 backdrop-blur-md flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#007aff]/10 text-[#007aff] flex items-center justify-center shadow-xs">
-              <History size={20} />
+            <div className="w-10 h-10 rounded-2xl bg-black/[0.04] text-[#1c1c1e] flex items-center justify-center shadow-xs">
+              <History size={18} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-[#1c1c1e] tracking-tight">
-                  Activity & Audit Logs
+                <h2 className="text-base font-semibold text-[#1c1c1e] tracking-tight">
+                  Activity Logs
                 </h2>
-                <span className="px-2 py-0.5 text-[11px] font-bold bg-[#007aff]/10 text-[#007aff] rounded-full">
-                  {activities.length} {activities.length === 1 ? 'event' : 'events'}
+                <span className="text-xs text-[#8e8e93] font-normal">
+                  ({activities.length})
                 </span>
               </div>
               <p className="text-xs text-[#8e8e93] font-medium mt-0.5">

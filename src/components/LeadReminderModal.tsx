@@ -228,17 +228,17 @@ export default function LeadReminderModal({
         {/* Apple iOS Frosted Header */}
         <div className="px-6 py-4.5 border-b border-black/[0.06] bg-white/95 backdrop-blur-md flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#ff9500]/10 text-[#ff9500] flex items-center justify-center shadow-xs">
-              <Bell size={20} />
+            <div className="w-10 h-10 rounded-2xl bg-black/[0.04] text-[#1c1c1e] flex items-center justify-center shadow-xs">
+              <Bell size={18} />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-[#1c1c1e] tracking-tight">
+              <div className="flex items-center gap-1.5">
+                <h2 className="text-base font-semibold text-[#1c1c1e] tracking-tight">
                   Candidate Reminders
                 </h2>
                 {pendingCount > 0 && (
-                  <span className="px-2 py-0.5 text-[11px] font-bold bg-[#ff9500]/10 text-[#ff9500] rounded-full">
-                    {pendingCount} active
+                  <span className="text-xs text-[#8e8e93] font-normal">
+                    ({pendingCount})
                   </span>
                 )}
               </div>
@@ -280,8 +280,8 @@ export default function LeadReminderModal({
             >
               <span>Reminders List</span>
               {reminders.length > 0 && (
-                <span className="px-1.5 py-0.2 text-[10px] rounded-full bg-[#ff9500]/10 text-[#ff9500] font-bold">
-                  {reminders.length}
+                <span className="text-xs text-[#8e8e93] font-normal">
+                  ({reminders.length})
                 </span>
               )}
             </button>
@@ -299,8 +299,8 @@ export default function LeadReminderModal({
             <div
               className={`p-3.5 rounded-2xl text-xs font-medium flex items-center gap-2.5 transition-all ${
                 feedback.type === 'success'
-                  ? 'bg-[#34c759]/10 text-[#248a3d] border border-[#34c759]/20'
-                  : 'bg-[#ff3b30]/10 text-[#ff3b30] border border-[#ff3b30]/20'
+                  ? 'bg-black/[0.04] text-[#1c1c1e] border border-black/[0.06]'
+                  : 'bg-black/[0.04] text-[#ff3b30] border border-black/[0.06]'
               }`}
             >
               {feedback.type === 'success' ? (
@@ -567,7 +567,7 @@ export default function LeadReminderModal({
                             {r.title}
                           </p>
                           {r.priority === 'HIGH' || r.priority === 'URGENT' ? (
-                            <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-[#ff3b30]/10 text-[#ff3b30]">
+                            <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-black/[0.04] text-[#ff3b30] border border-black/[0.06]">
                               {r.priority}
                             </span>
                           ) : null}

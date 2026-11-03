@@ -595,7 +595,7 @@ export default function CandidateDetail() {
 
           <button
             onClick={handleDelete}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-[#ff3b30] rounded-xl border border-rose-200/50 text-xs font-semibold transition-all active:scale-95"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white hover:bg-black/[0.04] text-[#8e8e93] hover:text-[#ff3b30] rounded-xl border border-black/[0.08] hover:border-black/[0.15] text-xs font-medium transition-all active:scale-95 shadow-2xs cursor-pointer"
           >
             <Trash2 size={13} />
             <span>Delete</span>
@@ -617,7 +617,7 @@ export default function CandidateDetail() {
                   {lead.customerName || `Candidate #${formatMaskedLeadRef(lead.id)}`}
                 </h1>
                 {renderVisaBadge(lead.visaType)}
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${currentStatusConfig.color}`}>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-black/[0.04] text-[#1c1c1e] border border-black/[0.06]">
                   {currentStatusConfig.label}
                 </span>
               </div>
@@ -684,14 +684,14 @@ export default function CandidateDetail() {
             {/* Apple iOS Activity & Audit Logs Button */}
             <button
               onClick={() => setShowActivityLogsModal(true)}
-              className="inline-flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-[#f2f2f7] text-[#1c1c1e] rounded-xl text-xs font-semibold border border-black/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-[#f2f2f7] text-[#1c1c1e] rounded-xl text-xs font-medium border border-black/[0.08] shadow-2xs transition-all active:scale-95 cursor-pointer"
               title="View counselor audit logs and candidate activity history"
             >
-              <History size={14} className="text-[#007aff]" />
+              <History size={14} className="text-[#8e8e93]" />
               <span>Activity Logs</span>
               {activities.length > 0 && (
-                <span className="px-1.5 py-0.5 text-[10px] font-bold bg-[#007aff]/10 text-[#007aff] rounded-full">
-                  {activities.length}
+                <span className="text-xs text-[#8e8e93] font-normal">
+                  ({activities.length})
                 </span>
               )}
             </button>
@@ -699,14 +699,14 @@ export default function CandidateDetail() {
             {/* Apple iOS Candidate Reminder Button */}
             <button
               onClick={() => setShowReminderModal(true)}
-              className="inline-flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-[#f2f2f7] text-[#1c1c1e] rounded-xl text-xs font-semibold border border-black/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-[#f2f2f7] text-[#1c1c1e] rounded-xl text-xs font-medium border border-black/[0.08] shadow-2xs transition-all active:scale-95 cursor-pointer"
               title="Set and manage reminders for this candidate"
             >
-              <Bell size={14} className="text-[#ff9500]" />
+              <Bell size={14} className="text-[#8e8e93]" />
               <span>Reminder</span>
               {leadReminders.filter((r) => !r.isCompleted).length > 0 && (
-                <span className="px-1.5 py-0.5 text-[10px] font-bold bg-[#ff9500]/10 text-[#ff9500] rounded-full">
-                  {leadReminders.filter((r) => !r.isCompleted).length}
+                <span className="text-xs text-[#8e8e93] font-normal">
+                  ({leadReminders.filter((r) => !r.isCompleted).length})
                 </span>
               )}
             </button>
@@ -730,11 +730,9 @@ export default function CandidateDetail() {
               <span className="text-[11px] font-bold uppercase tracking-wider text-[#86868b]">
                 CLOSING
               </span>
-              <div className="flex items-center gap-1.5">
-                <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-rose-500/10 text-[#ff3b30] flex-shrink-0">
-                  <Clock size={11} />
-                </span>
-                <span className="text-xs font-semibold text-slate-800">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-slate-800">
+                <Clock size={13} className="text-[#8e8e93]" />
+                <span>
                   {getExpectedClosingDate(lead.createdTime || (lead as any).createdAt || (lead as any).createdDate)}
                 </span>
               </div>
