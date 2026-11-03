@@ -385,29 +385,67 @@ export default function CandidateDetail() {
     }
 
     try {
-      // 1. Update customer profile
+      const promises: Promise<any>[] = [];
+
+      // 1. Update customer profile (must pass id in body)
       if (lead.customerId) {
-        await crmService.updateCustomer(lead.customerId, {
-          fullName: editFormData.customerName,
-          phoneNumber: editFormData.phoneNumber,
-          location: editFormData.city,
-        });
+        promises.push(
+          crmService.updateCustomer(lead.customerId, {
+            id: Number(lead.customerId),
+            fullName: editFormData.customerName || lead.customerName,
+            phoneNumber: editFormData.phoneNumber || lead.phoneNumber,
+            location: editFormData.city || lead.city || lead.location,
+            email: editFormData.email || lead.email,
+          }).catch((err) => {
+            console.warn('Customer profile update warning:', err);
+          })
+        );
       }
 
-      // 2. Update lead details
-      await crmService.patchLead(lead.id, {
-        visaType: editFormData.visaType,
-        notes: editFormData.notes,
-        age: editFormData.age,
-        educationalQualification: editFormData.educationalQualification,
-        areYouWorking: editFormData.areYouWorking,
-        areYouInterested: editFormData.areYouInterested,
-        leadConfirm: editFormData.leadConfirm,
-      });
+      // 2. Update lead preferences (must pass id in body)
+      const prefId = lead.preferenceId || (lead as any).leadPreferenceId;
+      if (prefId) {
+        promises.push(
+          axiosClient.patch(`/api/lead-preferences/${prefId}`, {
+            id: Number(prefId),
+            visaType: editFormData.visaType || lead.visaType,
+            email: editFormData.email || lead.email,
+            city: editFormData.city || lead.city,
+            age: editFormData.age || lead.age,
+            educationalQualification: editFormData.educationalQualification || lead.educationalQualification,
+            notes: editFormData.notes || lead.notes,
+          }).catch((err) => {
+            console.warn('Lead preference update warning:', err);
+          })
+        );
+      }
 
-      setLead({
-        ...lead,
-        ...editFormData,
+      // 3. Update lead status/notes if changed
+      if (editFormData.notes !== undefined && editFormData.notes !== lead.notes) {
+        promises.push(
+          crmService.updateLeadStatus(lead.id, lead.status || 'CREATED', editFormData.notes)
+            .catch((err) => {
+              console.warn('Lead status update warning:', err);
+            })
+        );
+      }
+
+      await Promise.all(promises);
+
+      // Optimistically update local state immediately so user sees changes instantly
+      setLead((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          ...editFormData,
+          customerName: editFormData.customerName || prev.customerName,
+          phoneNumber: editFormData.phoneNumber || prev.phoneNumber,
+          email: editFormData.email || prev.email,
+          city: editFormData.city || prev.city,
+          location: editFormData.city || prev.location,
+          visaType: editFormData.visaType || prev.visaType,
+          notes: editFormData.notes !== undefined ? editFormData.notes : prev.notes,
+        };
       });
 
       setShowEditModal(false);
@@ -418,7 +456,7 @@ export default function CandidateDetail() {
           userName: currentUser?.login || currentUser?.firstName || 'Counselor',
           userRole: currentUser?.authorities?.[0],
           actionType: 'DATA_MODIFY',
-          title: 'Candidate Dossier Modified',
+          title: 'Candidate Details Updated',
           description: `Counselor updated ${changes.length} field(s):\n• ` + changes.join('\n• '),
         });
       }
@@ -630,16 +668,16 @@ export default function CandidateDetail() {
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 hover:bg-white text-xs font-semibold text-[#007aff] transition-all shadow-xs border border-black/[0.05] active:scale-95 backdrop-blur-md"
         >
           <ChevronLeft size={16} />
-          <span>Back to Candidate Pipeline</span>
+          <span>Back to Leads</span>
         </button>
 
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowEditModal(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white/80 hover:bg-white text-slate-800 rounded-xl border border-black/[0.06] text-xs font-semibold shadow-xs transition-all active:scale-95 backdrop-blur-md"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white/80 hover:bg-white text-slate-800 rounded-xl border border-black/[0.06] text-xs font-semibold shadow-xs transition-all active:scale-95 backdrop-blur-md cursor-pointer"
           >
             <Edit2 size={13} className="text-[#007aff]" />
-            <span>Edit Dossier</span>
+            <span>Edit Details</span>
           </button>
 
           <button
@@ -844,7 +882,7 @@ export default function CandidateDetail() {
             <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
               <h3 className="text-xs font-bold uppercase tracking-wider text-[#86868b] flex items-center gap-2">
                 <UserCheck size={14} className="text-[#007aff]" />
-                <span>Contact Dossier</span>
+                <span>Contact Details</span>
               </h3>
               <button
                 onClick={handleCopyPhone}
@@ -981,7 +1019,7 @@ export default function CandidateDetail() {
             <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
               <h3 className="text-xs font-bold uppercase tracking-wider text-[#86868b] flex items-center gap-2">
                 <BrandAttributionIcon size={14} className="text-[#007aff]" />
-                <span>Marketing Origin Telemetry</span>
+                <span>Lead Source</span>
               </h3>
               <span className={`text-[11px] font-bold px-3 py-1 rounded-full border ${plat.color}`}>
                 {plat.label}
@@ -1027,9 +1065,9 @@ export default function CandidateDetail() {
             <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
               <h3 className="text-xs font-bold uppercase tracking-wider text-[#86868b] flex items-center gap-2">
                 <MessageCircle size={14} className="text-[#007aff]" />
-                <span>Remarks & Counselor Log</span>
+                <span>Counselor Notes</span>
               </h3>
-              <span className="text-[11px] text-[#86868b] font-medium">Quick Intake</span>
+              <span className="text-[11px] text-[#86868b] font-medium">Quick Note</span>
             </div>
 
             <form onSubmit={handleAddNote} className="space-y-3">
@@ -1048,7 +1086,7 @@ export default function CandidateDetail() {
                   className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#007aff] hover:bg-[#0071e3] text-white rounded-xl text-xs font-semibold shadow-[0_2px_8px_rgba(0,122,255,0.3)] transition-all active:scale-95 disabled:opacity-40"
                 >
                   <Send size={12} />
-                  <span>{submittingNote ? 'Saving Remarks...' : 'Add Remarks / Note'}</span>
+                  <span>{submittingNote ? 'Saving...' : 'Add Note'}</span>
                 </button>
               </div>
             </form>
@@ -1056,7 +1094,7 @@ export default function CandidateDetail() {
             {/* Historical Notes Stream */}
             <div className="pt-3 border-t border-black/[0.06] space-y-3">
               <span className="text-[11px] font-bold uppercase tracking-wider text-[#86868b]">
-                Remarks & Discussion History
+                Notes History
               </span>
 
               {notesHistory.length === 0 ? (
@@ -1117,146 +1155,133 @@ export default function CandidateDetail() {
         </div>
       </div>
 
-      {/* Edit Candidate Dossier Modal (Zoho CRM Modal & Field UI) */}
+      {/* Edit Candidate Details Modal */}
       {showEditModal && (
-        <div className="zoho-modal-backdrop">
-          <div className="zoho-modal-card max-w-lg animate-in zoom-in-95">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-base font-bold text-slate-900 tracking-tight">
-                Get Candidate Info
-              </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl border border-black/[0.08] max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="px-6 py-4.5 border-b border-black/[0.06] flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-semibold text-[#1c1c1e] tracking-tight">
+                  Edit Candidate Details
+                </h3>
+                <p className="text-xs text-[#8e8e93] mt-0.5">
+                  Update candidate contact and inquiry information
+                </p>
+              </div>
               <button
                 onClick={() => setShowEditModal(false)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded transition-colors"
+                className="w-8 h-8 rounded-full bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#8e8e93] hover:text-[#1c1c1e] flex items-center justify-center transition-colors cursor-pointer"
                 aria-label="Close"
               >
                 <X size={16} />
               </button>
             </div>
 
-            <div className="text-xs font-semibold text-slate-500 mt-3 mb-4">
-              Order Information
-            </div>
-
-            <form onSubmit={handleSaveEdit} className="text-xs">
-              {/* Full Name (Required: Red Left Accent Bar) */}
-              <div className="zoho-form-row">
-                <label className="zoho-form-label" title="Name of the Candidate">
-                  Name of the Cus...
+            <form onSubmit={handleSaveEdit} className="p-6 overflow-y-auto space-y-4 text-xs">
+              {/* Full Name */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-[#1c1c1e]">
+                  Full Name <span className="text-[#ff3b30]">*</span>
                 </label>
-                <div className="flex-1">
-                  <input
-                    type="text"
-                    required
-                    value={editFormData.customerName || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, customerName: e.target.value })}
-                    className="ios-input ios-input-required w-full font-medium"
-                  />
-                </div>
+                <input
+                  type="text"
+                  required
+                  value={editFormData.customerName || ''}
+                  onChange={(e) => setEditFormData({ ...editFormData, customerName: e.target.value })}
+                  placeholder="e.g. Mahendran"
+                  className="w-full px-3.5 py-2.5 bg-[#f2f2f7] hover:bg-[#e5e5ea]/50 focus:bg-white border border-black/[0.06] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff] transition-all font-medium"
+                />
               </div>
 
-              {/* Customer Email */}
-              <div className="zoho-form-row">
-                <label className="zoho-form-label" title="Customer Email">
-                  Customer Email
+              {/* Phone Number */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-[#1c1c1e]">
+                  Phone Number <span className="text-[#ff3b30]">*</span>
                 </label>
-                <div className="flex-1">
-                  <input
-                    type="email"
-                    value={editFormData.email || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                    className="ios-input w-full"
-                  />
-                </div>
+                <input
+                  type="tel"
+                  required
+                  value={editFormData.phoneNumber || ''}
+                  onChange={(e) => setEditFormData({ ...editFormData, phoneNumber: e.target.value })}
+                  placeholder="e.g. +919360185226"
+                  className="w-full px-3.5 py-2.5 bg-[#f2f2f7] hover:bg-[#e5e5ea]/50 focus:bg-white border border-black/[0.06] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff] transition-all font-medium"
+                />
               </div>
 
-              {/* Candidate Phone (Required: Red Left Accent Bar) */}
-              <div className="zoho-form-row">
-                <label className="zoho-form-label" title="Candidate Phone">
-                  Candidate Phone
+              {/* Email Address */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-[#1c1c1e]">
+                  Email Address
                 </label>
-                <div className="flex-1">
-                  <input
-                    type="tel"
-                    required
-                    value={editFormData.phoneNumber || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, phoneNumber: e.target.value })}
-                    className="ios-input ios-input-required w-full font-medium"
-                  />
-                </div>
+                <input
+                  type="email"
+                  value={editFormData.email || ''}
+                  onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                  placeholder="candidate@example.com"
+                  className="w-full px-3.5 py-2.5 bg-[#f2f2f7] hover:bg-[#e5e5ea]/50 focus:bg-white border border-black/[0.06] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff] transition-all"
+                />
               </div>
 
-              {/* Order / Candidate ID */}
-              <div className="zoho-form-row">
-                <label className="zoho-form-label" title="Candidate ID">
-                  Candidate ID
+              {/* City / Location */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-[#1c1c1e]">
+                  City / Location
                 </label>
-                <div className="flex-1">
-                  <input
-                    type="text"
-                    disabled
-                    value={lead?.id || '—'}
-                    className="ios-input w-full text-slate-700 opacity-90 cursor-not-allowed font-medium"
-                  />
-                </div>
+                <input
+                  type="text"
+                  value={editFormData.city || ''}
+                  onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
+                  placeholder="e.g. Namakkal, Salem, Chennai"
+                  className="w-full px-3.5 py-2.5 bg-[#f2f2f7] hover:bg-[#e5e5ea]/50 focus:bg-white border border-black/[0.06] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff] transition-all"
+                />
               </div>
 
-              {/* Date and Time of Record (Compound Field matching screenshot) */}
-              <div className="zoho-form-row">
-                <label className="zoho-form-label" title="Date and Time">
-                  Date and Time of ...
+              {/* Visa Type */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-[#1c1c1e]">
+                  Visa Type
                 </label>
-                <div className="flex-1 flex rounded-md overflow-hidden border border-[#d0dcf0] bg-[#edf2f9]">
-                  <div className="flex-1 px-3 py-2 border-r border-[#d0dcf0] text-xs text-slate-800 bg-[#edf2f9]">
-                    {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </div>
-                  <div className="w-28 px-3 py-2 text-xs text-slate-800 bg-[#edf2f9] text-center font-medium">
-                    {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                </div>
+                <select
+                  value={editFormData.visaType || 'WORK_VISA'}
+                  onChange={(e) => setEditFormData({ ...editFormData, visaType: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-[#f2f2f7] hover:bg-[#e5e5ea]/50 focus:bg-white border border-black/[0.06] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff] transition-all font-medium cursor-pointer"
+                >
+                  <option value="WORK_VISA">Work Visa</option>
+                  <option value="STUDY_VISA">Study Visa</option>
+                  <option value="OTHER_VISA">Other Visa</option>
+                </select>
               </div>
 
-              {/* Product / Visa Program (Dropdown matching screenshot) */}
-              <div className="zoho-form-row">
-                <label className="zoho-form-label" title="Product / Visa Program">
-                  Product / Visa
+              {/* Notes */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-[#1c1c1e]">
+                  Notes
                 </label>
-                <div className="flex-1">
-                  <select
-                    value={editFormData.visaType || 'WORK_VISA'}
-                    onChange={(e) => setEditFormData({ ...editFormData, visaType: e.target.value })}
-                    className="zoho-select font-medium"
-                  >
-                    <option value="WORK_VISA">Work Visa</option>
-                    <option value="STUDY_VISA">Study Visa</option>
-                    <option value="OTHER_VISA">Other Visa</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Remarks Field */}
-              <div className="zoho-form-row">
-                <label className="zoho-form-label" title="Candidate Remarks">
-                  Remarks
-                </label>
-                <div className="flex-1">
-                  <textarea
-                    value={editFormData.notes || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
-                    rows={2}
-                    className="ios-input w-full text-slate-800 text-xs font-medium"
-                  />
-                </div>
+                <textarea
+                  value={editFormData.notes || ''}
+                  onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
+                  rows={3}
+                  placeholder="Add notes about this candidate..."
+                  className="w-full px-3.5 py-2.5 bg-[#f2f2f7] hover:bg-[#e5e5ea]/50 focus:bg-white border border-black/[0.06] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff] transition-all leading-relaxed"
+                />
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-black/[0.06]">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="px-4 py-2 bg-white hover:bg-black/[0.03] text-[#1c1c1e] rounded-xl text-xs font-medium border border-black/[0.08] shadow-2xs transition-all active:scale-95 cursor-pointer"
+                >
+                  Cancel
+                </button>
                 <button
                   type="submit"
                   disabled={savingEdit}
-                  className="zoho-btn-done"
+                  className="px-4 py-2 bg-[#007aff] hover:bg-[#0071e3] text-white rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-95 cursor-pointer disabled:opacity-50"
                 >
-                  {savingEdit ? 'Saving...' : 'Done'}
+                  {savingEdit ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </form>
