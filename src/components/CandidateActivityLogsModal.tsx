@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import {
   X,
-  History,
   ArrowRight,
   Search,
 } from 'lucide-react';
+import { BrandActivityIcon } from './icons/BrandIcons';
 import type { LeadActivity } from '../types';
 
 interface CandidateActivityLogsModalProps {
@@ -78,7 +78,7 @@ export default function CandidateActivityLogsModal({
         <div className="px-6 py-4.5 border-b border-black/[0.06] bg-white/95 backdrop-blur-md flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-black/[0.04] text-[#1c1c1e] flex items-center justify-center shadow-xs">
-              <History size={18} />
+              <BrandActivityIcon size={18} />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -161,7 +161,7 @@ export default function CandidateActivityLogsModal({
           {filteredActivities.length === 0 ? (
             <div className="py-14 text-center space-y-2.5">
               <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
-                <History size={22} />
+                <BrandActivityIcon size={22} />
               </div>
               <h3 className="text-sm font-semibold text-[#1c1c1e]">No Activity Logs Found</h3>
               <p className="text-xs text-[#8e8e93] max-w-xs mx-auto">

@@ -9,7 +9,6 @@ import {
   MessageCircle,
   ChevronRight,
   AlertCircle,
-  Share2,
   Clock,
   Award,
   Layers,
@@ -20,6 +19,7 @@ import {
   PieChart,
   X,
 } from 'lucide-react';
+import { BrandAttributionIcon } from '../components/icons/BrandIcons';
 import crmService from '../services/api/crmService';
 import {
   USER_ROLES,
@@ -736,7 +736,7 @@ export default function Dashboard() {
         <div className="lg:col-span-5 bg-white border border-slate-200 rounded-lg shadow-2xs overflow-hidden">
           <div className="px-5 py-3.5 bg-slate-50/70 border-b border-slate-200 flex items-center justify-between">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
-              <Share2 size={14} className="text-blue-600" />
+              <BrandAttributionIcon size={14} className="text-[#007aff]" />
               <span>Inbound Marketing Sources</span>
             </h3>
             <span className="text-xs font-medium text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded">

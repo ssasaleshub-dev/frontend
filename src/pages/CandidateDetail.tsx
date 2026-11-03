@@ -13,7 +13,6 @@ import {
   Edit2,
   CheckCircle2,
   AlertCircle,
-  Share2,
   UserCheck,
   Send,
   Copy,
@@ -23,12 +22,15 @@ import {
   Globe,
   ShieldCheck,
   FileText,
-  ThumbsUp,
-  ThumbsDown,
-  History,
   Clock,
-  Bell,
 } from 'lucide-react';
+import {
+  BrandActivityIcon,
+  BrandAttributionIcon,
+  BrandWonIcon,
+  BrandLostIcon,
+  BrandReminderIcon,
+} from '../components/icons/BrandIcons';
 import crmService from '../services/api/crmService';
 import adminService from '../services/api/adminService';
 import leadActivityService from '../services/api/leadActivityService';
@@ -687,7 +689,7 @@ export default function CandidateDetail() {
               className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-[#f2f2f7] text-[#1c1c1e] rounded-xl text-xs font-medium border border-black/[0.08] shadow-2xs transition-all active:scale-95 cursor-pointer"
               title="View counselor audit logs and candidate activity history"
             >
-              <History size={14} className="text-[#8e8e93]" />
+              <BrandActivityIcon size={14} className="text-[#8e8e93]" />
               <span>Activity Logs</span>
               {activities.length > 0 && (
                 <span className="text-xs text-[#8e8e93] font-normal">
@@ -702,7 +704,7 @@ export default function CandidateDetail() {
               className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-[#f2f2f7] text-[#1c1c1e] rounded-xl text-xs font-medium border border-black/[0.08] shadow-2xs transition-all active:scale-95 cursor-pointer"
               title="Set and manage reminders for this candidate"
             >
-              <Bell size={14} className="text-[#8e8e93]" />
+              <BrandReminderIcon size={14} className="text-[#8e8e93]" />
               <span>Reminder</span>
               {leadReminders.filter((r) => !r.isCompleted).length > 0 && (
                 <span className="text-xs text-[#8e8e93] font-normal">
@@ -767,15 +769,15 @@ export default function CandidateDetail() {
                   }`}
                 >
                   {isWon && (
-                    <ThumbsUp
-                      size={12}
-                      className={isCurrent ? 'fill-white text-white' : 'text-[#34c759]'}
+                    <BrandWonIcon
+                      size={13}
+                      className={isCurrent ? 'text-white' : 'text-[#34c759]'}
                     />
                   )}
                   {isLost && (
-                    <ThumbsDown
-                      size={12}
-                      className={isCurrent ? 'fill-white text-white' : 'text-[#ff3b30]'}
+                    <BrandLostIcon
+                      size={13}
+                      className={isCurrent ? 'text-white' : 'text-[#8e8e93]'}
                     />
                   )}
                   <span className="truncate">{stageLabel}</span>
@@ -931,7 +933,7 @@ export default function CandidateDetail() {
           <div className="ios-card p-6 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
               <h3 className="text-xs font-bold uppercase tracking-wider text-[#86868b] flex items-center gap-2">
-                <Share2 size={14} className="text-[#007aff]" />
+                <BrandAttributionIcon size={14} className="text-[#007aff]" />
                 <span>Marketing Origin Telemetry</span>
               </h3>
               <span className={`text-[11px] font-bold px-3 py-1 rounded-full border ${plat.color}`}>

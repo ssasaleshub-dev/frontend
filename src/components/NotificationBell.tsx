@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Bell,
   Check,
   CheckCheck,
   Trash2,
@@ -10,6 +9,7 @@ import {
   Volume2,
   ChevronRight,
 } from 'lucide-react';
+import { BrandReminderIcon } from './icons/BrandIcons';
 import reminderNotificationService, {
   NotificationItem,
 } from '../services/reminderNotificationService';
@@ -121,7 +121,7 @@ export default function NotificationBell() {
         }`}
         aria-label="Notifications"
       >
-        <Bell size={17} strokeWidth={2} />
+        <BrandReminderIcon size={17} strokeWidth={1.8} />
         {unreadCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 bg-[#ff3b30] text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-white shadow-2xs">
             {unreadCount > 9 ? '9+' : unreadCount}
