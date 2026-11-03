@@ -13,10 +13,10 @@ import {
   User,
   CalendarCheck,
   Flag,
-  Bell,
   X,
   Filter,
 } from 'lucide-react';
+import { BrandReminderIcon } from '../components/icons/BrandIcons';
 import reminderNotificationService, {
   CalendarEvent,
   IndianHoliday,
@@ -525,7 +525,7 @@ export default function CalendarPage() {
             <div className="px-5 py-4 border-b border-black/[0.04] flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center">
-                  <Bell size={14} strokeWidth={2.2} />
+                  <BrandReminderIcon size={14} strokeWidth={2} />
                 </div>
                 <h3 className="text-[15px] font-semibold text-[#1d1d1f] tracking-tight">
                   New Reminder / Event

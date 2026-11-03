@@ -501,7 +501,7 @@ export default function LeadReminderModal({
                   disabled={isSubmitting}
                   className="w-full py-3 bg-[#007aff] hover:bg-[#0062cc] active:scale-[0.99] text-white font-semibold rounded-2xl text-xs shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
-                  <Bell size={14} />
+                  <BrandReminderIcon size={14} />
                   <span>{isSubmitting ? 'Scheduling Reminder...' : 'Set Reminder'}</span>
                 </button>
               </div>
@@ -516,7 +516,7 @@ export default function LeadReminderModal({
               ) : reminders.length === 0 ? (
                 <div className="py-14 text-center space-y-2">
                   <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
-                    <Bell size={20} />
+                    <BrandReminderIcon size={20} />
                   </div>
                   <h3 className="text-sm font-semibold text-[#1c1c1e]">No Reminders Set</h3>
                   <p className="text-xs text-[#8e8e93] max-w-xs mx-auto">

@@ -184,7 +184,7 @@ export default function NotificationBell() {
               /* Apple iOS Clean Empty State */
               <div className="py-12 px-6 text-center">
                 <div className="w-13 h-13 rounded-full bg-black/[0.04] flex items-center justify-center text-slate-400 mx-auto mb-3 shadow-inner">
-                  <Bell size={22} strokeWidth={1.5} className="text-[#86868b]" />
+                  <BrandReminderIcon size={22} strokeWidth={1.5} className="text-[#86868b]" />
                 </div>
                 <p className="text-[14px] font-semibold text-[#1d1d1f] tracking-tight">
                   No Notifications
@@ -216,7 +216,7 @@ export default function NotificationBell() {
                       </div>
                     ) : (
                       <div className="w-8 h-8 rounded-[10px] bg-slate-500/10 text-slate-700 flex items-center justify-center">
-                        <Bell size={15} strokeWidth={2.2} />
+                        <BrandReminderIcon size={15} strokeWidth={2} />
                       </div>
                     )}
                   </div>
