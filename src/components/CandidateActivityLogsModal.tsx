@@ -211,19 +211,19 @@ export default function CandidateActivityLogsModal({
                         {act.title}
                       </div>
 
-                      {/* Diff Visualization (Status Change or Value Change) */}
+                      {/* Value / Stage Transition (Apple HIG Linear-style Transition) */}
                       {act.oldValue && act.newValue && act.oldValue !== act.newValue && (
-                        <div className="flex flex-wrap items-center gap-2 py-1.5 px-3 bg-white rounded-xl border border-black/[0.05] text-xs">
+                        <div className="inline-flex items-center gap-2 py-1 px-2.5 bg-black/[0.03] rounded-lg border border-black/[0.04] text-xs">
                           {act.fieldChanged && (
-                            <span className="text-[10px] uppercase font-bold text-[#8e8e93]">
-                              {act.fieldChanged}:
+                            <span className="text-[10px] uppercase font-medium tracking-wide text-[#8e8e93]">
+                              {act.fieldChanged}
                             </span>
                           )}
-                          <span className="line-through text-[#ff3b30] font-medium">
+                          <span className="px-2 py-0.5 rounded-md bg-black/[0.04] text-[#8e8e93] font-normal">
                             {act.oldValue}
                           </span>
-                          <ArrowRight size={12} className="text-[#8e8e93]" />
-                          <span className="text-[#34c759] font-bold">
+                          <ArrowRight size={11} className="text-[#8e8e93]" />
+                          <span className="px-2 py-0.5 rounded-md bg-white text-[#1c1c1e] font-medium border border-black/[0.08] shadow-2xs">
                             {act.newValue}
                           </span>
                         </div>
