@@ -75,6 +75,7 @@ export default function CandidateDetail() {
   const [lead, setLead] = useState<Lead | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isServerDown, setIsServerDown] = useState<boolean>(false);
   const [copiedPhone, setCopiedPhone] = useState<boolean>(false);
   const [submittingNote, setSubmittingNote] = useState<boolean>(false);
   const [newNote, setNewNote] = useState<string>('');
@@ -106,6 +107,7 @@ export default function CandidateDetail() {
     }
     setLoading(true);
     setError(null);
+    setIsServerDown(false);
 
     // Fetch activities & candidate reminders in parallel
     leadActivityService.getActivities(targetId).then(setActivities).catch(() => {});
@@ -118,7 +120,11 @@ export default function CandidateDetail() {
       let candidateData: Lead | null = null;
       try {
         candidateData = await crmService.getDetailedLeadById(targetId);
-      } catch {
+      } catch (innerErr: any) {
+        // If server is down, rethrow immediately
+        if (innerErr?.isServerDown || (innerErr?.status && innerErr.status >= 500)) {
+          throw innerErr;
+        }
         // Fallback: search in detailed leads array
         const all = await crmService.getDetailedLeads();
         const found = (Array.isArray(all) ? all : []).find(
@@ -166,7 +172,14 @@ export default function CandidateDetail() {
         }
       }
     } catch (err: any) {
-      setError(err?.message || 'Failed to load candidate dossier.');
+      const serverDown = Boolean(
+        err?.isServerDown ||
+        (err?.status && err.status >= 500) ||
+        (err?.message && err.message.toLowerCase().includes('server is down')) ||
+        (err?.message && err.message.toLowerCase().includes('cloudflare'))
+      );
+      setIsServerDown(serverDown);
+      setError(serverDown ? 'Server is down. Please contact support team.' : err?.message || 'Failed to load candidate dossier.');
     } finally {
       setLoading(false);
     }
@@ -522,21 +535,55 @@ export default function CandidateDetail() {
   }
 
   if (error || !lead) {
-    return (
-      <div className="py-16 max-w-md mx-auto text-center space-y-4">
-        <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto border border-rose-200">
-          <AlertCircle size={22} />
+    if (isServerDown) {
+      return (
+        <div className="py-20 max-w-md mx-auto text-center space-y-4 px-4">
+          <div className="w-14 h-14 rounded-2xl bg-black/[0.04] text-[#ff3b30] flex items-center justify-center mx-auto border border-black/[0.06] shadow-2xs">
+            <AlertCircle size={26} />
+          </div>
+          <div className="space-y-1.5">
+            <h3 className="text-lg font-bold text-[#1c1c1e] tracking-tight">Server is down</h3>
+            <p className="text-xs text-[#8e8e93] leading-relaxed max-w-sm mx-auto">
+              Server is down. Please contact support team.
+            </p>
+          </div>
+          <div className="flex items-center justify-center gap-2 pt-2">
+            <button
+              onClick={() => fetchCandidate()}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#007aff] hover:bg-[#0071e3] text-white rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-95 cursor-pointer"
+            >
+              <RefreshCw size={13} />
+              <span>Retry</span>
+            </button>
+            <button
+              onClick={() => navigate('/leads')}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-black/[0.03] text-[#1c1c1e] rounded-xl text-xs font-semibold border border-black/[0.08] shadow-2xs transition-all active:scale-95 cursor-pointer"
+            >
+              <ChevronLeft size={13} />
+              <span>Return to Pipeline</span>
+            </button>
+          </div>
         </div>
-        <div>
-          <h3 className="text-base font-bold text-slate-900">Candidate Not Found</h3>
-          <p className="text-xs text-slate-500 mt-1">{error || 'This candidate record does not exist or was removed.'}</p>
+      );
+    }
+
+    return (
+      <div className="py-20 max-w-md mx-auto text-center space-y-4 px-4">
+        <div className="w-14 h-14 rounded-2xl bg-black/[0.04] text-[#8e8e93] flex items-center justify-center mx-auto border border-black/[0.06] shadow-2xs">
+          <AlertCircle size={26} />
+        </div>
+        <div className="space-y-1.5">
+          <h3 className="text-lg font-bold text-[#1c1c1e] tracking-tight">Candidate Not Found</h3>
+          <p className="text-xs text-[#8e8e93] leading-relaxed max-w-sm mx-auto">
+            {error || 'This candidate record does not exist or may have been removed.'}
+          </p>
         </div>
         <button
           onClick={() => navigate('/leads')}
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-semibold shadow-2xs hover:bg-slate-800"
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-black/[0.03] text-[#1c1c1e] rounded-xl text-xs font-semibold border border-black/[0.08] shadow-2xs transition-all active:scale-95 cursor-pointer"
         >
-          <ChevronLeft size={14} />
-          <span>Return to Candidate Leads</span>
+          <ChevronLeft size={13} />
+          <span>Return to Pipeline</span>
         </button>
       </div>
     );

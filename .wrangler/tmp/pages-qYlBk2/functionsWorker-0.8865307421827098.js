@@ -930,6 +930,19 @@ globalThis.process = process_default;
 
 // api/[[path]].js
 async function onRequest(context2) {
+  const origin = context2.request.headers.get("Origin") || "*";
+  if (context2.request.method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "Access-Control-Allow-Origin": origin === "null" ? "*" : origin,
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD",
+        "Access-Control-Allow-Headers": context2.request.headers.get("Access-Control-Request-Headers") || "*",
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Max-Age": "86400"
+      }
+    });
+  }
   const url = new URL(context2.request.url);
   const targetUrl = `http://api.ssasaleshub.cloud:8080${url.pathname}${url.search}`;
   const headers = new Headers(context2.request.headers);
@@ -943,11 +956,36 @@ async function onRequest(context2) {
   if (!["GET", "HEAD"].includes(context2.request.method)) {
     init.body = context2.request.body;
   }
-  return fetch(targetUrl, init);
+  try {
+    const response = await fetch(targetUrl, init);
+    const responseHeaders = new Headers(response.headers);
+    responseHeaders.set("Access-Control-Allow-Origin", origin === "null" ? "*" : origin);
+    responseHeaders.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD");
+    responseHeaders.set("Access-Control-Allow-Headers", "*");
+    responseHeaders.set("Access-Control-Allow-Credentials", "true");
+    responseHeaders.set("Access-Control-Expose-Headers", "Authorization, Link, X-Total-Count, X-Alert, X-Error");
+    const body = [204, 304].includes(response.status) ? null : response.body;
+    return new Response(body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: responseHeaders
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message || "Upstream gateway error" }), {
+      status: 502,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": origin === "null" ? "*" : origin,
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD",
+        "Access-Control-Allow-Headers": "*",
+        "Access-Control-Allow-Credentials": "true"
+      }
+    });
+  }
 }
 __name(onRequest, "onRequest");
 
-// ../.wrangler/tmp/pages-Szj2ab/functionsRoutes-0.24332745118404586.mjs
+// ../.wrangler/tmp/pages-qYlBk2/functionsRoutes-0.7984241567321957.mjs
 var routes = [
   {
     routePath: "/api/:path*",

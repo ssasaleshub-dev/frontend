@@ -42,12 +42,43 @@ instance.interceptors.response.use(
         window.location.href = '/login';
       }
     }
+    const status = error.response?.status;
     const errData = error.response?.data;
-    const message = errData?.detail || errData?.message || error.message || 'Request failed';
+
+    // Check if error is due to backend server down, network failure, or Cloudflare origin timeout
+    const rawMsg = String(
+      (typeof errData === 'string' ? errData : '') ||
+      errData?.detail ||
+      errData?.message ||
+      error.message ||
+      ''
+    );
+
+    const isServerDown =
+      !error.response ||
+      error.code === 'ERR_NETWORK' ||
+      error.code === 'ECONNABORTED' ||
+      (typeof status === 'number' && status >= 500 && status <= 599) ||
+      rawMsg.toLowerCase().includes('cloudflare') ||
+      rawMsg.toLowerCase().includes('tcp connection') ||
+      rawMsg.toLowerCase().includes('tcp handshake') ||
+      rawMsg.toLowerCase().includes('network error') ||
+      rawMsg.toLowerCase().includes('origin server') ||
+      rawMsg.toLowerCase().includes('failed to fetch') ||
+      rawMsg.toLowerCase().includes('econnrefused') ||
+      rawMsg.toLowerCase().includes('etimedout') ||
+      rawMsg.toLowerCase().includes('gateway') ||
+      rawMsg.toLowerCase().includes('service unavailable');
+
+    const message = isServerDown
+      ? 'Server is down. Please contact support team.'
+      : errData?.detail || errData?.message || error.message || 'Request failed';
+
     const customError: any = new Error(message);
-    customError.status = error.response?.status;
+    customError.status = status;
     customError.response = error.response;
     customError.data = errData;
+    customError.isServerDown = isServerDown;
     return Promise.reject(customError);
   }
 );
