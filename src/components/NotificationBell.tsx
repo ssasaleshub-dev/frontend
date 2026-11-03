@@ -83,10 +83,10 @@ export default function NotificationBell() {
       await reminderNotificationService.markAsRead(item.id);
     }
     setIsOpen(false);
-    if (item.type === 'REMINDER' || item.referenceType === 'EVENT') {
-      navigate('/calendar');
-    } else if (item.referenceType === 'LEAD' && item.referenceId) {
+    if (item.referenceType === 'LEAD' && item.referenceId) {
       navigate(`/leads/${encryptLeadId(item.referenceId)}`);
+    } else if (item.type === 'REMINDER' || item.referenceType === 'EVENT') {
+      navigate('/calendar');
     }
   };
 

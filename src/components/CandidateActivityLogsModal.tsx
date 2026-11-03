@@ -2,17 +2,8 @@ import React, { useState, useMemo } from 'react';
 import {
   X,
   History,
-  Activity,
   ArrowRight,
-  MessageCircle,
-  Phone,
-  Edit3,
-  FileText,
   Search,
-  Filter,
-  CheckCircle2,
-  Clock,
-  User,
 } from 'lucide-react';
 import type { LeadActivity } from '../types';
 
@@ -62,55 +53,17 @@ export default function CandidateActivityLogsModal({
     if (!dateStr) return '';
     try {
       const d = new Date(dateStr);
-      return d.toLocaleDateString('en-GB', {
+      return d.toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata',
         day: 'numeric',
         month: 'short',
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
+        hour12: true,
       });
     } catch {
       return dateStr;
-    }
-  };
-
-  const getActionBadge = (type: LeadActivity['actionType']) => {
-    switch (type) {
-      case 'STATUS_CHANGE':
-        return {
-          label: 'Stage Update',
-          icon: <Activity size={12} />,
-          badgeClass: 'bg-[#007aff]/10 text-[#007aff] border-[#007aff]/20',
-          dotClass: 'bg-[#007aff]',
-        };
-      case 'DATA_MODIFY':
-        return {
-          label: 'Dossier Modified',
-          icon: <Edit3 size={12} />,
-          badgeClass: 'bg-[#5856d6]/10 text-[#5856d6] border-[#5856d6]/20',
-          dotClass: 'bg-[#5856d6]',
-        };
-      case 'REMARKS_ADDED':
-        return {
-          label: 'Counselor Remark',
-          icon: <FileText size={12} />,
-          badgeClass: 'bg-[#ff9500]/10 text-[#ff9500] border-[#ff9500]/20',
-          dotClass: 'bg-[#ff9500]',
-        };
-      case 'OUTREACH':
-        return {
-          label: 'Outreach',
-          icon: <MessageCircle size={12} />,
-          badgeClass: 'bg-[#34c759]/10 text-[#34c759] border-[#34c759]/20',
-          dotClass: 'bg-[#34c759]',
-        };
-      default:
-        return {
-          label: 'Activity',
-          icon: <Clock size={12} />,
-          badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
-          dotClass: 'bg-slate-400',
-        };
     }
   };
 
@@ -220,22 +173,19 @@ export default function CandidateActivityLogsModal({
           ) : (
             <div className="relative pl-6 sm:pl-8 space-y-5 before:absolute before:left-3 sm:before:left-4 before:top-3 before:bottom-3 before:w-[1.5px] before:bg-black/[0.08]">
               {filteredActivities.map((act) => {
-                const badge = getActionBadge(act.actionType);
                 const initials = (act.userName || 'Counselor')
                   .substring(0, 2)
                   .toUpperCase();
 
                 return (
                   <div key={act.id} className="relative group">
-                    {/* Timeline Node Dot */}
-                    <div
-                      className={`absolute -left-6 sm:-left-8 top-1.5 w-3 h-3 rounded-full ring-4 ring-white ${badge.dotClass} shadow-xs transition-transform group-hover:scale-125`}
-                    />
+                    {/* Timeline Node Marker */}
+                    <div className="absolute -left-6 sm:-left-8 top-2.5 w-2 h-2 rounded-full ring-3 ring-white bg-[#8e8e93]/50 shadow-xs" />
 
                     {/* Activity Card */}
                     <div className="p-4 rounded-2xl bg-[#f8f9fa] border border-black/[0.06] hover:border-black/[0.12] hover:bg-white shadow-xs hover:shadow-sm transition-all space-y-2">
-                      {/* Top Meta Header: Counselor, Badge & Date */}
-                      <div className="flex flex-wrap items-center justify-between gap-2">
+                      {/* Top Meta Header: Counselor & Date */}
+                      <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           {/* User Avatar Pill */}
                           <div className="w-6 h-6 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-bold">
@@ -251,17 +201,9 @@ export default function CandidateActivityLogsModal({
                           )}
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold border ${badge.badgeClass}`}
-                          >
-                            {badge.icon}
-                            <span>{badge.label}</span>
-                          </span>
-                          <span className="text-[11px] text-[#8e8e93] font-medium">
-                            {formatDate(act.timestamp)}
-                          </span>
-                        </div>
+                        <span className="text-[11px] text-[#8e8e93] font-medium">
+                          {formatDate(act.timestamp)}
+                        </span>
                       </div>
 
                       {/* Main Title / Summary */}
@@ -302,15 +244,10 @@ export default function CandidateActivityLogsModal({
         </div>
 
         {/* iOS Footer Action Bar */}
-        <div className="px-6 py-3.5 bg-white border-t border-black/[0.06] flex items-center justify-between text-xs text-[#8e8e93]">
-          <div className="flex items-center gap-1.5">
-            <CheckCircle2 size={13} className="text-[#34c759]" />
-            <span>Audit trail auto-synchronized with counselor identity</span>
-          </div>
-
+        <div className="px-6 py-3.5 bg-white border-t border-black/[0.06] flex items-center justify-end text-xs">
           <button
             onClick={onClose}
-            className="px-4 py-1.5 bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#1c1c1e] font-semibold rounded-xl transition-all cursor-pointer"
+            className="px-5 py-2 bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#1c1c1e] font-semibold rounded-xl transition-all cursor-pointer"
           >
             Done
           </button>

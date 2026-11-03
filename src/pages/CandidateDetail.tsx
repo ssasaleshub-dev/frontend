@@ -27,11 +27,14 @@ import {
   ThumbsDown,
   History,
   Clock,
+  Bell,
 } from 'lucide-react';
 import crmService from '../services/api/crmService';
 import adminService from '../services/api/adminService';
 import leadActivityService from '../services/api/leadActivityService';
+import notificationApiService, { CalendarEventDTO } from '../services/api/notificationService';
 import CandidateActivityLogsModal from '../components/CandidateActivityLogsModal';
+import LeadReminderModal from '../components/LeadReminderModal';
 import {
   PLATFORMS,
   LEAD_STATUSES,
@@ -79,6 +82,10 @@ export default function CandidateDetail() {
   const [activities, setActivities] = useState<LeadActivity[]>([]);
   const [showActivityLogsModal, setShowActivityLogsModal] = useState<boolean>(false);
 
+  // Candidate Reminders
+  const [showReminderModal, setShowReminderModal] = useState<boolean>(false);
+  const [leadReminders, setLeadReminders] = useState<CalendarEventDTO[]>([]);
+
   // Modals
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
   const [showWhatsAppTemplateModal, setShowWhatsAppTemplateModal] = useState<boolean>(false);
@@ -98,8 +105,13 @@ export default function CandidateDetail() {
     setLoading(true);
     setError(null);
 
-    // Fetch activities in parallel
+    // Fetch activities & candidate reminders in parallel
     leadActivityService.getActivities(targetId).then(setActivities).catch(() => {});
+    notificationApiService.getEvents({ candidateId: targetId as any })
+      .then((evts) => {
+        if (Array.isArray(evts)) setLeadReminders(evts);
+      })
+      .catch(() => {});
     try {
       let candidateData: Lead | null = null;
       try {
@@ -418,12 +430,14 @@ export default function CandidateDetail() {
     if (!isoStr) return '—';
     try {
       const d = new Date(isoStr);
-      return d.toLocaleDateString('en-IN', {
-        month: 'short',
+      return d.toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata',
         day: 'numeric',
+        month: 'short',
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
+        hour12: true,
       });
     } catch {
       return isoStr;
@@ -678,6 +692,21 @@ export default function CandidateDetail() {
               {activities.length > 0 && (
                 <span className="px-1.5 py-0.5 text-[10px] font-bold bg-[#007aff]/10 text-[#007aff] rounded-full">
                   {activities.length}
+                </span>
+              )}
+            </button>
+
+            {/* Apple iOS Candidate Reminder Button */}
+            <button
+              onClick={() => setShowReminderModal(true)}
+              className="inline-flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-[#f2f2f7] text-[#1c1c1e] rounded-xl text-xs font-semibold border border-black/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all active:scale-95 cursor-pointer"
+              title="Set and manage reminders for this candidate"
+            >
+              <Bell size={14} className="text-[#ff9500]" />
+              <span>Reminder</span>
+              {leadReminders.filter((r) => !r.isCompleted).length > 0 && (
+                <span className="px-1.5 py-0.5 text-[10px] font-bold bg-[#ff9500]/10 text-[#ff9500] rounded-full">
+                  {leadReminders.filter((r) => !r.isCompleted).length}
                 </span>
               )}
             </button>
@@ -1247,6 +1276,26 @@ export default function CandidateDetail() {
           activities={activities}
           candidateName={lead.customerName}
           leadId={lead.id}
+        />
+      )}
+
+      {/* Candidate Reminders Modal */}
+      {lead && (
+        <LeadReminderModal
+          isOpen={showReminderModal}
+          onClose={() => setShowReminderModal(false)}
+          candidateId={resolvedLeadId || lead.id}
+          candidateName={lead.customerName || lead.fullName || 'Candidate'}
+          assignedStaff={lead.assignedTo || (currentUser as any)?.login}
+          onReminderSaved={() => {
+            const targetId = resolvedLeadId || lead.id;
+            notificationApiService.getEvents({ candidateId: targetId as any })
+              .then((evts) => {
+                if (Array.isArray(evts)) setLeadReminders(evts);
+              })
+              .catch(() => {});
+            leadActivityService.getActivities(targetId).then(setActivities).catch(() => {});
+          }}
         />
       )}
     </div>
