@@ -374,86 +374,30 @@ export default function AttendancePage() {
             </div>
           </div>
 
-          {/* Punch Actions */}
-          <div className="flex items-center gap-3 w-full lg:w-auto flex-wrap">
+          {/* Simple One-Click Punch Action (No forms, no notes) */}
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
             {!isCheckedIn ? (
-              <>
-                <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200/80">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedMode('OFFICE')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                      selectedMode === 'OFFICE'
-                        ? 'bg-white text-slate-900 shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    Office
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedMode('REMOTE')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                      selectedMode === 'REMOTE'
-                        ? 'bg-white text-slate-900 shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    WFH
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedMode('FIELD')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                      selectedMode === 'FIELD'
-                        ? 'bg-white text-slate-900 shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    Field
-                  </button>
-                </div>
-
-                <input
-                  type="text"
-                  value={punchNote}
-                  onChange={(e) => setPunchNote(e.target.value)}
-                  placeholder="Morning note (optional)"
-                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 flex-1 lg:w-48"
-                />
-
-                <button
-                  type="button"
-                  onClick={handleCheckIn}
-                  disabled={punching}
-                  className="px-4 py-2 rounded-xl bg-[#007aff] hover:bg-[#0062cc] text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 shrink-0 active:scale-95"
-                >
-                  {punching ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                  <span>Check In</span>
-                </button>
-              </>
+              <button
+                type="button"
+                onClick={handleCheckIn}
+                disabled={punching}
+                className="px-4 py-2 rounded-xl bg-[#007aff] hover:bg-[#0062cc] text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 active:scale-95"
+              >
+                {punching ? <Loader2 size={13} className="animate-spin" /> : <Clock size={14} />}
+                <span>Check In for Today</span>
+              </button>
             ) : isWorkingNow ? (
-              <>
-                <input
-                  type="text"
-                  value={punchNote}
-                  onChange={(e) => setPunchNote(e.target.value)}
-                  placeholder="Wrap-up summary (optional)"
-                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 flex-1 lg:w-56"
-                />
-
-                <button
-                  type="button"
-                  onClick={handleCheckOut}
-                  disabled={punching}
-                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 shrink-0 active:scale-95"
-                >
-                  {punching ? <Loader2 size={13} className="animate-spin" /> : <LogOut size={14} />}
-                  <span>Check Out</span>
-                </button>
-              </>
+              <button
+                type="button"
+                onClick={handleCheckOut}
+                disabled={punching}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 active:scale-95"
+              >
+                {punching ? <Loader2 size={13} className="animate-spin" /> : <LogOut size={14} />}
+                <span>Check Out</span>
+              </button>
             ) : (
-              <div className="flex items-center gap-2 text-xs text-slate-600 bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200">
+              <div className="flex items-center gap-2 text-xs text-slate-700 bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200">
                 <CheckCircle2 size={15} className="text-emerald-600" />
                 <span>Today's shift logged ({myTodayRecord?.totalHoursFormatted})</span>
               </div>
