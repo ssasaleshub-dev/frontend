@@ -1,25 +1,26 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Users,
-  Briefcase,
-  GraduationCap,
   RefreshCw,
   Phone,
   MessageCircle,
   ChevronRight,
   AlertCircle,
   Clock,
-  Award,
   Layers,
   Globe,
   Shield,
-  ShieldCheck,
   BarChart3,
   PieChart,
   X,
 } from 'lucide-react';
-import { BrandAttributionIcon } from '../components/icons/BrandIcons';
+import {
+  BrandAttributionIcon,
+  KpiCandidatesIcon,
+  KpiWorkVisaIcon,
+  KpiStudyVisaIcon,
+  KpiApprovedIcon,
+} from '../components/icons/BrandIcons';
 import crmService from '../services/api/crmService';
 import {
   USER_ROLES,
@@ -279,11 +280,6 @@ export default function Dashboard() {
           {/* Desk Switcher Segmented Control */}
           {isAdmin ? (
             <>
-              <div className="ios-badge ios-badge-indigo px-3 py-1">
-                <ShieldCheck size={13} />
-                <span>All Team Analytics</span>
-              </div>
-
               <div className="ios-segmented flex items-center">
                 <button
                   onClick={() => handleDeskChange('ALL')}
@@ -373,11 +369,11 @@ export default function Dashboard() {
             </span>
             <div className="w-8 h-8 rounded bg-blue-50 text-blue-600 flex items-center justify-center">
               {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa) ? (
-                <GraduationCap size={16} />
+                <KpiStudyVisaIcon size={18} />
               ) : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa) ? (
-                <Briefcase size={16} />
+                <KpiWorkVisaIcon size={18} />
               ) : (
-                <Users size={16} />
+                <KpiCandidatesIcon size={18} />
               )}
             </div>
           </div>
@@ -402,7 +398,7 @@ export default function Dashboard() {
                 : 'Work Visa Inquiries'}
             </span>
             <div className="w-8 h-8 rounded bg-indigo-50 text-indigo-600 flex items-center justify-center">
-              {deskFilter === 'ALL' && isAdmin ? <Briefcase size={16} /> : <Users size={16} />}
+              {deskFilter === 'ALL' && isAdmin ? <KpiWorkVisaIcon size={18} /> : <KpiCandidatesIcon size={18} />}
             </div>
           </div>
           <div className="mt-3">
@@ -431,11 +427,11 @@ export default function Dashboard() {
             </span>
             <div className="w-8 h-8 rounded bg-emerald-50 text-emerald-600 flex items-center justify-center">
               {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa) ? (
-                <GraduationCap size={16} />
+                <KpiStudyVisaIcon size={18} />
               ) : deskFilter === 'ALL' && isAdmin ? (
-                <GraduationCap size={16} />
+                <KpiStudyVisaIcon size={18} />
               ) : (
-                <Layers size={16} />
+                <KpiStudyVisaIcon size={18} />
               )}
             </div>
           </div>
@@ -464,7 +460,7 @@ export default function Dashboard() {
                 : 'Enrolled / Visa Approved'}
             </span>
             <div className="w-8 h-8 rounded bg-amber-50 text-amber-600 flex items-center justify-center">
-              <Award size={16} />
+              <KpiApprovedIcon size={18} />
             </div>
           </div>
           <div className="mt-3">
