@@ -96,11 +96,12 @@ export const attendanceService = {
         this.broadcastUpdate();
         return res;
       }
-    } catch (err) {
-      console.warn('Backend attendance check-in synced to local storage:', err);
+      return optimisticRecord;
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.detail || err?.response?.data?.message || err?.message || 'Check-in failed';
+      console.warn('Backend attendance check-in rejected:', errorMsg);
+      throw new Error(errorMsg);
     }
-
-    return optimisticRecord;
   },
 
   /**
@@ -121,24 +122,6 @@ export const attendanceService = {
       totalFormatted = `${hours}h ${rem}m`;
     }
 
-    const optimisticRecord: StaffAttendanceRecord = {
-      ...(existing || {
-        userId: params.userId,
-        userName: params.userId,
-        attendanceDate: new Date().toISOString().substring(0, 10),
-        workMode: 'OFFICE',
-        status: 'PRESENT',
-      }),
-      checkOutTime: nowIso,
-      checkOutNote: params.note,
-      totalMinutes,
-      totalHoursFormatted: totalFormatted,
-      status: totalMinutes < 240 ? 'HALF_DAY' : totalMinutes >= 540 ? 'OVERTIME' : (existing?.status || 'PRESENT'),
-    };
-
-    this.saveLocalRecord(params.userId, optimisticRecord);
-    this.broadcastUpdate();
-
     try {
       const res = await axiosClient.post<StaffAttendanceRecord>('/api/attendance/check-out', {
         userId: params.userId,
@@ -149,11 +132,12 @@ export const attendanceService = {
         this.broadcastUpdate();
         return res;
       }
-    } catch (err) {
-      console.warn('Backend attendance check-out synced to local storage:', err);
+      throw new Error('Check-out returned empty response');
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.detail || err?.response?.data?.message || err?.message || 'Check-out failed';
+      console.warn('Backend attendance check-out rejected:', errorMsg);
+      throw new Error(errorMsg);
     }
-
-    return optimisticRecord;
   },
 
   /**
