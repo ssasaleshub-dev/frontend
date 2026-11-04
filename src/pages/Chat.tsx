@@ -13,6 +13,7 @@ import {
   Loader2,
   ExternalLink,
   Info,
+  ChevronLeft,
 } from 'lucide-react';
 import chatService from '../services/api/chatService';
 import fileService from '../services/api/fileService';
@@ -27,6 +28,8 @@ export default function Chat() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [usersList, setUsersList] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState<boolean>(false);
+  // Mobile responsive view: 'list' (conversations sidebar) vs 'chat' (active conversation view)
+  const [mobileView, setMobileView] = useState<'list' | 'chat'>('chat');
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState<string>('');
@@ -363,7 +366,7 @@ export default function Chat() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-130px)] bg-white rounded-2xl border border-[rgba(60,60,67,0.12)] shadow-sm overflow-hidden select-none">
+    <div className="flex flex-col h-[calc(100dvh-125px)] sm:h-[calc(100vh-130px)] bg-white rounded-2xl border border-[rgba(60,60,67,0.12)] shadow-sm overflow-hidden select-none">
       {apiNotice && (
         <div className="bg-[#fff9e6] border-b border-[#ffe699] px-4 py-2 flex items-center justify-between text-xs text-[#806000]">
           <div className="flex items-center gap-2">
@@ -380,26 +383,40 @@ export default function Chat() {
       )}
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* Left Sidebar: iOS Messages Style */}
-        <div className="w-72 sm:w-80 border-r border-[rgba(60,60,67,0.12)] bg-[#f6f6f8] flex flex-col shrink-0">
+        {/* Left Sidebar: iOS Messages Style (Responsive: full width on mobile list, fixed on desktop) */}
+        <div
+          className={`${
+            mobileView === 'chat' ? 'hidden md:flex' : 'flex'
+          } w-full md:w-80 border-r border-[rgba(60,60,67,0.12)] bg-[#f6f6f8] flex-col shrink-0`}
+        >
           {/* Header */}
           <div className="p-4 border-b border-[rgba(60,60,67,0.08)] flex items-center justify-between">
             <h1 className="text-[20px] font-bold text-[#000000] tracking-tight">
               Messages
             </h1>
-            <button
-              onClick={() => {
-                fetchUsers();
-                fetchMessages(false);
-              }}
-              title="Refresh messages"
-              className="w-7 h-7 rounded-full bg-black/[0.04] hover:bg-black/[0.08] active:scale-95 text-[#636366] hover:text-[#000000] flex items-center justify-center transition-all cursor-pointer"
-            >
-              <RefreshCw
-                size={13}
-                className={loading || loadingUsers ? 'animate-spin text-[#007aff]' : ''}
-              />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setMobileView('chat')}
+                className="md:hidden text-[12px] font-semibold text-[#007aff] px-2.5 py-1 rounded-full bg-[#007aff]/10 active:scale-95 transition-all cursor-pointer"
+                title="View active chat"
+              >
+                Open Chat →
+              </button>
+              <button
+                onClick={() => {
+                  fetchUsers();
+                  fetchMessages(false);
+                }}
+                title="Refresh messages"
+                className="w-7 h-7 rounded-full bg-black/[0.04] hover:bg-black/[0.08] active:scale-95 text-[#636366] hover:text-[#000000] flex items-center justify-center transition-all cursor-pointer"
+              >
+                <RefreshCw
+                  size={13}
+                  className={loading || loadingUsers ? 'animate-spin text-[#007aff]' : ''}
+                />
+              </button>
+            </div>
           </div>
 
           {/* Search Bar & Segmented Switch */}
@@ -425,6 +442,7 @@ export default function Chat() {
                 onClick={() => {
                   setChatType('group');
                   setSelectedUser(null);
+                  setMobileView('chat');
                 }}
                 className={`ios-segmented-btn flex-1 flex items-center justify-center gap-1.5 ${
                   chatType === 'group' ? 'active' : ''
@@ -458,8 +476,9 @@ export default function Chat() {
                 onClick={() => {
                   setChatType('group');
                   setSelectedUser(null);
+                  setMobileView('chat');
                 }}
-                className="w-full flex items-center gap-3 px-3.5 py-3 text-left transition-colors bg-white/70 hover:bg-white"
+                className="w-full flex items-center gap-3 px-3.5 py-3 text-left transition-colors bg-white/70 hover:bg-white active:bg-[#007aff]/10 cursor-pointer"
               >
                 <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#007aff] to-[#5ac8fa] text-white flex items-center justify-center shrink-0 shadow-xs">
                   <UsersIcon size={18} />
@@ -493,8 +512,9 @@ export default function Chat() {
                     onClick={() => {
                       setChatType('p2p');
                       setSelectedUser(target);
+                      setMobileView('chat');
                     }}
-                    className={`w-full flex items-center gap-3 px-3.5 py-2.5 text-left transition-all ${
+                    className={`w-full flex items-center gap-3 px-3.5 py-2.5 text-left transition-all cursor-pointer ${
                       isSelected
                         ? 'bg-[#007aff] text-white'
                         : 'hover:bg-black/[0.03] text-[#1c1c1e]'
@@ -549,16 +569,31 @@ export default function Chat() {
               })
             )}
           </div>
-
-
         </div>
 
-        {/* Right Conversation View: Authentic Apple iMessage Layout */}
-        <div className="flex-1 flex flex-col min-w-0 bg-white">
-          {/* iOS Top Bar Header (Centered Contact Name & iMessage tag) */}
-          <div className="h-14 px-6 border-b border-[rgba(60,60,67,0.12)] bg-white/90 backdrop-blur-md flex items-center justify-between shrink-0">
-            <div className="flex-1 flex flex-col items-center justify-center text-center">
-              <div className="flex items-center gap-1.5">
+        {/* Right Conversation View: Authentic Apple iMessage Layout (Responsive: full width on mobile chat, flex-1 on desktop) */}
+        <div
+          className={`${
+            mobileView === 'list' ? 'hidden md:flex' : 'flex'
+          } flex-1 flex-col min-w-0 bg-white`}
+        >
+          {/* iOS Top Bar Header (Centered Contact Name & iMessage tag + Mobile Back Button) */}
+          <div className="h-14 px-3 sm:px-6 border-b border-[rgba(60,60,67,0.12)] bg-white/90 backdrop-blur-md flex items-center justify-between shrink-0">
+            {/* Mobile Back Button to Messages List */}
+            <div className="flex items-center md:hidden shrink-0">
+              <button
+                type="button"
+                onClick={() => setMobileView('list')}
+                className="flex items-center gap-0.5 text-[#007aff] hover:opacity-80 active:scale-95 transition-all py-1.5 pr-2 -ml-1 text-[13px] font-medium cursor-pointer"
+                title="Back to Messages"
+              >
+                <ChevronLeft size={20} strokeWidth={2.5} />
+                <span>Messages</span>
+              </button>
+            </div>
+
+            <div className="flex-1 flex flex-col items-center justify-center text-center min-w-0 px-2">
+              <div className="flex items-center gap-1.5 justify-center max-w-full">
                 {chatType === 'group' ? (
                   <div className="w-5 h-5 rounded-full bg-[#007aff]/15 text-[#007aff] flex items-center justify-center shrink-0">
                     <UsersIcon size={12} />
@@ -574,7 +609,7 @@ export default function Chat() {
                     {selectedUser?.firstName?.[0] || selectedUser?.login?.[0] || 'U'}
                   </div>
                 )}
-                <h2 className="font-semibold text-[13px] text-[#000000] tracking-tight truncate max-w-xs">
+                <h2 className="font-semibold text-[13px] text-[#000000] tracking-tight truncate max-w-[150px] sm:max-w-xs">
                   {chatType === 'group'
                     ? 'All Team Chat'
                     : selectedUser
@@ -591,7 +626,7 @@ export default function Chat() {
               </p>
             </div>
 
-            <div className="w-7 flex justify-end">
+            <div className="w-8 flex justify-end shrink-0">
               <button
                 onClick={() => fetchMessages(false)}
                 title="Refresh thread"
@@ -804,7 +839,7 @@ export default function Chat() {
           {/* Authentic Apple iOS iMessage Input Bar */}
           <form
             onSubmit={handleSendMessage}
-            className="p-3 bg-[#f6f6f6] border-t border-[rgba(60,60,67,0.12)] flex items-end gap-2.5"
+            className="p-2 sm:p-3 bg-[#f6f6f6] border-t border-[rgba(60,60,67,0.12)] flex items-end gap-2 sm:gap-2.5"
           >
             {/* Hidden native file picker */}
             <input
