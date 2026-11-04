@@ -305,12 +305,7 @@ export default function StaffProfile() {
             </div>
 
             <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-base font-bold text-slate-900">{displayName}</h1>
-                <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                  {badgeInfo.displayText}
-                </span>
-              </div>
+              <h1 className="text-base font-bold text-slate-900">{displayName}</h1>
               <p className="text-xs text-slate-500 mt-0.5">
                 Login: <strong className="text-slate-800">@{userId}</strong>
                 {user?.email && <> • <span>{user.email}</span></>}
@@ -493,61 +488,6 @@ export default function StaffProfile() {
                 </button>
               );
             })}
-          </div>
-        </div>
-
-        {/* Selected Date Detail Drawer / Footer */}
-        <div className="p-4 border-t border-slate-100 bg-slate-50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
-          {selectedRecord ? (
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="font-bold text-slate-800">
-                {selectedDateStr}:
-              </span>
-              <span className="text-slate-600">
-                In: <strong>{formatTime(selectedRecord.checkInTime)}</strong>
-              </span>
-              <span className="text-slate-600">
-                Out: <strong>{formatTime(selectedRecord.checkOutTime)}</strong>
-              </span>
-              <span className="text-slate-600">
-                Duration: <strong>{selectedRecord.totalHoursFormatted || '-'}</strong>
-              </span>
-              <span
-                className={`px-2 py-0.5 rounded-full font-semibold ${
-                  selectedRecord.status === 'LATE'
-                    ? 'bg-amber-100 text-amber-800'
-                    : 'bg-emerald-100 text-emerald-800'
-                }`}
-              >
-                {selectedRecord.status === 'LATE' ? 'Late Arrival' : 'On-Time Present'}
-              </span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 text-slate-500">
-              <span className="font-bold text-slate-700">{selectedDateStr}:</span>
-              <span>
-                {selectedDateStr === todayStr
-                  ? 'No punch recorded yet today.'
-                  : selectedDateStr < todayStr
-                  ? 'No attendance recorded for this past date.'
-                  : 'Future date.'}
-              </span>
-            </div>
-          )}
-
-          {/* Security Notice: Only today can be modified */}
-          <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500 shrink-0">
-            {selectedDateStr === todayStr ? (
-              <span className="text-emerald-700 font-semibold flex items-center gap-1">
-                <CheckCircle2 size={13} className="text-emerald-600" />
-                Active Shift Window (Today)
-              </span>
-            ) : (
-              <span className="text-slate-500 flex items-center gap-1">
-                <ShieldCheck size={13} className="text-slate-400" />
-                {selectedDateStr < todayStr ? 'Historical Record • Locked' : 'Future Date • Closed'}
-              </span>
-            )}
           </div>
         </div>
       </div>
