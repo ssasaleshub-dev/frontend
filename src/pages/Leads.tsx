@@ -135,8 +135,7 @@ export default function Leads() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(25);
 
-  // View Mode: Defaults to Apple iOS Inset Grouped List
-  const [viewMode, setViewMode] = useState<'ios-list' | 'table'>('ios-list');
+
 
 
 
@@ -1403,26 +1402,6 @@ export default function Leads() {
               <option value="OLDEST">Oldest Inquiries</option>
               <option value="NAME">Name (A–Z)</option>
             </select>
-
-            {/* View Mode Switcher (Apple iOS Inset List vs Data Table) */}
-            <div className="ios-segmented hidden sm:inline-flex items-center">
-              <button
-                type="button"
-                onClick={() => setViewMode('ios-list')}
-                className={`ios-segmented-btn ${viewMode === 'ios-list' ? 'active' : ''}`}
-                title="Apple iOS Inset Grouped List"
-              >
-                 iOS List
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('table')}
-                className={`ios-segmented-btn ${viewMode === 'table' ? 'active' : ''}`}
-                title="Full Data Grid"
-              >
-                ▦ Table Grid
-              </button>
-            </div>
           </div>
         </div>
 
@@ -1507,33 +1486,9 @@ export default function Leads() {
         />
       </div>
 
-      {/* ── DESKTOP: Switch between iOS List and Full Data Table ── */}
+      {/* ── DESKTOP: Full Data Table Grid ── */}
       <div className="hidden sm:block">
-        {viewMode === 'ios-list' ? (
-          <IosLeadList
-            leads={paginatedLeads}
-            loading={loading}
-            totalLeads={filteredLeads.length}
-            currentPage={currentPage}
-            pageSize={pageSize}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={setPageSize}
-            onToggleContacted={handleToggleContacted}
-            onOpenStatusModal={(lead, e) => {
-              e.stopPropagation();
-              setStatusModalLead(lead);
-              setStatusForm({
-                status: lead.status || 'CONTACTED',
-                notes: lead.notes || '',
-              });
-            }}
-            onDeleteLead={handleDeleteLead}
-            getLeadQuality={getLeadQuality}
-            getBudgetReady={getBudgetReady}
-            formatDate={formatDate}
-          />
-        ) : (
-          <div className="ios-card overflow-hidden">
+        <div className="ios-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse min-w-[1300px]">
             <thead>
@@ -1768,7 +1723,6 @@ export default function Leads() {
           </div>
         </div>
       </div>
-        )}
       </div>
 
       {/* iOS-Style Slide-Over Candidate Dossier Drawer */}
