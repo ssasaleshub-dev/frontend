@@ -1,0 +1,23 @@
+{
+  "short_name": "SSA CRM",
+  "name": "SSA Sales Hub CRM",
+  "description": "Enterprise Sales & Attendance Management Platform",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/brand-logo.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#ffffff",
+  "theme_color": "#007aff",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "scope": "/"
+}
