@@ -1343,23 +1343,20 @@ export default function CandidateDetail() {
                     const st = ((lead as any).paymentStatus || 'UNPAID').toUpperCase();
                     if (st === 'PAID') {
                       return (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                           Fully Paid
                         </span>
                       );
                     }
                     if (st === 'PARTIAL') {
                       return (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
                           Partially Paid
                         </span>
                       );
                     }
                     return (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
                         Not Paid
                       </span>
                     );
@@ -1398,13 +1395,12 @@ export default function CandidateDetail() {
                       type="button"
                       onClick={() => handleUpdatePaymentStatus(st.value as any)}
                       disabled={updatingPayment}
-                      className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all duration-150 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${
+                      className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all duration-150 flex items-center justify-center cursor-pointer active:scale-95 ${
                         isSelected
                           ? st.color
                           : `${st.inactive} font-medium`
                       }`}
                     >
-                      <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-current'}`} />
                       <span>{st.label}</span>
                     </button>
                   );

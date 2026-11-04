@@ -1190,12 +1190,12 @@ export default function Leads() {
           {b && <span className="font-semibold text-[#007aff]">₹{b}</span>}
           {p === 'PAID' && (
             <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-200">
-              ● Paid
+              Paid
             </span>
           )}
           {p === 'PARTIAL' && (
             <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-200">
-              ● Partial
+              Partial
             </span>
           )}
         </div>

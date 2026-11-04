@@ -627,7 +627,7 @@ export default function LeadReminderModal({
                             );
                           })()}
                           {r.isCompleted && (
-                            <span className="text-[#34c759] font-semibold">• Completed</span>
+                            <span className="text-[#34c759] font-semibold">Completed</span>
                           )}
                         </div>
 

@@ -495,7 +495,7 @@ export default function Users() {
                             item.activated ? 'text-[#34c759]' : 'text-[#8e8e93]'
                           }`}
                         >
-                          {item.activated ? '● Active' : '○ Inactive'}
+                          {item.activated ? 'Active' : 'Inactive'}
                         </span>
                       </div>
                     </div>
