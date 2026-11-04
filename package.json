@@ -1,7 +1,11 @@
 {
   "name": "ssa-frontend",
+  "productName": "SSA Sales Hub CRM",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.4",
+  "description": "SSA Sales Hub CRM Windows Desktop Application",
+  "author": "SSA Sales Hub",
+  "main": "electron/main.cjs",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -15,7 +19,10 @@
     "cap:sync": "vite build && npx cap sync android",
     "android:bundle": "vite build && npx cap sync android && cd android && gradlew.bat bundleRelease",
     "android:apk": "vite build && npx cap sync android && cd android && gradlew.bat assembleRelease",
-    "android:debug": "vite build && npx cap sync android && cd android && gradlew.bat assembleDebug"
+    "android:debug": "vite build && npx cap sync android && cd android && gradlew.bat assembleDebug",
+    "electron:start": "electron electron/main.cjs",
+    "electron:dist": "vite build && electron-builder --win nsis",
+    "electron:portable": "vite build && electron-builder --win portable"
   },
   "dependencies": {
     "@capacitor/android": "^8.6.0",
@@ -39,9 +46,40 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
+    "electron": "^45.2.2",
+    "electron-builder": "^26.18.0",
     "oxlint": "^1.81.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.0",
     "wrangler": "^4.148.0"
+  },
+  "build": {
+    "appId": "com.ssasaleshub.crm.desktop",
+    "productName": "SSA Sales Hub CRM",
+    "copyright": "Copyright © 2026 SSA Sales Hub",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "public/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "public/playstore-icon-512.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "SSA Sales Hub CRM"
+    }
   }
 }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 import {
   Check,
   CheckCheck,
@@ -8,6 +9,7 @@ import {
   Calendar,
   Volume2,
   ChevronRight,
+  Bell,
 } from 'lucide-react';
 import { BrandReminderIcon } from './icons/BrandIcons';
 import reminderNotificationService, {
@@ -107,6 +109,9 @@ export default function NotificationBell() {
     }
   };
 
+  const isNative = Capacitor.isNativePlatform();
+  const isMobile = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
   return (
     <div className="relative font-sf-display" ref={dropdownRef}>
       {/* Apple iOS Style Bell Trigger Button */}
@@ -131,52 +136,59 @@ export default function NotificationBell() {
 
       {/* Apple OS Frosted Glass Notification Popover */}
       {isOpen && (
-        <div className="absolute right-0 sm:right-0 mt-2.5 w-[360px] sm:w-[380px] bg-white/90 backdrop-blur-2xl rounded-[22px] shadow-[0_20px_50px_rgba(0,0,0,0.12),0_1px_3px_rgba(0,0,0,0.06)] border border-black/[0.06] z-50 overflow-hidden flex flex-col max-h-[520px] animate-in fade-in zoom-in-95 duration-150">
-          
-          {/* iOS Header */}
-          <div className="px-4 pt-3.5 pb-2.5 flex items-center justify-between border-b border-black/[0.04]">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-[14px] text-[#1d1d1f] tracking-tight">
-                Notifications
-              </span>
-              {unreadCount > 0 && (
-                <span className="px-2 py-0.5 bg-black/[0.05] text-[#1d1d1f] text-[11px] font-medium rounded-full">
-                  {unreadCount}
+        <>
+          {/* Mobile Backdrop Overlay to dismiss on tap */}
+          <div
+            className="fixed inset-0 bg-black/25 backdrop-blur-[2px] z-40 sm:hidden"
+            onClick={() => setIsOpen(false)}
+          />
+
+          <div className="fixed top-14 left-3 right-3 sm:left-auto sm:right-0 sm:absolute sm:top-full mt-2 sm:mt-2.5 sm:w-[380px] bg-white/95 backdrop-blur-2xl rounded-[22px] shadow-[0_20px_50px_rgba(0,0,0,0.18),0_1px_3px_rgba(0,0,0,0.08)] border border-black/[0.08] z-50 overflow-hidden flex flex-col max-h-[82vh] sm:max-h-[520px] animate-in fade-in zoom-in-95 duration-150">
+            
+            {/* iOS Header */}
+            <div className="px-4 pt-3.5 pb-2.5 flex items-center justify-between border-b border-black/[0.04]">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-[14px] text-[#1d1d1f] tracking-tight">
+                  Notifications
                 </span>
+                {unreadCount > 0 && (
+                  <span className="px-2 py-0.5 bg-black/[0.05] text-[#1d1d1f] text-[11px] font-medium rounded-full">
+                    {unreadCount}
+                  </span>
+                )}
+              </div>
+
+              {unreadCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleMarkAllRead}
+                  className="text-[12px] font-medium text-[#0071e3] hover:text-[#0077ED] transition-opacity active:opacity-60"
+                >
+                  Mark All as Read
+                </button>
               )}
             </div>
 
-            {unreadCount > 0 && (
-              <button
-                type="button"
-                onClick={handleMarkAllRead}
-                className="text-[12px] font-medium text-[#0071e3] hover:text-[#0077ED] transition-opacity active:opacity-60"
-              >
-                Mark All as Read
-              </button>
-            )}
-          </div>
-
-          {/* Desktop Alerts Request Pill (Apple iOS Widget Style) */}
-          {!hasPermission && (
-            <div className="mx-3.5 mt-2.5 p-2 bg-[#f5f5f7]/80 border border-black/[0.04] rounded-[14px] flex items-center justify-between gap-2.5">
-              <div className="flex items-center gap-2 min-w-0 pl-1">
-                <div className="w-6 h-6 rounded-full bg-[#0071e3]/10 text-[#0071e3] flex items-center justify-center shrink-0">
-                  <Volume2 size={12} strokeWidth={2.5} />
+            {/* Notification Permission Request Pill (Hide on Native Mobile where FCM is native) */}
+            {!hasPermission && !isNative && (
+              <div className="mx-3.5 mt-2.5 p-2 bg-[#f5f5f7]/80 border border-black/[0.04] rounded-[14px] flex items-center justify-between gap-2.5">
+                <div className="flex items-center gap-2 min-w-0 pl-1">
+                  <div className="w-6 h-6 rounded-full bg-[#0071e3]/10 text-[#0071e3] flex items-center justify-center shrink-0">
+                    <Volume2 size={12} strokeWidth={2.5} />
+                  </div>
+                  <span className="text-[12px] font-medium text-[#1d1d1f] truncate">
+                    {isMobile ? 'Push Alerts' : 'Desktop Alerts'}
+                  </span>
                 </div>
-                <span className="text-[12px] font-medium text-[#1d1d1f] truncate">
-                  Desktop Alerts
-                </span>
+                <button
+                  type="button"
+                  onClick={handleRequestPermission}
+                  className="px-3 py-1 bg-[#0071e3] hover:bg-[#0077ED] active:scale-95 text-white font-medium rounded-full text-[11px] shrink-0 shadow-xs transition-all"
+                >
+                  Turn On
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={handleRequestPermission}
-                className="px-3 py-1 bg-[#0071e3] hover:bg-[#0077ED] active:scale-95 text-white font-medium rounded-full text-[11px] shrink-0 shadow-xs transition-all"
-              >
-                Turn On
-              </button>
-            </div>
-          )}
+            )}
 
           {/* Notifications Scroll List */}
           <div className="overflow-y-auto flex-1 p-2.5 space-y-2">
@@ -300,6 +312,7 @@ export default function NotificationBell() {
           </div>
 
         </div>
+        </>
       )}
     </div>
   );
