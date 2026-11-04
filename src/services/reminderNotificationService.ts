@@ -415,5 +415,139 @@ class ReminderNotificationService {
   }
 }
 
+export interface RemainingTimeResult {
+  text: string;
+  days: number;
+  hours: number;
+  minutes: number;
+  totalMinutes: number;
+  isPast: boolean;
+  isNear: boolean;
+}
+
+/**
+ * Calculates human-readable duration remaining until reminder fires (e.g. "8 hours remaining", "12 hours remaining")
+ */
+export function getRemainingTimeInfo(
+  eventDateStr?: string,
+  eventTimeStr?: string
+): RemainingTimeResult | null {
+  if (!eventDateStr) return null;
+  const parts = eventDateStr.split('-').map(Number);
+  if (parts.length < 3 || isNaN(parts[0]) || isNaN(parts[1]) || isNaN(parts[2])) {
+    return null;
+  }
+  const [y, m, d] = parts;
+  const timeParts = (eventTimeStr || '00:00').split(':').map(Number);
+  const h = isNaN(timeParts[0]) ? 0 : timeParts[0];
+  const min = isNaN(timeParts[1]) ? 0 : timeParts[1];
+
+  const target = new Date(y, m - 1, d, h, min, 0);
+  const now = new Date();
+  const diffMs = target.getTime() - now.getTime();
+
+  if (diffMs <= 0) {
+    const pastMinutes = Math.abs(Math.floor(diffMs / 60000));
+    if (pastMinutes < 2) {
+      return {
+        text: 'Starting right now',
+        days: 0,
+        hours: 0,
+        minutes: 0,
+        totalMinutes: 0,
+        isPast: false,
+        isNear: true,
+      };
+    }
+    return {
+      text: 'Scheduled time has passed',
+      days: 0,
+      hours: 0,
+      minutes: 0,
+      totalMinutes: -pastMinutes,
+      isPast: true,
+      isNear: false,
+    };
+  }
+
+  const totalMinutes = Math.floor(diffMs / 60000);
+  const days = Math.floor(totalMinutes / (24 * 60));
+  const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+  const minutes = totalMinutes % 60;
+
+  let text = '';
+  if (days > 0) {
+    if (hours > 0) {
+      text = `${days} ${days === 1 ? 'day' : 'days'} ${hours} ${hours === 1 ? 'hour' : 'hours'} remaining`;
+    } else {
+      text = `${days} ${days === 1 ? 'day' : 'days'} remaining`;
+    }
+  } else if (hours > 0) {
+    if (minutes > 0) {
+      text = `${hours} ${hours === 1 ? 'hour' : 'hours'} ${minutes} min remaining`;
+    } else {
+      text = `${hours} ${hours === 1 ? 'hour' : 'hours'} remaining`;
+    }
+  } else {
+    text = `${minutes} min${minutes === 1 ? '' : 's'} remaining`;
+  }
+
+  return {
+    text,
+    days,
+    hours,
+    minutes,
+    totalMinutes,
+    isPast: false,
+    isNear: totalMinutes <= 60,
+  };
+}
+
+/**
+ * Returns formatted readable event date/time with Today/Tomorrow awareness (IST)
+ */
+export function formatEventReadable(eventDateStr: string, eventTimeStr?: string): string {
+  try {
+    const parts = eventDateStr.split('-').map(Number);
+    if (parts.length < 3) return `${eventDateStr} ${eventTimeStr || ''}`.trim();
+    const [y, m, d] = parts;
+    const timeParts = (eventTimeStr || '00:00').split(':').map(Number);
+    const h = isNaN(timeParts[0]) ? 0 : timeParts[0];
+    const min = isNaN(timeParts[1]) ? 0 : timeParts[1];
+
+    const target = new Date(y, m - 1, d, h, min, 0);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const eventDay = new Date(y, m - 1, d);
+
+    const timeStrFormatted = target.toLocaleTimeString('en-IN', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+
+    const diffDays = Math.round((eventDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) {
+      return `Today at ${timeStrFormatted}`;
+    }
+    if (diffDays === 1) {
+      return `Tomorrow at ${timeStrFormatted}`;
+    }
+    if (diffDays === -1) {
+      return `Yesterday at ${timeStrFormatted}`;
+    }
+
+    const dateFormatted = target.toLocaleDateString('en-IN', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      year: y !== now.getFullYear() ? 'numeric' : undefined,
+    });
+    return `${dateFormatted} at ${timeStrFormatted}`;
+  } catch {
+    return `${eventDateStr} ${eventTimeStr || ''}`.trim();
+  }
+}
+
 export const reminderNotificationService = new ReminderNotificationService();
 export default reminderNotificationService;

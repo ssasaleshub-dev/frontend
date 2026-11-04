@@ -21,7 +21,10 @@ import notificationApiService, {
   EventPriority,
   EventType,
 } from '../services/api/notificationService';
-import reminderNotificationService from '../services/reminderNotificationService';
+import reminderNotificationService, {
+  getRemainingTimeInfo,
+  formatEventReadable,
+} from '../services/reminderNotificationService';
 import { formatMaskedLeadRef } from '../utils/leadIdCrypto';
 
 interface LeadReminderModalProps {
@@ -436,6 +439,29 @@ export default function LeadReminderModal({
                 </div>
               </div>
 
+              {/* Live Remaining Time Preview */}
+              {(() => {
+                const liveRem = getRemainingTimeInfo(eventDate, eventTime);
+                if (!liveRem) return null;
+                return (
+                  <div
+                    className={`flex items-center justify-between px-3.5 py-2 rounded-xl border text-[11px] font-medium transition-all ${
+                      liveRem.isPast
+                        ? 'bg-amber-500/10 border-amber-500/20 text-amber-900'
+                        : 'bg-[#007aff]/[0.08] border-[#007aff]/20 text-[#007aff]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 truncate">
+                      <Clock size={12} className="shrink-0" />
+                      <span>{liveRem.isPast ? liveRem.text : `⏱ ${liveRem.text}`}</span>
+                    </div>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/80 shrink-0 shadow-2xs">
+                      {liveRem.isPast ? 'Passed' : 'Countdown'}
+                    </span>
+                  </div>
+                );
+              })()}
+
               {/* Remind Before & Priority Row */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Remind Before */}
@@ -574,7 +600,7 @@ export default function LeadReminderModal({
                         </div>
 
                         {/* Date & Time */}
-                        <div className="flex items-center gap-2 mt-1 text-[11px] text-[#8e8e93]">
+                        <div className="flex items-center gap-2 mt-1 text-[11px] text-[#8e8e93] flex-wrap">
                           <span className="flex items-center gap-1 font-medium">
                             <Calendar size={11} />
                             {r.eventDate}
@@ -585,6 +611,16 @@ export default function LeadReminderModal({
                               {r.eventTime}
                             </span>
                           )}
+                          {!r.isCompleted && (() => {
+                            const rem = getRemainingTimeInfo(r.eventDate, r.eventTime);
+                            if (!rem || rem.isPast) return null;
+                            return (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.2 rounded-full text-[10px] font-medium bg-amber-500/10 text-amber-800 border border-amber-500/20">
+                                <Clock size={10} />
+                                {rem.text}
+                              </span>
+                            );
+                          })()}
                           {r.isCompleted && (
                             <span className="text-[#34c759] font-semibold">• Completed</span>
                           )}

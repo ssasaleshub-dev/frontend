@@ -15,6 +15,7 @@ import {
   Flag,
   X,
   Filter,
+  Bell,
 } from 'lucide-react';
 import { BrandReminderIcon } from '../components/icons/BrandIcons';
 import reminderNotificationService, {
@@ -23,6 +24,8 @@ import reminderNotificationService, {
   INDIAN_HOLIDAYS,
   EventType,
   EventPriority,
+  getRemainingTimeInfo,
+  formatEventReadable,
 } from '../services/reminderNotificationService';
 
 const MONTH_NAMES = [
@@ -52,6 +55,17 @@ export default function CalendarPage() {
     candidateName: '',
     remindBeforeMinutes: 15,
   });
+
+  // Apple iOS Confirmation Modal State
+  const [successReminder, setSuccessReminder] = useState<{
+    title: string;
+    eventDate: string;
+    eventTime: string;
+    remainingText: string;
+    isPast: boolean;
+    remindBeforeMinutes: number;
+    eventType: EventType;
+  } | null>(null);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -123,11 +137,13 @@ export default function CalendarPage() {
   // Open modal for a specific date
   const handleOpenModal = (dateStr?: string) => {
     const d = dateStr || selectedDateStr;
+    const now = new Date();
+    const defaultHour = String((now.getHours() + 1) % 24).padStart(2, '0');
     setFormData({
       title: '',
       description: '',
       eventDate: d,
-      eventTime: '11:00',
+      eventTime: `${defaultHour}:00`,
       eventType: 'REMINDER',
       priority: 'MEDIUM',
       candidateName: '',
@@ -139,6 +155,8 @@ export default function CalendarPage() {
   const handleSaveEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim()) return;
+
+    const remainingInfo = getRemainingTimeInfo(formData.eventDate, formData.eventTime);
 
     await reminderNotificationService.saveEvent({
       userId: 'current',
@@ -154,6 +172,17 @@ export default function CalendarPage() {
     });
 
     setIsModalOpen(false);
+
+    // Present Apple iOS-style Confirmation Modal with dynamic countdown
+    setSuccessReminder({
+      title: formData.title.trim(),
+      eventDate: formData.eventDate,
+      eventTime: formData.eventTime,
+      remainingText: remainingInfo?.text || 'Scheduled',
+      isPast: !!remainingInfo?.isPast,
+      remindBeforeMinutes: Number(formData.remindBeforeMinutes),
+      eventType: formData.eventType,
+    });
   };
 
   const handleDeleteEvent = async (id: string, e: React.MouseEvent) => {
@@ -454,7 +483,7 @@ export default function CalendarPage() {
                         </div>
                       )}
 
-                      <div className="flex items-center gap-1.5 mt-1.5">
+                      <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                         <span className="px-2 py-0.2 bg-black/[0.04] text-[#515154] rounded-full text-[9px] font-medium uppercase">
                           {evt.eventType}
                         </span>
@@ -463,6 +492,16 @@ export default function CalendarPage() {
                             {evt.priority}
                           </span>
                         ) : null}
+                        {!evt.isCompleted && (() => {
+                          const rem = getRemainingTimeInfo(evt.eventDate, evt.eventTime);
+                          if (!rem || rem.isPast) return null;
+                          return (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.2 bg-amber-500/10 text-amber-800 rounded-full text-[9px] font-medium border border-amber-500/15">
+                              <Clock size={9} />
+                              {rem.text}
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
 
@@ -583,6 +622,29 @@ export default function CalendarPage() {
                 </div>
               </div>
 
+              {/* Live Dynamic Countdown Preview */}
+              {(() => {
+                const liveRem = getRemainingTimeInfo(formData.eventDate, formData.eventTime);
+                if (!liveRem) return null;
+                return (
+                  <div
+                    className={`flex items-center justify-between px-3 py-2 rounded-[14px] border text-[11px] transition-all ${
+                      liveRem.isPast
+                        ? 'bg-amber-500/10 border-amber-500/20 text-amber-900'
+                        : 'bg-[#0071e3]/[0.07] border-[#0071e3]/20 text-[#0071e3]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 font-medium truncate">
+                      <Clock size={12} className="shrink-0" />
+                      <span>{liveRem.isPast ? liveRem.text : `⏱ ${liveRem.text}`}</span>
+                    </div>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/80 shrink-0 shadow-2xs">
+                      {liveRem.isPast ? 'Passed' : 'IST Countdown'}
+                    </span>
+                  </div>
+                );
+              })()}
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1">
@@ -677,6 +739,79 @@ export default function CalendarPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Apple iOS-Themed Small Confirmation Modal */}
+      {successReminder && (
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center p-4 z-[70] animate-in fade-in duration-200"
+          onClick={() => setSuccessReminder(null)}
+        >
+          <div
+            className="bg-white/95 backdrop-blur-2xl rounded-[28px] shadow-[0_24px_60px_rgba(0,0,0,0.22)] border border-black/[0.08] max-w-[340px] w-full p-6 text-center animate-in zoom-in-95 duration-200 relative overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Top Close Button */}
+            <button
+              type="button"
+              onClick={() => setSuccessReminder(null)}
+              className="absolute top-4 right-4 w-7 h-7 rounded-full bg-black/[0.04] hover:bg-black/[0.08] flex items-center justify-center text-[#86868b] hover:text-[#1d1d1f] transition-colors"
+              title="Close"
+            >
+              <X size={13} strokeWidth={2.5} />
+            </button>
+
+            {/* Apple iOS Icon with Ambient Glow */}
+            <div className="mx-auto w-14 h-14 rounded-[20px] bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-300 text-white flex items-center justify-center shadow-lg shadow-amber-500/30 mb-3.5">
+              <Bell size={26} strokeWidth={2.3} className="drop-shadow-xs" />
+            </div>
+
+            {/* iOS Status Pill */}
+            <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-800 text-[10px] font-semibold tracking-wider uppercase mb-2">
+              <CheckCircle2 size={11} className="text-amber-700" />
+              <span>Reminder Scheduled</span>
+            </div>
+
+            {/* Event Title */}
+            <h3 className="text-[16px] font-semibold text-[#1d1d1f] tracking-tight line-clamp-2 px-1">
+              {successReminder.title}
+            </h3>
+
+            {/* Prominent iOS Duration Card */}
+            <div className="mt-4 p-4 rounded-[20px] bg-gradient-to-b from-[#f5f5f7] to-[#ebebee] border border-black/[0.04]">
+              <span className="block text-[10px] uppercase font-semibold text-[#86868b] tracking-wider mb-1">
+                Time Remaining
+              </span>
+              <div className="text-[19px] font-bold text-[#1d1d1f] tracking-tight flex items-center justify-center gap-1.5">
+                <Clock size={17} className="text-[#0071e3]" />
+                <span>{successReminder.remainingText}</span>
+              </div>
+              <div className="text-[11px] text-[#515154] mt-1.5 font-medium">
+                {formatEventReadable(successReminder.eventDate, successReminder.eventTime)}
+              </div>
+            </div>
+
+            {/* Notification alert details */}
+            <p className="text-[11px] text-[#86868b] mt-3 font-normal flex items-center justify-center gap-1">
+              <span>🔔</span>
+              <span>
+                {successReminder.remindBeforeMinutes > 0
+                  ? `Notification alert ${successReminder.remindBeforeMinutes} minutes before`
+                  : 'Notification alert at scheduled time'}
+              </span>
+            </p>
+
+            {/* Apple iOS Primary Action Button */}
+            <div className="mt-5">
+              <button
+                type="button"
+                onClick={() => setSuccessReminder(null)}
+                className="w-full py-2.5 px-4 rounded-full bg-[#0071e3] hover:bg-[#0077ED] text-white text-[13px] font-semibold shadow-xs transition-all active:scale-98"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}
