@@ -432,9 +432,101 @@ export default function Users() {
         </div>
       </div>
 
-      {/* User Directory Table */}
+      {/* User Directory: Table on desktop, Card list on mobile */}
       <div className="ios-card overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* ── MOBILE CARD LIST (shown only on small screens) ── */}
+        <div className="sm:hidden divide-y divide-[rgba(60,60,67,0.06)]">
+          {loading ? (
+            <div className="py-12 flex flex-col items-center gap-2 text-[#8e8e93]">
+              <RefreshCw size={18} className="animate-spin text-[#007aff]" />
+              <p className="text-xs font-medium">Loading users...</p>
+            </div>
+          ) : paginatedUsers.length === 0 ? (
+            <div className="py-12 flex flex-col items-center gap-2 text-[#8e8e93]">
+              <UsersIcon size={24} className="text-[#c7c7cc]" />
+              <p className="font-semibold text-[#1c1c1e] text-sm">No users found</p>
+              <p className="text-[11px] text-center max-w-xs">No staff accounts configured. Tap "Create New User" to add one.</p>
+            </div>
+          ) : (
+            paginatedUsers.map((item) => {
+              const isCurrent = currentUser?.login === item.login;
+              const fullName =
+                item.firstName || item.lastName
+                  ? `${item.firstName || ''} ${item.lastName || ''}`.trim()
+                  : '—';
+              const initial = (item.firstName?.[0] || item.login?.[0] || 'U').toUpperCase();
+
+              return (
+                <div
+                  key={item.login || item.id}
+                  className="px-4 py-3.5 flex items-center justify-between gap-3"
+                >
+                  {/* Avatar + Name + Role */}
+                  <div className="flex items-center gap-3 min-w-0">
+                    {item.imageUrl ? (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.login}
+                        className="w-10 h-10 rounded-full object-cover shrink-0 border border-[rgba(60,60,67,0.1)]"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm uppercase shrink-0 bg-gradient-to-tr from-slate-100 to-slate-200 text-slate-700 border border-[rgba(60,60,67,0.1)]">
+                        {initial}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-semibold text-[13px] text-[#1c1c1e] truncate">
+                          {fullName}
+                        </span>
+                        {isCurrent && (
+                          <span className="px-1.5 py-0.5 bg-[#007aff]/10 text-[#007aff] rounded text-[9px] font-semibold">
+                            You
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-[#8e8e93] font-mono mt-0.5 truncate">@{item.login}</p>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <span className="text-[10px] text-[#515154] bg-[#f2f2f7] px-2 py-0.5 rounded-full font-medium">
+                          {getRoleName(item.authorities)}
+                        </span>
+                        <span
+                          className={`text-[10px] font-medium ${
+                            item.activated ? 'text-[#34c759]' : 'text-[#8e8e93]'
+                          }`}
+                        >
+                          {item.activated ? '● Active' : '○ Inactive'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => openEditModal(item)}
+                      title="Edit User"
+                      className="w-9 h-9 flex items-center justify-center rounded-xl border border-[rgba(60,60,67,0.12)] bg-white text-[#3c3c43] hover:text-[#007aff] hover:border-[#007aff]/30 transition-all shadow-2xs active:scale-95"
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                    <button
+                      onClick={() => setDeletingUser(item)}
+                      disabled={isCurrent}
+                      title={isCurrent ? 'Cannot delete your own account' : 'Delete User'}
+                      className="w-9 h-9 flex items-center justify-center rounded-xl border border-[rgba(60,60,67,0.12)] bg-white text-[#8e8e93] hover:text-[#ff3b30] hover:border-[#ff3b30]/30 transition-all shadow-2xs active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* ── DESKTOP TABLE (hidden on mobile) ── */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-[#f2f2f7]/60 border-b border-[rgba(60,60,67,0.1)] text-[11px] font-semibold text-[#8e8e93] uppercase tracking-wider">
@@ -582,42 +674,29 @@ export default function Users() {
         </div>
 
         {/* Pagination Strip */}
-        <div className="p-3 bg-[#f2f2f7]/40 border-t border-[rgba(60,60,67,0.08)] flex items-center justify-between text-xs text-[#8e8e93]">
-          <div>
-            Showing{' '}
-            <span className="font-semibold text-[#1c1c1e]">
-              {users.length === 0 ? 0 : page * pageSize + 1}
-            </span>{' '}
-            to{' '}
-            <span className="font-semibold text-[#1c1c1e]">
-              {Math.min((page + 1) * pageSize, users.length)}
-            </span>{' '}
-            of{' '}
-            <span className="font-semibold text-[#1c1c1e]">{users.length}</span> users
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setPage((p) => Math.max(p - 1, 0))}
-              disabled={page === 0}
-              className="ios-btn-gray p-1.5 disabled:opacity-30 disabled:cursor-not-allowed"
-              title="Previous page"
-            >
-              <ChevronLeft size={14} />
-            </button>
-            <span className="font-medium text-[#1c1c1e] text-[11px]">
+        {totalPages > 1 && (
+          <div className="p-3 bg-[#f2f2f7]/40 border-t border-[rgba(60,60,67,0.08)] flex items-center justify-between text-xs text-[#8e8e93]">
+            <span>
               Page {page + 1} of {totalPages}
             </span>
-            <button
-              onClick={() => setPage((p) => Math.min(p + 1, totalPages - 1))}
-              disabled={page >= totalPages - 1}
-              className="ios-btn-gray p-1.5 disabled:opacity-30 disabled:cursor-not-allowed"
-              title="Next page"
-            >
-              <ChevronRight size={14} />
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="px-2.5 py-1 rounded-lg border border-[rgba(60,60,67,0.12)] bg-white hover:bg-[#f2f2f7] disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium"
+              >
+                ‹ Prev
+              </button>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={page >= totalPages - 1}
+                className="px-2.5 py-1 rounded-lg border border-[rgba(60,60,67,0.12)] bg-white hover:bg-[#f2f2f7] disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium"
+              >
+                Next ›
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* CREATE NEW USER MODAL (Zoho CRM Modal & Field UI) */}

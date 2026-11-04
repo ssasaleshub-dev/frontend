@@ -17,9 +17,34 @@ import type { Customer } from '../types';
 export default function Customers() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const hasLoadedRef = useRef<boolean>(false);
+
+  // Stale-while-revalidate cache key
+  const CACHE_KEY = 'ssa_customers_cache_v1';
+
+  const loadFromCache = () => {
+    try {
+      const raw = sessionStorage.getItem(CACHE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setCustomers(parsed);
+          setLoading(false); // show cached data instantly
+          return true;
+        }
+      }
+    } catch {}
+    return false;
+  };
+
+  const saveToCache = (data: Customer[]) => {
+    try {
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
+    } catch {}
+  };
 
   // Modals
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
@@ -35,25 +60,29 @@ export default function Customers() {
   });
   const [submitting, setSubmitting] = useState<boolean>(false);
 
-  const fetchCustomers = useCallback(async () => {
-    setLoading(true);
+  const fetchCustomers = useCallback(async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
+    else setRefreshing(true);
     setError(null);
     try {
       const res = await crmService.getCustomers(0, 100);
       const list = Array.isArray(res) ? res : res?.content || [];
       setCustomers(list);
+      saveToCache(list);
     } catch (err: any) {
       setError(err?.message || 'Failed to fetch customer directory');
-      setCustomers([]);
+      if (!isBackground) setCustomers([]);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
   useEffect(() => {
     if (!hasLoadedRef.current) {
       hasLoadedRef.current = true;
-      fetchCustomers();
+      const hasCached = loadFromCache(); // show instantly if cached
+      fetchCustomers(hasCached);         // then refresh in background if had cache, or full load if not
     }
   }, [fetchCustomers]);
 
@@ -154,11 +183,14 @@ export default function Customers() {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={fetchCustomers}
+            onClick={() => {
+              try { sessionStorage.removeItem('ssa_customers_cache_v1'); } catch {}
+              fetchCustomers(false);
+            }}
             disabled={loading}
             className="ios-btn-gray text-xs"
           >
-            <RefreshCw size={13} className={loading ? 'animate-spin text-[#007aff]' : 'text-[#8e8e93]'} />
+            <RefreshCw size={13} className={loading || refreshing ? 'animate-spin text-[#007aff]' : 'text-[#8e8e93]'} />
             <span>Refresh</span>
           </button>
 
@@ -212,6 +244,13 @@ export default function Customers() {
 
       {/* Customers Table */}
       <div className="ios-card overflow-hidden">
+        {/* Background refresh indicator */}
+        {refreshing && (
+          <div className="px-4 py-1.5 bg-[#007aff]/[0.06] border-b border-[#007aff]/10 flex items-center gap-2 text-[11px] text-[#007aff] font-medium">
+            <RefreshCw size={11} className="animate-spin shrink-0" />
+            Syncing latest data...
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase font-semibold text-[11px]">

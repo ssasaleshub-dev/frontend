@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -34,12 +34,27 @@ export default function Layout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
+
+  // Close user dropdown when clicking outside
+  useEffect(() => {
+    const handleOutside = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    if (userMenuOpen) {
+      document.addEventListener('mousedown', handleOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [userMenuOpen]);
 
   const handleAvatarSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -403,44 +418,71 @@ export default function Layout() {
               <NotificationBell />
             </div>
 
-            {/* Header User Section - Click to go to Profile */}
-            <div className="flex items-center gap-2.5 pl-3 border-l border-slate-200">
-              <button
-                type="button"
-                onClick={() => navigate('/profile')}
-                className="flex items-center gap-2.5 text-left focus:outline-none group"
-                title="View Staff Profile & Shift Records"
-              >
-                {user?.imageUrl ? (
-                  <img
-                    src={user.imageUrl}
-                    alt={displayName}
-                    className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0 group-hover:ring-2 group-hover:ring-[#007aff]/30 transition-all"
-                  />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-[#eaecf0] text-[#344054] font-semibold text-xs flex items-center justify-center shrink-0 uppercase group-hover:ring-2 group-hover:ring-[#007aff]/30 transition-all">
-                    {userInitial}
+            {/* Header User Section - Click avatar for dropdown, logout inside */}
+            <div className="flex items-center gap-2.5 pl-3 border-l border-slate-200" ref={userMenuRef}>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setUserMenuOpen((v) => !v)}
+                  className="flex items-center gap-2.5 text-left focus:outline-none group"
+                  title="Profile & Account"
+                >
+                  {user?.imageUrl ? (
+                    <img
+                      src={user.imageUrl}
+                      alt={displayName}
+                      className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0 group-hover:ring-2 group-hover:ring-[#007aff]/30 transition-all"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-[#eaecf0] text-[#344054] font-semibold text-xs flex items-center justify-center shrink-0 uppercase group-hover:ring-2 group-hover:ring-[#007aff]/30 transition-all">
+                      {userInitial}
+                    </div>
+                  )}
+                  <div className="hidden sm:flex flex-col text-left">
+                    <span className="text-xs font-semibold text-[#1e293b] leading-tight group-hover:text-[#007aff] transition-colors">
+                      {displayName}
+                    </span>
+                    <span className="text-[11px] text-[#64748b] font-normal leading-tight mt-0.5">
+                      {badgeInfo.displayText}
+                    </span>
+                  </div>
+                </button>
+
+                {/* User Dropdown Menu */}
+                {userMenuOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] border border-black/[0.06] z-50 overflow-hidden animate-in zoom-in-95 fade-in duration-150">
+                    {/* Profile info top */}
+                    <div className="px-4 py-3 border-b border-black/[0.05]">
+                      <p className="text-xs font-semibold text-[#1c1c1e] truncate">{displayName}</p>
+                      <p className="text-[11px] text-[#8e8e93] mt-0.5">{badgeInfo.displayText}</p>
+                    </div>
+
+                    {/* Menu items */}
+                    <div className="py-1.5">
+                      <button
+                        type="button"
+                        onClick={() => { navigate('/profile'); setUserMenuOpen(false); }}
+                        className="w-full px-4 py-2.5 text-left text-xs font-medium text-[#1c1c1e] hover:bg-[#f2f2f7] flex items-center gap-2.5 transition-colors"
+                      >
+                        <User size={14} className="text-[#8e8e93]" />
+                        View Profile
+                      </button>
+                    </div>
+
+                    {/* Logout - red destructive at bottom */}
+                    <div className="py-1.5 border-t border-black/[0.05]">
+                      <button
+                        type="button"
+                        onClick={() => { handleLogout(); setUserMenuOpen(false); }}
+                        className="w-full px-4 py-2.5 text-left text-xs font-medium text-[#ff3b30] hover:bg-[#ff3b30]/[0.06] flex items-center gap-2.5 transition-colors"
+                      >
+                        <LogOut size={14} />
+                        Log Out
+                      </button>
+                    </div>
                   </div>
                 )}
-                <div className="hidden sm:flex flex-col text-left">
-                  <span className="text-xs font-semibold text-[#1e293b] leading-tight group-hover:text-[#007aff] transition-colors">
-                    {displayName}
-                  </span>
-                  <span className="text-[11px] text-[#64748b] font-normal leading-tight mt-0.5">
-                    {badgeInfo.displayText}
-                  </span>
-                </div>
-              </button>
-
-              {/* Logout Button */}
-              <button
-                onClick={handleLogout}
-                title="Log Out"
-                className="p-1 text-slate-400 hover:text-slate-700 rounded transition-colors ml-1"
-                aria-label="Logout"
-              >
-                <LogOut size={16} />
-              </button>
+              </div>
             </div>
           </div>
         </header>
