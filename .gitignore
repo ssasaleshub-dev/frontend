@@ -25,6 +25,7 @@ dist-ssr
 
 
 # Android & Capacitor build artifacts
+android/local.properties
 android/.gradle
 android/build
 android/app/build
