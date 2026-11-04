@@ -26,6 +26,7 @@ import reminderNotificationService, {
   formatEventReadable,
 } from '../services/reminderNotificationService';
 import { formatMaskedLeadRef } from '../utils/leadIdCrypto';
+import { useAuth } from '../context/AuthContext';
 
 interface LeadReminderModalProps {
   isOpen: boolean;
@@ -44,6 +45,7 @@ export default function LeadReminderModal({
   assignedStaff,
   onReminderSaved,
 }: LeadReminderModalProps) {
+  const { user: currentUser } = useAuth();
   // Existing candidate reminders
   const [reminders, setReminders] = useState<CalendarEventDTO[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -162,7 +164,7 @@ export default function LeadReminderModal({
 
     try {
       const newEventData: Omit<CalendarEventDTO, 'id' | 'createdAt' | 'updatedAt' | 'notificationSent'> = {
-        userId: assignedStaff || 'current',
+        userId: assignedStaff || currentUser?.login || 'admin',
         title: title.trim(),
         description: description.trim() || undefined,
         eventDate,

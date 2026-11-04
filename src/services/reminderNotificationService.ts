@@ -11,6 +11,7 @@ import notificationApiService, {
   EventPriority,
   NotificationType,
 } from './api/notificationService';
+import pushNotificationService from './pushNotificationService';
 
 export type { CalendarEventDTO as CalendarEvent, NotificationDTO as NotificationItem, EventType, EventPriority, NotificationType };
 
@@ -149,6 +150,7 @@ class ReminderNotificationService {
     localStorage.setItem(EVENTS_CACHE_KEY, JSON.stringify(cached));
     window.dispatchEvent(new CustomEvent('ssa_events_updated'));
 
+    let finalEvent = newEvent;
     // Attempt real backend POST
     try {
       const savedOnServer = await notificationApiService.createEvent(newEvent);
@@ -160,14 +162,30 @@ class ReminderNotificationService {
           localStorage.setItem(EVENTS_CACHE_KEY, JSON.stringify(cached));
           window.dispatchEvent(new CustomEvent('ssa_events_updated'));
         }
-        return savedOnServer;
+        finalEvent = savedOnServer;
       }
     } catch {
       // Fallback kept
     }
 
+    // Schedule Native Android push notification & exact reminder alarm
+    try {
+      pushNotificationService.scheduleLocalReminder({
+        id: finalEvent.id,
+        title: finalEvent.title,
+        candidateName: finalEvent.candidateName,
+        eventDate: finalEvent.eventDate,
+        eventTime: finalEvent.eventTime,
+        remindBeforeMinutes: finalEvent.remindBeforeMinutes,
+        description: finalEvent.description,
+        candidateId: finalEvent.candidateId,
+      });
+    } catch (schedErr) {
+      console.warn('[Reminders] Could not schedule native notification:', schedErr);
+    }
+
     this.checkDueReminders();
-    return newEvent;
+    return finalEvent;
   }
 
   public async updateEvent(id: string, updates: Partial<CalendarEventDTO>): Promise<CalendarEventDTO | null> {
@@ -177,6 +195,11 @@ class ReminderNotificationService {
       cached[idx] = { ...cached[idx], ...updates, updatedAt: new Date().toISOString() };
       localStorage.setItem(EVENTS_CACHE_KEY, JSON.stringify(cached));
       window.dispatchEvent(new CustomEvent('ssa_events_updated'));
+
+      // Reschedule native notification if time or title changed
+      try {
+        pushNotificationService.scheduleLocalReminder(cached[idx]);
+      } catch {}
     }
 
     try {
@@ -190,6 +213,10 @@ class ReminderNotificationService {
     const cached = this.getCachedEvents().filter((e) => e.id !== id);
     localStorage.setItem(EVENTS_CACHE_KEY, JSON.stringify(cached));
     window.dispatchEvent(new CustomEvent('ssa_events_updated'));
+
+    try {
+      pushNotificationService.cancelLocalReminder(id);
+    } catch {}
 
     try {
       await notificationApiService.deleteEvent(id);

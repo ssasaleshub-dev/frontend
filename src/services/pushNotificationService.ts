@@ -11,6 +11,7 @@ import {
   PushNotificationSchema,
   ActionPerformed,
 } from '@capacitor/push-notifications';
+import { LocalNotifications, ActionPerformed as LocalActionPerformed } from '@capacitor/local-notifications';
 import axiosClient from './api/axiosClient';
 import reminderNotificationService from './reminderNotificationService';
 import { encryptLeadId } from '../utils/leadIdCrypto';
@@ -30,24 +31,35 @@ class PushNotificationService {
 
     try {
       this.isInitialized = true;
-      console.info('[PushNotifications] Initializing Native Push Notifications...');
+      console.info('[PushNotifications] Initializing Native Push & Local Notifications...');
 
-      // 1. Request user permission
+      // 1. Create notification channels on Android 8.0+ first
+      await this.createDefaultNotificationChannel();
+
+      // 2. Request user permissions for Push Notifications
       let permStatus = await PushNotifications.checkPermissions();
-
-      if (permStatus.receive === 'prompt') {
+      if (permStatus.receive !== 'granted') {
         permStatus = await PushNotifications.requestPermissions();
+      }
+
+      // 3. Request permissions for Local Notifications
+      try {
+        let localPerm = await LocalNotifications.checkPermissions();
+        if (localPerm.display !== 'granted') {
+          localPerm = await LocalNotifications.requestPermissions();
+        }
+      } catch (localErr) {
+        console.warn('[PushNotifications] Local notifications permission check warning:', localErr);
       }
 
       if (permStatus.receive !== 'granted') {
         console.warn('[PushNotifications] Push notification permission was not granted:', permStatus.receive);
-        return;
+      } else {
+        // Register with Google FCM / Apple APNS
+        await PushNotifications.register();
       }
 
-      // 2. Register with Apple APNS / Google FCM
-      await PushNotifications.register();
-
-      // 3. Listen for FCM registration token
+      // 4. Listen for FCM registration token
       await PushNotifications.addListener('registration', (token: Token) => {
         console.info('[PushNotifications] FCM Device Token received:', token.value);
         localStorage.setItem(FCM_TOKEN_STORAGE_KEY, token.value);
@@ -58,12 +70,12 @@ class PushNotificationService {
         );
       });
 
-      // 4. Handle registration errors
+      // 5. Handle registration errors
       await PushNotifications.addListener('registrationError', (error: any) => {
         console.error('[PushNotifications] Error on registration:', error);
       });
 
-      // 5. Handle foreground notification received
+      // 6. Handle foreground push notification received
       await PushNotifications.addListener(
         'pushNotificationReceived',
         (notification: PushNotificationSchema) => {
@@ -86,7 +98,7 @@ class PushNotificationService {
         }
       );
 
-      // 6. Handle notification click / tap action (Foreground or Background)
+      // 7. Handle notification click / tap action (Foreground or Background)
       await PushNotifications.addListener(
         'pushNotificationActionPerformed',
         (action: ActionPerformed) => {
@@ -110,8 +122,27 @@ class PushNotificationService {
         }
       );
 
-      // Create notification channel for Android 8.0+
-      await this.createDefaultNotificationChannel();
+      // 8. Handle Local Notification action tap (Navigates when user clicks native local alarm)
+      try {
+        await LocalNotifications.addListener(
+          'localNotificationActionPerformed',
+          (action: LocalActionPerformed) => {
+            console.info('[PushNotifications] Local notification action performed:', action);
+            const extra = action.notification.extra || {};
+            if (extra.leadId) {
+              window.dispatchEvent(
+                new CustomEvent('ssa_navigate_to', { detail: { path: `/leads/${encryptLeadId(extra.leadId)}` } })
+              );
+            } else if (extra.eventId) {
+              window.dispatchEvent(
+                new CustomEvent('ssa_navigate_to', { detail: { path: '/calendar' } })
+              );
+            }
+          }
+        );
+      } catch (localListenerErr) {
+        console.warn('[PushNotifications] Local notification listener warning:', localListenerErr);
+      }
     } catch (err) {
       console.error('[PushNotifications] Failed to initialize push notifications:', err);
     }
@@ -123,7 +154,7 @@ class PushNotificationService {
   private async createDefaultNotificationChannel(): Promise<void> {
     try {
       if (Capacitor.getPlatform() === 'android') {
-        await PushNotifications.createChannel({
+        const channelConfig = {
           id: 'fcm_default_channel',
           name: 'SSA CRM Alerts',
           description: 'General notifications and lead/reminder alerts for SSA CRM',
@@ -131,12 +162,112 @@ class PushNotificationService {
           visibility: 1,
           sound: 'default',
           vibration: true,
-        });
-        console.info('[PushNotifications] Default notification channel created.');
+        };
+
+        await PushNotifications.createChannel(channelConfig).catch(() => {});
+        await LocalNotifications.createChannel(channelConfig).catch(() => {});
+        console.info('[PushNotifications] Default notification channels created.');
       }
     } catch (e) {
       console.warn('[PushNotifications] Channel creation warning:', e);
     }
+  }
+
+  /**
+   * Schedule Native Android Local Reminder Notification
+   * Works offline & when app is closed via Android AlarmManager
+   */
+  public async scheduleLocalReminder(event: {
+    id?: string;
+    title: string;
+    candidateName?: string;
+    eventDate: string; // YYYY-MM-DD
+    eventTime?: string; // HH:mm
+    remindBeforeMinutes?: number;
+    description?: string;
+    candidateId?: string | number;
+  }): Promise<void> {
+    if (!Capacitor.isNativePlatform()) {
+      return;
+    }
+
+    try {
+      const timePart = event.eventTime || '09:00';
+      const [hours, minutes] = timePart.split(':').map(Number);
+      const parts = event.eventDate.split('-').map(Number);
+      const targetDate = new Date(parts[0], parts[1] - 1, parts[2], hours, minutes, 0, 0);
+
+      const offsetMinutes = Number(event.remindBeforeMinutes) || 0;
+      const triggerTime = new Date(targetDate.getTime() - offsetMinutes * 60 * 1000);
+      const now = new Date();
+
+      // Stable 32-bit integer ID for LocalNotifications
+      let notifId = Math.floor(Math.random() * 1000000);
+      if (event.id) {
+        let hash = 0;
+        for (let i = 0; i < event.id.length; i++) {
+          hash = (hash << 5) - hash + event.id.charCodeAt(i);
+          hash |= 0;
+        }
+        notifId = Math.abs(hash);
+      }
+
+      const candidateText = event.candidateName ? ` for ${event.candidateName}` : '';
+      const dueBody = `Reminder: "${event.title}"${candidateText} scheduled at ${timePart}.`;
+
+      const notificationsToSchedule: any[] = [];
+
+      // 1. If triggerTime is in the future, schedule native alarm
+      if (triggerTime.getTime() > now.getTime()) {
+        notificationsToSchedule.push({
+          id: notifId,
+          title: `🔔 ${event.title}`,
+          body: dueBody,
+          channelId: 'fcm_default_channel',
+          schedule: { at: triggerTime, allowWhileIdle: true },
+          sound: 'default',
+          extra: {
+            leadId: event.candidateId,
+            eventId: event.id,
+          },
+        });
+        console.info('[PushNotifications] Native reminder alarm scheduled for:', triggerTime.toLocaleString());
+      }
+
+      // 2. Immediate heads-up push confirmation on Android device confirming reminder was set
+      notificationsToSchedule.push({
+        id: notifId + 1,
+        title: `✅ Reminder Set: ${event.title}`,
+        body: `Scheduled for ${event.eventDate} at ${timePart}${candidateText} (Alert active)`,
+        channelId: 'fcm_default_channel',
+        schedule: { at: new Date(Date.now() + 500) },
+        sound: 'default',
+        extra: {
+          leadId: event.candidateId,
+          eventId: event.id,
+        },
+      });
+
+      await LocalNotifications.schedule({ notifications: notificationsToSchedule });
+    } catch (err) {
+      console.warn('[PushNotifications] Failed to schedule native local reminder:', err);
+    }
+  }
+
+  /**
+   * Cancel scheduled native reminder
+   */
+  public async cancelLocalReminder(id: string): Promise<void> {
+    if (!Capacitor.isNativePlatform()) return;
+    try {
+      let hash = 0;
+      for (let i = 0; i < id.length; i++) {
+        hash = (hash << 5) - hash + id.charCodeAt(i);
+        hash |= 0;
+      }
+      const notifId = Math.abs(hash);
+      await LocalNotifications.cancel({ notifications: [{ id: notifId }, { id: notifId + 1 }] });
+    } catch {}
   }
 
   /**

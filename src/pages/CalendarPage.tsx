@@ -159,7 +159,7 @@ export default function CalendarPage() {
     const remainingInfo = getRemainingTimeInfo(formData.eventDate, formData.eventTime);
 
     await reminderNotificationService.saveEvent({
-      userId: 'current',
+      userId: user?.login || 'admin',
       title: formData.title.trim(),
       description: formData.description.trim(),
       eventDate: formData.eventDate,
