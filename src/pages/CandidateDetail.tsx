@@ -23,6 +23,8 @@ import {
   ShieldCheck,
   FileText,
   Clock,
+  CreditCard,
+  Wallet,
 } from 'lucide-react';
 import {
   BrandActivityIcon,
@@ -31,12 +33,14 @@ import {
   BrandLostIcon,
   BrandReminderIcon,
 } from '../components/icons/BrandIcons';
+import axiosClient from '../services/api/axiosClient';
 import crmService from '../services/api/crmService';
 import adminService from '../services/api/adminService';
 import leadActivityService from '../services/api/leadActivityService';
 import notificationApiService, { CalendarEventDTO } from '../services/api/notificationService';
 import CandidateActivityLogsModal from '../components/CandidateActivityLogsModal';
 import LeadReminderModal from '../components/LeadReminderModal';
+import { useAlert } from '../context/AlertContext';
 import {
   PLATFORMS,
   LEAD_STATUSES,
@@ -55,6 +59,7 @@ export default function CandidateDetail() {
   const { id: rawParamId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
+  const { showAlert } = useAlert();
 
   const resolvedLeadId = decryptLeadId(rawParamId);
 
@@ -80,6 +85,13 @@ export default function CandidateDetail() {
   const [submittingNote, setSubmittingNote] = useState<boolean>(false);
   const [newNote, setNewNote] = useState<string>('');
   const [notesHistory, setNotesHistory] = useState<Array<{ note: string; date: string; author: string }>>([]);
+
+  // Client Budget & Payment State
+  const [isEditingBudget, setIsEditingBudget] = useState<boolean>(false);
+  const [budgetInput, setBudgetInput] = useState<string>('');
+  const [isEditingPaymentDetails, setIsEditingPaymentDetails] = useState<boolean>(false);
+  const [paymentDetailsInput, setPaymentDetailsInput] = useState<string>('');
+  const [updatingPayment, setUpdatingPayment] = useState<boolean>(false);
 
   // Activity & Audit Logs
   const [activities, setActivities] = useState<LeadActivity[]>([]);
@@ -149,6 +161,21 @@ export default function CandidateDetail() {
           candidateData.closingDate = effectiveClosing;
         }
 
+        const cachedBudget = localStorage.getItem(`ssa_lead_budget_${candidateData.id}`);
+        const cachedPaymentStatus = localStorage.getItem(`ssa_lead_payment_status_${candidateData.id}`);
+        const cachedPaymentDetails = localStorage.getItem(`ssa_lead_payment_details_${candidateData.id}`);
+
+        const effectiveBudget = candidateData.budgetRange || (candidateData as any).budget || (candidateData as any).clientBudget || cachedBudget || '';
+        const effectivePaymentStatus = (candidateData as any).paymentStatus || candidateData.mattressType || cachedPaymentStatus || 'UNPAID';
+        const effectivePaymentDetails = (candidateData as any).paymentDetails || candidateData.mattressSize || cachedPaymentDetails || '';
+
+        candidateData.budgetRange = effectiveBudget;
+        candidateData.clientBudget = effectiveBudget;
+        (candidateData as any).paymentStatus = effectivePaymentStatus;
+        (candidateData as any).paymentDetails = effectivePaymentDetails;
+
+        setBudgetInput(effectiveBudget);
+        setPaymentDetailsInput(effectivePaymentDetails);
         setLead(candidateData);
         setEditFormData({
           customerName: candidateData.customerName || '',
@@ -163,6 +190,10 @@ export default function CandidateDetail() {
           areYouInterested: candidateData.areYouInterested || 'yes',
           leadConfirm: candidateData.leadConfirm || 'Confirmed',
           notes: candidateData.notes || '',
+          budgetRange: effectiveBudget,
+          clientBudget: effectiveBudget,
+          paymentStatus: effectivePaymentStatus,
+          paymentDetails: effectivePaymentDetails,
         });
 
         if (candidateData.notes) {
@@ -357,6 +388,130 @@ export default function CandidateDetail() {
     }
   };
 
+  const handleUpdateBudget = async (newBudget: string) => {
+    if (!lead) return;
+    const trimmed = newBudget.trim();
+    const oldBudget = lead.budgetRange || '';
+
+    // Optimistically update
+    setLead((prev) => (prev ? { ...prev, budgetRange: trimmed, clientBudget: trimmed } : null));
+    setEditFormData((prev) => ({ ...prev, budgetRange: trimmed }));
+    localStorage.setItem(`ssa_lead_budget_${lead.id}`, trimmed);
+    setIsEditingBudget(false);
+
+    try {
+      const prefId = lead.preferenceId || (lead as any).leadPreferenceId;
+      const payload: any = { budgetRange: trimmed };
+      if (prefId) {
+        payload.id = Number(prefId);
+        await axiosClient.patch(`/api/lead-preferences/${prefId}`, payload);
+      } else {
+        payload.lead = { id: lead.id };
+        await axiosClient.post('/api/lead-preferences', payload);
+      }
+
+      leadActivityService.logActivity(lead.id, {
+        userName: currentUser?.login || currentUser?.firstName || 'Counselor',
+        userRole: currentUser?.authorities?.[0] || 'STAFF',
+        actionType: 'DATA_MODIFY',
+        title: 'Updated Client Budget',
+        description: `Client budget updated from "${oldBudget || 'None'}" to "${trimmed || 'None'}"`,
+        fieldChanged: 'budgetRange',
+        oldValue: oldBudget,
+        newValue: trimmed,
+      });
+
+      showAlert({ title: 'Success', message: `Client budget updated to ${trimmed || 'Cleared'}` });
+    } catch (err: any) {
+      console.warn('Failed to save budget:', err);
+    }
+  };
+
+  const handleUpdatePaymentStatus = async (status: 'UNPAID' | 'PARTIAL' | 'PAID') => {
+    if (!lead || updatingPayment) return;
+    setUpdatingPayment(true);
+    const oldStatus = (lead as any).paymentStatus || 'UNPAID';
+
+    // Optimistically update
+    setLead((prev) => (prev ? { ...prev, paymentStatus: status } : null));
+    setEditFormData((prev) => ({ ...prev, paymentStatus: status }));
+    localStorage.setItem(`ssa_lead_payment_status_${lead.id}`, status);
+
+    try {
+      const prefId = lead.preferenceId || (lead as any).leadPreferenceId;
+      const payload: any = { mattressType: status };
+      if (prefId) {
+        payload.id = Number(prefId);
+        await axiosClient.patch(`/api/lead-preferences/${prefId}`, payload);
+      } else {
+        payload.lead = { id: lead.id };
+        await axiosClient.post('/api/lead-preferences', payload);
+      }
+
+      const statusLabels: Record<string, string> = {
+        UNPAID: 'Not Paid',
+        PARTIAL: 'Partially Paid',
+        PAID: 'Fully Paid',
+      };
+
+      leadActivityService.logActivity(lead.id, {
+        userName: currentUser?.login || currentUser?.firstName || 'Counselor',
+        userRole: currentUser?.authorities?.[0] || 'STAFF',
+        actionType: 'STATUS_CHANGE',
+        title: 'Updated Payment Status',
+        description: `Payment status changed from ${statusLabels[oldStatus] || oldStatus} to ${statusLabels[status] || status}`,
+        fieldChanged: 'paymentStatus',
+        oldValue: oldStatus,
+        newValue: status,
+      });
+
+      showAlert({ title: 'Payment Updated', message: `Candidate marked as ${statusLabels[status]}` });
+    } catch (err: any) {
+      console.warn('Failed to save payment status:', err);
+    } finally {
+      setUpdatingPayment(false);
+    }
+  };
+
+  const handleUpdatePaymentDetails = async (details: string) => {
+    if (!lead) return;
+    const trimmed = details.trim();
+    const oldDetails = (lead as any).paymentDetails || '';
+
+    // Optimistically update
+    setLead((prev) => (prev ? { ...prev, paymentDetails: trimmed } : null));
+    setEditFormData((prev) => ({ ...prev, paymentDetails: trimmed }));
+    localStorage.setItem(`ssa_lead_payment_details_${lead.id}`, trimmed);
+    setIsEditingPaymentDetails(false);
+
+    try {
+      const prefId = lead.preferenceId || (lead as any).leadPreferenceId;
+      const payload: any = { mattressSize: trimmed };
+      if (prefId) {
+        payload.id = Number(prefId);
+        await axiosClient.patch(`/api/lead-preferences/${prefId}`, payload);
+      } else {
+        payload.lead = { id: lead.id };
+        await axiosClient.post('/api/lead-preferences', payload);
+      }
+
+      leadActivityService.logActivity(lead.id, {
+        userName: currentUser?.login || currentUser?.firstName || 'Counselor',
+        userRole: currentUser?.authorities?.[0] || 'STAFF',
+        actionType: 'DATA_MODIFY',
+        title: 'Updated Payment Details',
+        description: `Payment details updated: "${trimmed}"`,
+        fieldChanged: 'paymentDetails',
+        oldValue: oldDetails,
+        newValue: trimmed,
+      });
+
+      showAlert({ title: 'Success', message: 'Payment details saved successfully' });
+    } catch (err: any) {
+      console.warn('Failed to save payment details:', err);
+    }
+  };
+
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!lead) return;
@@ -398,6 +553,15 @@ export default function CandidateDetail() {
         `Target Closing Date: "${lead.closingDate || (lead as any).purchaseTimeline || 'Not Set'}" → "${editFormData.closingDate || 'Cleared'}"`
       );
     }
+    if (editFormData.budgetRange !== undefined && editFormData.budgetRange !== lead.budgetRange) {
+      changes.push(`Budget: "${lead.budgetRange || 'None'}" → "${editFormData.budgetRange}"`);
+    }
+    if (editFormData.paymentStatus !== undefined && editFormData.paymentStatus !== (lead as any).paymentStatus) {
+      changes.push(`Payment Status: "${(lead as any).paymentStatus || 'UNPAID'}" → "${editFormData.paymentStatus}"`);
+    }
+    if (editFormData.paymentDetails !== undefined && editFormData.paymentDetails !== (lead as any).paymentDetails) {
+      changes.push(`Payment Details: "${(lead as any).paymentDetails || 'None'}" → "${editFormData.paymentDetails}"`);
+    }
 
     try {
       const promises: Promise<any>[] = [];
@@ -419,20 +583,32 @@ export default function CandidateDetail() {
 
       // 2. Update lead preferences (must pass id in body)
       const prefId = lead.preferenceId || (lead as any).leadPreferenceId;
+      const prefPayload: any = {
+        visaType: editFormData.visaType || lead.visaType,
+        email: editFormData.email || lead.email,
+        city: editFormData.city || lead.city,
+        age: editFormData.age || lead.age,
+        educationalQualification: editFormData.educationalQualification || lead.educationalQualification,
+        notes: editFormData.notes || lead.notes,
+        purchaseTimeline: editFormData.closingDate || lead.closingDate,
+        closingDate: editFormData.closingDate || lead.closingDate,
+        budgetRange: editFormData.budgetRange !== undefined ? editFormData.budgetRange : lead.budgetRange,
+        mattressType: editFormData.paymentStatus !== undefined ? editFormData.paymentStatus : (lead as any).paymentStatus,
+        mattressSize: editFormData.paymentDetails !== undefined ? editFormData.paymentDetails : (lead as any).paymentDetails,
+      };
+
       if (prefId) {
+        prefPayload.id = Number(prefId);
         promises.push(
-          axiosClient.patch(`/api/lead-preferences/${prefId}`, {
-            id: Number(prefId),
-            visaType: editFormData.visaType || lead.visaType,
-            email: editFormData.email || lead.email,
-            city: editFormData.city || lead.city,
-            age: editFormData.age || lead.age,
-            educationalQualification: editFormData.educationalQualification || lead.educationalQualification,
-            notes: editFormData.notes || lead.notes,
-            purchaseTimeline: editFormData.closingDate || lead.closingDate,
-            closingDate: editFormData.closingDate || lead.closingDate,
-          }).catch((err) => {
+          axiosClient.patch(`/api/lead-preferences/${prefId}`, prefPayload).catch((err) => {
             console.warn('Lead preference update warning:', err);
+          })
+        );
+      } else {
+        prefPayload.lead = { id: lead.id };
+        promises.push(
+          axiosClient.post('/api/lead-preferences', prefPayload).catch((err) => {
+            console.warn('Lead preference create warning:', err);
           })
         );
       }
@@ -440,6 +616,15 @@ export default function CandidateDetail() {
       // Persist to local storage for instant offline resilience
       if (editFormData.closingDate !== undefined) {
         localStorage.setItem(`ssa_lead_closing_date_${lead.id}`, editFormData.closingDate);
+      }
+      if (editFormData.budgetRange !== undefined) {
+        localStorage.setItem(`ssa_lead_budget_${lead.id}`, editFormData.budgetRange);
+      }
+      if (editFormData.paymentStatus !== undefined) {
+        localStorage.setItem(`ssa_lead_payment_status_${lead.id}`, editFormData.paymentStatus);
+      }
+      if (editFormData.paymentDetails !== undefined) {
+        localStorage.setItem(`ssa_lead_payment_details_${lead.id}`, editFormData.paymentDetails);
       }
 
       // 3. Update lead status/notes if changed
@@ -469,6 +654,10 @@ export default function CandidateDetail() {
           closingDate: editFormData.closingDate !== undefined ? editFormData.closingDate : prev.closingDate,
           purchaseTimeline: editFormData.closingDate !== undefined ? editFormData.closingDate : (prev as any).purchaseTimeline,
           notes: editFormData.notes !== undefined ? editFormData.notes : prev.notes,
+          budgetRange: editFormData.budgetRange !== undefined ? editFormData.budgetRange : prev.budgetRange,
+          clientBudget: editFormData.budgetRange !== undefined ? editFormData.budgetRange : (prev as any).clientBudget,
+          paymentStatus: editFormData.paymentStatus !== undefined ? editFormData.paymentStatus : (prev as any).paymentStatus,
+          paymentDetails: editFormData.paymentDetails !== undefined ? editFormData.paymentDetails : (prev as any).paymentDetails,
         };
       });
 
@@ -1015,6 +1204,242 @@ export default function CandidateDetail() {
                   </p>
                 )}
               </div>
+
+              {/* Client Budget Quick Card */}
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1">
+                    <CreditCard size={12} className="text-[#007aff]" />
+                    <span>Client Budget</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBudgetInput(lead.budgetRange || '');
+                      setIsEditingBudget(true);
+                    }}
+                    className="text-[11px] font-semibold text-[#007aff] hover:underline"
+                  >
+                    {lead.budgetRange ? 'Change' : '+ Set'}
+                  </button>
+                </div>
+                <p className="text-sm font-bold text-[#1c1c1e] mt-1">
+                  {lead.budgetRange || <span className="text-[#8e8e93] font-normal italic">Not specified</span>}
+                </p>
+              </div>
+
+              {/* Payment Status Quick Card */}
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors">
+                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider block">Payment Status</span>
+                <div className="mt-1 flex items-center gap-2">
+                  {(() => {
+                    const st = ((lead as any).paymentStatus || 'UNPAID').toUpperCase();
+                    if (st === 'PAID') {
+                      return (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          Fully Paid
+                        </span>
+                      );
+                    }
+                    if (st === 'PARTIAL') {
+                      return (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                          Partially Paid
+                        </span>
+                      );
+                    }
+                    return (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                        Not Paid
+                      </span>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section: Client Budget & Payment Settlement (Apple HIG Inset Grouped Card) */}
+          <div className="ios-card p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#86868b] flex items-center gap-2">
+                <Wallet size={14} className="text-[#007aff]" />
+                <span>Financial & Payment Settlement</span>
+              </h3>
+              <span className="text-[11px] text-[#86868b] font-medium">Manual Staff Settlement</span>
+            </div>
+
+            {/* Quick 1-Click Status Segmented Control */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold text-[#86868b] uppercase tracking-wider block">
+                Settlement Status (1-Click Toggle)
+              </label>
+              <div className="grid grid-cols-3 gap-2 p-1 bg-[#f2f2f7] rounded-2xl border border-black/[0.04]">
+                {[
+                  { value: 'UNPAID', label: 'Not Paid', color: 'bg-rose-500 text-white shadow-xs', inactive: 'text-rose-700 hover:bg-rose-500/10' },
+                  { value: 'PARTIAL', label: 'Partially Paid', color: 'bg-amber-500 text-white shadow-xs', inactive: 'text-amber-700 hover:bg-amber-500/10' },
+                  { value: 'PAID', label: 'Fully Paid', color: 'bg-emerald-500 text-white shadow-xs', inactive: 'text-emerald-700 hover:bg-emerald-500/10' },
+                ].map((st) => {
+                  const currentStatus = ((lead as any).paymentStatus || 'UNPAID').toUpperCase();
+                  const isSelected = currentStatus === st.value;
+                  return (
+                    <button
+                      key={st.value}
+                      type="button"
+                      onClick={() => handleUpdatePaymentStatus(st.value as any)}
+                      disabled={updatingPayment}
+                      className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all duration-150 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${
+                        isSelected
+                          ? st.color
+                          : `${st.inactive} font-medium`
+                      }`}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-current'}`} />
+                      <span>{st.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Budget Range / Client Budget Details */}
+            <div className="p-4 rounded-2xl bg-[#f2f2f7]/60 border border-black/[0.04] space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                  <CreditCard size={13} className="text-[#007aff]" />
+                  <span>Client Budget (Dynamic & Editable)</span>
+                </span>
+                {!isEditingBudget && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBudgetInput(lead.budgetRange || '');
+                      setIsEditingBudget(true);
+                    }}
+                    className="text-xs font-semibold text-[#007aff] hover:text-[#0071e3] transition-colors"
+                  >
+                    Edit Budget
+                  </button>
+                )}
+              </div>
+
+              {isEditingBudget ? (
+                <div className="space-y-2.5 pt-1">
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#8e8e93]">₹</span>
+                      <input
+                        type="text"
+                        value={budgetInput}
+                        onChange={(e) => setBudgetInput(e.target.value)}
+                        placeholder="e.g. 1,50,000 or 2 Lakhs"
+                        className="w-full pl-7 pr-3 py-2 text-xs font-semibold bg-white border border-black/[0.08] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/30"
+                        autoFocus
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateBudget(budgetInput)}
+                      className="px-3.5 py-2 bg-[#007aff] text-white rounded-xl text-xs font-semibold hover:bg-[#0071e3] transition-colors cursor-pointer"
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingBudget(false)}
+                      className="px-3 py-2 bg-black/[0.05] text-[#1c1c1e] rounded-xl text-xs font-medium hover:bg-black/[0.1] transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  {/* Preset quick buttons */}
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {['₹25K', '₹50K', '₹1 Lakh', '₹2 Lakhs', '₹3.5 Lakhs', '₹5 Lakhs+'].map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => {
+                          setBudgetInput(preset);
+                          handleUpdateBudget(preset);
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-white border border-black/[0.08] text-[11px] font-medium text-[#1c1c1e] hover:bg-black/[0.04] transition-colors cursor-pointer"
+                      >
+                        {preset}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xl font-bold tracking-tight text-[#1c1c1e]">
+                    {lead.budgetRange ? lead.budgetRange : 'Not Specified'}
+                  </span>
+                  {lead.budgetRange && (
+                    <span className="text-[11px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      Budget Saved
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Payment Remarks & Receipt Notes */}
+            <div className="p-4 rounded-2xl bg-[#f2f2f7]/60 border border-black/[0.04] space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">
+                  Payment Details & Transaction Remarks
+                </span>
+                {!isEditingPaymentDetails && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentDetailsInput((lead as any).paymentDetails || '');
+                      setIsEditingPaymentDetails(true);
+                    }}
+                    className="text-xs font-semibold text-[#007aff] hover:text-[#0071e3] transition-colors"
+                  >
+                    Edit Remarks
+                  </button>
+                )}
+              </div>
+
+              {isEditingPaymentDetails ? (
+                <div className="space-y-2 pt-1">
+                  <textarea
+                    value={paymentDetailsInput}
+                    onChange={(e) => setPaymentDetailsInput(e.target.value)}
+                    rows={2}
+                    placeholder="e.g. Advance ₹25,000 received via UPI on Oct 24. Ref: UPI98231..."
+                    className="w-full px-3 py-2 text-xs bg-white border border-black/[0.08] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 leading-relaxed"
+                    autoFocus
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingPaymentDetails(false)}
+                      className="px-3 py-1.5 bg-black/[0.05] text-[#1c1c1e] rounded-xl text-xs font-medium hover:bg-black/[0.1] transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleUpdatePaymentDetails(paymentDetailsInput)}
+                      className="px-3.5 py-1.5 bg-[#007aff] text-white rounded-xl text-xs font-semibold hover:bg-[#0071e3] transition-colors cursor-pointer"
+                    >
+                      Save Remarks
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-[#3c3c43] font-medium leading-relaxed">
+                  {(lead as any).paymentDetails || (
+                    <span className="text-[#8e8e93] italic">No payment transactions recorded yet. Tap "Edit Remarks" to record advance, receipts, or notes.</span>
+                  )}
+                </p>
+              )}
             </div>
           </div>
 
@@ -1344,6 +1769,53 @@ export default function CandidateDetail() {
                   value={editFormData.closingDate || ''}
                   onChange={(e) => setEditFormData({ ...editFormData, closingDate: e.target.value })}
                   className="w-full px-3.5 py-2.5 bg-[#f2f2f7] hover:bg-[#e5e5ea]/50 focus:bg-white border border-black/[0.06] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff] transition-all font-medium cursor-pointer"
+                />
+              </div>
+
+              {/* Client Budget */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-[#1c1c1e]">
+                    Client Budget
+                  </label>
+                  <span className="text-[11px] text-[#8e8e93]">Candidate Financial Capacity</span>
+                </div>
+                <input
+                  type="text"
+                  value={editFormData.budgetRange || ''}
+                  onChange={(e) => setEditFormData({ ...editFormData, budgetRange: e.target.value })}
+                  placeholder="e.g. ₹1,50,000 or ₹2 Lakhs"
+                  className="w-full px-3.5 py-2.5 bg-[#f2f2f7] hover:bg-[#e5e5ea]/50 focus:bg-white border border-black/[0.06] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff] transition-all"
+                />
+              </div>
+
+              {/* Payment Settlement Status */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-[#1c1c1e]">
+                  Payment Settlement Status
+                </label>
+                <select
+                  value={editFormData.paymentStatus || 'UNPAID'}
+                  onChange={(e) => setEditFormData({ ...editFormData, paymentStatus: e.target.value as any })}
+                  className="w-full px-3.5 py-2.5 bg-[#f2f2f7] hover:bg-[#e5e5ea]/50 focus:bg-white border border-black/[0.06] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff] transition-all font-medium cursor-pointer"
+                >
+                  <option value="UNPAID">Not Paid / Unpaid</option>
+                  <option value="PARTIAL">Partially Paid</option>
+                  <option value="PAID">Fully Paid</option>
+                </select>
+              </div>
+
+              {/* Payment Details & Remarks */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-[#1c1c1e]">
+                  Payment Details & Receipt Notes
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.paymentDetails || ''}
+                  onChange={(e) => setEditFormData({ ...editFormData, paymentDetails: e.target.value })}
+                  placeholder="e.g. Advance ₹20,000 received via UPI on 24 Oct"
+                  className="w-full px-3.5 py-2.5 bg-[#f2f2f7] hover:bg-[#e5e5ea]/50 focus:bg-white border border-black/[0.06] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff] transition-all"
                 />
               </div>
 

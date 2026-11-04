@@ -28,7 +28,7 @@ interface IosLeadListProps {
   onOpenStatusModal: (lead: Lead, e: React.MouseEvent) => void;
   onDeleteLead: (id: number, name?: string) => void;
   getLeadQuality: (lead: Lead) => string;
-  getBudgetReady: (lead: Lead) => string;
+  getBudgetReady: (lead: Lead) => any;
   formatDate: (dateStr?: string) => string;
 }
 
@@ -318,8 +318,8 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
                   )}
                 </div>
 
-                {/* Stage Tag Line */}
-                <div className="flex items-center gap-2 mt-1">
+                {/* Stage Tag Line & Financial Badges */}
+                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                   <button
                     type="button"
                     onClick={(e) => onOpenStatusModal(lead, e)}
@@ -328,6 +328,34 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
                   >
                     <span>{stageLabel}</span>
                   </button>
+
+                  {/* Dynamic Budget & Payment Status Badges */}
+                  {(() => {
+                    const cachedBudget = localStorage.getItem(`ssa_lead_budget_${lead.id}`);
+                    const cachedPayment = localStorage.getItem(`ssa_lead_payment_status_${lead.id}`);
+                    const b = (lead as any).budgetRange || (lead as any).clientBudget || cachedBudget;
+                    const p = ((lead as any).paymentStatus || cachedPayment || '').toUpperCase();
+                    return (
+                      <>
+                        {b && (
+                          <span className="text-[10px] font-semibold text-[#007aff] bg-[#007aff]/10 px-1.5 py-0.5 rounded-full">
+                            ₹{b}
+                          </span>
+                        )}
+                        {p === 'PAID' && (
+                          <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-200">
+                            Paid
+                          </span>
+                        )}
+                        {p === 'PARTIAL' && (
+                          <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-200">
+                            Partial
+                          </span>
+                        )}
+                      </>
+                    );
+                  })()}
+
                   <span className="text-[10px] text-[#8e8e93]">
                     {formatDate(lead.followUpDate || lead.createdTime || lead.createdAt)}
                   </span>

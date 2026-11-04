@@ -38,6 +38,12 @@ export interface LeadDetailedDTO {
   leadConfirm?: string;          // e.g. "Confirmed" / "Pending"
   assignedTo?: string;           // Counselor login / name
 
+  // Financial & Payment Profile
+  budgetRange?: string;          // e.g. "₹1,50,000", "$5,000"
+  clientBudget?: string;         // Alias for client budget
+  paymentStatus?: 'UNPAID' | 'PARTIAL' | 'PAID' | string; // "UNPAID" | "PARTIAL" | "PAID"
+  paymentDetails?: string;       // e.g. "₹25,000 advance received via UPI"
+
   // Marketing Attribution
   campaignName?: string;         // e.g. "Work visa General"
   adSetName?: string;

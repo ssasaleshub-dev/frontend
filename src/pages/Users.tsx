@@ -1070,7 +1070,7 @@ export default function Users() {
             <p className="text-xs text-[#3c3c43] mb-4 leading-relaxed">
               Are you sure you want to permanently delete user{' '}
               <strong className="text-[#1c1c1e] font-mono">@{deletingUser.login}</strong>? This
-              action calls <code className="text-[10px] bg-slate-100 px-1 py-0.5 rounded">DELETE /api/admin/users/{deletingUser.login}</code> and cannot be undone.
+              action calls <code className="text-[10px] bg-slate-100 px-1 py-0.5 rounded">{`DELETE /api/admin/users/${deletingUser.login}`}</code> and cannot be undone.
             </p>
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-[rgba(60,60,67,0.1)]">
               <button

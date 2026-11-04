@@ -1179,7 +1179,30 @@ export default function Leads() {
     return '—';
   };
 
-  const getBudgetReady = (leadItem: Lead): string => {
+  const getBudgetReady = (leadItem: Lead): React.ReactNode => {
+    const cachedBudget = localStorage.getItem(`ssa_lead_budget_${leadItem.id}`);
+    const cachedPayment = localStorage.getItem(`ssa_lead_payment_status_${leadItem.id}`);
+    const b = (leadItem as any).budgetRange || (leadItem as any).clientBudget || cachedBudget;
+    const p = ((leadItem as any).paymentStatus || cachedPayment || '').toUpperCase();
+
+    if (b || (p && p !== 'UNPAID')) {
+      return (
+        <div className="flex flex-col items-start gap-1">
+          {b && <span className="font-semibold text-[#007aff]">₹{b}</span>}
+          {p === 'PAID' && (
+            <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-200">
+              ● Paid
+            </span>
+          )}
+          {p === 'PARTIAL' && (
+            <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-200">
+              ● Partial
+            </span>
+          )}
+        </div>
+      );
+    }
+
     if (leadItem.budgetReady) return leadItem.budgetReady;
     const n = (leadItem.notes || '').toLowerCase();
     if (n.includes('budget: no') || n.includes('budget no') || n.includes('budget_ready: no')) return 'No';
@@ -1521,7 +1544,7 @@ export default function Leads() {
                 <th className="py-3 px-3.5 whitespace-nowrap">Mobile Number</th>
                 <th className="py-3 px-3.5 whitespace-nowrap">WhatsApp Number</th>
                 <th className="py-3 px-3.5 whitespace-nowrap">City</th>
-                <th className="py-3 px-3.5 whitespace-nowrap text-center">Budget Ready</th>
+                <th className="py-3 px-3.5 whitespace-nowrap">Budget / Payment</th>
                 <th className="py-3 px-3.5 whitespace-nowrap">Lead Quality</th>
                 <th className="py-3 px-3.5 whitespace-nowrap">Follow-up Date</th>
                 <th className="py-3 px-3.5 whitespace-nowrap">Follow-up Status</th>

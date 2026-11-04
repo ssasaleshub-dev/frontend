@@ -355,19 +355,20 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Zoho CRM Metric Cards */}
+      {/* Apple HIG Executive Metric Cards (Grouped Inset with SF Symbols & Materials) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* KPI 1: Desk Total Inquiries */}
-        <div className="bg-white border border-slate-200 border-t-4 border-t-blue-600 rounded-lg p-4 sm:p-5 shadow-2xs flex flex-col justify-between hover:shadow-xs transition-shadow">
+        <div className="ios-card p-4 sm:p-5 flex flex-col justify-between hover:shadow-md transition-all duration-200 group relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#007aff] to-[#5856d6]" />
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#8e8e93]">
               {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
                 ? 'Study Visa Students'
                 : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
                 ? 'Work Visa Candidates'
                 : 'Total Candidates'}
             </span>
-            <div className="w-8 h-8 rounded bg-blue-50 text-blue-600 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-2xl bg-[#007aff]/10 text-[#007aff] flex items-center justify-center transition-transform group-hover:scale-105 border border-[#007aff]/15">
               {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa) ? (
                 <KpiStudyVisaIcon size={18} />
               ) : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa) ? (
@@ -378,54 +379,60 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+            <div className="text-2xl sm:text-3xl font-bold text-[#1c1c1e] tracking-tight">
               {metrics.total}
             </div>
-            <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+            <div className="mt-1 flex items-center gap-1.5 text-xs text-[#8e8e93] font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#007aff]" />
               <span>{metrics.statusCounts.CREATED || 0} awaiting contact</span>
             </div>
           </div>
         </div>
 
         {/* KPI 2: Contacted / Screened / Cross-Desk Work */}
-        <div className="bg-white border border-slate-200 border-t-4 border-t-indigo-600 rounded-lg p-4 sm:p-5 shadow-2xs flex flex-col justify-between hover:shadow-xs transition-shadow">
+        <div className="ios-card p-4 sm:p-5 flex flex-col justify-between hover:shadow-md transition-all duration-200 group relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#5856d6] to-[#af52de]" />
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#8e8e93]">
               {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
                 ? 'In Student Counseling'
                 : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
                 ? 'Screened & Qualified'
                 : 'Work Visa Inquiries'}
             </span>
-            <div className="w-8 h-8 rounded bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-2xl bg-[#5856d6]/10 text-[#5856d6] flex items-center justify-center transition-transform group-hover:scale-105 border border-[#5856d6]/15">
               {deskFilter === 'ALL' && isAdmin ? <KpiWorkVisaIcon size={18} /> : <KpiCandidatesIcon size={18} />}
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+            <div className="text-2xl sm:text-3xl font-bold text-[#1c1c1e] tracking-tight">
               {deskFilter === 'ALL' && isAdmin ? metrics.workVisaCount : metrics.contactedOrQualified}
             </div>
-            <div className="mt-1 text-xs text-slate-500 font-medium truncate">
-              {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
-                ? 'Course & eligibility prep'
-                : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
-                ? 'Employer screening pipeline'
-                : 'International job & permits'}
+            <div className="mt-1 text-xs text-[#8e8e93] font-medium truncate flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#5856d6]" />
+              <span>
+                {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
+                  ? 'Course & eligibility prep'
+                  : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
+                  ? 'Employer screening pipeline'
+                  : 'International job & permits'}
+              </span>
             </div>
           </div>
         </div>
 
         {/* KPI 3: In Process / Cross-Desk Study */}
-        <div className="bg-white border border-slate-200 border-t-4 border-t-emerald-600 rounded-lg p-4 sm:p-5 shadow-2xs flex flex-col justify-between hover:shadow-xs transition-shadow">
+        <div className="ios-card p-4 sm:p-5 flex flex-col justify-between hover:shadow-md transition-all duration-200 group relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#34c759] to-[#30b0c7]" />
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#8e8e93]">
               {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
                 ? 'Applications In Process'
                 : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
                 ? 'Permits In Process'
                 : 'Study Visa Inquiries'}
             </span>
-            <div className="w-8 h-8 rounded bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-2xl bg-[#34c759]/10 text-[#34c759] flex items-center justify-center transition-transform group-hover:scale-105 border border-[#34c759]/15">
               {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa) ? (
                 <KpiStudyVisaIcon size={18} />
               ) : deskFilter === 'ALL' && isAdmin ? (
@@ -436,44 +443,49 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+            <div className="text-2xl sm:text-3xl font-bold text-[#1c1c1e] tracking-tight">
               {deskFilter === 'ALL' && isAdmin ? metrics.studyVisaCount : metrics.inProcessCount}
             </div>
-            <div className="mt-1 text-xs text-slate-500 font-medium truncate">
-              {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
-                ? 'University offers & dossiers'
-                : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
-                ? 'Work contracts & permit filings'
-                : 'University & admissions desk'}
+            <div className="mt-1 text-xs text-[#8e8e93] font-medium truncate flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#34c759]" />
+              <span>
+                {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
+                  ? 'University offers & dossiers'
+                  : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
+                  ? 'Work contracts & permit filings'
+                  : 'University & admissions desk'}
+              </span>
             </div>
           </div>
         </div>
 
         {/* KPI 4: Successful Enrollment / Approval */}
-        <div className="bg-white border border-slate-200 border-t-4 border-t-amber-500 rounded-lg p-4 sm:p-5 shadow-2xs flex flex-col justify-between hover:shadow-xs transition-shadow">
+        <div className="ios-card p-4 sm:p-5 flex flex-col justify-between hover:shadow-md transition-all duration-200 group relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#ff9500] to-[#ff2d55]" />
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#8e8e93]">
               {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
                 ? 'Admissions & Visas Approved'
                 : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
                 ? 'Work Visas Approved'
                 : 'Enrolled / Visa Approved'}
             </span>
-            <div className="w-8 h-8 rounded bg-amber-50 text-amber-600 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-2xl bg-[#ff9500]/10 text-[#ff9500] flex items-center justify-center transition-transform group-hover:scale-105 border border-[#ff9500]/15">
               <KpiApprovedIcon size={18} />
             </div>
           </div>
           <div className="mt-3">
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+              <span className="text-2xl sm:text-3xl font-bold text-[#1c1c1e] tracking-tight">
                 {metrics.wonCount}
               </span>
-              <span className="text-xs font-medium text-slate-500">
+              <span className="text-xs font-semibold text-[#ff9500]">
                 ({metrics.conversionRate}% conversion)
               </span>
             </div>
-            <div className="mt-1 text-xs text-slate-500 font-medium">
-              {metrics.inProcessCount} dossiers in process
+            <div className="mt-1 text-xs text-[#8e8e93] font-medium flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#ff9500]" />
+              <span>{metrics.inProcessCount} dossiers in process</span>
             </div>
           </div>
         </div>
