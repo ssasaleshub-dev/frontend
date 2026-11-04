@@ -1230,12 +1230,15 @@ export default function CandidateDetail() {
         </div>
       </div>
 
-      {/* Edit Candidate Details Modal */}
+      {/* Edit Candidate Details Modal (Apple HIG Glass Sheet UI) */}
       {showEditModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl shadow-2xl border border-black/[0.08] max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150">
+        <div className="ios-modal-backdrop animate-in fade-in duration-200">
+          <div className="ios-material-thick rounded-3xl shadow-2xl border border-white/65 max-w-lg w-full overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-150">
+            <div className="pt-3 pb-1">
+              <div className="ios-sheet-grabber" />
+            </div>
             {/* Modal Header */}
-            <div className="px-6 py-4.5 border-b border-black/[0.06] flex items-center justify-between">
+            <div className="px-6 py-3.5 border-b border-black/[0.06] flex items-center justify-between">
               <div>
                 <h3 className="text-base font-semibold text-[#1c1c1e] tracking-tight">
                   Edit Candidate Details
@@ -1246,10 +1249,10 @@ export default function CandidateDetail() {
               </div>
               <button
                 onClick={() => setShowEditModal(false)}
-                className="w-8 h-8 rounded-full bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#8e8e93] hover:text-[#1c1c1e] flex items-center justify-center transition-colors cursor-pointer"
+                className="w-7 h-7 rounded-full bg-black/[0.05] text-[#8e8e93] hover:text-[#1c1c1e] hover:bg-black/[0.1] flex items-center justify-center transition-colors cursor-pointer"
                 aria-label="Close"
               >
-                <X size={16} />
+                <X size={15} />
               </button>
             </div>
 
@@ -1380,20 +1383,21 @@ export default function CandidateDetail() {
         </div>
       )}
 
-      {/* WhatsApp Template Customization Modal */}
+      {/* WhatsApp Template Customization Modal (Apple HIG Glass Sheet UI) */}
       {showWhatsAppTemplateModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-2xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full p-6 animate-in zoom-in-95 text-xs">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                <MessageCircle size={15} className="text-emerald-600" />
+        <div className="ios-modal-backdrop animate-in fade-in duration-200">
+          <div className="ios-material-thick rounded-3xl border border-white/65 shadow-2xl max-w-md w-full p-6 animate-in zoom-in-95 text-xs">
+            <div className="ios-sheet-grabber mb-3" />
+            <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
+              <h3 className="text-sm font-semibold text-[#1c1c1e] flex items-center gap-1.5">
+                <MessageCircle size={15} className="text-[#34c759]" />
                 <span>Personalize WhatsApp Message</span>
               </h3>
               <button
                 onClick={() => setShowWhatsAppTemplateModal(false)}
-                className="p-1 text-slate-400 hover:text-slate-600"
+                className="w-7 h-7 rounded-full bg-black/[0.05] text-[#8e8e93] hover:text-[#1c1c1e] hover:bg-black/[0.1] flex items-center justify-center transition-colors"
               >
-                <X size={16} />
+                <X size={15} />
               </button>
             </div>
 

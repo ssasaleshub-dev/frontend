@@ -86,15 +86,16 @@
 }
 
 /* ==========================================================================
-   Apple iOS & macOS Human Interface System Tokens
+   Apple iOS & macOS Human Interface System Tokens (Official HIG Specification)
+   https://developer.apple.com/design/human-interface-guidelines/
    ========================================================================== */
 
 /* Apple System Grouped Background */
 .ios-bg {
-  background-color: #f2f2f7;
+  background-color: var(--ios-bg, #f2f2f7);
 }
 
-/* Apple Inset / Grouped Squircle Card */
+/* Apple Inset / Grouped Squircle Card (HIG Layout & Materials) */
 .ios-card {
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.06);
@@ -112,28 +113,155 @@
   transform: translateY(-1.5px);
 }
 
-/* Apple Translucent Frosted Glass Materials */
-.ios-glass {
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+/* ─────────────────────────────────────────────────────────────────────────────
+   Apple HIG Materials (Translucency, Blur & Specular Vibrancy)
+   https://developer.apple.com/design/human-interface-guidelines/materials
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Ultra Thin Material: For floating controls and active overlays */
+.ios-material-ultra-thin {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(20px) saturate(190%);
+  -webkit-backdrop-filter: blur(20px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.6);
 }
 
+/* Thin Material: For secondary panes, drawers and sidebars */
+.ios-material-thin,
 .ios-glass-sidebar {
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  background: rgba(255, 255, 255, 0.70);
+  backdrop-filter: blur(25px) saturate(190%);
+  -webkit-backdrop-filter: blur(25px) saturate(190%);
   border-right: 1px solid rgba(0, 0, 0, 0.07);
 }
 
-.ios-glass-modal {
-  background: rgba(255, 255, 255, 0.95);
+/* Regular Material: For top navigation bars, toolbars, and search banners */
+.ios-material-regular,
+.ios-glass {
+  background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(30px) saturate(190%);
   -webkit-backdrop-filter: blur(30px) saturate(190%);
-  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  border-bottom: 0.5px solid rgba(60, 60, 67, 0.15);
+  box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.8) inset;
+}
+
+/* Thick Material: For floating sheets, popovers, and dialogs */
+.ios-material-thick,
+.ios-glass-modal,
+.ios-modal-card,
+.zoho-modal-card {
+  background: rgba(255, 255, 255, 0.90);
+  backdrop-filter: blur(40px) saturate(195%);
+  -webkit-backdrop-filter: blur(40px) saturate(195%);
   border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.22), 0 0 0 0.5px rgba(0, 0, 0, 0.08), inset 0 1px 1px 0 rgba(255, 255, 255, 0.85);
+  padding: 24px;
+  width: 100%;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  color: #1c1c1e;
+}
+
+/* Chrome Material: For docked controls and action bars */
+.ios-material-chrome {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(50px) saturate(200%);
+  -webkit-backdrop-filter: blur(50px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Apple HIG Modal Sheets & Presentation Backdrop
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.ios-modal-backdrop,
+.zoho-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background-color: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+/* Top drag handle / grabber pill on Apple Form Sheets */
+.ios-sheet-grabber {
+  width: 36px;
+  height: 5px;
+  border-radius: 9999px;
+  background-color: rgba(60, 60, 67, 0.28);
+  margin: 0 auto 14px auto;
+}
+
+/* Modal Form Layout */
+.ios-form-row,
+.zoho-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+@media (min-width: 640px) {
+  .ios-form-row,
+  .zoho-form-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+  }
+}
+
+.ios-form-label,
+.zoho-form-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #3c3c43;
+  width: 150px;
+  flex-shrink: 0;
+  text-align: start;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Apple HIG Accessibility & Layout Rules
+   https://developer.apple.com/design/human-interface-guidelines/accessibility
+   https://developer.apple.com/design/human-interface-guidelines/layout
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Minimum 44x44pt interactive hit target for touch accessibility */
+.ios-touch-target {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Apple System Focus Ring */
+.ios-focus-ring:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.35);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Apple HIG Right-To-Left (RTL) Support
+   https://developer.apple.com/design/human-interface-guidelines/right-to-left
+   ───────────────────────────────────────────────────────────────────────────── */
+
+[dir="rtl"] .ios-rtl-flip {
+  transform: scaleX(-1);
+}
+
+[dir="rtl"] .ios-rtl-mirror {
+  flex-direction: row-reverse;
 }
 
 /* Apple Segmented / Pill Switcher Control */

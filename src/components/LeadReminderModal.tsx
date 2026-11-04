@@ -222,15 +222,17 @@ export default function LeadReminderModal({
   const pendingCount = reminders.filter((r) => !r.isCompleted).length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="ios-modal-backdrop animate-in fade-in duration-200">
       <div
-        className="w-full max-w-xl max-h-[90vh] bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.18)] border border-black/[0.08] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+        className="w-full max-w-xl max-h-[92vh] ios-material-thick rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.25)] border border-white/60 flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
         role="dialog"
         aria-modal="true"
       >
         {/* Apple iOS Frosted Header */}
-        <div className="px-6 py-4.5 border-b border-black/[0.06] bg-white/95 backdrop-blur-md flex items-center justify-between sticky top-0 z-10">
-          <div className="flex items-center gap-3">
+        <div className="px-6 pt-3 pb-4 border-b border-black/[0.06] bg-white/80 backdrop-blur-xl flex flex-col sticky top-0 z-10">
+          <div className="ios-sheet-grabber mb-2" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-black/[0.04] text-[#1c1c1e] flex items-center justify-center shadow-xs">
               <BrandReminderIcon size={18} />
             </div>
@@ -259,6 +261,7 @@ export default function LeadReminderModal({
             <X size={16} />
           </button>
         </div>
+      </div>
 
         {/* Segmented Top Toggle (New Reminder vs Active Reminders) */}
         <div className="px-6 pt-3 pb-2 bg-[#f8f9fa] border-b border-black/[0.05] flex items-center justify-between gap-3">

@@ -364,10 +364,11 @@ export default function Customers() {
 
       {/* Add / Edit Customer Modal (Zoho CRM Modal & Field UI) */}
       {(showAddModal || editingCustomer) && (
-        <div className="zoho-modal-backdrop">
-          <div className="zoho-modal-card max-w-lg animate-in zoom-in-95">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-base font-bold text-slate-900 tracking-tight">
+        <div className="ios-modal-backdrop">
+          <div className="ios-modal-card max-w-lg animate-in zoom-in-95">
+            <div className="ios-sheet-grabber" />
+            <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
+              <h3 className="text-base font-semibold text-[#1c1c1e] tracking-tight">
                 {editingCustomer ? `Edit Customer #${editingCustomer.id}` : 'Customer Information'}
               </h3>
               <button
@@ -375,10 +376,10 @@ export default function Customers() {
                   setShowAddModal(false);
                   setEditingCustomer(null);
                 }}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded transition-colors"
+                className="w-7 h-7 rounded-full bg-black/[0.05] text-[#8e8e93] hover:text-[#1c1c1e] hover:bg-black/[0.1] flex items-center justify-center transition-colors"
                 aria-label="Close"
               >
-                <X size={16} />
+                <X size={15} />
               </button>
             </div>
 

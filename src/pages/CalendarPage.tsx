@@ -557,11 +557,14 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* New Reminder / Event Modal (Apple iOS Sheet Style) */}
+      {/* New Reminder / Event Modal (Apple HIG Glass Sheet UI) */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in">
-          <div className="bg-white/95 backdrop-blur-2xl rounded-[26px] shadow-[0_25px_60px_rgba(0,0,0,0.18)] border border-black/[0.06] max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-150">
-            <div className="px-5 py-4 border-b border-black/[0.04] flex items-center justify-between">
+        <div className="ios-modal-backdrop animate-in fade-in">
+          <div className="ios-material-thick rounded-[28px] shadow-2xl border border-white/65 max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-150">
+            <div className="pt-3 pb-1">
+              <div className="ios-sheet-grabber" />
+            </div>
+            <div className="px-5 py-3 border-b border-black/[0.04] flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center">
                   <BrandReminderIcon size={14} strokeWidth={2} />
@@ -573,7 +576,7 @@ export default function CalendarPage() {
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="w-7 h-7 rounded-full bg-black/[0.04] hover:bg-black/[0.08] flex items-center justify-center text-[#86868b] hover:text-[#1d1d1f] transition-colors"
+                className="w-7 h-7 rounded-full bg-black/[0.05] hover:bg-black/[0.1] flex items-center justify-center text-[#86868b] hover:text-[#1d1d1f] transition-colors"
               >
                 <X size={14} strokeWidth={2.5} />
               </button>
@@ -745,11 +748,11 @@ export default function CalendarPage() {
       {/* Apple iOS-Themed Small Confirmation Modal */}
       {successReminder && (
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center p-4 z-[70] animate-in fade-in duration-200"
+          className="ios-modal-backdrop animate-in fade-in duration-200 z-[70]"
           onClick={() => setSuccessReminder(null)}
         >
           <div
-            className="bg-white/95 backdrop-blur-2xl rounded-[28px] shadow-[0_24px_60px_rgba(0,0,0,0.22)] border border-black/[0.08] max-w-[340px] w-full p-6 text-center animate-in zoom-in-95 duration-200 relative overflow-hidden"
+            className="ios-material-thick rounded-[28px] shadow-2xl border border-white/65 max-w-[340px] w-full p-6 text-center animate-in zoom-in-95 duration-200 relative overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Top Close Button */}

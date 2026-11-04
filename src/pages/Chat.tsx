@@ -577,8 +577,8 @@ export default function Chat() {
             mobileView === 'list' ? 'hidden md:flex' : 'flex'
           } flex-1 flex-col min-w-0 bg-white`}
         >
-          {/* iOS Top Bar Header (Centered Contact Name & iMessage tag + Mobile Back Button) */}
-          <div className="h-14 px-3 sm:px-6 border-b border-[rgba(60,60,67,0.12)] bg-white/90 backdrop-blur-md flex items-center justify-between shrink-0">
+          {/* iOS Top Bar Header (Apple HIG Regular Material & Centered Contact Name) */}
+          <div className="h-14 px-3 sm:px-6 ios-material-regular flex items-center justify-between shrink-0">
             {/* Mobile Back Button to Messages List */}
             <div className="flex items-center md:hidden shrink-0">
               <button

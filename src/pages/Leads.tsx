@@ -26,6 +26,7 @@ import {
   FileUp,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import IosLeadList from '../components/leads/IosLeadList';
 import crmService from '../services/api/crmService';
 import adminService from '../services/api/adminService';
 import {
@@ -133,6 +134,9 @@ export default function Leads() {
   // Pagination for 1000s of data records
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(25);
+
+  // View Mode: Defaults to Apple iOS Inset Grouped List
+  const [viewMode, setViewMode] = useState<'ios-list' | 'table'>('ios-list');
 
 
 
@@ -368,6 +372,27 @@ export default function Leads() {
       }
       await fetchLeads();
     } catch (err: any) {
+      showAlert({ title: 'App', message: `Status update failed: ${err?.message || 'Server error'}` });
+    }
+  };
+
+  const handleToggleContacted = async (leadItem: Lead, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const isCurrentlyActive = leadItem.status !== 'CREATED' && leadItem.status !== 'LOST';
+    const newStatus = isCurrentlyActive ? 'CREATED' : 'CONTACTED';
+
+    // Optimistically update raw leads
+    setRawLeads((prev) =>
+      prev.map((l) => (l.id === leadItem.id ? { ...l, status: newStatus } : l))
+    );
+
+    try {
+      await crmService.updateLeadStatus(leadItem.id, newStatus);
+    } catch (err: any) {
+      // Revert on failure
+      setRawLeads((prev) =>
+        prev.map((l) => (l.id === leadItem.id ? { ...l, status: leadItem.status } : l))
+      );
       showAlert({ title: 'App', message: `Status update failed: ${err?.message || 'Server error'}` });
     }
   };
@@ -1355,6 +1380,26 @@ export default function Leads() {
               <option value="OLDEST">Oldest Inquiries</option>
               <option value="NAME">Name (A–Z)</option>
             </select>
+
+            {/* View Mode Switcher (Apple iOS Inset List vs Data Table) */}
+            <div className="ios-segmented hidden sm:inline-flex items-center">
+              <button
+                type="button"
+                onClick={() => setViewMode('ios-list')}
+                className={`ios-segmented-btn ${viewMode === 'ios-list' ? 'active' : ''}`}
+                title="Apple iOS Inset Grouped List"
+              >
+                 iOS List
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('table')}
+                className={`ios-segmented-btn ${viewMode === 'table' ? 'active' : ''}`}
+                title="Full Data Grid"
+              >
+                ▦ Table Grid
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1413,8 +1458,59 @@ export default function Leads() {
         </div>
       )}
 
-      {/* Apple Inset Grouped Candidate Data Table */}
-      <div className="ios-card overflow-hidden">
+      {/* ── MOBILE: Always show exact Apple iOS Inset Grouped List ── */}
+      <div className="sm:hidden">
+        <IosLeadList
+          leads={paginatedLeads}
+          loading={loading}
+          totalLeads={filteredLeads.length}
+          currentPage={currentPage}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          onToggleContacted={handleToggleContacted}
+          onOpenStatusModal={(lead, e) => {
+            e.stopPropagation();
+            setStatusModalLead(lead);
+            setStatusForm({
+              status: lead.status || 'CONTACTED',
+              notes: lead.notes || '',
+            });
+          }}
+          onDeleteLead={handleDeleteLead}
+          getLeadQuality={getLeadQuality}
+          getBudgetReady={getBudgetReady}
+          formatDate={formatDate}
+        />
+      </div>
+
+      {/* ── DESKTOP: Switch between iOS List and Full Data Table ── */}
+      <div className="hidden sm:block">
+        {viewMode === 'ios-list' ? (
+          <IosLeadList
+            leads={paginatedLeads}
+            loading={loading}
+            totalLeads={filteredLeads.length}
+            currentPage={currentPage}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            onToggleContacted={handleToggleContacted}
+            onOpenStatusModal={(lead, e) => {
+              e.stopPropagation();
+              setStatusModalLead(lead);
+              setStatusForm({
+                status: lead.status || 'CONTACTED',
+                notes: lead.notes || '',
+              });
+            }}
+            onDeleteLead={handleDeleteLead}
+            getLeadQuality={getLeadQuality}
+            getBudgetReady={getBudgetReady}
+            formatDate={formatDate}
+          />
+        ) : (
+          <div className="ios-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse min-w-[1300px]">
             <thead>
@@ -1649,6 +1745,8 @@ export default function Leads() {
           </div>
         </div>
       </div>
+        )}
+      </div>
 
       {/* iOS-Style Slide-Over Candidate Dossier Drawer */}
       {dossierLead && (
@@ -1844,22 +1942,23 @@ export default function Leads() {
         </div>
       )}
 
-      {/* Quick Status Update Modal (Zoho CRM Modal & Field UI) */}
+      {/* Quick Status Update Modal (Apple HIG Glass Sheet UI) */}
       {statusModalLead && (
-        <div className="zoho-modal-backdrop">
-          <div className="zoho-modal-card max-w-lg animate-in zoom-in-95">
+        <div className="ios-modal-backdrop">
+          <div className="ios-modal-card max-w-lg animate-in zoom-in-95">
+            <div className="ios-sheet-grabber" />
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-base font-bold text-slate-900 tracking-tight">
+            <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
+              <h3 className="text-base font-semibold text-[#1c1c1e] tracking-tight">
                 Update Stage
               </h3>
               <button
                 type="button"
                 onClick={() => setStatusModalLead(null)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded transition-colors"
+                className="w-7 h-7 rounded-full bg-black/[0.05] text-[#8e8e93] hover:text-[#1c1c1e] hover:bg-black/[0.1] flex items-center justify-center transition-colors"
                 aria-label="Close"
               >
-                <X size={16} />
+                <X size={15} />
               </button>
             </div>
 
@@ -1966,22 +2065,27 @@ export default function Leads() {
 
       {/* Create New Candidate Modal (Zoho CRM Enterprise Intake & Meta Import) */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-[1px] flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+        <div className="ios-modal-backdrop">
           <div
-            className={`bg-white rounded-[6px] shadow-[0_12px_40px_rgba(0,0,0,0.16)] border border-[#c8d1dc] ${
+            className={`ios-material-thick rounded-3xl border border-white/65 shadow-2xl ${
               modalTab === 'excel' && previewRows.length > 0 ? 'max-w-5xl' : 'max-w-xl'
-            } w-full my-auto transition-all duration-150 overflow-hidden flex flex-col font-zoho`}
+            } w-full my-auto transition-all duration-150 overflow-hidden flex flex-col`}
           >
+            {/* Grabber handle */}
+            <div className="pt-3 pb-1">
+              <div className="ios-sheet-grabber" />
+            </div>
+
             {/* Modal Header */}
-            <div className="bg-white px-6 py-3.5 border-b border-[#e5e7eb] flex items-center justify-between">
+            <div className="px-6 py-3 border-b border-black/[0.06] flex items-center justify-between">
               <div>
-                <h3 className="text-[15px] font-semibold text-[#1e293b] leading-tight">
+                <h3 className="text-base font-semibold text-[#1c1c1e] leading-tight tracking-tight">
                   {modalTab === 'manual' ? 'Candidate Intake' : 'Import Leads from Spreadsheet'}
                 </h3>
-                <p className="text-[12px] text-[#64748b] mt-0.5">
+                <p className="text-[12px] text-[#8e8e93] mt-0.5">
                   {modalTab === 'manual'
                     ? 'Record individual candidate lead information'
-                    : 'Ingest and map Meta Ads Manager (Facebook, Instagram) lead spreadsheets'}
+                    : 'Ingest and map Meta Ads Manager lead spreadsheets'}
                 </p>
               </div>
               <button
@@ -1995,43 +2099,37 @@ export default function Leads() {
                     navigate('/leads', { replace: true });
                   }
                 }}
-                className="w-7 h-7 rounded-[4px] text-[#64748b] hover:text-[#1e293b] hover:bg-[#f1f5f9] flex items-center justify-center transition-colors cursor-pointer text-base"
+                className="w-7 h-7 rounded-full bg-black/[0.05] text-[#8e8e93] hover:text-[#1c1c1e] hover:bg-black/[0.1] flex items-center justify-center transition-colors cursor-pointer"
                 title="Close dialog"
               >
-                <X size={16} />
+                <X size={15} />
               </button>
             </div>
 
-            {/* Zoho CRM Underline Tabs */}
-            <div className="bg-white border-b border-[#e5e7eb] px-6 flex items-center gap-6">
-              <button
-                type="button"
-                onClick={() => {
-                  setModalTab('manual');
-                  setImportError(null);
-                }}
-                className={`py-2.5 text-[13px] font-medium border-b-2 transition-colors cursor-pointer ${
-                  modalTab === 'manual'
-                    ? 'text-[#1366d9] border-[#1366d9]'
-                    : 'text-[#64748b] border-transparent hover:text-[#1e293b]'
-                }`}
-              >
-                Single Candidate
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setModalTab('excel');
-                }}
-                className={`py-2.5 text-[13px] font-medium border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
-                  modalTab === 'excel'
-                    ? 'text-[#1366d9] border-[#1366d9]'
-                    : 'text-[#64748b] border-transparent hover:text-[#1e293b]'
-                }`}
-              >
-                <FileSpreadsheet size={14} className={modalTab === 'excel' ? 'text-[#1366d9]' : 'text-[#64748b]'} />
-                <span>Import from Excel / Meta Ads</span>
-              </button>
+            {/* Apple Segmented Tabs */}
+            <div className="px-6 py-2.5 border-b border-black/[0.06] bg-black/[0.02]">
+              <div className="ios-segmented">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalTab('manual');
+                    setImportError(null);
+                  }}
+                  className={`ios-segmented-btn ${modalTab === 'manual' ? 'active' : ''}`}
+                >
+                  Single Candidate
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalTab('excel');
+                  }}
+                  className={`ios-segmented-btn flex items-center gap-1.5 ${modalTab === 'excel' ? 'active' : ''}`}
+                >
+                  <FileSpreadsheet size={13} />
+                  <span>Import from Spreadsheet</span>
+                </button>
+              </div>
             </div>
 
             {/* TAB 1: Manual Single Candidate Intake Form (Zoho CRM Modal & Field UI) */}

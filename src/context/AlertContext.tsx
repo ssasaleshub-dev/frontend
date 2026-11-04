@@ -131,32 +131,32 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
     <AlertContext.Provider value={{ showAlert, showConfirm, closeAlert }}>
       {children}
 
-      {/* Authentic iOS Alert Modal Backdrop & Dialog */}
+      {/* Authentic Apple HIG UIAlertController Modal & Materials */}
       {alertState.isOpen && (
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs transition-opacity duration-150 animate-in fade-in"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/35 backdrop-blur-md transition-opacity duration-150 animate-in fade-in"
         >
           <div
-            className="w-[270px] max-w-[85vw] bg-white/95 backdrop-blur-xl rounded-[14px] shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden text-center select-none border border-black/5 transform transition-transform duration-150 animate-in zoom-in-95"
+            className="w-[270px] max-w-[85vw] bg-[#f2f2f7]/88 backdrop-blur-2xl rounded-[16px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.35)] overflow-hidden text-center select-none border border-white/60 transform transition-transform duration-150 animate-in zoom-in-95"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header / Body */}
             <div className="px-4 pt-5 pb-4">
-              <h3 className="font-semibold text-[17px] text-slate-900 leading-snug tracking-[-0.015em]">
+              <h3 className="font-semibold text-[17px] text-[#1c1c1e] leading-snug tracking-tight">
                 {alertState.title}
               </h3>
               {alertState.message && (
-                <p className="mt-1 text-[13px] text-slate-700 leading-[1.35] tracking-[-0.01em] whitespace-pre-line">
+                <p className="mt-1 text-[13px] text-[#3c3c43] leading-[1.35] tracking-tight whitespace-pre-line">
                   {alertState.message}
                 </p>
               )}
             </div>
 
-            {/* Actions Bar */}
+            {/* Actions Bar (Apple 44pt Touch Targets) */}
             {alertState.type === 'alert' ? (
-              <div className="border-t border-[#3c3c43]/18">
+              <div className="border-t border-[rgba(60,60,67,0.18)]">
                 <button
                   type="button"
                   autoFocus
@@ -167,7 +167,7 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
                 </button>
               </div>
             ) : (
-              <div className="border-t border-[#3c3c43]/18 grid grid-cols-2 divide-x divide-[#3c3c43]/18">
+              <div className="border-t border-[rgba(60,60,67,0.18)] grid grid-cols-2 divide-x divide-[rgba(60,60,67,0.18)]">
                 <button
                   type="button"
                   onClick={handleCancel}

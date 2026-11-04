@@ -448,9 +448,9 @@ export default function Layout() {
                   </div>
                 </button>
 
-                {/* User Dropdown Menu */}
+                {/* User Dropdown Menu (Apple HIG Glass Menu) */}
                 {userMenuOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] border border-black/[0.06] z-50 overflow-hidden animate-in zoom-in-95 fade-in duration-150">
+                  <div className="absolute right-0 top-full mt-2 w-52 ios-material-thick rounded-2xl shadow-[0_20px_50px_-10px_rgba(0,0,0,0.22)] border border-white/60 z-50 overflow-hidden animate-in zoom-in-95 fade-in duration-150">
                     {/* Profile info top */}
                     <div className="px-4 py-3 border-b border-black/[0.05]">
                       <p className="text-xs font-semibold text-[#1c1c1e] truncate">{displayName}</p>
