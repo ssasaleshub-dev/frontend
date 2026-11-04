@@ -332,30 +332,43 @@ export default function Layout() {
               <button
                 type="button"
                 onClick={() => navigate('/attendance')}
-                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs font-semibold shadow-xs hover:bg-emerald-100 transition-all active:scale-95"
-                title="Shift in progress - View attendance"
+                className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-600/20 bg-emerald-500/[0.08] hover:bg-emerald-500/[0.14] text-emerald-950 text-xs font-medium shadow-xs transition-all active:scale-95 group"
+                title="Shift active - Click to view attendance"
               >
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Working</span>
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-60" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
+                </span>
+                <span className="font-semibold text-emerald-900 tracking-tight">On Duty</span>
+                {todayAttendance?.checkInTime && (
+                  <span className="text-[11px] text-emerald-700/80 font-mono pl-1 border-l border-emerald-600/20">
+                    {new Date(todayAttendance.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
               </button>
             ) : todayAttendance?.checkOutTime ? (
               <button
                 type="button"
                 onClick={() => navigate('/attendance')}
-                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 text-xs font-semibold shadow-xs hover:bg-slate-100 transition-all active:scale-95"
-                title="Shift completed for today"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200/80 bg-slate-100/70 hover:bg-slate-200/60 text-slate-700 text-xs font-medium shadow-xs transition-all active:scale-95"
+                title="Today's shift completed"
               >
                 <CheckCircle2 size={13} className="text-emerald-600" />
-                <span>Shift Done ({todayAttendance.totalHoursFormatted || 'Done'})</span>
+                <span>Shift Completed</span>
+                {todayAttendance.totalHoursFormatted && (
+                  <span className="text-[11px] text-slate-500 font-mono pl-1 border-l border-slate-300">
+                    {todayAttendance.totalHoursFormatted}
+                  </span>
+                )}
               </button>
             ) : (
               <button
                 type="button"
                 onClick={() => navigate('/attendance')}
-                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-xs font-semibold shadow-xs hover:bg-amber-100 transition-all active:scale-95"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 bg-white/80 hover:bg-white text-slate-700 text-xs font-medium shadow-xs transition-all active:scale-95 backdrop-blur-md"
                 title="Punch in for today's shift"
               >
-                <Clock size={13} className="text-amber-600" />
+                <Clock size={13} className="text-slate-500" />
                 <span>Punch In</span>
               </button>
             )}

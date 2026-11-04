@@ -354,9 +354,15 @@ export default function AttendancePage() {
                 <h2 className="text-base font-bold text-slate-900">{displayName}</h2>
                 <span className="text-xs text-slate-500 font-medium">({badgeInfo.displayText})</span>
                 {isWorkingNow ? (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    Working: {liveDuration || 'On Duty'}
+                  <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-600/20 bg-emerald-500/[0.08] text-emerald-950 text-xs font-medium shadow-xs">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-60" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
+                    </span>
+                    <span className="font-semibold text-emerald-900 tracking-tight">On Duty</span>
+                    <span className="text-[11px] text-emerald-700/80 font-mono pl-1 border-l border-emerald-600/20">
+                      {liveDuration || 'Shift Active'}
+                    </span>
                   </span>
                 ) : isCheckedOut ? (
                   <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
@@ -418,9 +424,12 @@ export default function AttendancePage() {
           </div>
 
           <div className="p-4 rounded-3xl bg-white border border-black/[0.06] shadow-xs">
-            <span className="text-[11px] font-semibold text-slate-500 block">Working Now</span>
-            <span className="text-xl font-bold text-emerald-600 mt-1 block flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[11px] font-semibold text-slate-500 block">On Duty Now</span>
+            <span className="text-xl font-bold text-emerald-600 mt-1 flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-60" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
+              </span>
               {adminSummary?.currentlyWorking ?? 0}
             </span>
             <span className="text-[10px] text-slate-400 mt-0.5 block">Active on shift</span>
@@ -574,7 +583,7 @@ export default function AttendancePage() {
               className="px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 shrink-0"
             >
               <option value="ALL">All Statuses</option>
-              <option value="WORKING">Currently Working</option>
+              <option value="WORKING">Currently On Duty</option>
               <option value="PRESENT">On-Time Present</option>
               <option value="LATE">Late Arrival</option>
               <option value="HALF_DAY">Half Day</option>

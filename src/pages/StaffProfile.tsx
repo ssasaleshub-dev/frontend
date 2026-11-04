@@ -320,13 +320,17 @@ export default function StaffProfile() {
           {/* Simple Today Action Strip */}
           <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-100">
             {isWorkingNow ? (
-              <div className="flex items-center gap-2.5">
-                <div className="text-right">
-                  <span className="text-xs font-bold text-emerald-700 flex items-center gap-1.5 justify-end">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    Working (In: {formatTime(todayRecord?.checkInTime)})
+              <div className="flex items-center gap-3">
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-600/20 bg-emerald-500/[0.08] text-emerald-950 text-xs font-medium shadow-xs">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-60" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
                   </span>
-                </div>
+                  <span className="font-semibold text-emerald-900 tracking-tight">On Duty</span>
+                  <span className="text-[11px] text-emerald-700/80 font-mono pl-1 border-l border-emerald-600/20">
+                    Since {formatTime(todayRecord?.checkInTime)}
+                  </span>
+                </span>
                 <button
                   type="button"
                   onClick={handleCheckOut}
@@ -334,7 +338,7 @@ export default function StaffProfile() {
                   className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs transition-all active:scale-95 flex items-center gap-1.5"
                 >
                   {punching ? <Loader2 size={13} className="animate-spin" /> : <LogOut size={13} />}
-                  <span>Check Out</span>
+                  <span>Punch Out</span>
                 </button>
               </div>
             ) : isCheckedOut ? (
