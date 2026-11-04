@@ -25,6 +25,7 @@ import {
   Clock,
   CreditCard,
   Wallet,
+  Award,
 } from 'lucide-react';
 import {
   BrandActivityIcon,
@@ -92,6 +93,10 @@ export default function CandidateDetail() {
   const [isEditingPaymentDetails, setIsEditingPaymentDetails] = useState<boolean>(false);
   const [paymentDetailsInput, setPaymentDetailsInput] = useState<string>('');
   const [updatingPayment, setUpdatingPayment] = useState<boolean>(false);
+
+  // Student Percentage / CGPA State
+  const [isEditingPercentage, setIsEditingPercentage] = useState<boolean>(false);
+  const [percentageInput, setPercentageInput] = useState<string>('');
 
   // Activity & Audit Logs
   const [activities, setActivities] = useState<LeadActivity[]>([]);
@@ -164,18 +169,32 @@ export default function CandidateDetail() {
         const cachedBudget = localStorage.getItem(`ssa_lead_budget_${candidateData.id}`);
         const cachedPaymentStatus = localStorage.getItem(`ssa_lead_payment_status_${candidateData.id}`);
         const cachedPaymentDetails = localStorage.getItem(`ssa_lead_payment_details_${candidateData.id}`);
+        const cachedPercentage = localStorage.getItem(`ssa_lead_percentage_${candidateData.id}`);
+
+        // Extract student percentage from notes if available (e.g. "CGPA: RNR" or "CGPA: 75%")
+        let extractedPercentage = '';
+        if (candidateData.notes) {
+          const m = candidateData.notes.match(/(?:what_is_your_cgpa_or_current_percentage|cgpa|percentage|score|marks)\s*[:=?]\s*([^|\n,;]+)/i);
+          if (m && m[1]) {
+            extractedPercentage = m[1].trim();
+          }
+        }
 
         const effectiveBudget = candidateData.budgetRange || (candidateData as any).budget || (candidateData as any).clientBudget || cachedBudget || '';
         const effectivePaymentStatus = (candidateData as any).paymentStatus || candidateData.mattressType || cachedPaymentStatus || 'UNPAID';
         const effectivePaymentDetails = (candidateData as any).paymentDetails || candidateData.mattressSize || cachedPaymentDetails || '';
+        const effectivePercentage = (candidateData as any).studentPercentage || (candidateData as any).cgpa || cachedPercentage || extractedPercentage || '';
 
         candidateData.budgetRange = effectiveBudget;
         candidateData.clientBudget = effectiveBudget;
         (candidateData as any).paymentStatus = effectivePaymentStatus;
         (candidateData as any).paymentDetails = effectivePaymentDetails;
+        candidateData.studentPercentage = effectivePercentage;
+        candidateData.cgpa = effectivePercentage;
 
         setBudgetInput(effectiveBudget);
         setPaymentDetailsInput(effectivePaymentDetails);
+        setPercentageInput(effectivePercentage);
         setLead(candidateData);
         setEditFormData({
           customerName: candidateData.customerName || '',
@@ -194,6 +213,8 @@ export default function CandidateDetail() {
           clientBudget: effectiveBudget,
           paymentStatus: effectivePaymentStatus,
           paymentDetails: effectivePaymentDetails,
+          studentPercentage: effectivePercentage,
+          cgpa: effectivePercentage,
         });
 
         if (candidateData.notes) {
@@ -512,6 +533,60 @@ export default function CandidateDetail() {
     }
   };
 
+  const handleUpdatePercentage = async (newPercentage: string) => {
+    if (!lead) return;
+    const trimmed = newPercentage.trim();
+    const oldPercentage = (lead as any).studentPercentage || (lead as any).cgpa || '';
+
+    // Optimistically update
+    setLead((prev) => (prev ? { ...prev, studentPercentage: trimmed, cgpa: trimmed } : null));
+    setEditFormData((prev) => ({ ...prev, studentPercentage: trimmed, cgpa: trimmed }));
+    localStorage.setItem(`ssa_lead_percentage_${lead.id}`, trimmed);
+    setIsEditingPercentage(false);
+
+    // Sync to notes: replace existing CGPA entry or prepend
+    let updatedNotes = lead.notes || '';
+    if (/(?:what_is_your_cgpa_or_current_percentage|cgpa|percentage|score|marks)\s*[:=?]\s*([^|\n,;]+)/i.test(updatedNotes)) {
+      updatedNotes = updatedNotes.replace(
+        /(?:what_is_your_cgpa_or_current_percentage|cgpa|percentage|score|marks)\s*[:=?]\s*([^|\n,;]+)/i,
+        `CGPA: ${trimmed}`
+      );
+    } else if (trimmed) {
+      updatedNotes = updatedNotes ? `CGPA: ${trimmed} | ${updatedNotes}` : `CGPA: ${trimmed}`;
+    }
+
+    try {
+      const promises: Promise<any>[] = [];
+      promises.push(crmService.patchLead(lead.id, { notes: updatedNotes }).catch(() => {}));
+
+      const prefId = lead.preferenceId || (lead as any).leadPreferenceId;
+      if (prefId) {
+        promises.push(
+          axiosClient
+            .patch(`/api/lead-preferences/${prefId}`, { id: Number(prefId), notes: updatedNotes })
+            .catch(() => {})
+        );
+      }
+
+      await Promise.allSettled(promises);
+
+      leadActivityService.logActivity(lead.id, {
+        userName: currentUser?.login || currentUser?.firstName || 'Counselor',
+        userRole: currentUser?.authorities?.[0] || 'STAFF',
+        actionType: 'DATA_MODIFY',
+        title: 'Updated Student Percentage / CGPA',
+        description: `Student score updated from "${oldPercentage || 'None'}" to "${trimmed || 'None'}"`,
+        fieldChanged: 'studentPercentage',
+        oldValue: oldPercentage,
+        newValue: trimmed,
+      });
+
+      showAlert({ title: 'Success', message: `Student score updated to ${trimmed || 'Cleared'}` });
+    } catch (err: any) {
+      console.warn('Failed to save student percentage:', err);
+    }
+  };
+
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!lead) return;
@@ -561,6 +636,9 @@ export default function CandidateDetail() {
     }
     if (editFormData.paymentDetails !== undefined && editFormData.paymentDetails !== (lead as any).paymentDetails) {
       changes.push(`Payment Details: "${(lead as any).paymentDetails || 'None'}" → "${editFormData.paymentDetails}"`);
+    }
+    if (editFormData.studentPercentage !== undefined && editFormData.studentPercentage !== (lead as any).studentPercentage) {
+      changes.push(`Student Percentage: "${(lead as any).studentPercentage || 'None'}" → "${editFormData.studentPercentage}"`);
     }
 
     try {
@@ -626,6 +704,9 @@ export default function CandidateDetail() {
       if (editFormData.paymentDetails !== undefined) {
         localStorage.setItem(`ssa_lead_payment_details_${lead.id}`, editFormData.paymentDetails);
       }
+      if (editFormData.studentPercentage !== undefined) {
+        localStorage.setItem(`ssa_lead_percentage_${lead.id}`, editFormData.studentPercentage);
+      }
 
       // 3. Update lead status/notes if changed
       if (editFormData.notes !== undefined && editFormData.notes !== lead.notes) {
@@ -658,6 +739,8 @@ export default function CandidateDetail() {
           clientBudget: editFormData.budgetRange !== undefined ? editFormData.budgetRange : (prev as any).clientBudget,
           paymentStatus: editFormData.paymentStatus !== undefined ? editFormData.paymentStatus : (prev as any).paymentStatus,
           paymentDetails: editFormData.paymentDetails !== undefined ? editFormData.paymentDetails : (prev as any).paymentDetails,
+          studentPercentage: editFormData.studentPercentage !== undefined ? editFormData.studentPercentage : (prev as any).studentPercentage,
+          cgpa: editFormData.studentPercentage !== undefined ? editFormData.studentPercentage : (prev as any).cgpa,
         };
       });
 
@@ -919,7 +1002,31 @@ export default function CandidateDetail() {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setShowEditModal(true)}
+            onClick={() => {
+              if (lead) {
+                setEditFormData({
+                  customerName: lead.customerName || '',
+                  phoneNumber: lead.phoneNumber || '',
+                  email: lead.email || '',
+                  city: lead.city || lead.location || '',
+                  visaType: lead.visaType || 'WORK_VISA',
+                  closingDate: (lead.closingDate || (lead as any).purchaseTimeline || '').substring(0, 10),
+                  age: lead.age || AGE_BRACKETS[0],
+                  educationalQualification: lead.educationalQualification || EDUCATION_QUALIFICATIONS[2],
+                  areYouWorking: lead.areYouWorking || 'yes',
+                  areYouInterested: lead.areYouInterested || 'yes',
+                  leadConfirm: lead.leadConfirm || 'Confirmed',
+                  notes: lead.notes || '',
+                  budgetRange: lead.budgetRange || '',
+                  clientBudget: lead.budgetRange || '',
+                  paymentStatus: (lead as any).paymentStatus || 'UNPAID',
+                  paymentDetails: (lead as any).paymentDetails || '',
+                  studentPercentage: (lead as any).studentPercentage || (lead as any).cgpa || '',
+                  cgpa: (lead as any).studentPercentage || (lead as any).cgpa || '',
+                });
+              }
+              setShowEditModal(true);
+            }}
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white/80 hover:bg-white text-slate-800 rounded-xl border border-black/[0.06] text-xs font-semibold shadow-xs transition-all active:scale-95 backdrop-blur-md cursor-pointer"
           >
             <Edit2 size={13} className="text-[#007aff]" />
@@ -1461,6 +1568,84 @@ export default function CandidateDetail() {
                 </p>
               </div>
 
+              {/* Student Percentage / CGPA (Dynamic & Inline-Editable) */}
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                    <Award size={13} className="text-[#007aff]" />
+                    <span>Student Percentage / CGPA</span>
+                  </span>
+                  {!isEditingPercentage && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPercentageInput((lead as any).studentPercentage || (lead as any).cgpa || '');
+                        setIsEditingPercentage(true);
+                      }}
+                      className="text-[11px] font-semibold text-[#007aff] hover:underline cursor-pointer"
+                    >
+                      {(lead as any).studentPercentage || (lead as any).cgpa ? 'Edit' : '+ Set'}
+                    </button>
+                  )}
+                </div>
+
+                {isEditingPercentage ? (
+                  <div className="space-y-2 mt-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        value={percentageInput}
+                        onChange={(e) => setPercentageInput(e.target.value)}
+                        placeholder="e.g. 75% or 7.8 CGPA or RNR"
+                        className="flex-1 px-2.5 py-1.5 text-xs font-semibold bg-white border border-black/[0.08] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/30"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleUpdatePercentage(percentageInput)}
+                        className="px-2.5 py-1.5 bg-[#007aff] text-white rounded-xl text-xs font-semibold hover:bg-[#0071e3] transition-colors cursor-pointer"
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingPercentage(false)}
+                        className="px-2 py-1.5 bg-black/[0.05] text-[#1c1c1e] rounded-xl text-xs font-medium hover:bg-black/[0.1] transition-colors cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    {/* Quick percentage chips */}
+                    <div className="flex flex-wrap gap-1">
+                      {['60-70%', '70-80%', '80%+', '6.5+ CGPA', '7.5+ CGPA', 'RNR'].map((chip) => (
+                        <button
+                          key={chip}
+                          type="button"
+                          onClick={() => {
+                            setPercentageInput(chip);
+                            handleUpdatePercentage(chip);
+                          }}
+                          className="px-2 py-0.5 rounded-lg bg-white border border-black/[0.08] text-[10px] font-medium text-[#1c1c1e] hover:bg-black/[0.04] cursor-pointer"
+                        >
+                          {chip}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-baseline gap-2 mt-1">
+                    <p className="font-bold text-[#1c1c1e] text-sm">
+                      {(lead as any).studentPercentage || (lead as any).cgpa || '—'}
+                    </p>
+                    {((lead as any).studentPercentage || (lead as any).cgpa) && (
+                      <span className="text-[10px] font-semibold text-[#007aff] bg-[#007aff]/10 px-2 py-0.5 rounded-full">
+                        Score Set
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors">
                 <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Age Demographic</span>
                 <p className="font-bold text-[#1c1c1e] text-sm mt-1">
@@ -1482,7 +1667,7 @@ export default function CandidateDetail() {
                 </p>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors col-span-1 sm:col-span-2">
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors">
                 <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Lead Confirmation Status</span>
                 <p className="font-bold text-[#1c1c1e] text-sm mt-1">
                   {lead.leadConfirm || 'Confirmed Candidate'}
@@ -1754,6 +1939,29 @@ export default function CandidateDetail() {
                   <option value="STUDY_VISA">Study Visa</option>
                   <option value="OTHER_VISA">Other Visa</option>
                 </select>
+              </div>
+
+              {/* Student Percentage / CGPA */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-[#1c1c1e]">
+                    Student Percentage / CGPA
+                  </label>
+                  <span className="text-[11px] text-[#8e8e93]">Academic Marks / Score</span>
+                </div>
+                <input
+                  type="text"
+                  value={editFormData.studentPercentage || ''}
+                  onChange={(e) =>
+                    setEditFormData({
+                      ...editFormData,
+                      studentPercentage: e.target.value,
+                      cgpa: e.target.value,
+                    })
+                  }
+                  placeholder="e.g. 75% or 8.2 CGPA or RNR"
+                  className="w-full px-3.5 py-2.5 bg-[#f2f2f7] hover:bg-[#e5e5ea]/50 focus:bg-white border border-black/[0.06] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff] transition-all"
+                />
               </div>
 
               {/* Target Closing Date */}

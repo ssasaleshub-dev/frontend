@@ -33,6 +33,8 @@ export interface LeadDetailedDTO {
   visaType?: 'WORK_VISA' | 'STUDY_VISA' | 'OTHER_VISA' | string;
   age?: string;                  // e.g. "18 - 35 years"
   educationalQualification?: string; // e.g. "10th / 12th / Diploma / Any Degree"
+  studentPercentage?: string;    // e.g. "75%", "8.2 CGPA", "RNR", "60-70% / 6.0-7.0 CGPA"
+  cgpa?: string;                 // Alias for academic percentage / CGPA
   areYouInterested?: string;     // e.g. "yes" / "no"
   areYouWorking?: string;        // e.g. "yes" / "no"
   leadConfirm?: string;          // e.g. "Confirmed" / "Pending"
