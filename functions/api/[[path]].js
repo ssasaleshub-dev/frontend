@@ -22,6 +22,14 @@ export async function onRequest(context) {
   headers.delete('origin')
   headers.delete('referer')
 
+  // Secure Worker-to-Origin authentication:
+  // Strip any client-supplied header to prevent spoofing, then inject private secret
+  headers.delete('x-origin-verify')
+  headers.delete('X-Origin-Verify')
+  if (context.env && context.env.ORIGIN_SECRET) {
+    headers.set('X-Origin-Verify', context.env.ORIGIN_SECRET)
+  }
+
   const init = {
     method: context.request.method,
     headers,
