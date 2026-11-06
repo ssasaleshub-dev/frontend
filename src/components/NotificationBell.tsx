@@ -143,7 +143,7 @@ export default function NotificationBell() {
             onClick={() => setIsOpen(false)}
           />
 
-          <div className="fixed top-14 left-3 right-3 sm:left-auto sm:right-0 sm:absolute sm:top-full mt-2 sm:mt-2.5 sm:w-[380px] ios-material-thick rounded-[24px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.25)] border border-white/60 z-50 overflow-hidden flex flex-col max-h-[82vh] sm:max-h-[520px] animate-in fade-in zoom-in-95 duration-150">
+          <div className="fixed top-14 left-3 right-3 sm:left-auto sm:right-0 sm:absolute sm:top-full mt-2 sm:mt-2.5 w-auto sm:w-[380px] max-w-[calc(100vw-24px)] ios-material-thick !p-0 rounded-[24px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.25)] border border-white/60 z-50 overflow-hidden flex flex-col max-h-[82vh] sm:max-h-[520px] animate-in fade-in zoom-in-95 duration-150">
             
             {/* iOS Header */}
             <div className="px-4 pt-3.5 pb-2.5 flex items-center justify-between border-b border-black/[0.04]">

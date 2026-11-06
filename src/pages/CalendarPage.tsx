@@ -575,7 +575,7 @@ export default function CalendarPage() {
       {/* New Reminder / Event Modal (Apple HIG Glass Sheet UI) */}
       {isModalOpen && (
         <div className="ios-modal-backdrop animate-in fade-in">
-          <div className="ios-material-thick rounded-[28px] shadow-2xl border border-white/65 max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-150">
+          <div className="ios-material-thick rounded-[28px] shadow-2xl border border-white/65 max-w-md w-full !p-0 overflow-hidden animate-in zoom-in-95 duration-150">
             <div className="pt-3 pb-1">
               <div className="ios-sheet-grabber" />
             </div>
