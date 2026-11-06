@@ -135,10 +135,23 @@ class ReminderNotificationService {
   public async saveEvent(
     eventData: Omit<CalendarEventDTO, 'id' | 'createdAt' | 'updatedAt' | 'notificationSent'>
   ): Promise<CalendarEventDTO> {
-    const tempId = `evt-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+    const generateUUID = () => {
+      if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        try {
+          return crypto.randomUUID();
+        } catch {}
+      }
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      });
+    };
+
+    const newId = generateUUID();
     const newEvent: CalendarEventDTO = {
       ...eventData,
-      id: tempId,
+      id: newId,
       notificationSent: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -153,10 +166,13 @@ class ReminderNotificationService {
     let finalEvent = newEvent;
     // Attempt real backend POST
     try {
-      const savedOnServer = await notificationApiService.createEvent(newEvent);
+      const savedOnServer = await notificationApiService.createEvent({
+        ...eventData,
+        id: newId,
+      });
       if (savedOnServer && savedOnServer.id) {
         // Replace temp ID with server ID
-        const idx = cached.findIndex((e) => e.id === tempId);
+        const idx = cached.findIndex((e) => e.id === newId);
         if (idx !== -1) {
           cached[idx] = savedOnServer;
           localStorage.setItem(EVENTS_CACHE_KEY, JSON.stringify(cached));
@@ -164,13 +180,13 @@ class ReminderNotificationService {
         }
         finalEvent = savedOnServer;
       }
-    } catch {
-      // Fallback kept
+    } catch (apiErr) {
+      console.warn('[Reminders] Backend sync deferred to local cache:', apiErr);
     }
 
-    // Schedule Native Android push notification & exact reminder alarm
+    // Schedule Native Android push notification
     try {
-      pushNotificationService.scheduleLocalReminder({
+      await pushNotificationService.scheduleLocalReminder({
         id: finalEvent.id,
         title: finalEvent.title,
         candidateName: finalEvent.candidateName,
@@ -184,7 +200,12 @@ class ReminderNotificationService {
       console.warn('[Reminders] Could not schedule native notification:', schedErr);
     }
 
-    this.checkDueReminders();
+    try {
+      this.checkDueReminders();
+    } catch (dueErr) {
+      console.warn('[Reminders] checkDueReminders warning:', dueErr);
+    }
+
     return finalEvent;
   }
 

@@ -27,6 +27,7 @@ import reminderNotificationService, {
   getRemainingTimeInfo,
   formatEventReadable,
 } from '../services/reminderNotificationService';
+import { useAuth } from '../context/AuthContext';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -36,6 +37,7 @@ const MONTH_NAMES = [
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function CalendarPage() {
+  const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [selectedDateStr, setSelectedDateStr] = useState<string>(
@@ -45,6 +47,8 @@ export default function CalendarPage() {
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -149,6 +153,7 @@ export default function CalendarPage() {
       candidateName: '',
       remindBeforeMinutes: 15,
     });
+    setSaveError(null);
     setIsModalOpen(true);
   };
 
@@ -156,33 +161,43 @@ export default function CalendarPage() {
     e.preventDefault();
     if (!formData.title.trim()) return;
 
-    const remainingInfo = getRemainingTimeInfo(formData.eventDate, formData.eventTime);
+    setIsSubmitting(true);
+    setSaveError(null);
 
-    await reminderNotificationService.saveEvent({
-      userId: user?.login || 'admin',
-      title: formData.title.trim(),
-      description: formData.description.trim(),
-      eventDate: formData.eventDate,
-      eventTime: formData.eventTime,
-      eventType: formData.eventType,
-      priority: formData.priority,
-      candidateName: formData.candidateName.trim() || undefined,
-      isCompleted: false,
-      remindBeforeMinutes: Number(formData.remindBeforeMinutes),
-    });
+    try {
+      const remainingInfo = getRemainingTimeInfo(formData.eventDate, formData.eventTime);
 
-    setIsModalOpen(false);
+      const saved = await reminderNotificationService.saveEvent({
+        userId: user?.login || 'admin',
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        eventDate: formData.eventDate,
+        eventTime: formData.eventTime,
+        eventType: formData.eventType,
+        priority: formData.priority,
+        candidateName: formData.candidateName.trim() || undefined,
+        isCompleted: false,
+        remindBeforeMinutes: Number(formData.remindBeforeMinutes),
+      });
 
-    // Present Apple iOS-style Confirmation Modal with dynamic countdown
-    setSuccessReminder({
-      title: formData.title.trim(),
-      eventDate: formData.eventDate,
-      eventTime: formData.eventTime,
-      remainingText: remainingInfo?.text || 'Scheduled',
-      isPast: !!remainingInfo?.isPast,
-      remindBeforeMinutes: Number(formData.remindBeforeMinutes),
-      eventType: formData.eventType,
-    });
+      setIsModalOpen(false);
+
+      // Present Apple iOS-style Confirmation Modal with dynamic countdown
+      setSuccessReminder({
+        title: formData.title.trim(),
+        eventDate: formData.eventDate,
+        eventTime: formData.eventTime,
+        remainingText: remainingInfo?.text || 'Scheduled',
+        isPast: !!remainingInfo?.isPast,
+        remindBeforeMinutes: Number(formData.remindBeforeMinutes),
+        eventType: formData.eventType,
+      });
+    } catch (err: any) {
+      console.error('[CalendarPage] Failed to save reminder:', err);
+      setSaveError(err?.message || 'Failed to save reminder. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDeleteEvent = async (id: string, e: React.MouseEvent) => {
@@ -726,19 +741,35 @@ export default function CalendarPage() {
                 />
               </div>
 
+              {saveError && (
+                <div className="p-2.5 rounded-[12px] bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+                  <AlertCircle size={14} className="shrink-0" />
+                  <span>{saveError}</span>
+                </div>
+              )}
+
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-black/[0.04]">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-1.5 rounded-full text-[12px] font-medium text-[#515154] hover:bg-black/[0.04] transition-colors"
+                  disabled={isSubmitting}
+                  className="px-4 py-1.5 rounded-full text-[12px] font-medium text-[#515154] hover:bg-black/[0.04] transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-1.5 rounded-full bg-[#0071e3] hover:bg-[#0077ED] text-white text-[12px] font-medium shadow-xs transition-all active:scale-95"
+                  disabled={isSubmitting}
+                  className="px-5 py-1.5 rounded-full bg-[#0071e3] hover:bg-[#0077ED] text-white text-[12px] font-medium shadow-xs transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 cursor-pointer"
                 >
-                  Save Reminder
+                  {isSubmitting ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <span>Save Reminder</span>
+                  )}
                 </button>
               </div>
             </form>

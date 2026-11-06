@@ -13,7 +13,6 @@ import {
 } from '@capacitor/push-notifications';
 import { LocalNotifications, ActionPerformed as LocalActionPerformed } from '@capacitor/local-notifications';
 import axiosClient from './api/axiosClient';
-import reminderNotificationService from './reminderNotificationService';
 import { encryptLeadId } from '../utils/leadIdCrypto';
 
 const FCM_TOKEN_STORAGE_KEY = 'ssa_fcm_token';
@@ -81,15 +80,19 @@ class PushNotificationService {
         (notification: PushNotificationSchema) => {
           console.info('[PushNotifications] Push received in foreground:', notification);
 
-          // Add to internal notifications inbox & cache
-          reminderNotificationService.addNotification({
-            userId: notification.data?.userId || 'current',
-            title: notification.title || 'SSA Notification',
-            message: notification.body || '',
-            type: (notification.data?.type as any) || 'SYSTEM',
-            referenceId: notification.data?.referenceId || notification.data?.leadId || notification.data?.eventId,
-            referenceType: notification.data?.referenceType || (notification.data?.leadId ? 'LEAD' : 'EVENT'),
-          });
+          // Add to internal notifications inbox & cache (lazy loaded to prevent circular dependency)
+          import('./reminderNotificationService')
+            .then((m) => {
+              m.default.addNotification({
+                userId: notification.data?.userId || 'current',
+                title: notification.title || 'SSA Notification',
+                message: notification.body || '',
+                type: (notification.data?.type as any) || 'SYSTEM',
+                referenceId: notification.data?.referenceId || notification.data?.leadId || notification.data?.eventId,
+                referenceType: notification.data?.referenceType || (notification.data?.leadId ? 'LEAD' : 'EVENT'),
+              });
+            })
+            .catch(() => {});
 
           // Dispatch UI notification event
           window.dispatchEvent(
@@ -224,7 +227,7 @@ class PushNotificationService {
           title: `🔔 ${event.title}`,
           body: dueBody,
           channelId: 'fcm_default_channel',
-          schedule: { at: triggerTime, allowWhileIdle: true },
+          schedule: { at: triggerTime },
           sound: 'default',
           extra: {
             leadId: event.candidateId,
@@ -248,7 +251,9 @@ class PushNotificationService {
         },
       });
 
-      await LocalNotifications.schedule({ notifications: notificationsToSchedule });
+      if (notificationsToSchedule.length > 0) {
+        await LocalNotifications.schedule({ notifications: notificationsToSchedule });
+      }
     } catch (err) {
       console.warn('[PushNotifications] Failed to schedule native local reminder:', err);
     }
