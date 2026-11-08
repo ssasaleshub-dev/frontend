@@ -216,8 +216,8 @@ export default function Layout() {
       {/* Apple HIG Real-Time In-App Notification Banner Popup */}
       <AppleNotificationBanner />
 
-      {/* Mobile Top Bar */}
-      <div className="md:hidden ios-glass text-slate-900 px-4 py-3 flex items-center justify-between sticky top-0 z-40 border-b border-black/[0.06]">
+      {/* Mobile Top Bar - Solid Opaque White (Zero Bleed-through) */}
+      <div className="md:hidden bg-white text-slate-900 px-4 py-3 flex items-center justify-between sticky top-0 z-40 border-b border-black/[0.08] shadow-2xs">
         <div className="flex items-center gap-2.5">
           <img src={brandLogo} alt="SSA Logo" className="w-8 h-8 rounded-xl object-cover shadow-xs border border-black/[0.06]" />
           <h1 className="font-bold text-sm tracking-tight text-slate-900 leading-tight">SSA CRM</h1>
@@ -361,8 +361,8 @@ export default function Layout() {
 
       {/* Main App Container */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Apple macOS Translucent Header */}
-        <header className="ios-glass px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-20">
+        {/* Solid Clean White Header (Zero Bleed-through) */}
+        <header className="bg-white px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-20 border-b border-black/[0.08] shadow-2xs">
           <div className="min-w-0">
             <h1 className="text-sm font-bold tracking-tight text-slate-900 leading-tight">
               {pageInfo.title}

@@ -232,7 +232,7 @@ export default function LeadReminderModal({
         aria-modal="true"
       >
         {/* Apple iOS Frosted Header */}
-        <div className="px-6 pt-3 pb-4 border-b border-black/[0.06] bg-white/80 backdrop-blur-xl flex flex-col sticky top-0 z-10">
+        <div className="px-6 pt-3 pb-4 border-b border-black/[0.06] bg-white flex flex-col sticky top-0 z-10">
           <div className="ios-sheet-grabber mb-2" />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

@@ -63,7 +63,7 @@ export default function CandidateActivityLogsModal({
         aria-modal="true"
       >
         {/* Apple iOS Frosted Header */}
-        <div className="px-6 py-4.5 border-b border-black/[0.06] bg-white/95 backdrop-blur-md flex items-center justify-between sticky top-0 z-10">
+        <div className="px-6 py-4.5 border-b border-black/[0.06] bg-white flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-black/[0.04] text-[#1c1c1e] flex items-center justify-center shadow-xs">
               <BrandActivityIcon size={18} />

@@ -141,8 +141,8 @@ export default function NotificationsPage() {
 
   return (
     <div className="w-full min-h-screen bg-white font-sf-display text-[#1d1d1f]">
-      {/* Instagram-style Top Navigation Header on Pure White */}
-      <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-black/[0.06] px-4 py-3 flex items-center justify-between">
+      {/* Top Navigation Header on Solid White */}
+      <div className="sticky top-0 z-20 bg-white border-b border-black/[0.08] px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
             type="button"
