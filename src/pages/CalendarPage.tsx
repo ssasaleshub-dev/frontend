@@ -485,19 +485,25 @@ export default function CalendarPage() {
               </button>
             </div>
 
-            {/* Indian Holiday Notice if on this day */}
+            {/* Apple iOS Holiday Item (Grouped list style with vertical Apple accent bar) */}
             {selectedDateHoliday && (
-              <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-[14px]">
-                <div className="flex items-center gap-1.5 text-[12px] font-semibold text-amber-950">
-                  <span>🇮🇳</span>
-                  <span>{selectedDateHoliday.title}</span>
-                  <span className="px-1.5 py-0.2 bg-amber-500/20 text-amber-950 rounded-full text-[9px] font-medium">
-                    {selectedDateHoliday.type}
-                  </span>
+              <div className="flex items-start gap-3 p-3 bg-white rounded-2xl border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.03)] transition-all">
+                <div className="w-1 self-stretch rounded-full bg-[#ff9500] shrink-0 my-0.5" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="text-[13px] font-semibold text-[#1c1c1e] truncate">
+                      {selectedDateHoliday.title}
+                    </h4>
+                    <span className="px-2 py-0.5 rounded-full bg-[#ff9500]/10 text-[#ff9500] text-[10px] font-semibold uppercase tracking-wider shrink-0">
+                      {selectedDateHoliday.type}
+                    </span>
+                  </div>
+                  {selectedDateHoliday.description && (
+                    <p className="text-[12px] text-[#8e8e93] mt-0.5 leading-snug font-normal">
+                      {selectedDateHoliday.description}
+                    </p>
+                  )}
                 </div>
-                <p className="text-[11px] text-amber-900 mt-1 leading-relaxed font-normal">
-                  {selectedDateHoliday.description}
-                </p>
               </div>
             )}
 
@@ -571,8 +577,8 @@ export default function CalendarPage() {
                           const rem = getRemainingTimeInfo(evt.eventDate, evt.eventTime);
                           if (!rem || rem.isPast) return null;
                           return (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.2 bg-amber-500/10 text-amber-800 rounded-full text-[9px] font-medium border border-amber-500/15">
-                              <Clock size={9} />
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#0071e3]/10 text-[#0071e3] rounded-full text-[10px] font-medium">
+                              <Clock size={10} />
                               {rem.text}
                             </span>
                           );
@@ -594,43 +600,60 @@ export default function CalendarPage() {
             </div>
           </div>
 
-          {/* Upcoming Indian Gazetted Holidays this month */}
+          {/* Upcoming Indian Holidays this month (Apple HIG Inset Grouped List) */}
           <div className="bg-white/90 backdrop-blur-xl rounded-[22px] border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-4 space-y-3">
-            <div className="flex items-center gap-1.5 pb-2 border-b border-black/[0.04]">
-              <span className="text-base">🇮🇳</span>
-              <h3 className="text-[12px] font-semibold uppercase tracking-wider text-[#1d1d1f]">
-                Indian Holidays ({MONTH_NAMES[month]})
-              </h3>
+            <div className="flex items-center justify-between pb-2 border-b border-black/[0.04]">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-[#ff9500]" />
+                <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#86868b]">
+                  Holidays • {MONTH_NAMES[month]}
+                </h3>
+              </div>
+              <span className="text-[11px] text-[#86868b] font-medium">
+                {monthlyHolidays.length} {monthlyHolidays.length === 1 ? 'holiday' : 'holidays'}
+              </span>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {monthlyHolidays.length === 0 ? (
                 <p className="text-[12px] text-[#86868b] py-2 font-normal">
-                  No gazetted public holidays in {MONTH_NAMES[month]}.
+                  No public holidays in {MONTH_NAMES[month]}.
                 </p>
               ) : (
                 monthlyHolidays.map((h) => {
                   const [hy, hm, hd] = h.date.split('-').map(Number);
                   const isHSelected = h.date === selectedDateStr;
+                  const formattedDate = new Date(hy, hm - 1, hd).toLocaleDateString('en-IN', {
+                    day: 'numeric',
+                    month: 'short',
+                  });
+
                   return (
                     <div
                       key={h.date}
                       onClick={() => handleSelectDate(h.date)}
-                      className={`p-3 rounded-[16px] border transition-all cursor-pointer ${
+                      className={`flex items-start gap-3 p-3 rounded-2xl border transition-all cursor-pointer ${
                         isHSelected
-                          ? 'bg-amber-500/10 border-amber-500/30 shadow-2xs'
-                          : 'border-black/[0.04] bg-[#fbfbfd] hover:bg-white hover:border-black/[0.08]'
+                          ? 'bg-[#0071e3]/[0.05] border-[#0071e3]/30 shadow-2xs'
+                          : 'bg-[#fbfbfd] border-black/[0.04] hover:bg-white hover:border-black/[0.08]'
                       }`}
                     >
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-semibold text-[#1d1d1f] text-[13px]">{h.title}</span>
-                        <span className="text-[11px] font-mono text-amber-900 font-semibold px-2 py-0.5 rounded-full bg-amber-500/15">
-                          {new Date(hy, hm - 1, hd).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                        </span>
+                      <div className="w-1 self-stretch rounded-full bg-[#ff9500] shrink-0 my-0.5" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-1.5">
+                          <span className="text-[13px] font-semibold text-[#1c1c1e] truncate">
+                            {h.title}
+                          </span>
+                          <span className="text-[11px] font-medium text-[#8e8e93] shrink-0">
+                            {formattedDate}
+                          </span>
+                        </div>
+                        {h.description && (
+                          <p className="text-[12px] text-[#8e8e93] mt-0.5 leading-snug line-clamp-1 font-normal">
+                            {h.description}
+                          </p>
+                        )}
                       </div>
-                      <p className="text-[12px] text-[#86868b] mt-1 leading-snug font-normal">
-                        {h.description}
-                      </p>
                     </div>
                   );
                 })
@@ -649,7 +672,7 @@ export default function CalendarPage() {
             </div>
             <div className="px-5 py-3 border-b border-black/[0.04] flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                <div className="w-7 h-7 rounded-full bg-[#ff9500]/10 text-[#ff9500] flex items-center justify-center">
                   <BrandReminderIcon size={14} strokeWidth={2} />
                 </div>
                 <h3 className="text-[15px] font-semibold text-[#1d1d1f] tracking-tight">
@@ -715,7 +738,7 @@ export default function CalendarPage() {
                   <div
                     className={`flex items-center justify-between px-3 py-2 rounded-[14px] border text-[11px] transition-all ${
                       liveRem.isPast
-                        ? 'bg-amber-500/10 border-amber-500/20 text-amber-900'
+                        ? 'bg-[#f2f2f7] border-black/[0.04] text-[#8e8e93]'
                         : 'bg-[#0071e3]/[0.07] border-[#0071e3]/20 text-[#0071e3]'
                     }`}
                   >
