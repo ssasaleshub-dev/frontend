@@ -51,7 +51,6 @@ const NOTIFICATIONS_CACHE_KEY = 'ssa_notifications_v2';
 
 class ReminderNotificationService {
   private checkInterval: any = null;
-  private syncInterval: any = null;
 
   constructor() {
     this.initDefaultData();
@@ -369,22 +368,28 @@ class ReminderNotificationService {
     } catch {}
   }
 
+  /**
+   * Directly stores incoming notification from WebSocket push without making HTTP requests
+   */
+  public addIncomingNotification(notification: NotificationDTO): void {
+    const cached = this.getCachedNotifications();
+    if (cached.some((n) => n.id === notification.id)) return;
+    cached.unshift(notification);
+    localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(cached));
+    window.dispatchEvent(new CustomEvent('ssa_notifications_updated'));
+  }
+
   // --- BACKGROUND TICKER & REAL-TIME REMINDER EVALUATOR ---
 
   public startBackgroundWorkers() {
     if (this.checkInterval) return;
 
-    // Check reminders every 25 seconds
+    // Check reminders locally in memory every 25 seconds (zero network calls)
     this.checkInterval = setInterval(() => {
       this.checkDueReminders();
     }, 25000);
 
-    // Sync with backend API every 60 seconds
-    this.syncInterval = setInterval(() => {
-      this.fetchEvents();
-      this.fetchNotifications();
-    }, 60000);
-
+    // Initial snapshot load on startup only (zero recurring polling - all real-time events use WebSocket)
     setTimeout(() => {
       this.fetchEvents();
       this.fetchNotifications();

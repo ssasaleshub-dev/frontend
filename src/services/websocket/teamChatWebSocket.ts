@@ -41,14 +41,19 @@ class TeamChatWebSocket {
   private statusListeners: Set<StatusCallback> = new Set();
 
   constructor() {
-    // Read from env or default to dedicated microservice port 8085
+    // Read from env or default to dedicated microservice
     const envUrl = (import.meta as any).env?.VITE_CHAT_WS_URL;
     if (envUrl) {
       this.url = envUrl;
     } else if (typeof window !== 'undefined') {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.hostname || 'localhost';
-      this.url = `${protocol}//${host}:8085`;
+      const isHttps = window.location.protocol === 'https:';
+      const wsProtocol = isHttps ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      const hostname = window.location.hostname;
+      const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+      this.url = isLocalhost
+        ? `ws://localhost:8085`
+        : `${wsProtocol}//${host}/ws/chat`;
     } else {
       this.url = 'ws://localhost:8085';
     }
@@ -69,7 +74,7 @@ class TeamChatWebSocket {
       this.ws.onopen = () => {
         this.isConnected = true;
         this.reconnectAttempts = 0;
-        console.log(`[TeamChatWebSocket] Connected to microservice: ${this.url}`);
+        console.log(`[TeamChatWebSocket] 🟢 Pure WebSocket connected: ${this.url}`);
         this.notifyStatus(true);
 
         // Authenticate session

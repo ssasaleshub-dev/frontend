@@ -42,9 +42,14 @@ class NotificationWebSocket {
     if (envUrl) {
       this.url = envUrl;
     } else if (typeof window !== 'undefined') {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.hostname || 'localhost';
-      this.url = `${protocol}//${host}:8086`;
+      const isHttps = window.location.protocol === 'https:';
+      const wsProtocol = isHttps ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      const hostname = window.location.hostname;
+      const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+      this.url = isLocalhost
+        ? `ws://localhost:8086`
+        : `${wsProtocol}//${host}/ws/notifications`;
     } else {
       this.url = 'ws://localhost:8086';
     }
@@ -62,7 +67,7 @@ class NotificationWebSocket {
       this.ws.onopen = () => {
         this.isConnected = true;
         this.reconnectAttempts = 0;
-        console.log(`[NotificationWebSocket] Connected to microservice: ${this.url}`);
+        console.log(`[NotificationWebSocket] 🟢 Pure WebSocket connected: ${this.url}`);
         this.notifyStatus(true);
 
         if (this.currentUser) {
@@ -86,7 +91,7 @@ class NotificationWebSocket {
       };
 
       this.ws.onerror = (err) => {
-        console.warn('[NotificationWebSocket] Warning/error:', err);
+        console.warn('[NotificationWebSocket] WebSocket status:', err);
       };
     } catch (err) {
       console.warn('[NotificationWebSocket] Connection error:', err);
@@ -98,22 +103,33 @@ class NotificationWebSocket {
     const { event, data } = frame;
 
     if (event === 'NOTIFICATION' && data) {
-      console.log('[NotificationWebSocket] Incoming notification frame:', data);
+      console.log('[NotificationWebSocket] 📨 Pure WebSocket notification received:', data);
 
-      // 1. Trigger Apple HIG in-app notification popup banner on the web app!
+      // 1. Add directly to cached notification history in memory & localStorage (zero HTTP API polling!)
+      const notifItem = {
+        id: data.id || `ws-${Date.now()}`,
+        title: data.title || 'Notification',
+        message: data.description || '',
+        type: data.type || 'SYSTEM',
+        isRead: false,
+        createdAt: data.createdAt || new Date().toISOString(),
+        referenceId: data.referenceId,
+        referenceType: data.referenceType,
+        url: data.url,
+      };
+      reminderNotificationService.addIncomingNotification(notifItem);
+
+      // 2. Trigger Apple HIG in-app notification popup banner on the web app!
       notificationBannerService.show({
-        id: data.id,
-        title: data.title,
-        description: data.description,
+        id: notifItem.id,
+        title: (data.title || 'Notification').replace(/^🔔\s*/, ''),
+        description: data.description || '',
         type: data.type || 'SYSTEM',
         timestamp: data.timestamp || 'now',
         url: data.url,
         referenceId: data.referenceId,
         referenceType: data.referenceType,
       });
-
-      // 2. Add to cached notification history in the notification bell
-      reminderNotificationService.fetchNotifications().catch(() => {});
 
       // 3. Notify subscribers
       for (const listener of this.notificationListeners) {
