@@ -169,10 +169,6 @@ export default function CalendarPage() {
     return [...prevDays, ...currentDays, ...nextDays];
   }, [year, month, daysInMonth, firstDayIndex]);
 
-  // Indian Holidays in this month
-  const monthlyHolidays = useMemo(() => {
-    return reminderNotificationService.getIndianHolidaysForMonth(year, month);
-  }, [year, month]);
 
   // Map of events keyed by date
   const eventsByDate = useMemo(() => {
@@ -300,7 +296,7 @@ export default function CalendarPage() {
             </h1>
           </div>
           <p className="text-[12px] text-[#86868b] mt-0.5 font-normal">
-            Counselor callback schedules, appointments, and Indian public holidays.
+            Counselor callback schedules and appointments.
           </p>
         </div>
 
@@ -600,66 +596,7 @@ export default function CalendarPage() {
             </div>
           </div>
 
-          {/* Upcoming Indian Holidays this month (Apple HIG Inset Grouped List) */}
-          <div className="bg-white/90 backdrop-blur-xl rounded-[22px] border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-4 space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-black/[0.04]">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-[#ff9500]" />
-                <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#86868b]">
-                  Holidays • {MONTH_NAMES[month]}
-                </h3>
-              </div>
-              <span className="text-[11px] text-[#86868b] font-medium">
-                {monthlyHolidays.length} {monthlyHolidays.length === 1 ? 'holiday' : 'holidays'}
-              </span>
-            </div>
 
-            <div className="space-y-1.5">
-              {monthlyHolidays.length === 0 ? (
-                <p className="text-[12px] text-[#86868b] py-2 font-normal">
-                  No public holidays in {MONTH_NAMES[month]}.
-                </p>
-              ) : (
-                monthlyHolidays.map((h) => {
-                  const [hy, hm, hd] = h.date.split('-').map(Number);
-                  const isHSelected = h.date === selectedDateStr;
-                  const formattedDate = new Date(hy, hm - 1, hd).toLocaleDateString('en-IN', {
-                    day: 'numeric',
-                    month: 'short',
-                  });
-
-                  return (
-                    <div
-                      key={h.date}
-                      onClick={() => handleSelectDate(h.date)}
-                      className={`flex items-start gap-3 p-3 rounded-2xl border transition-all cursor-pointer ${
-                        isHSelected
-                          ? 'bg-[#0071e3]/[0.05] border-[#0071e3]/30 shadow-2xs'
-                          : 'bg-[#fbfbfd] border-black/[0.04] hover:bg-white hover:border-black/[0.08]'
-                      }`}
-                    >
-                      <div className="w-1 self-stretch rounded-full bg-[#ff9500] shrink-0 my-0.5" />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-1.5">
-                          <span className="text-[13px] font-semibold text-[#1c1c1e] truncate">
-                            {h.title}
-                          </span>
-                          <span className="text-[11px] font-medium text-[#8e8e93] shrink-0">
-                            {formattedDate}
-                          </span>
-                        </div>
-                        {h.description && (
-                          <p className="text-[12px] text-[#8e8e93] mt-0.5 leading-snug line-clamp-1 font-normal">
-                            {h.description}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
         </div>
       </div>
 
