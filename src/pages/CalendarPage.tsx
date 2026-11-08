@@ -89,9 +89,9 @@ export default function CalendarPage() {
     return () => window.removeEventListener('ssa_events_updated', handleUpdate);
   }, [year, month]);
 
-  // Calendar Math
+  // Calendar Math & Days Generation (Apple HIG 7-column Matrix)
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const firstDayIndex = new Date(year, month, 1).getDay();
+  const firstDayIndex = new Date(year, month, 1).getDay(); // 0: Sunday
 
   const prevMonth = () => {
     setCurrentDate(new Date(year, month - 1, 1));
@@ -106,6 +106,66 @@ export default function CalendarPage() {
     setCurrentDate(today);
     setSelectedDateStr(today.toISOString().split('T')[0]);
   };
+
+  const handleSelectDate = (dateStr: string, targetYear?: number, targetMonth?: number) => {
+    setSelectedDateStr(dateStr);
+    if (targetYear !== undefined && targetMonth !== undefined && (targetYear !== year || targetMonth !== month)) {
+      setCurrentDate(new Date(targetYear, targetMonth, 1));
+    }
+  };
+
+  // Apple HIG Date Grid: Leading days, current month days, and trailing days
+  const allCalendarDays = useMemo(() => {
+    const prevMonthDaysCount = new Date(year, month, 0).getDate();
+    const prevMonthYear = month === 0 ? year - 1 : year;
+    const prevMonthMonth = month === 0 ? 11 : month - 1;
+
+    // Days from previous month
+    const prevDays = Array.from({ length: firstDayIndex }).map((_, i) => {
+      const dayNum = prevMonthDaysCount - firstDayIndex + 1 + i;
+      const dateStr = `${prevMonthYear}-${String(prevMonthMonth + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+      return {
+        dayNum,
+        dateStr,
+        isCurrentMonth: false,
+        targetYear: prevMonthYear,
+        targetMonth: prevMonthMonth,
+      };
+    });
+
+    // Days from current month
+    const currentDays = Array.from({ length: daysInMonth }).map((_, i) => {
+      const dayNum = i + 1;
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+      return {
+        dayNum,
+        dateStr,
+        isCurrentMonth: true,
+        targetYear: year,
+        targetMonth: month,
+      };
+    });
+
+    // Trailing days from next month to complete standard Apple grid
+    const totalSlots = firstDayIndex + daysInMonth <= 35 ? 35 : 42;
+    const trailingCount = totalSlots - (firstDayIndex + daysInMonth);
+    const nextMonthYear = month === 11 ? year + 1 : year;
+    const nextMonthMonth = month === 11 ? 0 : month + 1;
+
+    const nextDays = Array.from({ length: trailingCount }).map((_, i) => {
+      const dayNum = i + 1;
+      const dateStr = `${nextMonthYear}-${String(nextMonthMonth + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+      return {
+        dayNum,
+        dateStr,
+        isCurrentMonth: false,
+        targetYear: nextMonthYear,
+        targetMonth: nextMonthMonth,
+      };
+    });
+
+    return [...prevDays, ...currentDays, ...nextDays];
+  }, [year, month, daysInMonth, firstDayIndex]);
 
   // Indian Holidays in this month
   const monthlyHolidays = useMemo(() => {
@@ -138,6 +198,17 @@ export default function CalendarPage() {
   const selectedDateHoliday = useMemo(() => {
     return holidaysByDate[selectedDateStr];
   }, [holidaysByDate, selectedDateStr]);
+
+  const selectedDateDisplay = useMemo(() => {
+    if (!selectedDateStr) return '';
+    const [y, m, d] = selectedDateStr.split('-').map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString('en-IN', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  }, [selectedDateStr]);
 
   // Open modal for a specific date
   const handleOpenModal = (dateStr?: string) => {
@@ -250,155 +321,145 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* Main Grid: 8 Cols Calendar + 4 Cols Sidebar Agenda */}
+      {/* Main Grid: 7 Cols Calendar + 5 Cols Sidebar Agenda */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Calendar Grid (8 Cols) */}
-        <div className="lg:col-span-8 bg-white/90 backdrop-blur-xl rounded-[22px] border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden flex flex-col">
-          {/* Calendar Month Navigation Header */}
-          <div className="px-5 py-4 border-b border-black/[0.04] flex items-center justify-between bg-[#fbfbfd]">
+        {/* Apple HIG Inline Calendar Card (7 Cols) */}
+        <div className="lg:col-span-7 bg-white/95 backdrop-blur-xl rounded-[24px] border border-black/[0.06] shadow-[0_2px_8px_rgba(0,0,0,0.03)] p-5 sm:p-6 flex flex-col justify-between">
+          <div>
+            {/* Apple HIG Month & Navigation Header */}
+            <div className="flex items-center justify-between pb-3 mb-2">
+              <div className="flex items-center gap-2">
+                <h2 className="text-[18px] sm:text-[20px] font-semibold text-[#1d1d1f] tracking-tight">
+                  {MONTH_NAMES[month]} <span className="text-[#86868b] font-normal">{year}</span>
+                </h2>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={prevMonth}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-[#0071e3] hover:bg-[#0071e3]/10 active:scale-95 transition-all cursor-pointer"
+                  title="Previous Month"
+                  aria-label="Previous Month"
+                >
+                  <ChevronLeft size={18} strokeWidth={2.5} />
+                </button>
+                <button
+                  type="button"
+                  onClick={nextMonth}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-[#0071e3] hover:bg-[#0071e3]/10 active:scale-95 transition-all cursor-pointer"
+                  title="Next Month"
+                  aria-label="Next Month"
+                >
+                  <ChevronRight size={18} strokeWidth={2.5} />
+                </button>
+              </div>
+            </div>
+
+            {/* Apple HIG Weekday Names Header */}
+            <div className="grid grid-cols-7 text-center pb-2.5 border-b border-black/[0.04]">
+              {WEEKDAYS.map((day) => (
+                <div
+                  key={day}
+                  className="text-[11px] font-semibold tracking-wider text-[#86868b] uppercase"
+                >
+                  {day}
+                </div>
+              ))}
+            </div>
+
+            {/* Apple HIG Date Grid Matrix (No chunky badges - Pure Apple Dots) */}
+            <div className="grid grid-cols-7 gap-y-1 sm:gap-y-1.5 py-3">
+              {allCalendarDays.map((day) => {
+                const isToday = day.dateStr === todayStr;
+                const isSelected = day.dateStr === selectedDateStr;
+                const dayHoliday = holidaysByDate[day.dateStr];
+                const dayEvents = eventsByDate[day.dateStr] || [];
+
+                return (
+                  <button
+                    key={day.dateStr}
+                    type="button"
+                    onClick={() => handleSelectDate(day.dateStr, day.targetYear, day.targetMonth)}
+                    className="relative flex flex-col items-center justify-center py-1 sm:py-1.5 rounded-[14px] transition-all group hover:bg-black/[0.03] active:scale-95 focus:outline-none cursor-pointer"
+                  >
+                    {/* Apple Circular Date Indicator */}
+                    <div
+                      className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-[15px] transition-all ${
+                        isSelected
+                          ? 'bg-[#0071e3] text-white font-semibold shadow-xs scale-105'
+                          : isToday
+                          ? 'text-[#0071e3] font-bold bg-[#0071e3]/10'
+                          : day.isCurrentMonth
+                          ? 'text-[#1d1d1f] font-normal group-hover:text-black'
+                          : 'text-[#86868b]/35 font-normal'
+                      }`}
+                    >
+                      {day.dayNum}
+                    </div>
+
+                    {/* Apple Dot Indicators (Subtle HIG markers beneath date) */}
+                    <div className="h-2 flex items-center justify-center gap-1 mt-0.5">
+                      {/* Indian Holiday Dot (Amber) */}
+                      {dayHoliday && (
+                        <span
+                          className="w-1.5 h-1.5 rounded-full bg-[#ff9500] shrink-0"
+                          title={`Indian Holiday: ${dayHoliday.title}`}
+                        />
+                      )}
+
+                      {/* Event / Reminder Dots */}
+                      {dayEvents.slice(0, dayHoliday ? 2 : 3).map((evt) => (
+                        <span
+                          key={evt.id}
+                          className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                            evt.isCompleted
+                              ? 'bg-[#8e8e93]/40'
+                              : evt.priority === 'HIGH' || evt.priority === 'URGENT'
+                              ? 'bg-[#ff3b30]'
+                              : evt.eventType === 'CALL'
+                              ? 'bg-[#34c759]'
+                              : 'bg-[#0071e3]'
+                          }`}
+                          title={`${evt.title} (${evt.eventTime ? format12HourTime(evt.eventTime) : 'Anytime'})`}
+                        />
+                      ))}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Apple HIG Legend Footer */}
+          <div className="pt-3 mt-2 border-t border-black/[0.04] flex items-center justify-between text-[11px] text-[#86868b] flex-wrap gap-2">
             <div className="flex items-center gap-3">
-              <h2 className="text-[16px] font-semibold text-[#1d1d1f] tracking-tight">
-                {MONTH_NAMES[month]} {year}
-              </h2>
-              <span className="text-[11px] font-normal text-[#86868b]">
-                IST (UTC+5:30)
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#0071e3]" />
+                <span className="text-[#515154]">Reminder</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#34c759]" />
+                <span className="text-[#515154]">Call</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#ff3b30]" />
+                <span className="text-[#515154]">Urgent</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#ff9500]" />
+                <span className="text-[#515154]">Holiday</span>
               </span>
             </div>
 
-            <div className="flex items-center gap-1 bg-black/[0.04] rounded-full p-0.5">
-              <button
-                type="button"
-                onClick={prevMonth}
-                className="w-7 h-7 flex items-center justify-center text-[#1d1d1f] hover:bg-white rounded-full transition-all shadow-2xs"
-                title="Previous Month"
-              >
-                <ChevronLeft size={15} strokeWidth={2.5} />
-              </button>
-              <button
-                type="button"
-                onClick={nextMonth}
-                className="w-7 h-7 flex items-center justify-center text-[#1d1d1f] hover:bg-white rounded-full transition-all shadow-2xs"
-                title="Next Month"
-              >
-                <ChevronRight size={15} strokeWidth={2.5} />
-              </button>
-            </div>
-          </div>
-
-          {/* Weekday Names Header */}
-          <div className="grid grid-cols-7 border-b border-black/[0.04] bg-[#fbfbfd]/70 text-center text-[11px] font-medium text-[#86868b] py-2">
-            {WEEKDAYS.map((day, idx) => (
-              <div key={day} className={idx === 0 ? 'text-[#ff3b30]' : ''}>
-                {day}
-              </div>
-            ))}
-          </div>
-
-          {/* Day Cells Grid */}
-          <div className="grid grid-cols-7 flex-1 divide-x divide-y divide-slate-100 bg-slate-50/30">
-            {/* Blank leading days from previous month */}
-            {Array.from({ length: firstDayIndex }).map((_, i) => (
-              <div key={`blank-${i}`} className="min-h-[96px] bg-slate-50/60 p-1.5 opacity-40 select-none" />
-            ))}
-
-            {/* Days of current month */}
-            {Array.from({ length: daysInMonth }).map((_, i) => {
-              const dayNum = i + 1;
-              const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-              const isToday = dateStr === todayStr;
-              const isSelected = dateStr === selectedDateStr;
-              const dayHoliday = holidaysByDate[dateStr];
-              const dayEvents = eventsByDate[dateStr] || [];
-
-              return (
-                <div
-                  key={dateStr}
-                  onClick={() => setSelectedDateStr(dateStr)}
-                  className={`min-h-[96px] p-1.5 transition-colors cursor-pointer group flex flex-col justify-between ${
-                    isSelected
-                      ? 'bg-blue-50/40 ring-1 ring-inset ring-blue-500'
-                      : isToday
-                      ? 'bg-amber-50/30'
-                      : 'bg-white hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span
-                      className={`w-6 h-6 rounded-full flex items-center justify-center text-[12px] font-semibold transition-all ${
-                        isToday
-                          ? 'bg-[#0071e3] text-white shadow-2xs'
-                          : isSelected
-                          ? 'bg-[#1d1d1f] text-white shadow-2xs'
-                          : 'text-[#1d1d1f]'
-                      }`}
-                    >
-                      {dayNum}
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenModal(dateStr);
-                      }}
-                      title="Add reminder for this day"
-                      className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center hover:bg-black/[0.06] rounded-full text-[#86868b] hover:text-[#1d1d1f] transition-all"
-                    >
-                      <Plus size={11} strokeWidth={2.5} />
-                    </button>
-                  </div>
-
-                  {/* Day Content Badges */}
-                  <div className="space-y-1 mt-1 flex-1 overflow-hidden">
-                    {/* Indian Holiday Badge */}
-                    {dayHoliday && (
-                      <div
-                        title={`Indian Holiday: ${dayHoliday.title} (${dayHoliday.description})`}
-                        className="px-1.5 py-0.5 bg-amber-500/10 text-amber-900 border border-amber-500/20 rounded-[6px] text-[9px] font-medium truncate flex items-center gap-1"
-                      >
-                        <span className="shrink-0">🇮🇳</span>
-                        <span className="truncate">{dayHoliday.title}</span>
-                      </div>
-                    )}
-
-                    {/* Events & Reminders */}
-                    {dayEvents.slice(0, 2).map((evt) => (
-                      <div
-                        key={evt.id}
-                        title={`${evt.title} (${evt.eventTime ? format12HourTime(evt.eventTime) : 'Anytime'})`}
-                        className={`px-1.5 py-0.5 rounded text-[10px] font-medium truncate flex items-center gap-1 ${
-                          evt.isCompleted
-                            ? 'bg-slate-100 text-slate-400 line-through'
-                            : evt.eventType === 'CALL'
-                            ? 'bg-sky-50 text-sky-800 border border-sky-200'
-                            : evt.priority === 'HIGH' || evt.priority === 'URGENT'
-                            ? 'bg-rose-50 text-rose-800 border border-rose-200'
-                            : 'bg-slate-100 text-slate-800 border border-slate-200'
-                        }`}
-                      >
-                        {evt.eventType === 'CALL' ? (
-                          <Phone size={9} className="shrink-0" />
-                        ) : (
-                          <Clock size={9} className="shrink-0" />
-                        )}
-                        <span className="truncate">{evt.title}</span>
-                      </div>
-                    ))}
-
-                    {dayEvents.length > 2 && (
-                      <div className="text-[9px] text-slate-400 font-medium pl-1">
-                        +{dayEvents.length - 2} more
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+            <span className="font-mono text-[10px] text-[#86868b]">
+              IST (Asia/Kolkata)
+            </span>
           </div>
         </div>
 
-        {/* Right Sidebar: Selected Day Agenda & Indian Holidays (4 Cols) */}
-        <div className="lg:col-span-4 space-y-4">
+        {/* Right Sidebar: Selected Day Agenda & Indian Holidays (5 Cols) */}
+        <div className="lg:col-span-5 space-y-4">
           {/* Selected Date Dossier / Reminders */}
           <div className="bg-white/90 backdrop-blur-xl rounded-[22px] border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-4 space-y-3.5">
             <div className="flex items-center justify-between pb-2.5 border-b border-black/[0.04]">
@@ -407,13 +468,7 @@ export default function CalendarPage() {
                   Daily Agenda
                 </h3>
                 <p className="text-[15px] font-semibold text-[#1d1d1f] mt-0.5">
-                  {new Date(selectedDateStr).toLocaleDateString('en-IN', {
-                    timeZone: IST_TIMEZONE,
-                    weekday: 'short',
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                  })}
+                  {selectedDateDisplay}
                 </p>
               </div>
 
@@ -551,23 +606,31 @@ export default function CalendarPage() {
                   No gazetted public holidays in {MONTH_NAMES[month]}.
                 </p>
               ) : (
-                monthlyHolidays.map((h) => (
-                  <div
-                    key={h.date}
-                    onClick={() => setSelectedDateStr(h.date)}
-                    className="p-2.5 rounded-[14px] border border-black/[0.03] hover:border-amber-500/30 hover:bg-amber-500/5 transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium text-[#1d1d1f] text-[12px]">{h.title}</span>
-                      <span className="text-[10px] font-mono text-amber-900 font-semibold">
-                        {new Date(h.date).toLocaleDateString('en-IN', { timeZone: IST_TIMEZONE, day: 'numeric', month: 'short' })}
-                      </span>
+                monthlyHolidays.map((h) => {
+                  const [hy, hm, hd] = h.date.split('-').map(Number);
+                  const isHSelected = h.date === selectedDateStr;
+                  return (
+                    <div
+                      key={h.date}
+                      onClick={() => handleSelectDate(h.date)}
+                      className={`p-3 rounded-[16px] border transition-all cursor-pointer ${
+                        isHSelected
+                          ? 'bg-amber-500/10 border-amber-500/30 shadow-2xs'
+                          : 'border-black/[0.04] bg-[#fbfbfd] hover:bg-white hover:border-black/[0.08]'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-[#1d1d1f] text-[13px]">{h.title}</span>
+                        <span className="text-[11px] font-mono text-amber-900 font-semibold px-2 py-0.5 rounded-full bg-amber-500/15">
+                          {new Date(hy, hm - 1, hd).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                        </span>
+                      </div>
+                      <p className="text-[12px] text-[#86868b] mt-1 leading-snug font-normal">
+                        {h.description}
+                      </p>
                     </div>
-                    <p className="text-[11px] text-[#86868b] mt-0.5 leading-snug font-normal">
-                      {h.description}
-                    </p>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
