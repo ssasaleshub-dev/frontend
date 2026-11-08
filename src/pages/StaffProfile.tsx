@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -14,7 +15,7 @@ import {
   FileSpreadsheet,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getDisplayName, getRoleBadgeInfo } from '../utils/rbac';
+import { getDisplayName, getRoleBadgeInfo, isAdmin as checkIsAdmin } from '../utils/rbac';
 import attendanceService, { StaffAttendanceRecord } from '../services/api/attendanceService';
 import fileService from '../services/api/fileService';
 import { formatIndianTime } from '../utils/dateTimeUtils';
@@ -27,6 +28,15 @@ const MONTH_NAMES = [
 
 export default function StaffProfile() {
   const { user, updateUserAvatar } = useAuth();
+  const navigate = useNavigate();
+  const isAdmin = checkIsAdmin(user);
+
+  useEffect(() => {
+    if (isAdmin) {
+      navigate('/users', { replace: true });
+    }
+  }, [isAdmin, navigate]);
+
   const displayName = getDisplayName(user);
   const badgeInfo = getRoleBadgeInfo(user);
   const userInitial = (displayName?.[0] || 'S').toUpperCase();
@@ -51,7 +61,7 @@ export default function StaffProfile() {
   const month = currentMonthDate.getMonth();
 
   const loadAttendance = async () => {
-    if (!userId) return;
+    if (!userId || isAdmin) return;
     setLoading(true);
     try {
       const [today, records] = await Promise.all([
@@ -253,6 +263,10 @@ export default function StaffProfile() {
   };
 
   const selectedRecord = attendanceByDate.get(selectedDateStr);
+
+  if (isAdmin) {
+    return null;
+  }
 
   return (
     <div className="space-y-5 max-w-5xl mx-auto pb-12">

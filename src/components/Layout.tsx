@@ -164,13 +164,17 @@ export default function Layout() {
       to: '/notifications',
       exact: false,
     },
-    {
-      id: 'profile',
-      label: 'My Profile Desk',
-      icon: User,
-      to: '/profile',
-      exact: false,
-    },
+    ...(!isAdmin
+      ? [
+          {
+            id: 'profile',
+            label: 'My Profile Desk',
+            icon: User,
+            to: '/profile',
+            exact: false,
+          },
+        ]
+      : []),
     ...(isAdmin
       ? [
           {
@@ -332,9 +336,9 @@ export default function Layout() {
             {!sidebarCollapsed && (
               <button
                 type="button"
-                onClick={() => navigate('/profile')}
+                onClick={() => navigate(isAdmin ? '/users' : '/profile')}
                 className="min-w-0 flex-1 text-left focus:outline-none group"
-                title="View Staff Profile & Shift Desk"
+                title={isAdmin ? "View User Management" : "View Staff Profile & Shift Desk"}
               >
                 <p className="text-xs font-semibold text-white truncate leading-tight group-hover:text-blue-300 transition-colors">
                   {displayName}
@@ -373,50 +377,52 @@ export default function Layout() {
           </div>
 
           <div className="flex items-center gap-2.5">
-            {/* Quick Attendance Punch Pill */}
-            {todayAttendance?.checkInTime && !todayAttendance?.checkOutTime ? (
-              <button
-                type="button"
-                onClick={() => navigate('/attendance')}
-                className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-600/20 bg-emerald-500/[0.08] hover:bg-emerald-500/[0.14] text-emerald-950 text-xs font-medium shadow-xs transition-all active:scale-95 group"
-                title="Shift active - Click to view attendance"
-              >
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-60" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
-                </span>
-                <span className="font-semibold text-emerald-900 tracking-tight">On Duty</span>
-                {todayAttendance?.checkInTime && (
-                  <span className="text-[11px] text-emerald-700/80 font-mono pl-1 border-l border-emerald-600/20">
-                    {formatIndianTime(todayAttendance.checkInTime)}
+            {/* Quick Attendance Punch Pill (Staff / Counselors Only) */}
+            {!isAdmin && (
+              todayAttendance?.checkInTime && !todayAttendance?.checkOutTime ? (
+                <button
+                  type="button"
+                  onClick={() => navigate('/attendance')}
+                  className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-600/20 bg-emerald-500/[0.08] hover:bg-emerald-500/[0.14] text-emerald-950 text-xs font-medium shadow-xs transition-all active:scale-95 group"
+                  title="Shift active - Click to view attendance"
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-60" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
                   </span>
-                )}
-              </button>
-            ) : todayAttendance?.checkOutTime ? (
-              <button
-                type="button"
-                onClick={() => navigate('/attendance')}
-                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200/80 bg-slate-100/70 hover:bg-slate-200/60 text-slate-700 text-xs font-medium shadow-xs transition-all active:scale-95"
-                title="Today's shift completed"
-              >
-                <CheckCircle2 size={13} className="text-emerald-600" />
-                <span>Shift Completed</span>
-                {todayAttendance.totalHoursFormatted && (
-                  <span className="text-[11px] text-slate-500 font-mono pl-1 border-l border-slate-300">
-                    {todayAttendance.totalHoursFormatted}
-                  </span>
-                )}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => navigate('/attendance')}
-                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 bg-white/80 hover:bg-white text-slate-700 text-xs font-medium shadow-xs transition-all active:scale-95 backdrop-blur-md"
-                title="Punch in for today's shift"
-              >
-                <Clock size={13} className="text-slate-500" />
-                <span>Punch In</span>
-              </button>
+                  <span className="font-semibold text-emerald-900 tracking-tight">On Duty</span>
+                  {todayAttendance?.checkInTime && (
+                    <span className="text-[11px] text-emerald-700/80 font-mono pl-1 border-l border-emerald-600/20">
+                      {formatIndianTime(todayAttendance.checkInTime)}
+                    </span>
+                  )}
+                </button>
+              ) : todayAttendance?.checkOutTime ? (
+                <button
+                  type="button"
+                  onClick={() => navigate('/attendance')}
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200/80 bg-slate-100/70 hover:bg-slate-200/60 text-slate-700 text-xs font-medium shadow-xs transition-all active:scale-95"
+                  title="Today's shift completed"
+                >
+                  <CheckCircle2 size={13} className="text-emerald-600" />
+                  <span>Shift Completed</span>
+                  {todayAttendance.totalHoursFormatted && (
+                    <span className="text-[11px] text-slate-500 font-mono pl-1 border-l border-slate-300">
+                      {todayAttendance.totalHoursFormatted}
+                    </span>
+                  )}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => navigate('/attendance')}
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 bg-white/80 hover:bg-white text-slate-700 text-xs font-medium shadow-xs transition-all active:scale-95 backdrop-blur-md"
+                  title="Punch in for today's shift"
+                >
+                  <Clock size={13} className="text-slate-500" />
+                  <span>Punch In</span>
+                </button>
+              )
             )}
 
             {isAdmin && (
@@ -492,14 +498,25 @@ export default function Layout() {
 
                     {/* Menu items */}
                     <div className="py-1.5">
-                      <button
-                        type="button"
-                        onClick={() => { navigate('/profile'); setUserMenuOpen(false); }}
-                        className="w-full px-4 py-2.5 text-left text-xs font-medium text-[#1c1c1e] hover:bg-[#f2f2f7] flex items-center gap-2.5 transition-colors"
-                      >
-                        <User size={14} className="text-[#8e8e93]" />
-                        View Profile
-                      </button>
+                      {isAdmin ? (
+                        <button
+                          type="button"
+                          onClick={() => { navigate('/users'); setUserMenuOpen(false); }}
+                          className="w-full px-4 py-2.5 text-left text-xs font-medium text-[#1c1c1e] hover:bg-[#f2f2f7] flex items-center gap-2.5 transition-colors"
+                        >
+                          <UserCog size={14} className="text-[#8e8e93]" />
+                          User Management
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => { navigate('/profile'); setUserMenuOpen(false); }}
+                          className="w-full px-4 py-2.5 text-left text-xs font-medium text-[#1c1c1e] hover:bg-[#f2f2f7] flex items-center gap-2.5 transition-colors"
+                        >
+                          <User size={14} className="text-[#8e8e93]" />
+                          View Profile
+                        </button>
+                      )}
                     </div>
 
                     {/* Logout - red destructive at bottom */}
