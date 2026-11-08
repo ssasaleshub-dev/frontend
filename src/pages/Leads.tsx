@@ -1180,10 +1180,9 @@ export default function Leads() {
             notes: leadItem.notes || '',
           });
         }}
-        className="inline-flex items-center gap-1.5 text-xs hover:underline cursor-pointer"
+        className="text-xs hover:underline cursor-pointer"
         title="Click to update stage"
       >
-        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColor}`} />
         <span className={textColor}>{label}</span>
       </span>
     );
@@ -1211,14 +1210,12 @@ export default function Leads() {
         <div className="flex flex-col items-start gap-1">
           {b && <span className="font-semibold text-[#007aff]">₹{b}</span>}
           {p === 'PAID' && (
-            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            <span className="text-[11px] font-semibold text-emerald-700">
               Paid
             </span>
           )}
           {p === 'PARTIAL' && (
-            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-700">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+            <span className="text-[11px] font-medium text-amber-700">
               Partial
             </span>
           )}
@@ -1671,24 +1668,21 @@ export default function Leads() {
                                 const q = getLeadQuality(lead);
                                 if (q === 'Hot') {
                                   return (
-                                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#ff3b30]">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-[#ff3b30]" />
+                                    <span className="text-xs font-semibold text-[#ff3b30]">
                                       Hot
                                     </span>
                                   );
                                 }
                                 if (q === 'Warm') {
                                   return (
-                                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#ff9500]">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-[#ff9500]" />
+                                    <span className="text-xs font-semibold text-[#ff9500]">
                                       Warm
                                     </span>
                                   );
                                 }
                                 if (q === 'Cold') {
                                   return (
-                                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#8e8e93]">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-[#8e8e93]" />
+                                    <span className="text-xs font-medium text-[#8e8e93]">
                                       Cold
                                     </span>
                                   );

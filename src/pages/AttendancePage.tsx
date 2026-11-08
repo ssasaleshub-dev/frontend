@@ -345,11 +345,7 @@ export default function AttendancePage() {
                 <h2 className="text-base font-bold text-slate-900">{displayName}</h2>
                 <span className="text-xs text-slate-500 font-medium">({badgeInfo.displayText})</span>
                 {isWorkingNow ? (
-                  <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-600/20 bg-emerald-500/[0.08] text-emerald-950 text-xs font-medium shadow-xs">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-60" />
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
-                    </span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-emerald-600/20 bg-emerald-500/[0.08] text-emerald-950 text-xs font-medium shadow-xs">
                     <span className="font-semibold text-emerald-900 tracking-tight">On Duty</span>
                     <span className="text-[11px] text-emerald-700/80 font-mono pl-1 border-l border-emerald-600/20">
                       {liveDuration || 'Shift Active'}
@@ -416,11 +412,7 @@ export default function AttendancePage() {
 
           <div className="p-4 rounded-3xl bg-white border border-black/[0.06] shadow-xs">
             <span className="text-[11px] font-semibold text-slate-500 block">On Duty Now</span>
-            <span className="text-xl font-bold text-emerald-600 mt-1 flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-60" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
-              </span>
+            <span className="text-xl font-bold text-emerald-600 mt-1 block">
               {adminSummary?.currentlyWorking ?? 0}
             </span>
             <span className="text-[10px] text-slate-400 mt-0.5 block">Active on shift</span>
@@ -665,8 +657,7 @@ export default function AttendancePage() {
                       {/* Duration */}
                       <td className="py-3.5 px-4 font-semibold text-slate-900 whitespace-nowrap">
                         {isStaffWorkingNow ? (
-                          <span className="inline-flex items-center gap-1.5 text-emerald-600 font-semibold">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                          <span className="text-emerald-600 font-semibold">
                             In Progress
                           </span>
                         ) : (
@@ -677,28 +668,23 @@ export default function AttendancePage() {
                       {/* Status */}
                       <td className="py-3.5 px-4 whitespace-nowrap">
                         {isStaffWorkingNow ? (
-                          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          <span className="text-xs font-semibold text-emerald-700">
                             On Duty
                           </span>
                         ) : rec.status === 'LATE' ? (
-                          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                          <span className="text-xs font-medium text-amber-700">
                             Late Arrival
                           </span>
                         ) : rec.status === 'HALF_DAY' ? (
-                          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-700">
-                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                          <span className="text-xs font-medium text-indigo-700">
                             Half Day
                           </span>
                         ) : rec.status === 'OVERTIME' ? (
-                          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-purple-700">
-                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                          <span className="text-xs font-medium text-purple-700">
                             Overtime
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          <span className="text-xs font-medium text-emerald-700">
                             Present
                           </span>
                         )}

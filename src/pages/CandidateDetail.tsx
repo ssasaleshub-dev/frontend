@@ -1325,23 +1325,20 @@ export default function CandidateDetail() {
                     const st = ((lead as any).paymentStatus || 'UNPAID').toUpperCase();
                     if (st === 'PAID') {
                       return (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        <span className="text-xs font-semibold text-emerald-700">
                           Fully Paid
                         </span>
                       );
                     }
                     if (st === 'PARTIAL') {
                       return (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                        <span className="text-xs font-medium text-amber-700">
                           Partially Paid
                         </span>
                       );
                     }
                     return (
-                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500">
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                      <span className="text-xs font-medium text-slate-500">
                         Not Paid
                       </span>
                     );

@@ -403,8 +403,7 @@ export default function Dashboard() {
             <div className="text-2xl sm:text-3xl font-bold text-[#1c1c1e] tracking-tight">
               {metrics.total}
             </div>
-            <div className="mt-1 flex items-center gap-1.5 text-xs text-[#8e8e93] font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#007aff]" />
+            <div className="mt-1 text-xs text-[#8e8e93] font-medium">
               <span>{metrics.statusCounts.CREATED || 0} awaiting contact</span>
             </div>
           </div>
@@ -429,8 +428,7 @@ export default function Dashboard() {
             <div className="text-2xl sm:text-3xl font-bold text-[#1c1c1e] tracking-tight">
               {deskFilter === 'ALL' && isAdmin ? metrics.workVisaCount : metrics.contactedOrQualified}
             </div>
-            <div className="mt-1 text-xs text-[#8e8e93] font-medium truncate flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#5856d6]" />
+            <div className="mt-1 text-xs text-[#8e8e93] font-medium truncate">
               <span>
                 {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
                   ? 'Course & eligibility prep'
@@ -467,8 +465,7 @@ export default function Dashboard() {
             <div className="text-2xl sm:text-3xl font-bold text-[#1c1c1e] tracking-tight">
               {deskFilter === 'ALL' && isAdmin ? metrics.studyVisaCount : metrics.inProcessCount}
             </div>
-            <div className="mt-1 text-xs text-[#8e8e93] font-medium truncate flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#34c759]" />
+            <div className="mt-1 text-xs text-[#8e8e93] font-medium truncate">
               <span>
                 {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
                   ? 'University offers & dossiers'
@@ -504,8 +501,7 @@ export default function Dashboard() {
                 ({metrics.conversionRate}% conversion)
               </span>
             </div>
-            <div className="mt-1 text-xs text-[#8e8e93] font-medium flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#ff9500]" />
+            <div className="mt-1 text-xs text-[#8e8e93] font-medium">
               <span>{metrics.inProcessCount} dossiers in process</span>
             </div>
           </div>

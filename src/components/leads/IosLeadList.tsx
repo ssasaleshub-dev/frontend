@@ -300,7 +300,7 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
                   )}
                   {quality !== '—' && (
                     <span
-                      className={`inline-flex items-center gap-1 text-[11px] font-semibold shrink-0 ${
+                      className={`text-[11px] font-semibold shrink-0 ${
                         quality === 'Hot'
                           ? 'text-[#ff3b30]'
                           : quality === 'Warm'
@@ -308,16 +308,7 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
                           : 'text-[#8e8e93]'
                       }`}
                     >
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                          quality === 'Hot'
-                            ? 'bg-[#ff3b30]'
-                            : quality === 'Warm'
-                            ? 'bg-[#ff9500]'
-                            : 'bg-[#8e8e93]'
-                        }`}
-                      />
-                      <span>{quality}</span>
+                      {quality}
                     </span>
                   )}
                 </div>
@@ -348,10 +339,9 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
                   <button
                     type="button"
                     onClick={(e) => onOpenStatusModal(lead, e)}
-                    className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[#1c1c1e] hover:underline cursor-pointer"
+                    className="text-[11px] font-medium hover:underline cursor-pointer"
                     title="Click to update stage"
                   >
-                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${stageDotColor}`} />
                     <span className={stageTextColor}>{stageLabel}</span>
                   </button>
                   {b && (
@@ -380,13 +370,11 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
                   )}
                   <span>·</span>
                   {p === 'PAID' ? (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <span className="text-[11px] font-semibold text-emerald-700">
                       Paid
                     </span>
                   ) : p === 'PARTIAL' ? (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-700">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                    <span className="text-[11px] font-medium text-amber-700">
                       Partial
                     </span>
                   ) : (
@@ -405,10 +393,9 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
                 <button
                   type="button"
                   onClick={(e) => onOpenStatusModal(lead, e)}
-                  className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#1c1c1e] hover:underline cursor-pointer"
+                  className="text-[12px] font-medium hover:underline cursor-pointer"
                   title="Click to update stage"
                 >
-                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${stageDotColor}`} />
                   <span className={stageTextColor}>{stageLabel}</span>
                 </button>
                 <span className="text-[11px] text-[#8e8e93] mt-1 font-mono">

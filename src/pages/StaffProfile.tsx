@@ -323,11 +323,7 @@ export default function StaffProfile() {
           <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-100">
             {isWorkingNow ? (
               <div className="flex items-center gap-3">
-                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-600/20 bg-emerald-500/[0.08] text-emerald-950 text-xs font-medium shadow-xs">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-60" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
-                  </span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-600/20 bg-emerald-500/[0.08] text-emerald-950 text-xs font-medium shadow-xs">
                   <span className="font-semibold text-emerald-900 tracking-tight">On Duty</span>
                   <span className="text-[11px] text-emerald-700/80 font-mono pl-1 border-l border-emerald-600/20">
                     Since {formatTime(todayRecord?.checkInTime)}
@@ -401,13 +397,11 @@ export default function StaffProfile() {
 
           {/* Quick Summary Badges */}
           <div className="flex items-center gap-3 text-xs flex-wrap">
-            <span className="flex items-center gap-1.5 font-semibold text-slate-700">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              Present: <strong>{monthlyStats.presentDays}</strong> days
+            <span className="font-semibold text-slate-700">
+              Present: <strong className="text-emerald-700">{monthlyStats.presentDays}</strong> days
             </span>
-            <span className="flex items-center gap-1.5 font-semibold text-slate-700">
-              <span className="w-2 h-2 rounded-full bg-amber-500" />
-              Late: <strong>{monthlyStats.lateDays}</strong>
+            <span className="font-semibold text-slate-700">
+              Late: <strong className="text-amber-700">{monthlyStats.lateDays}</strong>
             </span>
             <span className="flex items-center gap-1.5 font-semibold text-slate-700">
               <Clock size={12} className="text-[#007aff]" />
@@ -467,15 +461,8 @@ export default function StaffProfile() {
 
                     {/* Status on Day */}
                     {hasCheckedIn && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-medium">
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                            rec?.status === 'LATE' ? 'bg-amber-500' : 'bg-emerald-500'
-                          }`}
-                        />
-                        <span className={rec?.status === 'LATE' ? 'text-amber-700' : 'text-emerald-700 font-semibold'}>
-                          {rec?.status === 'LATE' ? 'Late' : 'Present'}
-                        </span>
+                      <span className={`text-[10px] font-semibold ${rec?.status === 'LATE' ? 'text-amber-700' : 'text-emerald-700'}`}>
+                        {rec?.status === 'LATE' ? 'Late' : 'Present'}
                       </span>
                     )}
                   </div>

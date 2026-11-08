@@ -386,10 +386,6 @@ export default function Layout() {
                   className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-600/20 bg-emerald-500/[0.08] hover:bg-emerald-500/[0.14] text-emerald-950 text-xs font-medium shadow-xs transition-all active:scale-95 group"
                   title="Shift active - Click to view attendance"
                 >
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-60" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
-                  </span>
                   <span className="font-semibold text-emerald-900 tracking-tight">On Duty</span>
                   {todayAttendance?.checkInTime && (
                     <span className="text-[11px] text-emerald-700/80 font-mono pl-1 border-l border-emerald-600/20">
