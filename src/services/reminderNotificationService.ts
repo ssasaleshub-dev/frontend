@@ -264,33 +264,53 @@ class ReminderNotificationService {
     return true;
   }
 
+  public getCurrentUserLogin(): string {
+    try {
+      const stored = localStorage.getItem('ssa_user') || localStorage.getItem('user');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.login) return parsed.login;
+      }
+    } catch {}
+    return 'admin';
+  }
+
   // --- INTERNAL NOTIFICATIONS (DYNAMIC API WITH FALLBACK) ---
 
-  public async fetchNotifications(): Promise<NotificationDTO[]> {
+  public async fetchNotifications(userId?: string): Promise<NotificationDTO[]> {
+    const targetUser = userId || this.getCurrentUserLogin();
     try {
-      const serverNotifs = await notificationApiService.getNotifications();
+      const serverNotifs = await notificationApiService.getNotifications(targetUser);
       if (Array.isArray(serverNotifs)) {
-        localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(serverNotifs));
+        // Strictly filter to notifications intended for targetUser
+        const userNotifs = targetUser
+          ? serverNotifs.filter((n) => !n.userId || n.userId === targetUser || n.userId === 'all')
+          : serverNotifs;
+        localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(userNotifs));
         window.dispatchEvent(new CustomEvent('ssa_notifications_updated'));
-        return serverNotifs;
+        return userNotifs;
       }
     } catch {}
 
-    return this.getCachedNotifications();
+    return this.getCachedNotifications(targetUser);
   }
 
-  public getCachedNotifications(): NotificationDTO[] {
+  public getCachedNotifications(userId?: string): NotificationDTO[] {
     try {
       const raw = localStorage.getItem(NOTIFICATIONS_CACHE_KEY);
       const list: NotificationDTO[] = raw ? JSON.parse(raw) : [];
-      return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      const targetUser = userId || this.getCurrentUserLogin();
+      const filtered = targetUser
+        ? list.filter((n) => !n.userId || n.userId === targetUser || n.userId === 'all')
+        : list;
+      return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     } catch {
       return [];
     }
   }
 
-  public getUnreadNotificationCount(): number {
-    return this.getCachedNotifications().filter((n) => !n.isRead).length;
+  public getUnreadNotificationCount(userId?: string): number {
+    return this.getCachedNotifications(userId).filter((n) => !n.isRead).length;
   }
 
   public addNotification(notification: Omit<NotificationDTO, 'id' | 'createdAt' | 'isRead'>): NotificationDTO {
@@ -372,6 +392,10 @@ class ReminderNotificationService {
    * Directly stores incoming notification from WebSocket push without making HTTP requests
    */
   public addIncomingNotification(notification: NotificationDTO): void {
+    const currentLogin = this.getCurrentUserLogin();
+    if (notification.userId && notification.userId !== currentLogin && notification.userId !== 'all') {
+      return; // Do not store or display another user's private notification
+    }
     const cached = this.getCachedNotifications();
     if (cached.some((n) => n.id === notification.id)) return;
     cached.unshift(notification);
@@ -405,6 +429,12 @@ class ReminderNotificationService {
     events.forEach((evt) => {
       if (evt.isCompleted || evt.notificationSent) return;
 
+      // Only alert the user who owns or was assigned this reminder!
+      const currentLogin = this.getCurrentUserLogin();
+      if (evt.userId && evt.userId !== currentLogin && currentLogin !== 'admin') {
+        return;
+      }
+
       try {
         const timePart = evt.eventTime || '09:00';
         const [hours, minutes] = timePart.split(':').map(Number);
@@ -421,10 +451,16 @@ class ReminderNotificationService {
           evt.notificationSent = true;
           updated = true;
 
+          const rawCandidate = evt.candidateName;
+          const cleanCandidate = rawCandidate ? rawCandidate.replace(/^Candidate:\s*/i, '').trim() : '';
           const formattedTime12h = format12HourTime(timePart);
-          const msg = evt.candidateName
-            ? `Reminder: "${evt.title}" for candidate ${evt.candidateName} scheduled at ${formattedTime12h}.`
-            : `Reminder: "${evt.title}" scheduled for ${formattedTime12h}.`;
+
+          let msg = evt.description && evt.description.trim() ? evt.description.trim() : '';
+          if (!msg) {
+            msg = cleanCandidate
+              ? `Reminder for ${cleanCandidate} scheduled at ${formattedTime12h}.`
+              : `Reminder scheduled for ${formattedTime12h}.`;
+          }
 
           this.addNotification({
             userId: evt.userId,

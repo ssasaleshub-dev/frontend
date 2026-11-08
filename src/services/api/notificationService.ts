@@ -66,12 +66,12 @@ export const notificationApiService = {
   },
 
   // --- Internal Notifications Inbox ---
-  getNotifications: async (): Promise<NotificationDTO[]> => {
-    return axiosClient.get('/api/notifications');
+  getNotifications: async (userId?: string): Promise<NotificationDTO[]> => {
+    return axiosClient.get('/api/notifications', { params: userId ? { userId } : {} });
   },
 
-  getUnreadCount: async (): Promise<{ count: number }> => {
-    return axiosClient.get('/api/notifications/unread-count');
+  getUnreadCount: async (userId?: string): Promise<{ count: number }> => {
+    return axiosClient.get('/api/notifications/unread-count', { params: userId ? { userId } : {} });
   },
 
   markAsRead: async (id: string): Promise<any> => {

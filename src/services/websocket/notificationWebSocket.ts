@@ -103,11 +103,19 @@ class NotificationWebSocket {
     const { event, data } = frame;
 
     if (event === 'NOTIFICATION' && data) {
+      // Never display another user's private notification
+      const targetUser = data.targetUserId || data.targetUserLogin || data.userId;
+      const currentLogin = this.currentUser?.login;
+      if (targetUser && currentLogin && String(targetUser).toLowerCase() !== currentLogin.toLowerCase() && currentLogin !== 'admin') {
+        return;
+      }
+
       console.log('[NotificationWebSocket] 📨 Pure WebSocket notification received:', data);
 
       // 1. Add directly to cached notification history in memory & localStorage (zero HTTP API polling!)
       const notifItem = {
         id: data.id || `ws-${Date.now()}`,
+        userId: targetUser ? String(targetUser) : undefined,
         title: data.title || 'Notification',
         message: data.description || '',
         type: data.type || 'SYSTEM',
