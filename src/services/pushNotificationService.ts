@@ -222,7 +222,7 @@ class PushNotificationService {
 
       const notificationsToSchedule: any[] = [];
 
-      // 1. If triggerTime is in the future, schedule native alarm
+      // 1. Schedule native alarm at triggerTime (only the original reminder when due)
       if (triggerTime.getTime() > now.getTime()) {
         notificationsToSchedule.push({
           id: notifId,
@@ -238,20 +238,6 @@ class PushNotificationService {
         });
         console.info('[PushNotifications] Native reminder alarm scheduled for:', triggerTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true }));
       }
-
-      // 2. Immediate heads-up push confirmation on Android device confirming reminder was set
-      notificationsToSchedule.push({
-        id: notifId + 1,
-        title: `✅ Reminder Set: ${event.title}`,
-        body: `Scheduled for ${event.eventDate} at ${formattedTime}${candidateText} (Alert active)`,
-        channelId: 'fcm_default_channel',
-        schedule: { at: new Date(Date.now() + 500) },
-        sound: 'default',
-        extra: {
-          leadId: event.candidateId,
-          eventId: event.id,
-        },
-      });
 
       if (notificationsToSchedule.length > 0) {
         await LocalNotifications.schedule({ notifications: notificationsToSchedule });

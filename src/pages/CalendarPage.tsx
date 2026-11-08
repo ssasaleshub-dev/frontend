@@ -60,7 +60,7 @@ export default function CalendarPage() {
     eventType: 'REMINDER' as EventType,
     priority: 'MEDIUM' as EventPriority,
     candidateName: '',
-    remindBeforeMinutes: 15,
+    remindBeforeMinutes: 0,
   });
 
   // Apple iOS Confirmation Modal State
@@ -225,7 +225,7 @@ export default function CalendarPage() {
       eventType: 'REMINDER',
       priority: 'MEDIUM',
       candidateName: '',
-      remindBeforeMinutes: 15,
+      remindBeforeMinutes: 0,
     });
     setSaveError(null);
     setShowMoreDetails(false);

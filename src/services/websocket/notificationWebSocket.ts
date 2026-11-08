@@ -103,11 +103,15 @@ class NotificationWebSocket {
     const { event, data } = frame;
 
     if (event === 'NOTIFICATION' && data) {
-      // Never display another user's private notification
+      // Filter notification to intended recipient or admin
       const targetUser = data.targetUserId || data.targetUserLogin || data.userId;
       const currentLogin = this.currentUser?.login;
-      if (targetUser && currentLogin && String(targetUser).toLowerCase() !== currentLogin.toLowerCase() && currentLogin !== 'admin') {
-        return;
+      if (targetUser && currentLogin) {
+        const t = String(targetUser).toLowerCase();
+        const c = String(currentLogin).toLowerCase();
+        if (t !== c && c !== 'admin' && t !== 'admin' && t !== 'all') {
+          return;
+        }
       }
 
       console.log('[NotificationWebSocket] 📨 Pure WebSocket notification received:', data);

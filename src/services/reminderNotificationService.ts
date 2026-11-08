@@ -201,12 +201,6 @@ class ReminderNotificationService {
       console.warn('[Reminders] Could not schedule native notification:', schedErr);
     }
 
-    try {
-      this.checkDueReminders();
-    } catch (dueErr) {
-      console.warn('[Reminders] checkDueReminders warning:', dueErr);
-    }
-
     return finalEvent;
   }
 
@@ -281,36 +275,35 @@ class ReminderNotificationService {
     const targetUser = userId || this.getCurrentUserLogin();
     try {
       const serverNotifs = await notificationApiService.getNotifications(targetUser);
-      if (Array.isArray(serverNotifs)) {
-        // Strictly filter to notifications intended for targetUser
-        const userNotifs = targetUser
-          ? serverNotifs.filter((n) => !n.userId || n.userId === targetUser || n.userId === 'all')
-          : serverNotifs;
-        localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(userNotifs));
+      if (Array.isArray(serverNotifs) && serverNotifs.length > 0) {
+        const cached = this.getCachedNotifications();
+        const map = new Map<string, NotificationDTO>();
+        cached.forEach((n) => map.set(n.id, n));
+        serverNotifs.forEach((n) => map.set(n.id, n));
+        const merged = Array.from(map.values()).sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(merged));
         window.dispatchEvent(new CustomEvent('ssa_notifications_updated'));
-        return userNotifs;
+        return merged;
       }
     } catch {}
 
-    return this.getCachedNotifications(targetUser);
+    return this.getCachedNotifications();
   }
 
-  public getCachedNotifications(userId?: string): NotificationDTO[] {
+  public getCachedNotifications(): NotificationDTO[] {
     try {
       const raw = localStorage.getItem(NOTIFICATIONS_CACHE_KEY);
       const list: NotificationDTO[] = raw ? JSON.parse(raw) : [];
-      const targetUser = userId || this.getCurrentUserLogin();
-      const filtered = targetUser
-        ? list.filter((n) => !n.userId || n.userId === targetUser || n.userId === 'all')
-        : list;
-      return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     } catch {
       return [];
     }
   }
 
-  public getUnreadNotificationCount(userId?: string): number {
-    return this.getCachedNotifications(userId).filter((n) => !n.isRead).length;
+  public getUnreadNotificationCount(): number {
+    return this.getCachedNotifications().filter((n) => !n.isRead).length;
   }
 
   public addNotification(notification: Omit<NotificationDTO, 'id' | 'createdAt' | 'isRead'>): NotificationDTO {
@@ -339,7 +332,9 @@ class ReminderNotificationService {
         timestamp: 'now',
         url: newItem.referenceType === 'LEAD' && newItem.referenceId ? `/leads/${newItem.referenceId}` : '/calendar',
       });
-    } catch {}
+    } catch (bannerErr) {
+      console.warn('Banner show error:', bannerErr);
+    }
 
     return newItem;
   }
@@ -392,10 +387,6 @@ class ReminderNotificationService {
    * Directly stores incoming notification from WebSocket push without making HTTP requests
    */
   public addIncomingNotification(notification: NotificationDTO): void {
-    const currentLogin = this.getCurrentUserLogin();
-    if (notification.userId && notification.userId !== currentLogin && notification.userId !== 'all') {
-      return; // Do not store or display another user's private notification
-    }
     const cached = this.getCachedNotifications();
     if (cached.some((n) => n.id === notification.id)) return;
     cached.unshift(notification);
@@ -408,10 +399,10 @@ class ReminderNotificationService {
   public startBackgroundWorkers() {
     if (this.checkInterval) return;
 
-    // Check reminders locally in memory every 25 seconds (zero network calls)
+    // Check reminders locally in memory every 10 seconds for real-time responsiveness (zero network calls)
     this.checkInterval = setInterval(() => {
       this.checkDueReminders();
-    }, 25000);
+    }, 10000);
 
     // Initial snapshot load on startup only (zero recurring polling - all real-time events use WebSocket)
     setTimeout(() => {
@@ -429,24 +420,23 @@ class ReminderNotificationService {
     events.forEach((evt) => {
       if (evt.isCompleted || evt.notificationSent) return;
 
-      // Only alert the user who owns or was assigned this reminder!
-      const currentLogin = this.getCurrentUserLogin();
-      if (evt.userId && evt.userId !== currentLogin && currentLogin !== 'admin') {
-        return;
-      }
-
       try {
+        if (!evt.eventDate) return;
         const timePart = evt.eventTime || '09:00';
         const [hours, minutes] = timePart.split(':').map(Number);
-        const eventDateTime = new Date(evt.eventDate);
-        eventDateTime.setHours(hours, minutes, 0, 0);
+        const dateParts = evt.eventDate.split('-').map(Number);
+        if (dateParts.length < 3) return;
 
-        const leadOffset = (evt.remindBeforeMinutes || 0) * 60 * 1000;
+        // Construct local date time reliably without UTC timezone skew
+        const eventDateTime = new Date(dateParts[0], dateParts[1] - 1, dateParts[2], hours, minutes, 0, 0);
+
+        const leadOffset = (Number(evt.remindBeforeMinutes) || 0) * 60 * 1000;
         const triggerTime = new Date(eventDateTime.getTime() - leadOffset);
 
         const diffMs = now.getTime() - triggerTime.getTime();
         const twoDaysMs = 48 * 60 * 60 * 1000;
 
+        // Trigger when current time is at or past the scheduled trigger time (within 48h active window)
         if (diffMs >= 0 && diffMs <= twoDaysMs) {
           evt.notificationSent = true;
           updated = true;
@@ -462,8 +452,10 @@ class ReminderNotificationService {
               : `Reminder scheduled for ${formattedTime12h}.`;
           }
 
+          console.log(`[Reminders] 🔔 Reminder due! Triggering banner & sound for: "${evt.title}" (${formattedTime12h})`);
+
           this.addNotification({
-            userId: evt.userId,
+            userId: evt.userId || this.getCurrentUserLogin(),
             title: `🔔 ${evt.title}`,
             message: msg,
             type: 'REMINDER',

@@ -60,7 +60,7 @@ export default function LeadReminderModal({
     return d.toISOString().split('T')[0];
   });
   const [eventTime, setEventTime] = useState('10:00');
-  const [remindBeforeMinutes, setRemindBeforeMinutes] = useState<number>(15);
+  const [remindBeforeMinutes, setRemindBeforeMinutes] = useState<number>(0);
   const [priority, setPriority] = useState<EventPriority>('MEDIUM');
   const [eventType, setEventType] = useState<EventType>('FOLLOWUP');
   const [description, setDescription] = useState('');
