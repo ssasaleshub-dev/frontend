@@ -3,6 +3,7 @@ import {
   Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Plus,
   Clock,
   CheckCircle2,
@@ -48,6 +49,7 @@ export default function CalendarPage() {
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showMoreDetails, setShowMoreDetails] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -226,6 +228,7 @@ export default function CalendarPage() {
       remindBeforeMinutes: 15,
     });
     setSaveError(null);
+    setShowMoreDetails(false);
     setIsModalOpen(true);
   };
 
@@ -670,10 +673,9 @@ export default function CalendarPage() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Call candidate regarding IELTS score"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-[#f5f5f7] border border-black/[0.04] rounded-[12px] text-[13px] text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
+                  className="w-full px-3.5 py-2 bg-[#f5f5f7] border border-black/[0.04] rounded-[12px] text-[13px] text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
                 />
               </div>
 
@@ -728,82 +730,102 @@ export default function CalendarPage() {
                 );
               })()}
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1">
-                    Type
-                  </label>
-                  <select
-                    value={formData.eventType}
-                    onChange={(e) => setFormData({ ...formData, eventType: e.target.value as EventType })}
-                    className="w-full px-3 py-1.5 bg-[#f5f5f7] border border-black/[0.04] rounded-[12px] text-[12px] text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
-                  >
-                    <option value="REMINDER">General Reminder</option>
-                    <option value="CALL">Candidate Callback</option>
-                    <option value="INTERVIEW">Visa Interview</option>
-                    <option value="FOLLOWUP">Doc Follow-up</option>
-                    <option value="EVENT">Meeting / Event</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1">
-                    Priority
-                  </label>
-                  <select
-                    value={formData.priority}
-                    onChange={(e) => setFormData({ ...formData, priority: e.target.value as EventPriority })}
-                    className="w-full px-3 py-1.5 bg-[#f5f5f7] border border-black/[0.04] rounded-[12px] text-[12px] text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
-                  >
-                    <option value="LOW">Low</option>
-                    <option value="MEDIUM">Medium</option>
-                    <option value="HIGH">High Priority</option>
-                    <option value="URGENT">Urgent (Red Alert)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1">
-                  Candidate Link (Optional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Praveen Selvaraj / Lead #101"
-                  value={formData.candidateName}
-                  onChange={(e) => setFormData({ ...formData, candidateName: e.target.value })}
-                  className="w-full px-3 py-1.5 bg-[#f5f5f7] border border-black/[0.04] rounded-[12px] text-[12px] text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1">
-                  Notify Me Before
-                </label>
-                <select
-                  value={formData.remindBeforeMinutes}
-                  onChange={(e) => setFormData({ ...formData, remindBeforeMinutes: Number(e.target.value) })}
-                  className="w-full px-3 py-1.5 bg-[#f5f5f7] border border-black/[0.04] rounded-[12px] text-[12px] text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
+              {/* Expandable Additional Details Section (Apple HIG Disclosure) */}
+              <div className="pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => setShowMoreDetails((prev) => !prev)}
+                  className="flex items-center justify-between w-full py-2 px-3 rounded-[12px] bg-black/[0.03] hover:bg-black/[0.06] text-[#0071e3] text-[12px] font-medium transition-all cursor-pointer"
                 >
-                  <option value={0}>At time of event</option>
-                  <option value={15}>15 minutes before</option>
-                  <option value={30}>30 minutes before</option>
-                  <option value={60}>1 hour before</option>
-                  <option value={1440}>1 day before</option>
-                </select>
-              </div>
+                  <span>{showMoreDetails ? 'Hide Details' : 'More Details'}</span>
+                  <ChevronDown
+                    size={15}
+                    strokeWidth={2.4}
+                    className={`transition-transform duration-200 text-[#0071e3] ${
+                      showMoreDetails ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
 
-              <div>
-                <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1">
-                  Notes & Details
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="Additional notes for this reminder..."
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3 py-1.5 bg-[#f5f5f7] border border-black/[0.04] rounded-[12px] text-[12px] text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#0071e3]/20 transition-all resize-none"
-                />
+                {showMoreDetails && (
+                  <div className="space-y-3.5 pt-3 animate-in fade-in duration-150">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1">
+                          Type
+                        </label>
+                        <select
+                          value={formData.eventType}
+                          onChange={(e) => setFormData({ ...formData, eventType: e.target.value as EventType })}
+                          className="w-full px-3 py-1.5 bg-[#f5f5f7] border border-black/[0.04] rounded-[12px] text-[12px] text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
+                        >
+                          <option value="REMINDER">General Reminder</option>
+                          <option value="CALL">Candidate Callback</option>
+                          <option value="INTERVIEW">Visa Interview</option>
+                          <option value="FOLLOWUP">Doc Follow-up</option>
+                          <option value="EVENT">Meeting / Event</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1">
+                          Priority
+                        </label>
+                        <select
+                          value={formData.priority}
+                          onChange={(e) => setFormData({ ...formData, priority: e.target.value as EventPriority })}
+                          className="w-full px-3 py-1.5 bg-[#f5f5f7] border border-black/[0.04] rounded-[12px] text-[12px] text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
+                        >
+                          <option value="LOW">Low</option>
+                          <option value="MEDIUM">Medium</option>
+                          <option value="HIGH">High Priority</option>
+                          <option value="URGENT">Urgent (Red Alert)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1">
+                        Candidate Link (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.candidateName}
+                        onChange={(e) => setFormData({ ...formData, candidateName: e.target.value })}
+                        className="w-full px-3 py-1.5 bg-[#f5f5f7] border border-black/[0.04] rounded-[12px] text-[12px] text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1">
+                        Notify Me Before
+                      </label>
+                      <select
+                        value={formData.remindBeforeMinutes}
+                        onChange={(e) => setFormData({ ...formData, remindBeforeMinutes: Number(e.target.value) })}
+                        className="w-full px-3 py-1.5 bg-[#f5f5f7] border border-black/[0.04] rounded-[12px] text-[12px] text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
+                      >
+                        <option value={0}>At time of event</option>
+                        <option value={15}>15 minutes before</option>
+                        <option value={30}>30 minutes before</option>
+                        <option value={60}>1 hour before</option>
+                        <option value={1440}>1 day before</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1">
+                        Notes & Details
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        className="w-full px-3 py-1.5 bg-[#f5f5f7] border border-black/[0.04] rounded-[12px] text-[12px] text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#0071e3]/20 transition-all resize-none"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {saveError && (

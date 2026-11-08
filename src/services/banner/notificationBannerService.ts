@@ -96,3 +96,4 @@ class NotificationBannerService {
 
 export const notificationBannerService = new NotificationBannerService();
 export default notificationBannerService;
+
