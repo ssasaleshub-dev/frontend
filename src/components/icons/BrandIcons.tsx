@@ -176,6 +176,47 @@ export const BrandReminderIcon: React.FC<BrandIconProps> = ({
   </svg>
 );
 
+export interface AppleBellIconProps extends BrandIconProps {
+  hasBadge?: boolean;
+}
+
+/**
+ * Apple HIG Bell & Notification Icon (SF Symbol bell / bell.badge)
+ * Directly matches Apple Human Interface Guidelines: Managing Notifications.
+ */
+export const AppleBellIcon: React.FC<AppleBellIconProps> = ({
+  size = 18,
+  className = '',
+  strokeWidth = 1.75,
+  hasBadge = false,
+}) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={strokeWidth}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden="true"
+  >
+    {hasBadge ? (
+      <>
+        <path d="M10.5 4.5A5.5 5.5 0 0 0 6 10c0 5.5-2.5 7.5-2.5 7.5h17s-.8-1.5-1.5-4" />
+        <path d="M10 20.5a2.5 2.5 0 0 0 4 0" />
+        <circle cx="18" cy="6" r="3.2" fill="#ff3b30" stroke="white" strokeWidth="1.5" />
+      </>
+    ) : (
+      <>
+        <path d="M6 10a6 6 0 0 1 12 0c0 5.5 2.5 7.5 2.5 7.5H3.5S6 15.5 6 10" />
+        <path d="M10 20.5a2.5 2.5 0 0 0 4 0" />
+      </>
+    )}
+  </svg>
+);
+
 /* ═══════════════════════════════════════════════════════════════
    SSA DASHBOARD KPI ICONS — Hand-coded, brand-exclusive SVGs.
    Each icon is purpose-built for its KPI metric context:
