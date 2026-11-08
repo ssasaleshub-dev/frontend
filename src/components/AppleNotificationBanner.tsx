@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { X, MessageSquare, Clock, Phone, User } from 'lucide-react';
+import { X } from 'lucide-react';
 import notificationBannerService, { AppleBannerPayload } from '../services/banner/notificationBannerService';
-import { AppleBellIcon } from './icons/BrandIcons';
 import brandLogo from '../assets/brand-logo.jpg';
 import { cleanNotificationMessage } from '../utils/dateTimeUtils';
 
@@ -10,11 +10,10 @@ import { cleanNotificationMessage } from '../utils/dateTimeUtils';
  * Apple iOS In-App Notification Banner Popup
  *
  * Implements authentic Apple iOS notification banner specification:
- * - Ultra-clear frosted glass container with iOS squircle corners and subtle specular rim
- * - iOS App Icon with SSA CRM title and "now" timestamp
- * - Bold primary title and secondary message
- * - Swipe up to dismiss gesture
- * - 5-second auto-hide with smooth spring exit
+ * - Mounted via React Portal directly to document.body to prevent any container transform clipping
+ * - Perfect horizontal viewport centering using `inset-x-0 mx-auto`
+ * - Clean iOS card with app squircle, SSA CRM header, timestamp, bold title, and description
+ * - 5-second auto-hide with swipe-up to dismiss gesture
  */
 export default function AppleNotificationBanner() {
   const [banner, setBanner] = useState<AppleBannerPayload | null>(null);
@@ -41,6 +40,7 @@ export default function AppleNotificationBanner() {
   }, []);
 
   if (!banner) return null;
+  if (typeof document === 'undefined') return null;
 
   const handleClick = () => {
     if (banner.onClick) {
@@ -69,7 +69,7 @@ export default function AppleNotificationBanner() {
   };
 
   const handleTouchEnd = () => {
-    if (offsetY < -25) {
+    if (offsetY < -20) {
       notificationBannerService.dismiss();
     } else {
       setOffsetY(0);
@@ -79,26 +79,22 @@ export default function AppleNotificationBanner() {
   const cleanTitle = banner.title.replace(/^🔔\s*/, '').replace(/^Reminder:\s*/i, '').trim();
   const cleanDesc = cleanNotificationMessage(banner.description, cleanTitle);
 
-  return (
+  const bannerContent = (
     <div
-      className={`fixed top-3 sm:top-4 left-1/2 -translate-x-1/2 z-[100] max-w-[400px] w-[calc(100%-24px)] select-none font-sf-display transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+      className={`fixed top-3 sm:top-4 inset-x-0 mx-auto z-[9999] max-w-[390px] w-[calc(100%-24px)] select-none font-sf-display transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
         isVisible
           ? 'opacity-100 translate-y-0 scale-100'
-          : 'opacity-0 -translate-y-8 scale-95 pointer-events-none'
+          : 'opacity-0 -translate-y-12 scale-95 pointer-events-none'
       }`}
-      style={{
-        transform: isVisible
-          ? `translate(-50%, ${offsetY}px)`
-          : undefined,
-      }}
+      style={offsetY ? { transform: `translateY(${offsetY}px)` } : undefined}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Authentic Apple iOS Frosted Glass Notification Card */}
+      {/* Authentic Apple iOS Solid White Notification Card */}
       <div
         onClick={handleClick}
-        className="group relative flex flex-col p-3.5 px-4 rounded-[22px] bg-white/92 backdrop-blur-2xl text-[#1d1d1f] border border-black/[0.08] shadow-[0_16px_40px_rgba(0,0,0,0.13),0_2px_8px_rgba(0,0,0,0.04)] cursor-pointer hover:bg-white/98 transition-all active:scale-[0.985]"
+        className="group relative flex flex-col p-3.5 px-4 rounded-[22px] bg-white text-[#1d1d1f] border border-black/[0.08] shadow-[0_16px_40px_rgba(0,0,0,0.14),0_2px_8px_rgba(0,0,0,0.04)] cursor-pointer hover:bg-[#fafafa] transition-all active:scale-[0.985]"
         role="alert"
         aria-live="assertive"
       >
@@ -166,8 +162,10 @@ export default function AppleNotificationBanner() {
         </div>
 
         {/* Subtle iOS pull indicator handle */}
-        <div className="w-8 h-1 rounded-full bg-black/10 mx-auto mt-2" />
+        <div className="w-8 h-1 rounded-full bg-black/15 mx-auto mt-2" />
       </div>
     </div>
   );
+
+  return createPortal(bannerContent, document.body);
 }

@@ -361,8 +361,8 @@ export default function Layout() {
 
       {/* Main App Container */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Solid Clean White Header (Zero Bleed-through) */}
-        <header className="bg-white px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-20 border-b border-black/[0.08] shadow-2xs">
+        {/* Desktop Header - Solid Clean White (Hidden on Mobile) */}
+        <header className="hidden md:flex bg-white px-4 sm:px-6 py-3 items-center justify-between sticky top-0 z-20 border-b border-black/[0.08] shadow-2xs">
           <div className="min-w-0">
             <h1 className="text-sm font-bold tracking-tight text-slate-900 leading-tight">
               {pageInfo.title}
