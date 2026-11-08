@@ -456,7 +456,7 @@ class ReminderNotificationService {
 
           this.addNotification({
             userId: evt.userId || this.getCurrentUserLogin(),
-            title: `🔔 ${evt.title}`,
+            title: evt.title,
             message: msg,
             type: 'REMINDER',
             referenceId: evt.id,

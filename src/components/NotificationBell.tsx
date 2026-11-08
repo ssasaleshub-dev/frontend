@@ -304,35 +304,9 @@ export default function NotificationBell() {
                               : 'bg-white hover:bg-white border-[#0071e3]/20 shadow-xs ring-1 ring-[#0071e3]/10'
                           }`}
                         >
-                          {/* Top Row: Squircle Glyph + Source Subtitle + Timestamp + Unread Dot */}
+                          {/* Top Row: Category Label + Timestamp + Unread Dot */}
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-1.5 min-w-0">
-                              <div
-                                className={`w-5 h-5 rounded-[6px] flex items-center justify-center shrink-0 ${
-                                  item.type && item.type.startsWith('CLOSING_MILESTONE_')
-                                    ? item.type.includes('100')
-                                      ? 'bg-rose-500/10 text-rose-600'
-                                      : 'bg-amber-500/10 text-amber-600'
-                                    : item.type === 'CALL'
-                                    ? 'bg-emerald-500/10 text-emerald-600'
-                                    : item.type === 'REMINDER'
-                                    ? 'bg-amber-500/10 text-amber-600'
-                                    : item.type === 'LEAD_ASSIGNED'
-                                    ? 'bg-[#0071e3]/10 text-[#0071e3]'
-                                    : 'bg-slate-500/10 text-slate-700'
-                                }`}
-                              >
-                                {item.type === 'CALL' ? (
-                                  <Phone size={10} strokeWidth={2.5} />
-                                ) : item.type === 'REMINDER' || (item.type && item.type.startsWith('CLOSING_MILESTONE_')) ? (
-                                  <Clock size={10} strokeWidth={2.5} />
-                                ) : item.type === 'LEAD_ASSIGNED' ? (
-                                  <Calendar size={10} strokeWidth={2.5} />
-                                ) : (
-                                  <AppleBellIcon size={11} strokeWidth={2} />
-                                )}
-                              </div>
-
                               <span className="text-[10px] font-semibold uppercase tracking-wider text-[#86868b] truncate">
                                 {item.type === 'CALL'
                                   ? 'Candidate Callback'
@@ -384,13 +358,13 @@ export default function NotificationBell() {
                           </div>
 
                           {/* Body Content */}
-                          <div className="pl-6.5 pr-1">
+                          <div className="pr-1 mt-1">
                             <p
                               className={`text-[13px] leading-snug truncate ${
                                 item.isRead ? 'font-medium text-[#1d1d1f]' : 'font-semibold text-[#1d1d1f]'
                               }`}
                             >
-                              {item.title}
+                              {item.title.replace(/^🔔\s*/, '').replace(/^Reminder:\s*/i, '').trim()}
                             </p>
                             <p className="text-[12px] text-[#515154] leading-relaxed line-clamp-2 mt-0.5 font-normal">
                               {item.message}

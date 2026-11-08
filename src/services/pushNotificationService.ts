@@ -226,7 +226,7 @@ class PushNotificationService {
       if (triggerTime.getTime() > now.getTime()) {
         notificationsToSchedule.push({
           id: notifId,
-          title: `🔔 ${event.title}`,
+          title: event.title,
           body: dueBody,
           channelId: 'fcm_default_channel',
           schedule: { at: triggerTime },

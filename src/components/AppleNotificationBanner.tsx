@@ -98,7 +98,7 @@ export default function AppleNotificationBanner() {
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <h4 className="text-[13.5px] font-semibold text-white tracking-tight truncate leading-snug">
-              {banner.title}
+              {banner.title.replace(/^🔔\s*/, '').replace(/^Reminder:\s*/i, '').trim()}
             </h4>
 
             {/* Right: "now" timestamp from Apple HIG spec */}
