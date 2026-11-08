@@ -21,8 +21,6 @@ import {
 import { BrandReminderIcon } from '../components/icons/BrandIcons';
 import reminderNotificationService, {
   CalendarEvent,
-  IndianHoliday,
-  INDIAN_HOLIDAYS,
   EventType,
   EventPriority,
   getRemainingTimeInfo,
@@ -180,22 +178,10 @@ export default function CalendarPage() {
     return map;
   }, [events]);
 
-  const holidaysByDate = useMemo(() => {
-    const map: Record<string, IndianHoliday> = {};
-    INDIAN_HOLIDAYS.forEach((h) => {
-      map[h.date] = h;
-    });
-    return map;
-  }, []);
-
   // Events on selected date
   const selectedDateEvents = useMemo(() => {
     return eventsByDate[selectedDateStr] || [];
   }, [eventsByDate, selectedDateStr]);
-
-  const selectedDateHoliday = useMemo(() => {
-    return holidaysByDate[selectedDateStr];
-  }, [holidaysByDate, selectedDateStr]);
 
   const selectedDateDisplay = useMemo(() => {
     if (!selectedDateStr) return '';
@@ -372,7 +358,6 @@ export default function CalendarPage() {
               {allCalendarDays.map((day) => {
                 const isToday = day.dateStr === todayStr;
                 const isSelected = day.dateStr === selectedDateStr;
-                const dayHoliday = holidaysByDate[day.dateStr];
                 const dayEvents = eventsByDate[day.dateStr] || [];
 
                 return (
@@ -399,16 +384,8 @@ export default function CalendarPage() {
 
                     {/* Apple Dot Indicators (Subtle HIG markers beneath date) */}
                     <div className="h-2 flex items-center justify-center gap-1 mt-0.5">
-                      {/* Indian Holiday Dot (Amber) */}
-                      {dayHoliday && (
-                        <span
-                          className="w-1.5 h-1.5 rounded-full bg-[#ff9500] shrink-0"
-                          title={`Indian Holiday: ${dayHoliday.title}`}
-                        />
-                      )}
-
                       {/* Event / Reminder Dots */}
-                      {dayEvents.slice(0, dayHoliday ? 2 : 3).map((evt) => (
+                      {dayEvents.slice(0, 3).map((evt) => (
                         <span
                           key={evt.id}
                           className={`w-1.5 h-1.5 rounded-full shrink-0 ${
@@ -445,10 +422,6 @@ export default function CalendarPage() {
                 <span className="w-2 h-2 rounded-full bg-[#ff3b30]" />
                 <span className="text-[#515154]">Urgent</span>
               </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#ff9500]" />
-                <span className="text-[#515154]">Holiday</span>
-              </span>
             </div>
 
             <span className="font-mono text-[10px] text-[#86868b]">
@@ -457,7 +430,7 @@ export default function CalendarPage() {
           </div>
         </div>
 
-        {/* Right Sidebar: Selected Day Agenda & Indian Holidays (5 Cols) */}
+        {/* Right Sidebar: Selected Day Agenda & Reminders (5 Cols) */}
         <div className="lg:col-span-5 space-y-4">
           {/* Selected Date Dossier / Reminders */}
           <div className="bg-white/90 backdrop-blur-xl rounded-[22px] border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-4 space-y-3.5">
@@ -480,28 +453,6 @@ export default function CalendarPage() {
                 <span>Add</span>
               </button>
             </div>
-
-            {/* Apple iOS Holiday Item (Grouped list style with vertical Apple accent bar) */}
-            {selectedDateHoliday && (
-              <div className="flex items-start gap-3 p-3 bg-white rounded-2xl border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.03)] transition-all">
-                <div className="w-1 self-stretch rounded-full bg-[#ff9500] shrink-0 my-0.5" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <h4 className="text-[13px] font-semibold text-[#1c1c1e] truncate">
-                      {selectedDateHoliday.title}
-                    </h4>
-                    <span className="px-2 py-0.5 rounded-full bg-[#ff9500]/10 text-[#ff9500] text-[10px] font-semibold uppercase tracking-wider shrink-0">
-                      {selectedDateHoliday.type}
-                    </span>
-                  </div>
-                  {selectedDateHoliday.description && (
-                    <p className="text-[12px] text-[#8e8e93] mt-0.5 leading-snug font-normal">
-                      {selectedDateHoliday.description}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
 
             {/* Reminders List for Selected Day */}
             <div className="space-y-2">
