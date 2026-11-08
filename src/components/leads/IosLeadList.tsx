@@ -24,7 +24,7 @@ interface IosLeadListProps {
   pageSize: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
-  onToggleContacted: (lead: Lead, e: React.MouseEvent) => void;
+  onToggleContacted?: (lead: Lead, e: React.MouseEvent) => void;
   onOpenStatusModal: (lead: Lead, e: React.MouseEvent) => void;
   onDeleteLead: (id: number, name?: string) => void;
   getLeadQuality: (lead: Lead) => string;
@@ -230,8 +230,6 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
       {/* ── Apple HIG: Inset Grouped Table Container ── */}
       <div className="bg-white rounded-[18px] sm:rounded-[22px] border border-black/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden divide-y divide-black/[0.05]">
         {leads.map((lead) => {
-          const isContactedOrActive =
-            lead.status !== 'CREATED' && lead.status !== 'LOST';
           const quality = getLeadQuality(lead);
           const stage = (lead.status || 'CREATED').toUpperCase();
 
@@ -431,22 +429,6 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
                     <Phone size={14} />
                   </a>
                 )}
-
-                {/* Exact iOS Green Toggle Switch (Contacted / Active Toggle) */}
-                <div className="flex flex-col items-center">
-                  <IosSwitch
-                    checked={isContactedOrActive}
-                    onChange={(e) => onToggleContacted(lead, e)}
-                    title={
-                      isContactedOrActive
-                        ? 'Active / Contacted (Tap to reset to New Lead)'
-                        : 'New Lead (Tap to mark as Contacted)'
-                    }
-                  />
-                  <span className="text-[9px] font-medium text-[#8e8e93] mt-0.5 select-none hidden sm:inline">
-                    {isContactedOrActive ? 'Contacted' : 'New'}
-                  </span>
-                </div>
 
                 {/* Apple Disclosure Chevron (Table Row > in Apple HIG) */}
                 <button
