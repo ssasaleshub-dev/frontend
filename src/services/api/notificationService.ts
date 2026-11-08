@@ -75,6 +75,9 @@ export const notificationApiService = {
   },
 
   markAsRead: async (id: string): Promise<any> => {
+    if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id))) {
+      return { success: true };
+    }
     return axiosClient.patch(`/api/notifications/${id}/read`);
   },
 
@@ -83,6 +86,9 @@ export const notificationApiService = {
   },
 
   deleteNotification: async (id: string): Promise<any> => {
+    if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id))) {
+      return { success: true };
+    }
     return axiosClient.delete(`/api/notifications/${id}`);
   },
 

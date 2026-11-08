@@ -314,9 +314,22 @@ class ReminderNotificationService {
   }
 
   public addNotification(notification: Omit<NotificationDTO, 'id' | 'createdAt' | 'isRead'>): NotificationDTO {
+    const generateUUID = () => {
+      if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        try {
+          return crypto.randomUUID();
+        } catch {}
+      }
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      });
+    };
+
     const newItem: NotificationDTO = {
       ...notification,
-      id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      id: generateUUID(),
       isRead: false,
       createdAt: new Date().toISOString(),
     };
