@@ -138,12 +138,16 @@ export default function Leads() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(25);
 
-  // Apple HIG View Mode: Inset Grouped List vs Table Grid (Default: list)
+  // Apple HIG View Mode: Inset Grouped List vs Table Grid (Default: table)
   const [viewMode, setViewMode] = useState<'list' | 'table'>(() => {
     if (typeof window !== 'undefined') {
-      return (localStorage.getItem('ssa_leads_view_mode') as 'list' | 'table') || 'list';
+      const saved = localStorage.getItem('ssa_leads_view_mode_v2');
+      if (saved === 'list' || saved === 'table') {
+        return saved;
+      }
+      return 'table';
     }
-    return 'list';
+    return 'table';
   });
 
 
@@ -1465,11 +1469,12 @@ export default function Leads() {
           })}
 
           {/* Apple HIG Segmented View Toggle (List vs Table) */}
-          <div className="hidden sm:inline-flex items-center p-0.5 bg-black/[0.05] rounded-[9px] text-xs font-medium shrink-0 ml-auto border border-black/[0.03]">
+          <div className="inline-flex items-center p-0.5 bg-black/[0.05] rounded-[9px] text-xs font-medium shrink-0 ml-auto border border-black/[0.03]">
             <button
               type="button"
               onClick={() => {
                 setViewMode('list');
+                localStorage.setItem('ssa_leads_view_mode_v2', 'list');
                 localStorage.setItem('ssa_leads_view_mode', 'list');
               }}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[7px] text-[11px] font-medium transition-all cursor-pointer ${
@@ -1486,6 +1491,7 @@ export default function Leads() {
               type="button"
               onClick={() => {
                 setViewMode('table');
+                localStorage.setItem('ssa_leads_view_mode_v2', 'table');
                 localStorage.setItem('ssa_leads_view_mode', 'table');
               }}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[7px] text-[11px] font-medium transition-all cursor-pointer ${
@@ -1542,35 +1548,8 @@ export default function Leads() {
           formatDate={formatDate}
         />
       ) : (
-        <>
-          {/* Mobile Fallback: Always Inset Grouped List on narrow screens */}
-          <div className="sm:hidden">
-            <IosLeadList
-              leads={paginatedLeads}
-              loading={loading}
-              totalLeads={filteredLeads.length}
-              currentPage={currentPage}
-              pageSize={pageSize}
-              onPageChange={setCurrentPage}
-              onPageSizeChange={setPageSize}
-              onToggleContacted={handleToggleContacted}
-              onOpenStatusModal={(lead, e) => {
-                e.stopPropagation();
-                setStatusModalLead(lead);
-                setStatusForm({
-                  status: lead.status || 'CONTACTED',
-                  notes: lead.notes || '',
-                });
-              }}
-              onDeleteLead={handleDeleteLead}
-              getLeadQuality={getLeadQuality}
-              getBudgetReady={getBudgetReady}
-              formatDate={formatDate}
-            />
-          </div>
-
-          {/* ── Desktop: Apple HIG Grouped Table View ── */}
-          <div className="hidden sm:block space-y-2.5">
+        /* ── Candidate Table Directory (Responsive with smooth horizontal scroll) ── */
+        <div className="space-y-2.5">
             {/* Apple HIG Grouped Table View Header */}
             <div className="flex items-center justify-between px-3 text-[12px] font-semibold tracking-wider text-[#6e6e73] uppercase select-none">
               <div className="flex items-center gap-2">
@@ -1864,7 +1843,6 @@ export default function Leads() {
               <span>Showing {filteredLeads.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredLeads.length)} of {filteredLeads.length} records</span>
             </div>
           </div>
-        </>
       )}
 
       {/* iOS-Style Slide-Over Candidate Dossier Drawer */}
