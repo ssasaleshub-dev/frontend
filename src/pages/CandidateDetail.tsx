@@ -53,6 +53,7 @@ import {
 } from '../config/constants';
 import { isAdmin as checkIsAdmin } from '../utils/rbac';
 import { useAuth } from '../context/AuthContext';
+import { formatIndianDateTime, formatIndianDate } from '../utils/dateTimeUtils';
 import { Lead, LeadActivity } from '../types';
 import { encryptLeadId, decryptLeadId, formatMaskedLeadRef } from '../utils/leadIdCrypto';
 
@@ -777,20 +778,7 @@ export default function CandidateDetail() {
 
   const formatDate = (isoStr?: string) => {
     if (!isoStr) return '—';
-    try {
-      const d = new Date(isoStr);
-      return d.toLocaleString('en-IN', {
-        timeZone: 'Asia/Kolkata',
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
-      });
-    } catch {
-      return isoStr;
-    }
+    return formatIndianDateTime(isoStr, { fallback: isoStr });
   };
 
   const renderVisaBadge = (type?: string) => {
@@ -934,13 +922,7 @@ export default function CandidateDetail() {
 
   const formatPipelineDate = (d?: string | null, fallback: string = 'Mar 16, 2026') => {
     if (!d) return fallback;
-    try {
-      const dt = new Date(d);
-      if (isNaN(dt.getTime())) return fallback;
-      return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    } catch {
-      return fallback;
-    }
+    return formatIndianDate(d, { fallback });
   };
 
   const getClosingDateInfo = (startStr?: string | null) => {

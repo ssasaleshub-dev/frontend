@@ -18,6 +18,7 @@ import {
 import adminService, { type CreateUserData } from '../services/api/adminService';
 import { useAuth } from '../context/AuthContext';
 import { USER_ROLE_CONFIG, USER_ROLES } from '../config/constants';
+import { formatIndianDate, formatIndianTime } from '../utils/dateTimeUtils';
 import type { User } from '../types';
 
 export default function Users() {
@@ -887,10 +888,10 @@ export default function Users() {
                 </label>
                 <div className="flex-1 flex rounded-md overflow-hidden border border-[#d0dcf0] bg-[#edf2f9]">
                   <div className="flex-1 px-3 py-2 border-r border-[#d0dcf0] text-xs text-slate-800 bg-[#edf2f9]">
-                    {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    {formatIndianDate(new Date())}
                   </div>
                   <div className="w-28 px-3 py-2 text-xs text-slate-800 bg-[#edf2f9] text-center font-medium">
-                    {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                    {formatIndianTime(new Date())}
                   </div>
                 </div>
               </div>
@@ -1031,10 +1032,10 @@ export default function Users() {
                 </label>
                 <div className="flex-1 flex rounded-md overflow-hidden border border-[#d0dcf0] bg-[#edf2f9]">
                   <div className="flex-1 px-3 py-2 border-r border-[#d0dcf0] text-xs text-slate-800 bg-[#edf2f9]">
-                    {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    {formatIndianDate(new Date())}
                   </div>
                   <div className="w-28 px-3 py-2 text-xs text-slate-800 bg-[#edf2f9] text-center font-medium">
-                    {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                    {formatIndianTime(new Date())}
                   </div>
                 </div>
               </div>

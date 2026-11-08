@@ -20,6 +20,7 @@ import fileService from '../services/api/fileService';
 import authService from '../services/api/authService';
 import axiosClient from '../services/api/axiosClient';
 import { useAuth } from '../context/AuthContext';
+import { formatIndianTime, formatIndianDate } from '../utils/dateTimeUtils';
 import type { ChatMessage, User } from '../types';
 
 export default function Chat() {
@@ -276,9 +277,7 @@ export default function Chat() {
 
   const formatTimestamp = (val?: string) => {
     if (!val) return '';
-    const date = new Date(val);
-    if (isNaN(date.getTime())) return '';
-    return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    return formatIndianTime(val, { fallback: '' });
   };
 
   const formatFileSize = (bytes?: number) => {
@@ -346,14 +345,14 @@ export default function Chat() {
     yesterday.setDate(now.getDate() - 1);
     const isYesterday = curr.toDateString() === yesterday.toDateString();
 
-    const timeStr = curr.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    const timeStr = formatIndianTime(curr, { fallback: '' });
     let label = '';
     if (isToday) {
-      label = `Today ${timeStr}`;
+      label = `Today at ${timeStr}`;
     } else if (isYesterday) {
-      label = `Yesterday ${timeStr}`;
+      label = `Yesterday at ${timeStr}`;
     } else {
-      label = `${curr.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })} at ${timeStr}`;
+      label = `${formatIndianDate(curr, { weekday: true })} at ${timeStr}`;
     }
 
     return (

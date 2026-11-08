@@ -17,6 +17,7 @@ import { useAuth } from '../context/AuthContext';
 import { getDisplayName, getRoleBadgeInfo } from '../utils/rbac';
 import attendanceService, { StaffAttendanceRecord } from '../services/api/attendanceService';
 import fileService from '../services/api/fileService';
+import { formatIndianTime } from '../utils/dateTimeUtils';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTH_NAMES = [
@@ -248,16 +249,7 @@ export default function StaffProfile() {
 
   const formatTime = (iso?: string) => {
     if (!iso) return '-';
-    try {
-      return new Date(iso).toLocaleTimeString('en-IN', {
-        timeZone: 'Asia/Kolkata',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
-      });
-    } catch {
-      return iso;
-    }
+    return formatIndianTime(iso, { fallback: iso });
   };
 
   const selectedRecord = attendanceByDate.get(selectedDateStr);

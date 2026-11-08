@@ -12,6 +12,7 @@ import notificationApiService, {
   NotificationType,
 } from './api/notificationService';
 import pushNotificationService from './pushNotificationService';
+import { format12HourTime, IST_TIMEZONE } from '../utils/dateTimeUtils';
 
 export type { CalendarEventDTO as CalendarEvent, NotificationDTO as NotificationItem, EventType, EventPriority, NotificationType };
 
@@ -401,9 +402,10 @@ class ReminderNotificationService {
           evt.notificationSent = true;
           updated = true;
 
+          const formattedTime12h = format12HourTime(timePart);
           const msg = evt.candidateName
-            ? `Reminder: "${evt.title}" for candidate ${evt.candidateName} scheduled at ${timePart}.`
-            : `Reminder: "${evt.title}" scheduled for ${timePart}.`;
+            ? `Reminder: "${evt.title}" for candidate ${evt.candidateName} scheduled at ${formattedTime12h}.`
+            : `Reminder: "${evt.title}" scheduled for ${formattedTime12h}.`;
 
           this.addNotification({
             userId: evt.userId,
@@ -569,6 +571,7 @@ export function formatEventReadable(eventDateStr: string, eventTimeStr?: string)
     const eventDay = new Date(y, m - 1, d);
 
     const timeStrFormatted = target.toLocaleTimeString('en-IN', {
+      timeZone: IST_TIMEZONE,
       hour: 'numeric',
       minute: '2-digit',
       hour12: true,
@@ -586,6 +589,7 @@ export function formatEventReadable(eventDateStr: string, eventTimeStr?: string)
     }
 
     const dateFormatted = target.toLocaleDateString('en-IN', {
+      timeZone: IST_TIMEZONE,
       weekday: 'short',
       day: 'numeric',
       month: 'short',

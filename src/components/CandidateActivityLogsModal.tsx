@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { BrandActivityIcon } from './icons/BrandIcons';
 import type { LeadActivity } from '../types';
+import { formatIndianDateTime } from '../utils/dateTimeUtils';
 
 interface CandidateActivityLogsModalProps {
   isOpen: boolean;
@@ -51,20 +52,7 @@ export default function CandidateActivityLogsModal({
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '';
-    try {
-      const d = new Date(dateStr);
-      return d.toLocaleString('en-IN', {
-        timeZone: 'Asia/Kolkata',
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
-      });
-    } catch {
-      return dateStr;
-    }
+    return formatIndianDateTime(dateStr, { fallback: dateStr });
   };
 
   return (

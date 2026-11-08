@@ -27,6 +27,7 @@ import attendanceService, {
   AttendanceAdminSummary,
 } from '../services/api/attendanceService';
 import adminService from '../services/api/adminService';
+import { formatIndianTime } from '../utils/dateTimeUtils';
 import type { User } from '../types';
 
 export default function AttendancePage() {
@@ -293,8 +294,8 @@ export default function AttendancePage() {
       r.userId,
       `"${r.userRole || 'Counselor'}"`,
       r.workMode,
-      r.checkInTime ? new Date(r.checkInTime).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }) : '-',
-      r.checkOutTime ? new Date(r.checkOutTime).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }) : '-',
+      r.checkInTime ? formatIndianTime(r.checkInTime, { includeSeconds: true }) : '-',
+      r.checkOutTime ? formatIndianTime(r.checkOutTime, { includeSeconds: true }) : '-',
       r.totalHoursFormatted || `${r.totalMinutes || 0}m`,
       r.status,
       `"${r.checkInNote || ''}"`,
@@ -318,17 +319,7 @@ export default function AttendancePage() {
 
   const formatPunchTime = (iso?: string) => {
     if (!iso) return '-';
-    try {
-      return new Date(iso).toLocaleTimeString('en-IN', {
-        timeZone: 'Asia/Kolkata',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: true,
-      });
-    } catch {
-      return iso;
-    }
+    return formatIndianTime(iso, { includeSeconds: true, fallback: iso });
   };
 
   return (

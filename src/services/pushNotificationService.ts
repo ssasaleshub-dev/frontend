@@ -14,6 +14,7 @@ import {
 import { LocalNotifications, ActionPerformed as LocalActionPerformed } from '@capacitor/local-notifications';
 import axiosClient from './api/axiosClient';
 import { encryptLeadId } from '../utils/leadIdCrypto';
+import { format12HourTime } from '../utils/dateTimeUtils';
 
 const FCM_TOKEN_STORAGE_KEY = 'ssa_fcm_token';
 
@@ -216,7 +217,8 @@ class PushNotificationService {
       }
 
       const candidateText = event.candidateName ? ` for ${event.candidateName}` : '';
-      const dueBody = `Reminder: "${event.title}"${candidateText} scheduled at ${timePart}.`;
+      const formattedTime = format12HourTime(timePart);
+      const dueBody = `Reminder: "${event.title}"${candidateText} scheduled at ${formattedTime}.`;
 
       const notificationsToSchedule: any[] = [];
 
@@ -234,14 +236,14 @@ class PushNotificationService {
             eventId: event.id,
           },
         });
-        console.info('[PushNotifications] Native reminder alarm scheduled for:', triggerTime.toLocaleString());
+        console.info('[PushNotifications] Native reminder alarm scheduled for:', triggerTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true }));
       }
 
       // 2. Immediate heads-up push confirmation on Android device confirming reminder was set
       notificationsToSchedule.push({
         id: notifId + 1,
         title: `✅ Reminder Set: ${event.title}`,
-        body: `Scheduled for ${event.eventDate} at ${timePart}${candidateText} (Alert active)`,
+        body: `Scheduled for ${event.eventDate} at ${formattedTime}${candidateText} (Alert active)`,
         channelId: 'fcm_default_channel',
         schedule: { at: new Date(Date.now() + 500) },
         sound: 'default',

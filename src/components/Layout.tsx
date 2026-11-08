@@ -24,6 +24,7 @@ import { useAuth } from '../context/AuthContext';
 import { isAdmin as checkIsAdmin, getRoleBadgeInfo, getDisplayName } from '../utils/rbac';
 import fileService from '../services/api/fileService';
 import attendanceService, { StaffAttendanceRecord } from '../services/api/attendanceService';
+import { formatIndianTime } from '../utils/dateTimeUtils';
 import brandLogo from '../assets/brand-logo.jpg';
 
 export default function Layout() {
@@ -357,7 +358,7 @@ export default function Layout() {
                 <span className="font-semibold text-emerald-900 tracking-tight">On Duty</span>
                 {todayAttendance?.checkInTime && (
                   <span className="text-[11px] text-emerald-700/80 font-mono pl-1 border-l border-emerald-600/20">
-                    {new Date(todayAttendance.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {formatIndianTime(todayAttendance.checkInTime)}
                   </span>
                 )}
               </button>

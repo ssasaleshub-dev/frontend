@@ -26,6 +26,7 @@ import reminderNotificationService, {
   formatEventReadable,
 } from '../services/reminderNotificationService';
 import { formatMaskedLeadRef } from '../utils/leadIdCrypto';
+import { format12HourTime } from '../utils/dateTimeUtils';
 import { useAuth } from '../context/AuthContext';
 
 interface LeadReminderModalProps {
@@ -613,7 +614,7 @@ export default function LeadReminderModal({
                           {r.eventTime && (
                             <span className="flex items-center gap-1 font-medium">
                               <Clock size={11} />
-                              {r.eventTime}
+                              {format12HourTime(r.eventTime)}
                             </span>
                           )}
                           {!r.isCompleted && (() => {

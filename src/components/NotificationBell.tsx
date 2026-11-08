@@ -16,6 +16,7 @@ import reminderNotificationService, {
   NotificationItem,
 } from '../services/reminderNotificationService';
 import { encryptLeadId } from '../utils/leadIdCrypto';
+import { formatIndianDate } from '../utils/dateTimeUtils';
 
 export default function NotificationBell() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -103,7 +104,7 @@ export default function NotificationBell() {
       if (diffMins < 60) return `${diffMins}m ago`;
       const diffHours = Math.floor(diffMins / 60);
       if (diffHours < 24) return `${diffHours}h ago`;
-      return date.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' });
+      return formatIndianDate(date);
     } catch {
       return '';
     }

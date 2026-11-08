@@ -28,6 +28,7 @@ import reminderNotificationService, {
   formatEventReadable,
 } from '../services/reminderNotificationService';
 import { useAuth } from '../context/AuthContext';
+import { format12HourTime, IST_TIMEZONE } from '../utils/dateTimeUtils';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -364,7 +365,7 @@ export default function CalendarPage() {
                     {dayEvents.slice(0, 2).map((evt) => (
                       <div
                         key={evt.id}
-                        title={`${evt.title} (${evt.eventTime || 'Anytime'})`}
+                        title={`${evt.title} (${evt.eventTime ? format12HourTime(evt.eventTime) : 'Anytime'})`}
                         className={`px-1.5 py-0.5 rounded text-[10px] font-medium truncate flex items-center gap-1 ${
                           evt.isCompleted
                             ? 'bg-slate-100 text-slate-400 line-through'
@@ -407,6 +408,7 @@ export default function CalendarPage() {
                 </h3>
                 <p className="text-[15px] font-semibold text-[#1d1d1f] mt-0.5">
                   {new Date(selectedDateStr).toLocaleDateString('en-IN', {
+                    timeZone: IST_TIMEZONE,
                     weekday: 'short',
                     day: 'numeric',
                     month: 'short',
@@ -481,7 +483,7 @@ export default function CalendarPage() {
                           {evt.title}
                         </p>
                         <span className="text-[10px] font-mono text-[#86868b] shrink-0">
-                          {evt.eventTime || 'All Day'}
+                          {evt.eventTime ? format12HourTime(evt.eventTime) : 'All Day'}
                         </span>
                       </div>
 
@@ -558,7 +560,7 @@ export default function CalendarPage() {
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-medium text-[#1d1d1f] text-[12px]">{h.title}</span>
                       <span className="text-[10px] font-mono text-amber-900 font-semibold">
-                        {new Date(h.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                        {new Date(h.date).toLocaleDateString('en-IN', { timeZone: IST_TIMEZONE, day: 'numeric', month: 'short' })}
                       </span>
                     </div>
                     <p className="text-[11px] text-[#86868b] mt-0.5 leading-snug font-normal">
