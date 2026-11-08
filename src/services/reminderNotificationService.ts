@@ -348,9 +348,9 @@ class ReminderNotificationService {
 
   public async markAsRead(id: string): Promise<void> {
     const cached = this.getCachedNotifications();
-    const item = cached.find((n) => n.id === id);
+    const item = cached.find((n) => String(n.id) === String(id));
     if (item) {
-      item.isRead = true;
+      item.isRead = !item.isRead;
       localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(cached));
       window.dispatchEvent(new CustomEvent('ssa_notifications_updated'));
     }
@@ -372,7 +372,7 @@ class ReminderNotificationService {
   }
 
   public async deleteNotification(id: string): Promise<void> {
-    const cached = this.getCachedNotifications().filter((n) => n.id !== id);
+    const cached = this.getCachedNotifications().filter((n) => String(n.id) !== String(id));
     localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(cached));
     window.dispatchEvent(new CustomEvent('ssa_notifications_updated'));
 

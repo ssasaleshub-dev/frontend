@@ -2,6 +2,9 @@ import React, { useState, useRef } from 'react';
 import {
   Check,
   Trash2,
+  Clock,
+  Phone,
+  User,
 } from 'lucide-react';
 import { NotificationItem } from '../services/reminderNotificationService';
 import { cleanNotificationMessage } from '../utils/dateTimeUtils';
@@ -28,6 +31,7 @@ export default function SwipeableNotificationCard({
 
   const startX = useRef(0);
   const startY = useRef(0);
+  const currentDiffX = useRef(0);
   const isHorizontalSwipe = useRef(false);
   const isVerticalScroll = useRef(false);
   const hasMoved = useRef(false);
@@ -36,6 +40,7 @@ export default function SwipeableNotificationCard({
   const handleTouchStart = (e: React.TouchEvent) => {
     startX.current = e.touches[0].clientX;
     startY.current = e.touches[0].clientY;
+    currentDiffX.current = 0;
     isHorizontalSwipe.current = false;
     isVerticalScroll.current = false;
     hasMoved.current = false;
@@ -56,29 +61,37 @@ export default function SwipeableNotificationCard({
         isVerticalScroll.current = true;
         return;
       }
-      if (Math.abs(diffX) > 8) {
+      if (Math.abs(diffX) > 6) {
         isHorizontalSwipe.current = true;
       }
     }
 
     if (isHorizontalSwipe.current) {
       hasMoved.current = true;
+      currentDiffX.current = diffX;
+
       let clamped = diffX;
-      if (diffX > 90) clamped = 90 + (diffX - 90) * 0.3;
-      if (diffX < -90) clamped = -90 + (diffX + 90) * 0.3;
+      if (diffX > 100) clamped = 100 + (diffX - 100) * 0.25;
+      if (diffX < -100) clamped = -100 + (diffX + 100) * 0.25;
       setOffsetX(clamped);
     }
   };
 
   const handleTouchEnd = () => {
     setIsDragging(false);
-    if (isHorizontalSwipe.current) {
-      if (offsetX > 60) {
+    const finalDiff = currentDiffX.current;
+
+    if (isHorizontalSwipe.current && hasMoved.current) {
+      if (finalDiff > 35) {
+        // Right swipe: Toggle/Mark as Read
         onMarkAsRead(item.id);
-      } else if (offsetX < -60) {
+      } else if (finalDiff < -35) {
+        // Left swipe: Delete
         onDelete(item.id);
       }
     }
+
+    currentDiffX.current = 0;
     setOffsetX(0);
     isHorizontalSwipe.current = false;
     isVerticalScroll.current = false;
@@ -89,20 +102,22 @@ export default function SwipeableNotificationCard({
     if (e.button !== 0) return;
     startX.current = e.clientX;
     startY.current = e.clientY;
+    currentDiffX.current = 0;
     isHorizontalSwipe.current = false;
     hasMoved.current = false;
     setIsDragging(true);
 
     const onMouseMove = (moveEvent: MouseEvent) => {
       const diffX = moveEvent.clientX - startX.current;
-      if (Math.abs(diffX) > 6) {
+      if (Math.abs(diffX) > 4) {
         isHorizontalSwipe.current = true;
         hasMoved.current = true;
       }
       if (isHorizontalSwipe.current) {
+        currentDiffX.current = diffX;
         let clamped = diffX;
-        if (diffX > 90) clamped = 90 + (diffX - 90) * 0.3;
-        if (diffX < -90) clamped = -90 + (diffX + 90) * 0.3;
+        if (diffX > 100) clamped = 100 + (diffX - 100) * 0.25;
+        if (diffX < -100) clamped = -100 + (diffX + 100) * 0.25;
         setOffsetX(clamped);
       }
     };
@@ -111,13 +126,17 @@ export default function SwipeableNotificationCard({
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
       setIsDragging(false);
-      if (isHorizontalSwipe.current) {
-        if (offsetX > 60) {
+
+      const finalDiff = currentDiffX.current;
+      if (isHorizontalSwipe.current && hasMoved.current) {
+        if (finalDiff > 35) {
           onMarkAsRead(item.id);
-        } else if (offsetX < -60) {
+        } else if (finalDiff < -35) {
           onDelete(item.id);
         }
       }
+
+      currentDiffX.current = 0;
       setOffsetX(0);
       isHorizontalSwipe.current = false;
     };
@@ -127,7 +146,7 @@ export default function SwipeableNotificationCard({
   };
 
   const handleClick = (e: React.MouseEvent) => {
-    if (hasMoved.current || Math.abs(offsetX) > 6) {
+    if (hasMoved.current || Math.abs(currentDiffX.current) > 5 || Math.abs(offsetX) > 5) {
       e.preventDefault();
       e.stopPropagation();
       return;
@@ -142,9 +161,12 @@ export default function SwipeableNotificationCard({
 
   return (
     <div className="relative overflow-hidden bg-white select-none touch-pan-y group">
-      {/* BACKGROUND ACTION: Right Swipe = Mark as Read (Apple/Instagram Blue) */}
+      {/* BACKGROUND ACTION: Right Swipe = Mark as Read / Unread (Apple/Instagram Blue) */}
       <div
-        onClick={() => onMarkAsRead(item.id)}
+        onClick={(e) => {
+          e.stopPropagation();
+          onMarkAsRead(item.id);
+        }}
         className={`absolute inset-y-0 left-0 w-full flex items-center justify-start pl-6 pr-4 bg-[#0071e3] text-white transition-opacity duration-150 cursor-pointer ${
           isSwipingRight ? 'opacity-100 z-0' : 'opacity-0 -z-10'
         }`}
@@ -152,17 +174,20 @@ export default function SwipeableNotificationCard({
         <div
           className="flex items-center gap-2 font-semibold text-xs tracking-tight transition-transform"
           style={{
-            transform: `scale(${Math.min(1.15, Math.max(0.85, Math.abs(offsetX) / 60))})`,
+            transform: `scale(${Math.min(1.2, Math.max(0.85, Math.abs(offsetX) / 45))})`,
           }}
         >
           <Check size={20} strokeWidth={2.8} />
-          <span>Mark Read</span>
+          <span>{item.isRead ? 'Mark Unread' : 'Mark Read'}</span>
         </div>
       </div>
 
       {/* BACKGROUND ACTION: Left Swipe = Delete (Instagram Red) */}
       <div
-        onClick={() => onDelete(item.id)}
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(item.id);
+        }}
         className={`absolute inset-y-0 right-0 w-full flex items-center justify-end pr-6 pl-4 bg-[#ff3b30] text-white transition-opacity duration-150 cursor-pointer ${
           isSwipingLeft ? 'opacity-100 z-0' : 'opacity-0 -z-10'
         }`}
@@ -170,7 +195,7 @@ export default function SwipeableNotificationCard({
         <div
           className="flex items-center gap-2 font-semibold text-xs tracking-tight transition-transform"
           style={{
-            transform: `scale(${Math.min(1.15, Math.max(0.85, Math.abs(offsetX) / 60))})`,
+            transform: `scale(${Math.min(1.2, Math.max(0.85, Math.abs(offsetX) / 45))})`,
           }}
         >
           <span>Delete</span>
@@ -178,7 +203,7 @@ export default function SwipeableNotificationCard({
         </div>
       </div>
 
-      {/* FOREGROUND ROW: Pure Apple iOS Clean List Item */}
+      {/* FOREGROUND ROW: Instagram-style Flat White Row with Clear Visual Feedback */}
       <div
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -190,26 +215,64 @@ export default function SwipeableNotificationCard({
           transform: `translateX(${offsetX}px)`,
           transition: isDragging ? 'none' : 'transform 0.28s cubic-bezier(0.18, 0.89, 0.32, 1.15)',
         }}
-        className="px-4 py-3.5 bg-white hover:bg-[#fafafa] active:bg-[#f2f2f7] border-b border-[#e5e5ea]/70 relative z-10 cursor-pointer transition-colors flex flex-col justify-center"
+        className={`px-4 py-3.5 flex items-center gap-3.5 border-b border-black/[0.04] relative z-10 cursor-pointer transition-colors duration-200 ${
+          !item.isRead
+            ? 'bg-[#0071e3]/[0.05] hover:bg-[#0071e3]/[0.08]'
+            : 'bg-white hover:bg-[#fafafa]'
+        }`}
       >
-        <div className="flex items-baseline justify-between gap-3">
-          <h4
-            className={`text-[15px] leading-snug tracking-tight truncate ${
-              item.isRead ? 'font-normal text-[#1c1c1e]' : 'font-semibold text-[#000000]'
-            }`}
-          >
-            {cleanTitle}
-          </h4>
-          <span className="text-[12px] text-[#8e8e93] shrink-0 font-normal">
-            {formattedTimestamp}
-          </span>
+        {/* Left: Circular icon avatar with active indicator */}
+        <div
+          className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 border transition-all ${
+            item.type === 'CALL'
+              ? 'bg-emerald-50 text-emerald-600 border-emerald-200/50'
+              : item.type === 'REMINDER'
+              ? 'bg-orange-50 text-orange-600 border-orange-200/50'
+              : item.type === 'LEAD_ASSIGNED'
+              ? 'bg-purple-50 text-purple-600 border-purple-200/50'
+              : 'bg-blue-50 text-[#0071e3] border-blue-200/50'
+          } ${!item.isRead ? 'ring-2 ring-[#0071e3]/20 shadow-xs' : ''}`}
+        >
+          {item.type === 'CALL' ? (
+            <Phone size={18} strokeWidth={2.2} />
+          ) : item.type === 'LEAD_ASSIGNED' ? (
+            <User size={18} strokeWidth={2.2} />
+          ) : (
+            <Clock size={18} strokeWidth={2.2} />
+          )}
         </div>
 
-        {displayMessage && (
-          <p className="text-[13px] text-[#636366] leading-normal font-normal mt-0.5 line-clamp-2">
-            {displayMessage}
+        {/* Center: Instagram-style inline notification text */}
+        <div className="flex-1 min-w-0 pr-1">
+          <p className="text-[14px] leading-snug">
+            <span
+              className={`transition-colors ${
+                !item.isRead ? 'font-bold text-[#1d1d1f]' : 'font-normal text-[#515154]'
+              }`}
+            >
+              {cleanTitle}
+            </span>
+            {displayMessage && (
+              <span className="text-[#515154] font-normal ml-1.5">
+                {displayMessage}
+              </span>
+            )}
           </p>
-        )}
+          <div className="flex items-center gap-2 mt-1">
+            <span
+              className={`text-[12px] block font-normal transition-colors ${
+                !item.isRead ? 'text-[#0071e3] font-medium' : 'text-[#8e8e93]'
+              }`}
+            >
+              {formattedTimestamp}
+            </span>
+            {!item.isRead && (
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0071e3] bg-[#0071e3]/10 px-1.5 py-0.2 rounded-md">
+                Unread
+              </span>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
