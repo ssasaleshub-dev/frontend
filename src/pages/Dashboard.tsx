@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  RefreshCw,
   Phone,
   MessageCircle,
   ChevronRight,
@@ -339,17 +338,6 @@ export default function Dashboard() {
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          <button
-            type="button"
-            onClick={() => loadDashboardData()}
-            disabled={loading}
-            className="ios-btn-gray text-xs py-2 px-3.5 shrink-0"
-            title="Reload telemetry"
-          >
-            <RefreshCw size={12} className={loading ? 'animate-spin text-[#007aff]' : 'text-[#8e8e93]'} />
-            <span>Sync</span>
-          </button>
-
           <button
             type="button"
             onClick={() => navigate('/leads')}
