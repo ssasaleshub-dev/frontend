@@ -335,7 +335,7 @@ export default function NotificationBell() {
                             : 'bg-white hover:bg-white border-[#0071e3]/20 shadow-xs ring-1 ring-[#0071e3]/10'
                         }`}
                       >
-                        {/* Top Row: Category Label + Timestamp + Unread Dot */}
+                        {/* Top Row: Category Label + Timestamp (Zero Blue Dot) */}
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-1.5 min-w-0">
                             <span className="text-[10px] font-semibold uppercase tracking-wider text-[#86868b] truncate">
@@ -357,14 +357,8 @@ export default function NotificationBell() {
                             </span>
                           </div>
 
-                          {/* Unread Indicator & Hover Quick Actions */}
+                          {/* Desktop Hover Quick Actions (Zero Dot) */}
                           <div className="flex items-center gap-1.5 shrink-0">
-                            {!item.isRead && (
-                              <span
-                                className="w-2 h-2 rounded-full bg-[#0071e3] shrink-0"
-                                title="Unread notification"
-                              />
-                            )}
                             <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
                               {!item.isRead && (
                                 <button

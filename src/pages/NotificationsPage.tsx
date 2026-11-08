@@ -15,6 +15,7 @@ import {
   Filter,
 } from 'lucide-react';
 import { AppleBellIcon } from '../components/icons/BrandIcons';
+import SwipeableNotificationCard from '../components/SwipeableNotificationCard';
 import reminderNotificationService, {
   NotificationItem,
 } from '../services/reminderNotificationService';
@@ -332,6 +333,20 @@ export default function NotificationsPage() {
         </div>
       )}
 
+      {/* Swipe Gesture Hint Header */}
+      {notifications.length > 0 && (
+        <div className="flex items-center justify-between text-[11px] text-[#86868b] px-3 py-1.5 bg-black/[0.03] rounded-xl border border-black/[0.04]">
+          <span className="inline-flex items-center gap-1 font-medium text-[#0071e3]">
+            <Check size={12} strokeWidth={2.8} />
+            <span>Swipe right to mark read</span>
+          </span>
+          <span className="inline-flex items-center gap-1 font-medium text-[#ff3b30]">
+            <span>Swipe left to delete</span>
+            <Trash2 size={11} strokeWidth={2.2} />
+          </span>
+        </div>
+      )}
+
       {/* Grouped Notification List */}
       <div className="space-y-6 pt-1">
         {groupedNotifications.length === 0 ? (
@@ -376,110 +391,15 @@ export default function NotificationsPage() {
                     .trim();
 
                   return (
-                    <div
+                    <SwipeableNotificationCard
                       key={item.id}
-                      onClick={() => handleNotificationClick(item)}
-                      className={`p-4 rounded-2xl transition-all cursor-pointer border flex flex-col gap-2 relative ${
-                        item.isRead
-                          ? 'bg-white hover:bg-slate-50/80 border-black/[0.05] shadow-2xs'
-                          : 'bg-white hover:bg-slate-50/80 border-[#0071e3]/25 shadow-xs ring-1 ring-[#0071e3]/10'
-                      }`}
-                    >
-                      {/* Top Row: Category Badge + Timestamp + Unread Dot + Quick Actions */}
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span
-                            className={`text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${
-                              item.type === 'CALL'
-                                ? 'bg-emerald-500/10 text-emerald-700'
-                                : item.type === 'REMINDER'
-                                ? 'bg-orange-500/10 text-orange-700'
-                                : item.type === 'LEAD_ASSIGNED'
-                                ? 'bg-purple-500/10 text-purple-700'
-                                : 'bg-blue-500/10 text-blue-700'
-                            }`}
-                          >
-                            {item.type === 'CALL'
-                              ? 'Candidate Callback'
-                              : item.type === 'REMINDER'
-                              ? 'Reminder'
-                              : item.type === 'LEAD_ASSIGNED'
-                              ? 'Lead Assignment'
-                              : item.type && item.type.startsWith('CLOSING_MILESTONE_')
-                              ? 'Milestone'
-                              : 'SSA Sales Hub'}
-                          </span>
-
-                          <span className="text-[11px] text-[#86868b] font-normal truncate">
-                            {formatTimestamp(item.createdAt)}
-                          </span>
-                        </div>
-
-                        {/* Action buttons */}
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {!item.isRead && (
-                            <span
-                              className="w-2.5 h-2.5 rounded-full bg-[#0071e3] shrink-0"
-                              title="Unread notification"
-                            />
-                          )}
-
-                          {!item.isRead && (
-                            <button
-                              type="button"
-                              onClick={(e) => handleMarkAsRead(item.id, e)}
-                              title="Mark as read"
-                              className="p-1.5 rounded-lg text-[#86868b] hover:text-[#0071e3] hover:bg-black/[0.05] transition-colors"
-                            >
-                              <Check size={14} strokeWidth={2.5} />
-                            </button>
-                          )}
-
-                          <button
-                            type="button"
-                            onClick={(e) => handleDelete(item.id, e)}
-                            title="Delete notification"
-                            className="p-1.5 rounded-lg text-[#86868b] hover:text-[#ff3b30] hover:bg-black/[0.05] transition-colors"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Content Body */}
-                      <div className="space-y-1">
-                        <h4
-                          className={`text-[14px] leading-snug tracking-tight ${
-                            item.isRead ? 'font-medium text-[#1d1d1f]' : 'font-semibold text-[#1d1d1f]'
-                          }`}
-                        >
-                          {cleanTitle}
-                        </h4>
-                        <p className="text-[13px] text-[#515154] leading-relaxed font-normal">
-                          {item.message}
-                        </p>
-                      </div>
-
-                      {/* Bottom Link Hint if lead or event attached */}
-                      {(item.referenceType === 'LEAD' || item.referenceType === 'EVENT' || item.type === 'REMINDER') && (
-                        <div className="pt-1 flex items-center justify-between text-xs text-[#0071e3] font-medium border-t border-black/[0.03]">
-                          <span className="inline-flex items-center gap-1">
-                            {item.referenceType === 'LEAD' ? (
-                              <>
-                                <User size={12} />
-                                <span>Open candidate lead profile</span>
-                              </>
-                            ) : (
-                              <>
-                                <Calendar size={12} />
-                                <span>Open calendar event</span>
-                              </>
-                            )}
-                          </span>
-                          <ChevronRight size={13} strokeWidth={2.2} />
-                        </div>
-                      )}
-                    </div>
+                      item={item}
+                      cleanTitle={cleanTitle}
+                      formattedTimestamp={formatTimestamp(item.createdAt)}
+                      onClick={handleNotificationClick}
+                      onMarkAsRead={(id) => reminderNotificationService.markAsRead(id)}
+                      onDelete={(id) => reminderNotificationService.deleteNotification(id)}
+                    />
                   );
                 })}
               </div>
@@ -507,3 +427,4 @@ export default function NotificationsPage() {
     </div>
   );
 }
+
