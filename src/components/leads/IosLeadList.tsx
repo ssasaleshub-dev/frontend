@@ -233,28 +233,35 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
           const quality = getLeadQuality(lead);
           const stage = (lead.status || 'CREATED').toUpperCase();
 
-          // Stage styling
+          // Clean status indicators (minimalist dot + text, no neon pills)
           let stageLabel = 'New Lead';
-          let stageClass = 'bg-[#f2f2f7] text-[#1c1c1e]';
+          let stageDotColor = 'bg-slate-400';
+          let stageTextColor = 'text-slate-700';
 
           if (stage === 'CONTACTED') {
             stageLabel = 'Contacted';
-            stageClass = 'bg-[#007aff]/10 text-[#007aff]';
+            stageDotColor = 'bg-[#007aff]';
+            stageTextColor = 'text-[#007aff]';
           } else if (stage === 'QUALIFIED') {
             stageLabel = 'Qualified';
-            stageClass = 'bg-[#5856d6]/10 text-[#5856d6]';
+            stageDotColor = 'bg-[#5856d6]';
+            stageTextColor = 'text-[#5856d6]';
           } else if (stage === 'PROPOSAL_SENT') {
             stageLabel = 'Docs Requested';
-            stageClass = 'bg-[#30b0c7]/10 text-[#30b0c7]';
+            stageDotColor = 'bg-[#0284c7]';
+            stageTextColor = 'text-[#0284c7]';
           } else if (stage === 'NEGOTIATION') {
             stageLabel = 'In Process';
-            stageClass = 'bg-[#ff9500]/10 text-[#ff9500]';
+            stageDotColor = 'bg-[#ff9500]';
+            stageTextColor = 'text-[#ff9500]';
           } else if (stage === 'CONVERTED' || stage === 'WON') {
             stageLabel = stage === 'WON' ? 'Visa Approved' : 'Converted';
-            stageClass = 'bg-[#34c759]/15 text-[#248a3d] font-semibold';
+            stageDotColor = 'bg-[#34c759]';
+            stageTextColor = 'text-[#248a3d] font-semibold';
           } else if (stage === 'LOST') {
             stageLabel = 'Lost / Closed';
-            stageClass = 'bg-[#ff3b30]/10 text-[#ff3b30]';
+            stageDotColor = 'bg-[#ff3b30]';
+            stageTextColor = 'text-[#ff3b30]';
           }
 
           // Budget & Payment calculations
@@ -287,21 +294,30 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
                     {lead.customerName || `Candidate #${lead.id}`}
                   </span>
                   {lead.visaType && (
-                    <span className="text-[10px] font-medium text-[#8e8e93] bg-[#f2f2f7] px-2 py-0.5 rounded-full shrink-0">
-                      {lead.visaType === 'WORK_VISA' ? 'Work Visa' : 'Study Visa'}
+                    <span className="text-[11px] font-normal text-[#8e8e93] shrink-0">
+                      · {lead.visaType === 'WORK_VISA' ? 'Work Visa' : 'Study Visa'}
                     </span>
                   )}
                   {quality !== '—' && (
                     <span
-                      className={`text-[9px] font-semibold uppercase px-2 py-0.5 rounded-full shrink-0 ${
+                      className={`inline-flex items-center gap-1 text-[11px] font-semibold shrink-0 ${
                         quality === 'Hot'
-                          ? 'bg-rose-50 text-rose-600 border border-rose-200/60'
+                          ? 'text-[#ff3b30]'
                           : quality === 'Warm'
-                          ? 'bg-amber-50 text-amber-700 border border-amber-200/60'
-                          : 'bg-slate-100 text-slate-600'
+                          ? 'text-[#ff9500]'
+                          : 'text-[#8e8e93]'
                       }`}
                     >
-                      {quality}
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                          quality === 'Hot'
+                            ? 'bg-[#ff3b30]'
+                            : quality === 'Warm'
+                            ? 'bg-[#ff9500]'
+                            : 'bg-[#8e8e93]'
+                        }`}
+                      />
+                      <span>{quality}</span>
                     </span>
                   )}
                 </div>
@@ -327,18 +343,19 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
                   )}
                 </div>
 
-                {/* Mobile / Compact Badges */}
-                <div className="flex items-center gap-1.5 mt-1 sm:hidden flex-wrap">
+                {/* Mobile / Compact Info */}
+                <div className="flex items-center gap-2 mt-1 sm:hidden flex-wrap">
                   <button
                     type="button"
                     onClick={(e) => onOpenStatusModal(lead, e)}
-                    className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full transition-opacity hover:opacity-80 ${stageClass}`}
+                    className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[#1c1c1e] hover:underline cursor-pointer"
                     title="Click to update stage"
                   >
-                    <span>{stageLabel}</span>
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${stageDotColor}`} />
+                    <span className={stageTextColor}>{stageLabel}</span>
                   </button>
                   {b && (
-                    <span className="text-[10px] font-semibold text-[#007aff] bg-[#007aff]/10 px-1.5 py-0.5 rounded-full">
+                    <span className="text-[11px] font-semibold text-[#1c1c1e]">
                       ₹{b}
                     </span>
                   )}
@@ -357,21 +374,23 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
                 </div>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   {b ? (
-                    <span className="text-[11px] font-semibold text-[#007aff]">₹{b}</span>
+                    <span className="text-[11px] font-semibold text-[#1c1c1e]">₹{b}</span>
                   ) : (
                     <span className="text-[11px] text-[#8e8e93]">Budget: —</span>
                   )}
                   <span>·</span>
                   {p === 'PAID' ? (
-                    <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded-full border border-emerald-200">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                       Paid
                     </span>
                   ) : p === 'PARTIAL' ? (
-                    <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded-full border border-amber-200">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-700">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                       Partial
                     </span>
                   ) : (
-                    <span className="text-[10px] text-[#8e8e93]">Unsettled</span>
+                    <span className="text-[11px] text-[#8e8e93]">Unsettled</span>
                   )}
                 </div>
                 {lead.notes && (
@@ -386,10 +405,11 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
                 <button
                   type="button"
                   onClick={(e) => onOpenStatusModal(lead, e)}
-                  className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full transition-opacity hover:opacity-80 ${stageClass}`}
+                  className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#1c1c1e] hover:underline cursor-pointer"
                   title="Click to update stage"
                 >
-                  <span>{stageLabel}</span>
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${stageDotColor}`} />
+                  <span className={stageTextColor}>{stageLabel}</span>
                 </button>
                 <span className="text-[11px] text-[#8e8e93] mt-1 font-mono">
                   {formatDate(lead.followUpDate || lead.createdTime || lead.createdAt)}

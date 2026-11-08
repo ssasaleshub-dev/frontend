@@ -677,24 +677,29 @@ export default function AttendancePage() {
                       {/* Status */}
                       <td className="py-3.5 px-4 whitespace-nowrap">
                         {isStaffWorkingNow ? (
-                          <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                             On Duty
                           </span>
                         ) : rec.status === 'LATE' ? (
-                          <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                             Late Arrival
                           </span>
                         ) : rec.status === 'HALF_DAY' ? (
-                          <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-700">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
                             Half Day
                           </span>
                         ) : rec.status === 'OVERTIME' ? (
-                          <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+                          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-purple-700">
+                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
                             Overtime
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            On-Time Present
+                          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            Present
                           </span>
                         )}
                       </td>

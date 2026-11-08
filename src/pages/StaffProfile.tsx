@@ -451,16 +451,17 @@ export default function StaffProfile() {
                       {d.dayNumber}
                     </span>
 
-                    {/* Status Pill on Day */}
+                    {/* Status on Day */}
                     {hasCheckedIn && (
-                      <span
-                        className={`text-[9px] font-bold px-1.5 py-0.2 rounded-md ${
-                          rec?.status === 'LATE'
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-emerald-100 text-emerald-800'
-                        }`}
-                      >
-                        {rec?.status === 'LATE' ? 'Late' : 'Present'}
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium">
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                            rec?.status === 'LATE' ? 'bg-amber-500' : 'bg-emerald-500'
+                          }`}
+                        />
+                        <span className={rec?.status === 'LATE' ? 'text-amber-700' : 'text-emerald-700 font-semibold'}>
+                          {rec?.status === 'LATE' ? 'Late' : 'Present'}
+                        </span>
                       </span>
                     )}
                   </div>

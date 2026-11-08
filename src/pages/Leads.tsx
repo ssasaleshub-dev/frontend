@@ -1133,21 +1133,37 @@ export default function Leads() {
   const renderStageBadge = (leadItem: Lead) => {
     const s = (leadItem.status || 'CREATED').toUpperCase();
     let label = 'New Lead';
+    let dotColor = 'bg-slate-400';
+    let textColor = 'text-slate-700';
 
     if (s === 'CONTACTED') {
       label = 'Contacted';
+      dotColor = 'bg-[#007aff]';
+      textColor = 'text-[#007aff]';
     } else if (s === 'QUALIFIED') {
       label = 'Qualified';
+      dotColor = 'bg-[#5856d6]';
+      textColor = 'text-[#5856d6]';
     } else if (s === 'CONVERTED') {
       label = 'Converted';
+      dotColor = 'bg-[#34c759]';
+      textColor = 'text-emerald-700 font-semibold';
     } else if (s === 'WON') {
       label = 'Visa Approved';
+      dotColor = 'bg-[#34c759]';
+      textColor = 'text-emerald-700 font-semibold';
     } else if (s === 'PROPOSAL_SENT') {
       label = 'Docs Requested';
+      dotColor = 'bg-[#0284c7]';
+      textColor = 'text-[#0284c7]';
     } else if (s === 'NEGOTIATION') {
       label = 'In Process';
+      dotColor = 'bg-[#ff9500]';
+      textColor = 'text-[#ff9500]';
     } else if (s === 'LOST') {
       label = 'Lost / Closed';
+      dotColor = 'bg-[#ff3b30]';
+      textColor = 'text-[#ff3b30]';
     }
 
     return (
@@ -1160,10 +1176,11 @@ export default function Leads() {
             notes: leadItem.notes || '',
           });
         }}
-        className="text-xs text-[#1c1c1e] hover:text-[#007aff] hover:underline cursor-pointer"
+        className="inline-flex items-center gap-1.5 text-xs hover:underline cursor-pointer"
         title="Click to update stage"
       >
-        {label}
+        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColor}`} />
+        <span className={textColor}>{label}</span>
       </span>
     );
   };
@@ -1190,12 +1207,14 @@ export default function Leads() {
         <div className="flex flex-col items-start gap-1">
           {b && <span className="font-semibold text-[#007aff]">₹{b}</span>}
           {p === 'PAID' && (
-            <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-200">
+            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
               Paid
             </span>
           )}
           {p === 'PARTIAL' && (
-            <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-200">
+            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-700">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
               Partial
             </span>
           )}
@@ -1669,7 +1688,34 @@ export default function Leads() {
 
                             {/* Lead Quality */}
                             <td className="py-3 px-3.5 whitespace-nowrap text-xs text-[#1c1c1e]">
-                              {getLeadQuality(lead)}
+                              {(() => {
+                                const q = getLeadQuality(lead);
+                                if (q === 'Hot') {
+                                  return (
+                                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#ff3b30]">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-[#ff3b30]" />
+                                      Hot
+                                    </span>
+                                  );
+                                }
+                                if (q === 'Warm') {
+                                  return (
+                                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#ff9500]">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-[#ff9500]" />
+                                      Warm
+                                    </span>
+                                  );
+                                }
+                                if (q === 'Cold') {
+                                  return (
+                                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#8e8e93]">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-[#8e8e93]" />
+                                      Cold
+                                    </span>
+                                  );
+                                }
+                                return <span className="text-xs text-[#8e8e93]">—</span>;
+                              })()}
                             </td>
 
                             {/* Follow-up Date */}
