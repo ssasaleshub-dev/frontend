@@ -6,7 +6,30 @@ import type { User } from '../types';
  */
 
 export const isAdmin = (user: User | null | undefined): boolean => {
-  return Boolean(user?.authorities?.includes(USER_ROLES.ADMIN));
+  if (!user) {
+    try {
+      const stored = localStorage.getItem('ssa_user') || localStorage.getItem('user');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        const l = (parsed.login || '').toLowerCase().trim();
+        if (
+          l === 'admin' ||
+          l === 'administrator' ||
+          parsed.authorities?.includes(USER_ROLES.ADMIN) ||
+          parsed.roles?.includes(USER_ROLES.ADMIN)
+        ) {
+          return true;
+        }
+      }
+    } catch {}
+    return false;
+  }
+  const login = (user.login || '').toLowerCase().trim();
+  if (login === 'admin' || login === 'administrator') return true;
+  if ((user as any).role === 'admin' || (user as any).role === 'ADMIN') return true;
+  if (user.authorities?.includes(USER_ROLES.ADMIN)) return true;
+  if ((user as any).roles?.includes(USER_ROLES.ADMIN)) return true;
+  return false;
 };
 
 export const isWorkVisaStaff = (user: User | null | undefined): boolean => {

@@ -377,48 +377,21 @@ export default function Layout() {
           </div>
 
           <div className="flex items-center gap-2.5">
-            {/* Quick Attendance Punch Pill (Staff / Counselors Only) */}
-            {!isAdmin && (
-              todayAttendance?.checkInTime && !todayAttendance?.checkOutTime ? (
-                <button
-                  type="button"
-                  onClick={() => navigate('/attendance')}
-                  className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-600/20 bg-emerald-500/[0.08] hover:bg-emerald-500/[0.14] text-emerald-950 text-xs font-medium shadow-xs transition-all active:scale-95 group"
-                  title="Shift active - Click to view attendance"
-                >
-                  <span className="font-semibold text-emerald-900 tracking-tight">On Duty</span>
-                  {todayAttendance?.checkInTime && (
-                    <span className="text-[11px] text-emerald-700/80 font-mono pl-1 border-l border-emerald-600/20">
-                      {formatIndianTime(todayAttendance.checkInTime)}
-                    </span>
-                  )}
-                </button>
-              ) : todayAttendance?.checkOutTime ? (
-                <button
-                  type="button"
-                  onClick={() => navigate('/attendance')}
-                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200/80 bg-slate-100/70 hover:bg-slate-200/60 text-slate-700 text-xs font-medium shadow-xs transition-all active:scale-95"
-                  title="Today's shift completed"
-                >
-                  <CheckCircle2 size={13} className="text-emerald-600" />
-                  <span>Shift Completed</span>
-                  {todayAttendance.totalHoursFormatted && (
-                    <span className="text-[11px] text-slate-500 font-mono pl-1 border-l border-slate-300">
-                      {todayAttendance.totalHoursFormatted}
-                    </span>
-                  )}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => navigate('/attendance')}
-                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 bg-white/80 hover:bg-white text-slate-700 text-xs font-medium shadow-xs transition-all active:scale-95 backdrop-blur-md"
-                  title="Punch in for today's shift"
-                >
-                  <Clock size={13} className="text-slate-500" />
-                  <span>Punch In</span>
-                </button>
-              )
+            {/* Quick Attendance Status Pill (Staff / Counselors Only when on active shift) */}
+            {!isAdmin && todayAttendance?.checkInTime && !todayAttendance?.checkOutTime && (
+              <button
+                type="button"
+                onClick={() => navigate('/attendance')}
+                className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-600/20 bg-emerald-500/[0.08] hover:bg-emerald-500/[0.14] text-emerald-950 text-xs font-medium shadow-xs transition-all active:scale-95 group"
+                title="Shift active - Click to view attendance"
+              >
+                <span className="font-semibold text-emerald-900 tracking-tight">On Duty</span>
+                {todayAttendance?.checkInTime && (
+                  <span className="text-[11px] text-emerald-700/80 font-mono pl-1 border-l border-emerald-600/20">
+                    {formatIndianTime(todayAttendance.checkInTime)}
+                  </span>
+                )}
+              </button>
             )}
 
             {isAdmin && (
