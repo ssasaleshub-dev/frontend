@@ -24,6 +24,8 @@ import {
   UploadCloud,
   CheckCircle2,
   FileUp,
+  LayoutList,
+  Table,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import IosLeadList from '../components/leads/IosLeadList';
@@ -135,6 +137,14 @@ export default function Leads() {
   // Pagination for 1000s of data records
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(25);
+
+  // Apple HIG View Mode: Inset Grouped List vs Table Grid (Default: list)
+  const [viewMode, setViewMode] = useState<'list' | 'table'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('ssa_leads_view_mode') as 'list' | 'table') || 'list';
+    }
+    return 'list';
+  });
 
 
 
@@ -1434,6 +1444,42 @@ export default function Leads() {
               </button>
             );
           })}
+
+          {/* Apple HIG Segmented View Toggle (List vs Table) */}
+          <div className="hidden sm:inline-flex items-center p-0.5 bg-black/[0.05] rounded-[9px] text-xs font-medium shrink-0 ml-auto border border-black/[0.03]">
+            <button
+              type="button"
+              onClick={() => {
+                setViewMode('list');
+                localStorage.setItem('ssa_leads_view_mode', 'list');
+              }}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[7px] text-[11px] font-medium transition-all cursor-pointer ${
+                viewMode === 'list'
+                  ? 'bg-white text-[#1d1d1f] font-semibold shadow-2xs'
+                  : 'text-[#86868b] hover:text-[#1d1d1f]'
+              }`}
+              title="Apple HIG Grouped List View"
+            >
+              <LayoutList size={13} strokeWidth={2} />
+              <span>List</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setViewMode('table');
+                localStorage.setItem('ssa_leads_view_mode', 'table');
+              }}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[7px] text-[11px] font-medium transition-all cursor-pointer ${
+                viewMode === 'table'
+                  ? 'bg-white text-[#1d1d1f] font-semibold shadow-2xs'
+                  : 'text-[#86868b] hover:text-[#1d1d1f]'
+              }`}
+              title="Multi-column Table View"
+            >
+              <Table size={13} strokeWidth={2} />
+              <span>Table</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1451,8 +1497,9 @@ export default function Leads() {
         </div>
       )}
 
-      {/* ── MOBILE: Always show exact Apple iOS Inset Grouped List ── */}
-      <div className="sm:hidden">
+      {/* ── Apple HIG Lists and Tables (https://developer.apple.com/design/human-interface-guidelines/lists-and-tables) ── */}
+      {viewMode === 'list' ? (
+        /* ── Full Cross-Device Apple Inset Grouped List View ── */
         <IosLeadList
           leads={paginatedLeads}
           loading={loading}
@@ -1475,246 +1522,304 @@ export default function Leads() {
           getBudgetReady={getBudgetReady}
           formatDate={formatDate}
         />
-      </div>
+      ) : (
+        <>
+          {/* Mobile Fallback: Always Inset Grouped List on narrow screens */}
+          <div className="sm:hidden">
+            <IosLeadList
+              leads={paginatedLeads}
+              loading={loading}
+              totalLeads={filteredLeads.length}
+              currentPage={currentPage}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              onToggleContacted={handleToggleContacted}
+              onOpenStatusModal={(lead, e) => {
+                e.stopPropagation();
+                setStatusModalLead(lead);
+                setStatusForm({
+                  status: lead.status || 'CONTACTED',
+                  notes: lead.notes || '',
+                });
+              }}
+              onDeleteLead={handleDeleteLead}
+              getLeadQuality={getLeadQuality}
+              getBudgetReady={getBudgetReady}
+              formatDate={formatDate}
+            />
+          </div>
 
-      {/* ── DESKTOP: Full Data Table Grid ── */}
-      <div className="hidden sm:block">
-        <div className="ios-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse min-w-[1300px]">
-            <thead>
-              <tr className="bg-[#fbfbfd] border-b border-black/[0.06] text-[11px] font-semibold text-[#8e8e93] select-none">
-                <th className="py-3 px-3.5 whitespace-nowrap">Lead Source</th>
-                <th className="py-3 px-3.5 whitespace-nowrap">Campaign Name</th>
-                <th className="py-3 px-3.5 whitespace-nowrap">Candidate Name</th>
-                <th className="py-3 px-3.5 whitespace-nowrap">Mobile Number</th>
-                <th className="py-3 px-3.5 whitespace-nowrap">WhatsApp Number</th>
-                <th className="py-3 px-3.5 whitespace-nowrap">City</th>
-                <th className="py-3 px-3.5 whitespace-nowrap">Budget / Payment</th>
-                <th className="py-3 px-3.5 whitespace-nowrap">Lead Quality</th>
-                <th className="py-3 px-3.5 whitespace-nowrap">Follow-up Date</th>
-                <th className="py-3 px-3.5 whitespace-nowrap">Follow-up Status</th>
-                <th className="py-3 px-3.5 whitespace-nowrap">Current Stage</th>
-                <th className="py-3 px-3.5 whitespace-nowrap">Remarks</th>
-                <th className="py-3 px-3.5 text-right whitespace-nowrap">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-black/[0.04]">
-              {paginatedLeads.length === 0 ? (
-                <tr>
-                  <td colSpan={13} className="py-12 text-center text-[#8e8e93]">
-                    {loading ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <RefreshCw size={15} className="animate-spin text-[#1c1c1e]" />
-                        Loading candidates...
-                      </span>
-                    ) : (
-                      <div>
-                        <p className="text-[#1c1c1e] font-semibold text-sm">No candidate records match your criteria</p>
-                        <p className="text-[#8e8e93] text-xs mt-1">
-                          Try clearing filters or search keywords, or ingest new records from Meta ads.
-                        </p>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ) : (
-                paginatedLeads.map((lead) => {
-                  const plat = (lead.platform && PLATFORMS[lead.platform]) || PLATFORMS.OTHER;
+          {/* ── Desktop: Apple HIG Grouped Table View ── */}
+          <div className="hidden sm:block space-y-2.5">
+            {/* Apple HIG Grouped Table View Header */}
+            <div className="flex items-center justify-between px-3 text-[12px] font-semibold tracking-wider text-[#6e6e73] uppercase select-none">
+              <div className="flex items-center gap-2">
+                <span>Candidate Table Directory</span>
+                <span className="text-[11px] font-normal normal-case text-[#86868b] bg-black/[0.04] px-2.5 py-0.5 rounded-full border border-black/[0.04]">
+                  {filteredLeads.length} {filteredLeads.length === 1 ? 'candidate' : 'candidates'}
+                </span>
+              </div>
+              <span className="text-[11px] font-medium normal-case text-[#86868b]">
+                Page {currentPage} of {totalPages}
+              </span>
+            </div>
 
-                  return (
-                    <tr
-                      key={lead.id}
-                      onClick={() => navigate(`/leads/${encryptLeadId(lead.id)}`)}
-                      className="hover:bg-[#007aff]/[0.02] transition-colors cursor-pointer group"
-                    >
-                      {/* Lead Source */}
-                      <td className="py-3 px-3.5 whitespace-nowrap">
-                        <span className="font-semibold text-xs text-[#1c1c1e]">
-                          {plat.label}
-                        </span>
-                      </td>
-
-                      {/* Campaign Name */}
-                      <td className="py-3 px-3.5">
-                        <div className="font-medium text-[#1c1c1e] text-xs truncate max-w-[160px]" title={lead.campaignName || '—'}>
-                          {lead.campaignName || '—'}
-                        </div>
-                      </td>
-
-                      {/* Candidate Name */}
-                      <td className="py-3 px-3.5">
-                        <div className="font-semibold text-[13px] text-[#1c1c1e] group-hover:text-[#007aff] transition-colors">
-                          {lead.customerName || `Candidate #${lead.id}`}
-                        </div>
-                        <div className="flex items-center gap-1.5 text-[11px] text-[#8e8e93] mt-0.5">
-                          {lead.email && <span className="truncate max-w-[140px]">{lead.email}</span>}
-                          {lead.email && <span>·</span>}
-                          <span className="font-sf-mono text-[10px]">
-                            {lead.externalId ? lead.externalId : `#${lead.id}`}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Mobile Number */}
-                      <td className="py-3 px-3.5 whitespace-nowrap">
-                        <span className="font-sf-mono text-[12px] text-[#1c1c1e] font-medium tracking-tight">
-                          {lead.phoneNumber || '—'}
-                        </span>
-                      </td>
-
-                      {/* WhatsApp Number */}
-                      <td className="py-3 px-3.5 whitespace-nowrap text-xs text-[#1c1c1e]">
-                        {lead.phoneNumber ? 'Yes' : '—'}
-                      </td>
-
-                      {/* City */}
-                      <td className="py-3 px-3.5 whitespace-nowrap">
-                        <span className="text-xs text-[#1c1c1e] capitalize">
-                          {lead.city || lead.location || '—'}
-                        </span>
-                      </td>
-
-                      {/* Budget Ready */}
-                      <td className="py-3 px-3.5 whitespace-nowrap text-xs text-[#1c1c1e]">
-                        {getBudgetReady(lead)}
-                      </td>
-
-                      {/* Lead Quality */}
-                      <td className="py-3 px-3.5 whitespace-nowrap text-xs text-[#1c1c1e]">
-                        {getLeadQuality(lead)}
-                      </td>
-
-                      {/* Follow-up Date */}
-                      <td className="py-3 px-3.5 text-[#64748b] text-[11px] whitespace-nowrap font-normal">
-                        {formatDate(lead.followUpDate || lead.createdTime || lead.createdAt)}
-                      </td>
-
-                      {/* Follow-up Status */}
-                      <td className="py-3 px-3.5 whitespace-nowrap">
-                        <span className="text-xs font-medium text-[#1c1c1e]">
-                          {lead.followUpStatus || lead.leadConfirm || (lead.status === 'CREATED' ? 'Pending' : 'Interested')}
-                        </span>
-                      </td>
-
-                      {/* Current Stage */}
-                      <td className="py-3 px-3.5 whitespace-nowrap">
-                        {renderStageBadge(lead)}
-                      </td>
-
-                      {/* Remarks */}
-                      <td className="py-3 px-3.5">
-                        <div className="text-[11px] text-[#475569] truncate max-w-[150px]" title={lead.notes || '—'}>
-                          {lead.notes || '—'}
-                        </div>
-                      </td>
-
-                      {/* Outreach & Actions (Clean macOS Style Icon Buttons) */}
-                      <td className="py-3 px-3.5 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-0.5">
-                          {lead.phoneNumber && (
-                            <>
-                              <a
-                                href={`https://wa.me/${lead.phoneNumber.replace(
-                                  /\D/g,
-                                  ''
-                                )}?text=Hello%20${encodeURIComponent(
-                                  lead.customerName || ''
-                                )},%20greetings%20from%20our%20Overseas%20Visa%20Consultancy!%20We%20received%20your%20${encodeURIComponent(
-                                  lead.visaType === 'WORK_VISA' ? 'Work Visa' : 'Study Visa'
-                                )}%20inquiry.`}
-                                target="_blank"
-                                rel="noreferrer"
-                                title="WhatsApp Direct Chat"
-                                className="w-7 h-7 rounded-lg flex items-center justify-center text-[#8e8e93] hover:text-[#34c759] hover:bg-[#34c759]/10 transition-colors"
-                              >
-                                <MessageCircle size={14} />
-                              </a>
-                              <a
-                                href={`tel:${lead.phoneNumber}`}
-                                title="Call Candidate"
-                                className="w-7 h-7 rounded-lg flex items-center justify-center text-[#8e8e93] hover:text-[#007aff] hover:bg-[#007aff]/10 transition-colors"
-                              >
-                                <Phone size={14} />
-                              </a>
-                            </>
-                          )}
-                          <button
-                            onClick={() => navigate(`/leads/${encryptLeadId(lead.id)}`)}
-                            title="Inspect Candidate Dossier"
-                            className="w-7 h-7 rounded-lg flex items-center justify-center text-[#8e8e93] hover:text-[#1c1c1e] hover:bg-black/[0.05] transition-colors"
-                          >
-                            <Eye size={14} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteLead(lead.id, lead.customerName)}
-                            title="Delete Lead"
-                            className="w-7 h-7 rounded-lg flex items-center justify-center text-[#8e8e93] hover:text-[#ff3b30] hover:bg-[#ff3b30]/10 transition-colors"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
+            {/* Apple HIG Inset Grouped Table Container */}
+            <div className="bg-white rounded-[18px] sm:rounded-[22px] border border-black/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse min-w-[1300px]">
+                  <thead>
+                    <tr className="bg-[#fbfbfd] border-b border-black/[0.06] text-[11px] font-semibold text-[#8e8e93] select-none">
+                      <th className="py-3 px-3.5 whitespace-nowrap">Lead Source</th>
+                      <th className="py-3 px-3.5 whitespace-nowrap">Campaign Name</th>
+                      <th className="py-3 px-3.5 whitespace-nowrap">Candidate Name</th>
+                      <th className="py-3 px-3.5 whitespace-nowrap">Mobile Number</th>
+                      <th className="py-3 px-3.5 whitespace-nowrap">WhatsApp Number</th>
+                      <th className="py-3 px-3.5 whitespace-nowrap">City</th>
+                      <th className="py-3 px-3.5 whitespace-nowrap">Budget / Payment</th>
+                      <th className="py-3 px-3.5 whitespace-nowrap">Lead Quality</th>
+                      <th className="py-3 px-3.5 whitespace-nowrap">Follow-up Date</th>
+                      <th className="py-3 px-3.5 whitespace-nowrap">Follow-up Status</th>
+                      <th className="py-3 px-3.5 whitespace-nowrap">Current Stage</th>
+                      <th className="py-3 px-3.5 whitespace-nowrap">Remarks</th>
+                      <th className="py-3 px-3.5 text-right whitespace-nowrap">Actions</th>
                     </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                  </thead>
+                  <tbody className="divide-y divide-black/[0.04]">
+                    {paginatedLeads.length === 0 ? (
+                      <tr>
+                        <td colSpan={13} className="py-12 text-center text-[#8e8e93]">
+                          {loading ? (
+                            <span className="flex items-center justify-center gap-2">
+                              <RefreshCw size={15} className="animate-spin text-[#1c1c1e]" />
+                              Loading candidates...
+                            </span>
+                          ) : (
+                            <div>
+                              <p className="text-[#1c1c1e] font-semibold text-sm">No candidate records match your criteria</p>
+                              <p className="text-[#8e8e93] text-xs mt-1">
+                                Try clearing filters or search keywords, or ingest new records from Meta ads.
+                              </p>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedLeads.map((lead) => {
+                        const plat = (lead.platform && PLATFORMS[lead.platform]) || PLATFORMS.OTHER;
 
-        {/* High-Capacity Pagination Toolbar (iOS / macOS HIG Status Bar) */}
-        <div className="p-3.5 border-t border-black/[0.05] bg-[#fbfbfd] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-3 text-[#8e8e93]">
-            <span>
-              Showing <strong className="text-[#1c1c1e] font-semibold">{filteredLeads.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}</strong> to{' '}
-              <strong className="text-[#1c1c1e] font-semibold">{Math.min(currentPage * pageSize, filteredLeads.length)}</strong> of{' '}
-              <strong className="text-[#1c1c1e] font-semibold">{filteredLeads.length}</strong> candidates
-            </span>
+                        return (
+                          <tr
+                            key={lead.id}
+                            onClick={() => navigate(`/leads/${encryptLeadId(lead.id)}`)}
+                            className="hover:bg-[#007aff]/[0.02] transition-colors cursor-pointer group"
+                          >
+                            {/* Lead Source */}
+                            <td className="py-3 px-3.5 whitespace-nowrap">
+                              <span className="font-semibold text-xs text-[#1c1c1e]">
+                                {plat.label}
+                              </span>
+                            </td>
 
-            {/* Page Size Selector */}
-            <div className="flex items-center gap-1.5 pl-2 border-l border-black/[0.08]">
-              <span className="text-[11px] text-[#8e8e93]">Rows:</span>
-              <select
-                value={pageSize}
-                onChange={(e) => setPageSize(Number(e.target.value))}
-                className="px-2 py-0.5 bg-black/[0.04] hover:bg-black/[0.08] border-0 rounded-md text-xs font-semibold text-[#1c1c1e] focus:outline-none transition-colors cursor-pointer"
-              >
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
+                            {/* Campaign Name */}
+                            <td className="py-3 px-3.5">
+                              <div className="font-medium text-[#1c1c1e] text-xs truncate max-w-[160px]" title={lead.campaignName || '—'}>
+                                {lead.campaignName || '—'}
+                              </div>
+                            </td>
+
+                            {/* Candidate Name */}
+                            <td className="py-3 px-3.5">
+                              <div className="font-semibold text-[13px] text-[#1c1c1e] group-hover:text-[#007aff] transition-colors">
+                                {lead.customerName || `Candidate #${lead.id}`}
+                              </div>
+                              <div className="flex items-center gap-1.5 text-[11px] text-[#8e8e93] mt-0.5">
+                                {lead.email && <span className="truncate max-w-[140px]">{lead.email}</span>}
+                                {lead.email && <span>·</span>}
+                                <span className="font-sf-mono text-[10px]">
+                                  {lead.externalId ? lead.externalId : `#${lead.id}`}
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* Mobile Number */}
+                            <td className="py-3 px-3.5 whitespace-nowrap">
+                              <span className="font-sf-mono text-[12px] text-[#1c1c1e] font-medium tracking-tight">
+                                {lead.phoneNumber || '—'}
+                              </span>
+                            </td>
+
+                            {/* WhatsApp Number */}
+                            <td className="py-3 px-3.5 whitespace-nowrap text-xs text-[#1c1c1e]">
+                              {lead.phoneNumber ? 'Yes' : '—'}
+                            </td>
+
+                            {/* City */}
+                            <td className="py-3 px-3.5 whitespace-nowrap">
+                              <span className="text-xs text-[#1c1c1e] capitalize">
+                                {lead.city || lead.location || '—'}
+                              </span>
+                            </td>
+
+                            {/* Budget Ready */}
+                            <td className="py-3 px-3.5 whitespace-nowrap text-xs text-[#1c1c1e]">
+                              {getBudgetReady(lead)}
+                            </td>
+
+                            {/* Lead Quality */}
+                            <td className="py-3 px-3.5 whitespace-nowrap text-xs text-[#1c1c1e]">
+                              {getLeadQuality(lead)}
+                            </td>
+
+                            {/* Follow-up Date */}
+                            <td className="py-3 px-3.5 text-[#64748b] text-[11px] whitespace-nowrap font-normal">
+                              {formatDate(lead.followUpDate || lead.createdTime || lead.createdAt)}
+                            </td>
+
+                            {/* Follow-up Status */}
+                            <td className="py-3 px-3.5 whitespace-nowrap">
+                              <span className="text-xs font-medium text-[#1c1c1e]">
+                                {lead.followUpStatus || lead.leadConfirm || (lead.status === 'CREATED' ? 'Pending' : 'Interested')}
+                              </span>
+                            </td>
+
+                            {/* Current Stage */}
+                            <td className="py-3 px-3.5 whitespace-nowrap">
+                              {renderStageBadge(lead)}
+                            </td>
+
+                            {/* Remarks */}
+                            <td className="py-3 px-3.5">
+                              <div className="text-[11px] text-[#475569] truncate max-w-[150px]" title={lead.notes || '—'}>
+                                {lead.notes || '—'}
+                              </div>
+                            </td>
+
+                            {/* Outreach & Actions (Clean macOS Style Icon Buttons with Chevron) */}
+                            <td className="py-3 px-3.5 text-right" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center justify-end gap-0.5">
+                                {lead.phoneNumber && (
+                                  <>
+                                    <a
+                                      href={`https://wa.me/${lead.phoneNumber.replace(
+                                        /\D/g,
+                                        ''
+                                      )}?text=Hello%20${encodeURIComponent(
+                                        lead.customerName || ''
+                                      )},%20greetings%20from%20our%20Overseas%20Visa%20Consultancy!%20We%20received%20your%20${encodeURIComponent(
+                                        lead.visaType === 'WORK_VISA' ? 'Work Visa' : 'Study Visa'
+                                      )}%20inquiry.`}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      title="WhatsApp Direct Chat"
+                                      className="w-7 h-7 rounded-lg flex items-center justify-center text-[#8e8e93] hover:text-[#34c759] hover:bg-[#34c759]/10 transition-colors"
+                                    >
+                                      <MessageCircle size={14} />
+                                    </a>
+                                    <a
+                                      href={`tel:${lead.phoneNumber}`}
+                                      title="Call Candidate"
+                                      className="w-7 h-7 rounded-lg flex items-center justify-center text-[#8e8e93] hover:text-[#007aff] hover:bg-[#007aff]/10 transition-colors"
+                                    >
+                                      <Phone size={14} />
+                                    </a>
+                                  </>
+                                )}
+                                <button
+                                  onClick={() => navigate(`/leads/${encryptLeadId(lead.id)}`)}
+                                  title="Inspect Candidate Dossier"
+                                  className="w-7 h-7 rounded-lg flex items-center justify-center text-[#8e8e93] hover:text-[#1c1c1e] hover:bg-black/[0.05] transition-colors"
+                                >
+                                  <Eye size={14} />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteLead(lead.id, lead.customerName)}
+                                  title="Delete Lead"
+                                  className="w-7 h-7 rounded-lg flex items-center justify-center text-[#8e8e93] hover:text-[#ff3b30] hover:bg-[#ff3b30]/10 transition-colors"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+
+                                {/* Apple Disclosure Chevron */}
+                                <button
+                                  type="button"
+                                  onClick={() => navigate(`/leads/${encryptLeadId(lead.id)}`)}
+                                  title="Open Candidate Profile"
+                                  className="p-1 text-[#c7c7cc] group-hover:text-[#007aff] transition-colors ml-0.5"
+                                >
+                                  <ChevronRight size={16} strokeWidth={2.4} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* High-Capacity Pagination Toolbar (iOS / macOS HIG Status Bar) */}
+              <div className="p-3.5 border-t border-black/[0.05] bg-[#fbfbfd] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-3 text-[#8e8e93]">
+                  <span>
+                    Showing <strong className="text-[#1c1c1e] font-semibold">{filteredLeads.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}</strong> to{' '}
+                    <strong className="text-[#1c1c1e] font-semibold">{Math.min(currentPage * pageSize, filteredLeads.length)}</strong> of{' '}
+                    <strong className="text-[#1c1c1e] font-semibold">{filteredLeads.length}</strong> candidates
+                  </span>
+
+                  {/* Page Size Selector */}
+                  <div className="flex items-center gap-1.5 pl-2 border-l border-black/[0.08]">
+                    <span className="text-[11px] text-[#8e8e93]">Rows:</span>
+                    <select
+                      value={pageSize}
+                      onChange={(e) => setPageSize(Number(e.target.value))}
+                      className="px-2 py-0.5 bg-black/[0.04] hover:bg-black/[0.08] border-0 rounded-md text-xs font-semibold text-[#1c1c1e] focus:outline-none transition-colors cursor-pointer"
+                    >
+                      <option value={10}>10</option>
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Page Switcher */}
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg bg-black/[0.04] hover:bg-black/[0.08] text-[#1c1c1e] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    title="Previous Page"
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+
+                  <span className="px-2 font-medium text-[#1c1c1e] text-xs">
+                    Page {currentPage} of {totalPages}
+                  </span>
+
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg bg-black/[0.04] hover:bg-black/[0.08] text-[#1c1c1e] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    title="Next Page"
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Apple HIG Grouped Table View Footer */}
+            <div className="px-3 text-[12px] text-[#8e8e93] flex items-center justify-between select-none">
+              <span>Select any row to inspect complete dossier, visa milestones, and timeline.</span>
+              <span>Showing {filteredLeads.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredLeads.length)} of {filteredLeads.length} records</span>
             </div>
           </div>
-
-          {/* Page Switcher */}
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-              disabled={currentPage === 1}
-              className="w-7 h-7 flex items-center justify-center rounded-lg bg-black/[0.04] hover:bg-black/[0.08] text-[#1c1c1e] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              title="Previous Page"
-            >
-              <ChevronLeft size={14} />
-            </button>
-
-            <span className="px-2 font-medium text-[#1c1c1e] text-xs">
-              Page {currentPage} of {totalPages}
-            </span>
-
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              className="w-7 h-7 flex items-center justify-center rounded-lg bg-black/[0.04] hover:bg-black/[0.08] text-[#1c1c1e] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              title="Next Page"
-            >
-              <ChevronRight size={14} />
-            </button>
-          </div>
-        </div>
-      </div>
-      </div>
+        </>
+      )}
 
       {/* iOS-Style Slide-Over Candidate Dossier Drawer */}
       {dossierLead && (

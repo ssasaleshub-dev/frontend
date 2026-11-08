@@ -213,18 +213,23 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
   }
 
   return (
-    <div className="space-y-3">
-      {/* iOS Section Header */}
-      <div className="flex items-center justify-between px-1 text-[11px] font-semibold uppercase tracking-wider text-[#8e8e93]">
-        <span>Candidate Directory</span>
-        <span>
-          {leads.length} of {totalLeads} Records
+    <div className="space-y-2.5">
+      {/* ── Apple HIG: Grouped Table View Header ── */}
+      <div className="flex items-center justify-between px-3 text-[12px] font-semibold tracking-wider text-[#6e6e73] uppercase select-none">
+        <div className="flex items-center gap-2">
+          <span>Candidate Directory</span>
+          <span className="text-[11px] font-normal normal-case text-[#86868b] bg-black/[0.04] px-2.5 py-0.5 rounded-full border border-black/[0.04]">
+            {totalLeads} {totalLeads === 1 ? 'candidate' : 'candidates'}
+          </span>
+        </div>
+        <span className="text-[11px] font-medium normal-case text-[#86868b]">
+          Page {currentPage} of {totalPages}
         </span>
       </div>
 
-      {/* iOS Inset Grouped Card */}
-      <div className="bg-white rounded-[16px] sm:rounded-[20px] border border-[rgba(60,60,67,0.1)] shadow-2xs overflow-hidden divide-y divide-[rgba(60,60,67,0.06)]">
-        {leads.map((lead, index) => {
+      {/* ── Apple HIG: Inset Grouped Table Container ── */}
+      <div className="bg-white rounded-[18px] sm:rounded-[22px] border border-black/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden divide-y divide-black/[0.05]">
+        {leads.map((lead) => {
           const isContactedOrActive =
             lead.status !== 'CREATED' && lead.status !== 'LOST';
           const quality = getLeadQuality(lead);
@@ -254,13 +259,19 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
             stageClass = 'bg-[#ff3b30]/10 text-[#ff3b30]';
           }
 
+          // Budget & Payment calculations
+          const cachedBudget = localStorage.getItem(`ssa_lead_budget_${lead.id}`);
+          const cachedPayment = localStorage.getItem(`ssa_lead_payment_status_${lead.id}`);
+          const b = (lead as any).budgetRange || (lead as any).clientBudget || cachedBudget;
+          const p = ((lead as any).paymentStatus || cachedPayment || '').toUpperCase();
+
           return (
             <div
               key={lead.id}
               onClick={() => navigate(`/leads/${encryptLeadId(lead.id)}`)}
-              className="px-3.5 sm:px-4 py-3 sm:py-3.5 flex items-center justify-between gap-3 hover:bg-[#f2f2f7]/50 active:bg-[#f2f2f7] transition-colors cursor-pointer select-none group"
+              className="px-3.5 sm:px-4 py-3 sm:py-3.5 flex items-center justify-between gap-3 sm:gap-4 hover:bg-[#f9f9fb] active:bg-[#f2f2f7] transition-colors cursor-pointer select-none group"
             >
-              {/* Left: App Squircle Icon */}
+              {/* Left Column: App Squircle Icon */}
               <div className="shrink-0">
                 <IosPlatformSquircle
                   platform={lead.platform}
@@ -270,7 +281,7 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
                 />
               </div>
 
-              {/* Middle: Candidate Info & Subtitle (Exact iOS cell layout) */}
+              {/* Primary Candidate Info (Title & Subtitle) */}
               <div className="min-w-0 flex-1">
                 {/* Title Line */}
                 <div className="flex items-center gap-2 flex-wrap">
@@ -278,17 +289,17 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
                     {lead.customerName || `Candidate #${lead.id}`}
                   </span>
                   {lead.visaType && (
-                    <span className="text-[10px] font-medium text-[#8e8e93] bg-[#f2f2f7] px-1.5 py-0.5 rounded-full shrink-0">
-                      {lead.visaType === 'WORK_VISA' ? 'Work' : 'Study'}
+                    <span className="text-[10px] font-medium text-[#8e8e93] bg-[#f2f2f7] px-2 py-0.5 rounded-full shrink-0">
+                      {lead.visaType === 'WORK_VISA' ? 'Work Visa' : 'Study Visa'}
                     </span>
                   )}
                   {quality !== '—' && (
                     <span
-                      className={`text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded-full shrink-0 ${
+                      className={`text-[9px] font-semibold uppercase px-2 py-0.5 rounded-full shrink-0 ${
                         quality === 'Hot'
-                          ? 'bg-red-50 text-red-600'
+                          ? 'bg-rose-50 text-rose-600 border border-rose-200/60'
                           : quality === 'Warm'
-                          ? 'bg-amber-50 text-amber-700'
+                          ? 'bg-amber-50 text-amber-700 border border-amber-200/60'
                           : 'bg-slate-100 text-slate-600'
                       }`}
                     >
@@ -297,7 +308,7 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
                   )}
                 </div>
 
-                {/* Subtitle Line (Phone · City · Follow-up) */}
+                {/* Subtitle Line (Phone · City · External ID) */}
                 <div className="flex items-center gap-1.5 text-[11px] sm:text-[12px] text-[#8e8e93] mt-0.5 truncate">
                   <span className="font-mono text-[#3c3c43]">
                     {lead.phoneNumber || 'No phone'}
@@ -308,18 +319,18 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
                       <span className="capitalize">{lead.city || lead.location}</span>
                     </>
                   )}
-                  {lead.campaignName && (
+                  {lead.externalId && (
                     <>
                       <span>·</span>
-                      <span className="truncate max-w-[140px] text-[#3c3c43]">
-                        {lead.campaignName}
+                      <span className="font-mono text-[10px] text-[#8e8e93]">
+                        {lead.externalId}
                       </span>
                     </>
                   )}
                 </div>
 
-                {/* Stage Tag Line & Financial Badges */}
-                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                {/* Mobile / Compact Badges */}
+                <div className="flex items-center gap-1.5 mt-1 sm:hidden flex-wrap">
                   <button
                     type="button"
                     onClick={(e) => onOpenStatusModal(lead, e)}
@@ -328,43 +339,68 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
                   >
                     <span>{stageLabel}</span>
                   </button>
-
-                  {/* Dynamic Budget & Payment Status Badges */}
-                  {(() => {
-                    const cachedBudget = localStorage.getItem(`ssa_lead_budget_${lead.id}`);
-                    const cachedPayment = localStorage.getItem(`ssa_lead_payment_status_${lead.id}`);
-                    const b = (lead as any).budgetRange || (lead as any).clientBudget || cachedBudget;
-                    const p = ((lead as any).paymentStatus || cachedPayment || '').toUpperCase();
-                    return (
-                      <>
-                        {b && (
-                          <span className="text-[10px] font-semibold text-[#007aff] bg-[#007aff]/10 px-1.5 py-0.5 rounded-full">
-                            ₹{b}
-                          </span>
-                        )}
-                        {p === 'PAID' && (
-                          <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-200">
-                            Paid
-                          </span>
-                        )}
-                        {p === 'PARTIAL' && (
-                          <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-200">
-                            Partial
-                          </span>
-                        )}
-                      </>
-                    );
-                  })()}
-
+                  {b && (
+                    <span className="text-[10px] font-semibold text-[#007aff] bg-[#007aff]/10 px-1.5 py-0.5 rounded-full">
+                      ₹{b}
+                    </span>
+                  )}
                   <span className="text-[10px] text-[#8e8e93]">
                     {formatDate(lead.followUpDate || lead.createdTime || lead.createdAt)}
                   </span>
                 </div>
               </div>
 
-              {/* Right Side: Quick Action Pills + Green iOS Toggle Switch + Chevron */}
+              {/* Desktop Mid-Column: Campaign, Financials, & Notes */}
+              <div className="hidden lg:flex flex-col min-w-[200px] max-w-[280px] shrink-0 text-left">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[12px] font-medium text-[#1d1d1f] truncate" title={lead.campaignName || 'Meta Organic'}>
+                    {lead.campaignName || 'Meta Organic Ingestion'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  {b ? (
+                    <span className="text-[11px] font-semibold text-[#007aff]">₹{b}</span>
+                  ) : (
+                    <span className="text-[11px] text-[#8e8e93]">Budget: —</span>
+                  )}
+                  <span>·</span>
+                  {p === 'PAID' ? (
+                    <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded-full border border-emerald-200">
+                      Paid
+                    </span>
+                  ) : p === 'PARTIAL' ? (
+                    <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded-full border border-amber-200">
+                      Partial
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-[#8e8e93]">Unsettled</span>
+                  )}
+                </div>
+                {lead.notes && (
+                  <p className="text-[11px] text-[#8e8e93] truncate mt-0.5 font-normal">
+                    {lead.notes}
+                  </p>
+                )}
+              </div>
+
+              {/* Desktop Status & Follow-up Column */}
+              <div className="hidden sm:flex flex-col items-end min-w-[130px] shrink-0">
+                <button
+                  type="button"
+                  onClick={(e) => onOpenStatusModal(lead, e)}
+                  className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full transition-opacity hover:opacity-80 ${stageClass}`}
+                  title="Click to update stage"
+                >
+                  <span>{stageLabel}</span>
+                </button>
+                <span className="text-[11px] text-[#8e8e93] mt-1 font-mono">
+                  {formatDate(lead.followUpDate || lead.createdTime || lead.createdAt)}
+                </span>
+              </div>
+
+              {/* Right Side: Quick Action Outreach + iOS Toggle Switch + Chevron */}
               <div
-                className="flex items-center gap-2 sm:gap-3 shrink-0"
+                className="flex items-center gap-2 sm:gap-2.5 shrink-0"
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* 1-Tap WhatsApp outreach button */}
@@ -412,19 +448,25 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
                   </span>
                 </div>
 
-                {/* Apple Chevron */}
+                {/* Apple Disclosure Chevron (Table Row > in Apple HIG) */}
                 <button
                   type="button"
                   onClick={() => navigate(`/leads/${encryptLeadId(lead.id)}`)}
                   title="View Dossier"
                   className="text-[#c7c7cc] group-hover:text-[#007aff] transition-colors p-1"
                 >
-                  <ChevronRight size={17} strokeWidth={2.5} />
+                  <ChevronRight size={18} strokeWidth={2.4} />
                 </button>
               </div>
             </div>
           );
         })}
+      </div>
+
+      {/* ── Apple HIG: Grouped Table View Footer ── */}
+      <div className="px-3 text-[12px] text-[#8e8e93] flex flex-col sm:flex-row sm:items-center justify-between gap-1 select-none">
+        <span>Tap any candidate row to inspect complete dossier, visa milestones, and timeline.</span>
+        <span>Showing {leads.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, totalLeads)} of {totalLeads} records</span>
       </div>
 
       {/* iOS Pagination Control */}
