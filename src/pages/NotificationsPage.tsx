@@ -3,16 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import {
   ChevronLeft,
-  Check,
-  CheckCheck,
-  Trash2,
   Calendar,
-  Clock,
-  Phone,
-  User,
   RefreshCw,
-  ChevronRight,
-  Filter,
 } from 'lucide-react';
 import { AppleBellIcon } from '../components/icons/BrandIcons';
 import SwipeableNotificationCard from '../components/SwipeableNotificationCard';
@@ -214,23 +206,11 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      {/* Large Apple HIG Page Title Header */}
-      <div className="flex items-end justify-between px-1">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1d1d1f]">
-              Notifications
-            </h1>
-            {unreadCount > 0 && (
-              <span className="px-2.5 py-0.5 bg-[#0071e3] text-white text-[12px] font-semibold rounded-full shadow-2xs">
-                {unreadCount} new
-              </span>
-            )}
-          </div>
-          <p className="text-[13px] text-[#86868b] mt-0.5 font-normal">
-            Scheduled reminders, candidate callbacks, and team alerts
-          </p>
-        </div>
+      {/* Page Title Header */}
+      <div className="px-1">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1d1d1f]">
+          Notifications
+        </h1>
       </div>
 
       {/* Apple HIG Segmented Control: [ All | Unread ] */}
@@ -333,20 +313,6 @@ export default function NotificationsPage() {
         </div>
       )}
 
-      {/* Swipe Gesture Hint Header */}
-      {notifications.length > 0 && (
-        <div className="flex items-center justify-between text-[11px] text-[#86868b] px-3 py-1.5 bg-black/[0.03] rounded-xl border border-black/[0.04]">
-          <span className="inline-flex items-center gap-1 font-medium text-[#0071e3]">
-            <Check size={12} strokeWidth={2.8} />
-            <span>Swipe right to mark read</span>
-          </span>
-          <span className="inline-flex items-center gap-1 font-medium text-[#ff3b30]">
-            <span>Swipe left to delete</span>
-            <Trash2 size={11} strokeWidth={2.2} />
-          </span>
-        </div>
-      )}
-
       {/* Grouped Notification List */}
       <div className="space-y-6 pt-1">
         {groupedNotifications.length === 0 ? (
@@ -408,22 +374,6 @@ export default function NotificationsPage() {
         )}
       </div>
 
-      {/* Bottom Shortcuts */}
-      <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#86868b] border-t border-black/[0.05]">
-        <button
-          type="button"
-          onClick={() => navigate('/calendar')}
-          className="inline-flex items-center gap-1.5 text-[#0071e3] hover:text-[#0077ED] font-medium cursor-pointer"
-        >
-          <Calendar size={14} />
-          <span>Go to Calendar & Indian Holidays</span>
-          <ChevronRight size={13} />
-        </button>
-
-        <p className="text-[11px] text-[#86868b]">
-          Times displayed in Indian Standard Time (IST, UTC+05:30)
-        </p>
-      </div>
     </div>
   );
 }

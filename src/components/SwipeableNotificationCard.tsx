@@ -2,9 +2,6 @@ import React, { useState, useRef } from 'react';
 import {
   Check,
   Trash2,
-  Calendar,
-  User,
-  ChevronRight,
 } from 'lucide-react';
 import { NotificationItem } from '../services/reminderNotificationService';
 import { cleanNotificationMessage } from '../utils/dateTimeUtils';
@@ -279,26 +276,6 @@ export default function SwipeableNotificationCard({
             </div>
           );
         })()}
-
-        {/* Bottom Link Hint if lead or event attached */}
-        {(item.referenceType === 'LEAD' || item.referenceType === 'EVENT' || item.type === 'REMINDER') && (
-          <div className="pt-1 flex items-center justify-between text-xs text-[#0071e3] font-medium border-t border-black/[0.03]">
-            <span className="inline-flex items-center gap-1">
-              {item.referenceType === 'LEAD' ? (
-                <>
-                  <User size={12} />
-                  <span>Open candidate lead profile</span>
-                </>
-              ) : (
-                <>
-                  <Calendar size={12} />
-                  <span>Open calendar event</span>
-                </>
-              )}
-            </span>
-            <ChevronRight size={13} strokeWidth={2.2} />
-          </div>
-        )}
       </div>
     </div>
   );
