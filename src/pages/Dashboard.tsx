@@ -276,38 +276,56 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Executive Command Header Bar */}
-      <div className="ios-card p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2.5">
+      <div className="ios-card p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="w-full sm:w-auto flex items-center">
           {/* Desk Switcher Segmented Control */}
           {isAdmin ? (
-            <>
-              <div className="ios-segmented flex items-center">
-                <button
-                  onClick={() => handleDeskChange('ALL')}
-                  className={`ios-segmented-btn ${deskFilter === 'ALL' ? 'active' : ''}`}
-                >
-                  All Visas ({roleScopedLeads.length})
-                </button>
-                <button
-                  onClick={() => handleDeskChange('WORK_VISA')}
-                  className={`ios-segmented-btn ${deskFilter === 'WORK_VISA' ? 'active' : ''}`}
-                >
-                  Work Visa ({metrics.workVisaCount})
-                </button>
-                <button
-                  onClick={() => handleDeskChange('STUDY_VISA')}
-                  className={`ios-segmented-btn ${deskFilter === 'STUDY_VISA' ? 'active' : ''}`}
-                >
-                  Study Visa ({metrics.studyVisaCount})
-                </button>
-                <button
-                  onClick={() => handleDeskChange('OTHER_VISA')}
-                  className={`ios-segmented-btn ${deskFilter === 'OTHER_VISA' ? 'active' : ''}`}
-                >
-                  Other Visa ({metrics.otherVisaCount})
-                </button>
-              </div>
-            </>
+            <div className="ios-segmented w-full sm:w-auto !grid grid-cols-4 sm:!inline-flex items-center p-1">
+              <button
+                type="button"
+                onClick={() => handleDeskChange('ALL')}
+                className={`ios-segmented-btn !px-1 sm:!px-3.5 !py-2 sm:!py-1.5 flex items-center justify-center text-center text-[11px] sm:text-xs whitespace-nowrap transition-all ${
+                  deskFilter === 'ALL' ? 'active font-semibold shadow-xs' : ''
+                }`}
+              >
+                <span>All</span>
+                <span className="hidden sm:inline">&nbsp;Visas</span>
+                <span className="ml-1 text-[10px] sm:text-[11px] opacity-75 font-semibold">({roleScopedLeads.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeskChange('WORK_VISA')}
+                className={`ios-segmented-btn !px-1 sm:!px-3.5 !py-2 sm:!py-1.5 flex items-center justify-center text-center text-[11px] sm:text-xs whitespace-nowrap transition-all ${
+                  deskFilter === 'WORK_VISA' ? 'active font-semibold shadow-xs' : ''
+                }`}
+              >
+                <span>Work</span>
+                <span className="hidden sm:inline">&nbsp;Visa</span>
+                <span className="ml-1 text-[10px] sm:text-[11px] opacity-75 font-semibold">({metrics.workVisaCount})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeskChange('STUDY_VISA')}
+                className={`ios-segmented-btn !px-1 sm:!px-3.5 !py-2 sm:!py-1.5 flex items-center justify-center text-center text-[11px] sm:text-xs whitespace-nowrap transition-all ${
+                  deskFilter === 'STUDY_VISA' ? 'active font-semibold shadow-xs' : ''
+                }`}
+              >
+                <span>Study</span>
+                <span className="hidden sm:inline">&nbsp;Visa</span>
+                <span className="ml-1 text-[10px] sm:text-[11px] opacity-75 font-semibold">({metrics.studyVisaCount})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeskChange('OTHER_VISA')}
+                className={`ios-segmented-btn !px-1 sm:!px-3.5 !py-2 sm:!py-1.5 flex items-center justify-center text-center text-[11px] sm:text-xs whitespace-nowrap transition-all ${
+                  deskFilter === 'OTHER_VISA' ? 'active font-semibold shadow-xs' : ''
+                }`}
+              >
+                <span>Other</span>
+                <span className="hidden sm:inline">&nbsp;Visa</span>
+                <span className="ml-1 text-[10px] sm:text-[11px] opacity-75 font-semibold">({metrics.otherVisaCount})</span>
+              </button>
+            </div>
           ) : (
             <div className="flex items-center gap-2">
               <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${roleBadge.badgeClass}`}>
@@ -320,11 +338,12 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <button
+            type="button"
             onClick={() => loadDashboardData()}
             disabled={loading}
-            className="ios-btn-gray text-xs"
+            className="ios-btn-gray text-xs py-2 px-3.5 shrink-0"
             title="Reload telemetry"
           >
             <RefreshCw size={12} className={loading ? 'animate-spin text-[#007aff]' : 'text-[#8e8e93]'} />
@@ -332,8 +351,9 @@ export default function Dashboard() {
           </button>
 
           <button
+            type="button"
             onClick={() => navigate('/leads')}
-            className="ios-btn-primary text-xs"
+            className="ios-btn-primary text-xs py-2 px-4 flex-1 sm:flex-initial justify-center"
           >
             <span>Open Leads Table</span>
             <ChevronRight size={13} />
