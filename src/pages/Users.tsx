@@ -1058,7 +1058,7 @@ export default function Users() {
       {/* DELETE CONFIRMATION MODAL */}
       {deletingUser && (
         <div className="fixed inset-0 z-50 bg-black/35 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="ios-glass-modal max-w-sm w-full p-6 border border-white/60">
+          <div className="ios-glass-modal max-w-sm w-full p-6 border border-black/[0.08]">
             <div className="flex items-center gap-3 mb-3 text-[#1c1c1e]">
               <div className="w-9 h-9 rounded-xl bg-[#ff3b30]/10 text-[#ff3b30] flex items-center justify-center border border-[#ff3b30]/20">
                 <Trash2 size={18} />

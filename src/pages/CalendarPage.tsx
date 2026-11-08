@@ -309,7 +309,7 @@ export default function CalendarPage() {
       {/* Main Grid: 7 Cols Calendar + 5 Cols Sidebar Agenda */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Apple HIG Inline Calendar Card (7 Cols) */}
-        <div className="lg:col-span-7 bg-white/95 backdrop-blur-xl rounded-[24px] border border-black/[0.06] shadow-[0_2px_8px_rgba(0,0,0,0.03)] p-5 sm:p-6 flex flex-col justify-between">
+        <div className="lg:col-span-7 bg-white rounded-[24px] border border-black/[0.06] shadow-[0_2px_8px_rgba(0,0,0,0.03)] p-5 sm:p-6 flex flex-col justify-between">
           <div>
             {/* Apple HIG Month & Navigation Header */}
             <div className="flex items-center justify-between pb-3 mb-2">
@@ -433,7 +433,7 @@ export default function CalendarPage() {
         {/* Right Sidebar: Selected Day Agenda & Reminders (5 Cols) */}
         <div className="lg:col-span-5 space-y-4">
           {/* Selected Date Dossier / Reminders */}
-          <div className="bg-white/90 backdrop-blur-xl rounded-[22px] border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-4 space-y-3.5">
+          <div className="bg-white rounded-[22px] border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-4 space-y-3.5">
             <div className="flex items-center justify-between pb-2.5 border-b border-black/[0.04]">
               <div>
                 <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#86868b]">
@@ -554,7 +554,7 @@ export default function CalendarPage() {
       {/* New Reminder / Event Modal (Apple HIG Glass Sheet UI) */}
       {isModalOpen && (
         <div className="ios-modal-backdrop animate-in fade-in">
-          <div className="ios-material-thick rounded-[28px] shadow-2xl border border-white/65 max-w-md w-full !p-0 overflow-hidden animate-in zoom-in-95 duration-150">
+          <div className="ios-material-thick rounded-[28px] shadow-2xl border border-black/[0.08] max-w-md w-full !p-0 overflow-hidden animate-in zoom-in-95 duration-150">
             <div className="pt-3 pb-1">
               <div className="ios-sheet-grabber" />
             </div>
@@ -781,7 +781,7 @@ export default function CalendarPage() {
           onClick={() => setSuccessReminder(null)}
         >
           <div
-            className="ios-material-thick rounded-[28px] shadow-2xl border border-white/65 max-w-[340px] w-full p-6 text-center animate-in zoom-in-95 duration-200 relative overflow-hidden"
+            className="ios-material-thick rounded-[28px] shadow-2xl border border-black/[0.08] max-w-[340px] w-full p-6 text-center animate-in zoom-in-95 duration-200 relative overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Top Close Button */}

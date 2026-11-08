@@ -227,7 +227,7 @@ export default function LeadReminderModal({
   return (
     <div className="ios-modal-backdrop animate-in fade-in duration-200">
       <div
-        className="w-full max-w-xl max-h-[92vh] ios-material-thick rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.25)] border border-white/60 flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+        className="w-full max-w-xl max-h-[92vh] ios-material-thick rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.25)] border border-black/[0.08] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
         role="dialog"
         aria-modal="true"
       >

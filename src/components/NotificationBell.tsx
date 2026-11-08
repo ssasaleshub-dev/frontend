@@ -203,12 +203,12 @@ export default function NotificationBell() {
         )}
       </button>
 
-      {/* Apple macOS Frosted Glass Notification Popover (DESKTOP ONLY; Mobile uses dedicated /notifications page) */}
+      {/* Apple Notification Popover (Solid White Surface, Zero Bleed-through; DESKTOP ONLY) */}
       {isOpen && !isMobileScreen && !isNative && (
-        <div className="absolute right-0 top-full mt-2 sm:mt-2.5 w-[390px] ios-material-thick !p-0 rounded-[24px] shadow-[0_20px_50px_rgba(0,0,0,0.18)] border border-white/60 z-50 overflow-hidden flex flex-col max-h-[540px] animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute right-0 top-full mt-2 sm:mt-2.5 w-[390px] bg-white !p-0 rounded-[24px] shadow-[0_20px_50px_rgba(0,0,0,0.18)] border border-black/[0.08] z-50 overflow-hidden flex flex-col max-h-[540px] animate-in fade-in zoom-in-95 duration-150">
           
           {/* Apple HIG Header & Segmented Filter Control */}
-          <div className="px-4 pt-3.5 pb-2.5 border-b border-black/[0.04] space-y-2.5 bg-[#fbfbfd]/80">
+          <div className="px-4 pt-3.5 pb-2.5 border-b border-black/[0.04] space-y-2.5 bg-[#fbfbfd]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-[15px] text-[#1d1d1f] tracking-tight">

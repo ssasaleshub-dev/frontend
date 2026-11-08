@@ -1824,7 +1824,7 @@ export default function CandidateDetail() {
       {/* Edit Candidate Details Modal (Apple HIG Glass Sheet UI) */}
       {showEditModal && (
         <div className="ios-modal-backdrop animate-in fade-in duration-200">
-          <div className="ios-material-thick rounded-3xl shadow-2xl border border-white/65 max-w-lg w-full overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-150">
+          <div className="ios-material-thick rounded-3xl shadow-2xl border border-black/[0.08] max-w-lg w-full overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-150">
             <div className="pt-3 pb-1">
               <div className="ios-sheet-grabber" />
             </div>
@@ -2047,7 +2047,7 @@ export default function CandidateDetail() {
       {/* WhatsApp Template Customization Modal (Apple HIG Glass Sheet UI) */}
       {showWhatsAppTemplateModal && (
         <div className="ios-modal-backdrop animate-in fade-in duration-200">
-          <div className="ios-material-thick rounded-3xl border border-white/65 shadow-2xl max-w-md w-full p-6 animate-in zoom-in-95 text-xs">
+          <div className="ios-material-thick rounded-3xl border border-black/[0.08] shadow-2xl max-w-md w-full p-6 animate-in zoom-in-95 text-xs">
             <div className="ios-sheet-grabber mb-3" />
             <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
               <h3 className="text-sm font-semibold text-[#1c1c1e] flex items-center gap-1.5">

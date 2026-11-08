@@ -368,6 +368,31 @@ class ReminderNotificationService {
       return true;
     }
 
+    // Title matching: if both notifications share the exact same clean title
+    const cleanTitleA = (a.title || '')
+      .replace(/^🔔\s*/, '')
+      .replace(/^Reminder:\s*/i, '')
+      .trim()
+      .toLowerCase();
+    const cleanTitleB = (b.title || '')
+      .replace(/^🔔\s*/, '')
+      .replace(/^Reminder:\s*/i, '')
+      .trim()
+      .toLowerCase();
+
+    if (cleanTitleA && cleanTitleB && cleanTitleA === cleanTitleB) {
+      // Proximity check: within 48 hours or same calendar day
+      const timeA = new Date(a.createdAt || a.scheduledFor || Date.now()).getTime();
+      const timeB = new Date(b.createdAt || b.scheduledFor || Date.now()).getTime();
+      if (!isNaN(timeA) && !isNaN(timeB)) {
+        if (Math.abs(timeA - timeB) < 48 * 3600 * 1000) {
+          return true;
+        }
+      } else {
+        return true;
+      }
+    }
+
     // Reminder title & date match (collapses duplicate cards with same title on the same day)
     const isAReminder = (a.type || '').toUpperCase() === 'REMINDER';
     const isBReminder = (b.type || '').toUpperCase() === 'REMINDER';
@@ -491,7 +516,26 @@ class ReminderNotificationService {
     try {
       const raw = localStorage.getItem(NOTIFICATIONS_CACHE_KEY);
       const list: NotificationDTO[] = raw ? JSON.parse(raw) : [];
-      return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      // Deduplicate on read to collapse any existing duplicates in local storage
+      const deduped: NotificationDTO[] = [];
+      for (const item of list) {
+        if (this.isDeletedNotification(item)) continue;
+        const existingIdx = deduped.findIndex((d) => this.isSameNotification(d, item));
+        if (existingIdx === -1) {
+          deduped.push({ ...item });
+        } else {
+          // If either is read, preserve read state
+          if (item.isRead) deduped[existingIdx].isRead = true;
+          // Prefer server-backed item for ID and syncing
+          if (item.isServerBacked) {
+            deduped[existingIdx] = {
+              ...item,
+              isRead: deduped[existingIdx].isRead || item.isRead,
+            };
+          }
+        }
+      }
+      return deduped.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     } catch {
       return [];
     }
@@ -584,7 +628,7 @@ class ReminderNotificationService {
     cached.forEach((n) => {
       if (String(n.id) === strId || this.isSameNotification(n, item)) {
         n.isRead = newReadState;
-        if (this.isServerNotification(n.id) || n.isServerBacked) {
+        if (this.isServerNotification(n.id) && this.getServerNotificationIds().has(String(n.id))) {
           serverIdsToSync.add(String(n.id));
         }
       }
@@ -593,7 +637,7 @@ class ReminderNotificationService {
     localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(cached));
     window.dispatchEvent(new CustomEvent('ssa_notifications_updated'));
 
-    if (this.isServerNotification(strId)) {
+    if (this.isServerNotification(strId) && this.getServerNotificationIds().has(strId)) {
       serverIdsToSync.add(strId);
     }
 
@@ -673,13 +717,13 @@ class ReminderNotificationService {
       console.warn('Storage tombstone error:', e);
     }
 
-    // Dispatch DELETE request to backend for all server-backed IDs found
+    // Dispatch DELETE request to backend for all real server-backed IDs found
     const serverIdsToDelete = new Set<string>();
-    if (this.isServerNotification(strId)) {
+    if (this.isServerNotification(strId) && this.getServerNotificationIds().has(strId)) {
       serverIdsToDelete.add(strId);
     }
     matchingItems.forEach((item) => {
-      if (this.isServerNotification(item.id) || item.isServerBacked) {
+      if (this.isServerNotification(item.id) && this.getServerNotificationIds().has(String(item.id))) {
         serverIdsToDelete.add(String(item.id));
       }
     });

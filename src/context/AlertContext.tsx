@@ -139,7 +139,7 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
           className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/35 backdrop-blur-md transition-opacity duration-150 animate-in fade-in"
         >
           <div
-            className="w-[270px] max-w-[85vw] bg-[#f2f2f7]/88 backdrop-blur-2xl rounded-[16px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.35)] overflow-hidden text-center select-none border border-white/60 transform transition-transform duration-150 animate-in zoom-in-95"
+            className="w-[270px] max-w-[85vw] bg-white rounded-[16px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.35)] overflow-hidden text-center select-none border border-black/[0.08] transform transition-transform duration-150 animate-in zoom-in-95"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header / Body */}

@@ -2164,7 +2164,7 @@ export default function Leads() {
       {showAddModal && (
         <div className="ios-modal-backdrop">
           <div
-            className={`ios-material-thick rounded-3xl border border-white/65 shadow-2xl ${
+            className={`ios-material-thick rounded-3xl border border-black/[0.08] shadow-2xl ${
               modalTab === 'excel' && previewRows.length > 0 ? 'max-w-5xl' : 'max-w-xl'
             } w-full my-auto transition-all duration-150 overflow-hidden flex flex-col`}
           >
