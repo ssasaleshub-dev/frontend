@@ -43,14 +43,27 @@ export default function NotificationsPage() {
   const unreadCount = useMemo(() => notifications.filter((n) => !n.isRead).length, [notifications]);
 
   const handleMarkAsRead = async (id: string) => {
+    const target = notifications.find((n) => String(n.id) === String(id));
     setNotifications((prev) =>
-      prev.map((n) => (String(n.id) === String(id) ? { ...n, isRead: !n.isRead } : n))
+      prev.map((n) => {
+        if (String(n.id) === String(id) || (target && reminderNotificationService.isSameNotification(n, target))) {
+          return { ...n, isRead: !n.isRead };
+        }
+        return n;
+      })
     );
     await reminderNotificationService.markAsRead(id);
   };
 
   const handleDelete = async (id: string) => {
-    setNotifications((prev) => prev.filter((n) => String(n.id) !== String(id)));
+    const target = notifications.find((n) => String(n.id) === String(id));
+    setNotifications((prev) =>
+      prev.filter((n) => {
+        if (String(n.id) === String(id)) return false;
+        if (target && reminderNotificationService.isSameNotification(n, target)) return false;
+        return true;
+      })
+    );
     await reminderNotificationService.deleteNotification(id);
   };
 

@@ -50,6 +50,8 @@ const EVENTS_CACHE_KEY = 'ssa_calendar_events_v2';
 const NOTIFICATIONS_CACHE_KEY = 'ssa_notifications_v2';
 const NOTIFIED_EVENT_IDS_KEY = 'ssa_notified_event_ids_v1';
 const SERVER_NOTIF_IDS_KEY = 'ssa_server_notif_ids_v1';
+const DELETED_NOTIF_IDS_KEY = 'ssa_deleted_notif_ids_v1';
+const DELETED_NOTIF_KEYS_KEY = 'ssa_deleted_notif_keys_v1';
 
 class ReminderNotificationService {
   private checkInterval: any = null;
@@ -82,30 +84,39 @@ class ReminderNotificationService {
         localStorage.setItem(EVENTS_CACHE_KEY, JSON.stringify([]));
       }
 
-      // Purge any mock/sample notifications
+      // Purge mock notifications, deleted items, and collapse existing duplicate cards
       const rawNotifs = localStorage.getItem(NOTIFICATIONS_CACHE_KEY);
       if (rawNotifs) {
         try {
           const parsed = JSON.parse(rawNotifs);
-          const realOnly = Array.isArray(parsed)
-            ? parsed
-                .filter(
-                  (n: any) =>
-                    n.id !== 'notif-welcome' &&
-                    n.referenceId !== 'evt-1' &&
-                    n.referenceId !== 'evt-2' &&
-                    !n.title?.includes('Schengen Visa') &&
-                    !n.title?.includes('Follow up with Praveen') &&
-                    !n.title?.includes('Internal Notification System Online')
-                )
-                .map((n: any) => {
-                  if (n.message) {
-                    n.message = cleanNotificationMessage(n.message, n.title);
-                  }
-                  return n;
-                })
-            : [];
-          localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(realOnly));
+          if (Array.isArray(parsed)) {
+            const deduplicated: NotificationDTO[] = [];
+            for (const n of parsed) {
+              if (
+                n.id === 'notif-welcome' ||
+                n.referenceId === 'evt-1' ||
+                n.referenceId === 'evt-2' ||
+                n.title?.includes('Schengen Visa') ||
+                n.title?.includes('Follow up with Praveen') ||
+                n.title?.includes('Internal Notification System Online') ||
+                this.isDeletedNotification(n)
+              ) {
+                continue;
+              }
+              if (n.message) {
+                n.message = cleanNotificationMessage(n.message, n.title);
+              }
+              const existingIdx = deduplicated.findIndex((item) => this.isSameNotification(item, n));
+              if (existingIdx === -1) {
+                deduplicated.push(n);
+              } else {
+                if (n.isServerBacked && !deduplicated[existingIdx].isServerBacked) {
+                  deduplicated[existingIdx] = n;
+                }
+              }
+            }
+            localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(deduplicated));
+          }
         } catch {
           localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify([]));
         }
@@ -278,31 +289,176 @@ class ReminderNotificationService {
     return 'admin';
   }
 
-  // --- INTERNAL NOTIFICATIONS (DYNAMIC API WITH FALLBACK) ---
+  // --- INTERNAL NOTIFICATIONS (DYNAMIC API WITH FALLBACK & DEDUPLICATION) ---
+
+  public getDeletedNotificationIds(): Set<string> {
+    try {
+      const raw = localStorage.getItem(DELETED_NOTIF_IDS_KEY);
+      return new Set(raw ? JSON.parse(raw) : []);
+    } catch {
+      return new Set();
+    }
+  }
+
+  public getDeletedNotificationKeys(): Set<string> {
+    try {
+      const raw = localStorage.getItem(DELETED_NOTIF_KEYS_KEY);
+      return new Set(raw ? JSON.parse(raw) : []);
+    } catch {
+      return new Set();
+    }
+  }
+
+  public getDedupeKey(n: Partial<NotificationDTO>): string {
+    if (!n) return '';
+    const cleanTitle = (n.title || '')
+      .replace(/^🔔\s*/, '')
+      .replace(/^Reminder:\s*/i, '')
+      .trim()
+      .toLowerCase();
+
+    const type = (n.type || 'NOTIFICATION').toUpperCase();
+
+    if (n.referenceType && n.referenceId) {
+      return `${type}_${n.referenceType}_${n.referenceId}`.toLowerCase();
+    }
+
+    const dateKey = n.scheduledFor
+      ? n.scheduledFor.substring(0, 10)
+      : n.createdAt
+      ? n.createdAt.substring(0, 10)
+      : new Date().toISOString().substring(0, 10);
+
+    return `${type}_${cleanTitle}_${dateKey}`.toLowerCase();
+  }
+
+  public getReminderTitleDateKey(n: Partial<NotificationDTO>): string {
+    if (!n) return '';
+    const cleanTitle = (n.title || '')
+      .replace(/^🔔\s*/, '')
+      .replace(/^Reminder:\s*/i, '')
+      .trim()
+      .toLowerCase();
+    const dateKey = n.scheduledFor
+      ? n.scheduledFor.substring(0, 10)
+      : n.createdAt
+      ? n.createdAt.substring(0, 10)
+      : new Date().toISOString().substring(0, 10);
+    return `reminder_${cleanTitle}_${dateKey}`;
+  }
+
+  public isSameNotification(a: Partial<NotificationDTO>, b: Partial<NotificationDTO>): boolean {
+    if (!a || !b) return false;
+    if (a.id && b.id && String(a.id) === String(b.id)) return true;
+
+    // Direct reference match (e.g. EVENT with same event id)
+    if (
+      a.referenceType &&
+      b.referenceType &&
+      a.referenceId &&
+      b.referenceId &&
+      a.referenceType === b.referenceType &&
+      String(a.referenceId) === String(b.referenceId)
+    ) {
+      return true;
+    }
+
+    // Cross-match if referenceId matches
+    if (a.referenceId && b.referenceId && String(a.referenceId) === String(b.referenceId)) {
+      return true;
+    }
+
+    // Reminder title & date match (collapses duplicate cards with same title on the same day)
+    const isAReminder = (a.type || '').toUpperCase() === 'REMINDER';
+    const isBReminder = (b.type || '').toUpperCase() === 'REMINDER';
+    if (isAReminder && isBReminder) {
+      const keyA = this.getReminderTitleDateKey(a);
+      const keyB = this.getReminderTitleDateKey(b);
+      if (keyA && keyB && keyA === keyB) {
+        return true;
+      }
+    }
+
+    const dedupeA = this.getDedupeKey(a);
+    const dedupeB = this.getDedupeKey(b);
+    return Boolean(dedupeA && dedupeB && dedupeA === dedupeB);
+  }
+
+  public isDeletedNotification(n: Partial<NotificationDTO>): boolean {
+    if (!n) return false;
+    const deletedIds = this.getDeletedNotificationIds();
+    if (n.id && deletedIds.has(String(n.id))) {
+      return true;
+    }
+    const deletedKeys = this.getDeletedNotificationKeys();
+    const dedupeKey = this.getDedupeKey(n);
+    if (dedupeKey && deletedKeys.has(dedupeKey)) {
+      return true;
+    }
+    const reminderKey = this.getReminderTitleDateKey(n);
+    if (reminderKey && deletedKeys.has(reminderKey)) {
+      return true;
+    }
+    if (
+      n.referenceId &&
+      (deletedKeys.has(String(n.referenceId)) || deletedKeys.has(`event_${n.referenceId}`.toLowerCase()))
+    ) {
+      return true;
+    }
+    return false;
+  }
 
   public async fetchNotifications(userId?: string): Promise<NotificationDTO[]> {
     const targetUser = userId || this.getCurrentUserLogin();
     try {
       const serverNotifs = await notificationApiService.getNotifications(targetUser);
-      if (Array.isArray(serverNotifs) && serverNotifs.length > 0) {
-        const cached = this.getCachedNotifications();
-        const map = new Map<string, NotificationDTO>();
-        cached.forEach((n) => map.set(n.id, n));
-        serverNotifs.forEach((n) => {
-          n.isServerBacked = true;
-          this.recordServerNotificationId(n.id);
-          map.set(n.id, n);
-        });
-        const merged = Array.from(map.values()).sort(
-          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-        localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(merged));
+      if (Array.isArray(serverNotifs)) {
+        // 1. Process server notifications and clean up any previously deleted on client
+        const validServerNotifs: NotificationDTO[] = [];
+        for (const n of serverNotifs) {
+          if (this.isDeletedNotification(n)) {
+            try {
+              notificationApiService.deleteNotification(n.id);
+            } catch {}
+          } else {
+            n.isServerBacked = true;
+            this.recordServerNotificationId(n.id);
+            validServerNotifs.push(n);
+          }
+        }
+
+        // 2. Load cached notifications and filter out any deleted ones
+        const cached = this.getCachedNotifications().filter((n) => !this.isDeletedNotification(n));
+
+        // 3. Deduplicate merge: server notifications take precedence over matching client-only items
+        const deduplicatedList: NotificationDTO[] = [];
+
+        for (const sNotif of validServerNotifs) {
+          const existingIdx = deduplicatedList.findIndex((item) => this.isSameNotification(item, sNotif));
+          if (existingIdx === -1) {
+            deduplicatedList.push(sNotif);
+          } else {
+            deduplicatedList[existingIdx] = sNotif;
+          }
+        }
+
+        for (const cNotif of cached) {
+          const alreadyInList = deduplicatedList.some((item) => this.isSameNotification(item, cNotif));
+          if (!alreadyInList) {
+            deduplicatedList.push(cNotif);
+          }
+        }
+
+        deduplicatedList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+        localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(deduplicatedList));
         window.dispatchEvent(new CustomEvent('ssa_notifications_updated'));
-        return merged;
+        return deduplicatedList;
       }
     } catch {}
 
-    return this.getCachedNotifications();
+    const validCached = this.getCachedNotifications().filter((n) => !this.isDeletedNotification(n));
+    return validCached;
   }
 
   public getServerNotificationIds(): Set<string> {
@@ -348,7 +504,25 @@ class ReminderNotificationService {
   public addNotification(
     notification: Omit<NotificationDTO, 'id' | 'createdAt' | 'isRead'>,
     showBanner = true
-  ): NotificationDTO {
+  ): NotificationDTO | null {
+    if (this.isDeletedNotification(notification as any)) {
+      return null;
+    }
+
+    const cached = this.getCachedNotifications();
+
+    // Check if identical notification already exists
+    const existingIdx = cached.findIndex((item) => this.isSameNotification(item, notification as any));
+    if (existingIdx !== -1) {
+      cached[existingIdx] = {
+        ...cached[existingIdx],
+        message: notification.message || cached[existingIdx].message,
+      };
+      localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(cached));
+      window.dispatchEvent(new CustomEvent('ssa_notifications_updated'));
+      return cached[existingIdx];
+    }
+
     const generateUUID = () => {
       if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
         try {
@@ -370,7 +544,6 @@ class ReminderNotificationService {
       isServerBacked: false,
     };
 
-    const cached = this.getCachedNotifications();
     cached.unshift(newItem);
     localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(cached));
     window.dispatchEvent(new CustomEvent('ssa_notifications_updated'));
@@ -399,17 +572,34 @@ class ReminderNotificationService {
   }
 
   public async markAsRead(id: string): Promise<void> {
+    if (!id) return;
+    const strId = String(id);
     const cached = this.getCachedNotifications();
-    const item = cached.find((n) => String(n.id) === String(id));
-    if (item) {
-      item.isRead = !item.isRead;
-      localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(cached));
-      window.dispatchEvent(new CustomEvent('ssa_notifications_updated'));
+    const item = cached.find((n) => String(n.id) === strId);
+    if (!item) return;
+
+    const newReadState = !item.isRead;
+    const serverIdsToSync = new Set<string>();
+
+    cached.forEach((n) => {
+      if (String(n.id) === strId || this.isSameNotification(n, item)) {
+        n.isRead = newReadState;
+        if (this.isServerNotification(n.id) || n.isServerBacked) {
+          serverIdsToSync.add(String(n.id));
+        }
+      }
+    });
+
+    localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(cached));
+    window.dispatchEvent(new CustomEvent('ssa_notifications_updated'));
+
+    if (this.isServerNotification(strId)) {
+      serverIdsToSync.add(strId);
     }
 
-    if (this.isServerNotification(id)) {
+    for (const serverId of serverIdsToSync) {
       try {
-        await notificationApiService.markAsRead(id);
+        await notificationApiService.markAsRead(serverId);
       } catch {}
     }
   }
@@ -426,21 +616,109 @@ class ReminderNotificationService {
   }
 
   public async deleteNotification(id: string): Promise<void> {
-    const isServer = this.isServerNotification(id);
-    const cached = this.getCachedNotifications().filter((n) => String(n.id) !== String(id));
-    localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(cached));
-    window.dispatchEvent(new CustomEvent('ssa_notifications_updated'));
+    if (!id) return;
+    const strId = String(id);
+    const cached = this.getCachedNotifications();
+    const target = cached.find((n) => String(n.id) === strId);
 
-    if (isServer) {
+    const deletedIds = this.getDeletedNotificationIds();
+    const deletedKeys = this.getDeletedNotificationKeys();
+
+    deletedIds.add(strId);
+
+    const matchingItems: NotificationDTO[] = [];
+    const remainingItems: NotificationDTO[] = [];
+
+    for (const item of cached) {
+      if (String(item.id) === strId || (target && this.isSameNotification(item, target))) {
+        matchingItems.push(item);
+      } else {
+        remainingItems.push(item);
+      }
+    }
+
+    matchingItems.forEach((item) => {
+      deletedIds.add(String(item.id));
+      const k1 = this.getDedupeKey(item);
+      if (k1) deletedKeys.add(k1);
+      const k2 = this.getReminderTitleDateKey(item);
+      if (k2) deletedKeys.add(k2);
+      if (item.referenceId) {
+        deletedKeys.add(String(item.referenceId));
+        deletedKeys.add(`event_${item.referenceId}`.toLowerCase());
+      }
+      if (item.referenceType && item.referenceId) {
+        deletedKeys.add(`${item.referenceType}_${item.referenceId}`.toLowerCase());
+      }
+    });
+
+    if (target) {
+      const k1 = this.getDedupeKey(target);
+      if (k1) deletedKeys.add(k1);
+      const k2 = this.getReminderTitleDateKey(target);
+      if (k2) deletedKeys.add(k2);
+      if (target.referenceId) {
+        deletedKeys.add(String(target.referenceId));
+        deletedKeys.add(`event_${target.referenceId}`.toLowerCase());
+      }
+    }
+
+    // Persist tombstones and remaining items immediately
+    try {
+      localStorage.setItem(DELETED_NOTIF_IDS_KEY, JSON.stringify(Array.from(deletedIds)));
+      localStorage.setItem(DELETED_NOTIF_KEYS_KEY, JSON.stringify(Array.from(deletedKeys)));
+      localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(remainingItems));
+      window.dispatchEvent(new CustomEvent('ssa_notifications_updated'));
+    } catch (e) {
+      console.warn('Storage tombstone error:', e);
+    }
+
+    // Dispatch DELETE request to backend for all server-backed IDs found
+    const serverIdsToDelete = new Set<string>();
+    if (this.isServerNotification(strId)) {
+      serverIdsToDelete.add(strId);
+    }
+    matchingItems.forEach((item) => {
+      if (this.isServerNotification(item.id) || item.isServerBacked) {
+        serverIdsToDelete.add(String(item.id));
+      }
+    });
+
+    for (const serverId of serverIdsToDelete) {
       try {
-        await notificationApiService.deleteNotification(id);
-      } catch {}
+        await notificationApiService.deleteNotification(serverId);
+      } catch (err) {
+        console.warn('Backend delete notification sync error:', err);
+      }
     }
   }
 
   public async clearAllNotifications(): Promise<void> {
-    localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify([]));
-    window.dispatchEvent(new CustomEvent('ssa_notifications_updated'));
+    const cached = this.getCachedNotifications();
+    const deletedIds = this.getDeletedNotificationIds();
+    const deletedKeys = this.getDeletedNotificationKeys();
+
+    cached.forEach((item) => {
+      deletedIds.add(String(item.id));
+      const k1 = this.getDedupeKey(item);
+      if (k1) deletedKeys.add(k1);
+      const k2 = this.getReminderTitleDateKey(item);
+      if (k2) deletedKeys.add(k2);
+      if (item.referenceId) {
+        deletedKeys.add(String(item.referenceId));
+        deletedKeys.add(`event_${item.referenceId}`.toLowerCase());
+      }
+      if (item.referenceType && item.referenceId) {
+        deletedKeys.add(`${item.referenceType}_${item.referenceId}`.toLowerCase());
+      }
+    });
+
+    try {
+      localStorage.setItem(DELETED_NOTIF_IDS_KEY, JSON.stringify(Array.from(deletedIds)));
+      localStorage.setItem(DELETED_NOTIF_KEYS_KEY, JSON.stringify(Array.from(deletedKeys)));
+      localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify([]));
+      window.dispatchEvent(new CustomEvent('ssa_notifications_updated'));
+    } catch {}
 
     try {
       await notificationApiService.clearAllNotifications();
@@ -451,11 +729,19 @@ class ReminderNotificationService {
    * Directly stores incoming notification from WebSocket push without making HTTP requests
    */
   public addIncomingNotification(notification: NotificationDTO): void {
-    const cached = this.getCachedNotifications();
-    if (cached.some((n) => n.id === notification.id)) return;
+    if (this.isDeletedNotification(notification)) {
+      return;
+    }
     notification.isServerBacked = true;
     this.recordServerNotificationId(notification.id);
-    cached.unshift(notification);
+
+    const cached = this.getCachedNotifications();
+    const existingIdx = cached.findIndex((n) => this.isSameNotification(n, notification));
+    if (existingIdx !== -1) {
+      cached[existingIdx] = { ...cached[existingIdx], ...notification, isServerBacked: true };
+    } else {
+      cached.unshift(notification);
+    }
     localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(cached));
     window.dispatchEvent(new CustomEvent('ssa_notifications_updated'));
   }
@@ -538,6 +824,8 @@ class ReminderNotificationService {
     const now = new Date();
     const nowMs = now.getTime();
     const notified = this.getNotifiedEventIds();
+    const deletedKeys = this.getDeletedNotificationKeys();
+    const cachedNotifs = this.getCachedNotifications();
     let updated = false;
 
     events.forEach((evt) => {
@@ -546,6 +834,18 @@ class ReminderNotificationService {
 
       // If already completed or already notified, DO NOTHING
       if (evt.isCompleted || evt.notificationSent || notified.has(strId)) {
+        return;
+      }
+
+      // If user deleted this reminder notification previously, skip it silently
+      if (
+        deletedKeys.has(strId) ||
+        deletedKeys.has(`event_${strId}`.toLowerCase()) ||
+        deletedKeys.has(`reminder_event_${strId}`.toLowerCase())
+      ) {
+        evt.notificationSent = true;
+        notified.add(strId);
+        updated = true;
         return;
       }
 
@@ -582,18 +882,32 @@ class ReminderNotificationService {
 
           console.log(`[Reminders] 🔔 Exact-time reminder reached: "${evt.title}" (${formattedTime12h})`);
 
-          this.addNotification(
-            {
-              userId: evt.userId || this.getCurrentUserLogin(),
-              title: evt.title,
-              message: msg,
-              type: 'REMINDER',
-              referenceId: evt.id,
-              referenceType: 'EVENT',
-              scheduledFor: eventDateTime.toISOString(),
-            },
-            true // Show banner with iPhone sound & 5s auto-hide
+          // If a notification for this event already exists in the cache, don't show another duplicate
+          const alreadyNotifiedInCache = cachedNotifs.some(
+            (n) =>
+              (n.referenceType === 'EVENT' && String(n.referenceId) === strId) ||
+              this.isSameNotification(n, {
+                title: evt.title,
+                type: 'REMINDER',
+                referenceId: evt.id,
+                referenceType: 'EVENT',
+              })
           );
+
+          if (!alreadyNotifiedInCache) {
+            this.addNotification(
+              {
+                userId: evt.userId || this.getCurrentUserLogin(),
+                title: evt.title,
+                message: msg,
+                type: 'REMINDER',
+                referenceId: evt.id,
+                referenceType: 'EVENT',
+                scheduledFor: eventDateTime.toISOString(),
+              },
+              true // Show banner with iPhone sound & 5s auto-hide
+            );
+          }
         } else if (diffMs > 30000) {
           // If it was already past (e.g. browser was sleeping or old reminder), silently mark notified
           evt.notificationSent = true;
