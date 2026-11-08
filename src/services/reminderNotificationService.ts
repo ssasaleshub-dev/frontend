@@ -12,6 +12,7 @@ import notificationApiService, {
   NotificationType,
 } from './api/notificationService';
 import pushNotificationService from './pushNotificationService';
+import notificationBannerService from './banner/notificationBannerService';
 import { format12HourTime, IST_TIMEZONE } from '../utils/dateTimeUtils';
 
 export type { CalendarEventDTO as CalendarEvent, NotificationDTO as NotificationItem, EventType, EventPriority, NotificationType };
@@ -308,6 +309,19 @@ class ReminderNotificationService {
 
     // Trigger browser notification
     this.sendBrowserNotification(newItem.title, newItem.message);
+
+    // Trigger Apple HIG In-App Notification Banner Popup
+    try {
+      notificationBannerService.show({
+        id: newItem.id,
+        title: newItem.title.replace(/^🔔\s*/, ''),
+        description: newItem.message,
+        type: (newItem.type as any) || 'REMINDER',
+        timestamp: 'now',
+        url: newItem.referenceType === 'LEAD' && newItem.referenceId ? `/leads/${newItem.referenceId}` : '/calendar',
+      });
+    } catch {}
+
     return newItem;
   }
 

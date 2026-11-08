@@ -20,6 +20,9 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import NotificationBell from './NotificationBell';
+import AppleNotificationBanner from './AppleNotificationBanner';
+import notificationWebSocket from '../services/websocket/notificationWebSocket';
+import teamChatWebSocket from '../services/websocket/teamChatWebSocket';
 import { useAuth } from '../context/AuthContext';
 import { isAdmin as checkIsAdmin, getRoleBadgeInfo, getDisplayName } from '../utils/rbac';
 import fileService from '../services/api/fileService';
@@ -56,6 +59,14 @@ export default function Layout() {
     }
     return () => document.removeEventListener('mousedown', handleOutside);
   }, [userMenuOpen]);
+
+  // Connect to Real-Time WebSocket Microservices (Team Chat on 8085, Notifications on 8086)
+  useEffect(() => {
+    if (user) {
+      notificationWebSocket.connect(user);
+      teamChatWebSocket.connect(user);
+    }
+  }, [user]);
 
   const handleAvatarSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -189,6 +200,9 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-[#f2f2f7] flex flex-col md:flex-row font-sans text-slate-900 antialiased selection:bg-[#007aff] selection:text-white">
+      {/* Apple HIG Real-Time In-App Notification Banner Popup */}
+      <AppleNotificationBanner />
+
       {/* Mobile Top Bar */}
       <div className="md:hidden ios-glass text-slate-900 px-4 py-3 flex items-center justify-between sticky top-0 z-40 border-b border-black/[0.06]">
         <div className="flex items-center gap-2.5">

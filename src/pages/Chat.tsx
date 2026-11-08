@@ -21,6 +21,8 @@ import authService from '../services/api/authService';
 import axiosClient from '../services/api/axiosClient';
 import { useAuth } from '../context/AuthContext';
 import { formatIndianTime, formatIndianDate } from '../utils/dateTimeUtils';
+import teamChatWebSocket from '../services/websocket/teamChatWebSocket';
+import notificationBannerService from '../services/banner/notificationBannerService';
 import type { ChatMessage, User } from '../types';
 
 export default function Chat() {
@@ -146,12 +148,40 @@ export default function Chat() {
     fetchMessages();
   }, [fetchMessages]);
 
+  // Real-Time Team Chat WebSocket Microservice Integration
   useEffect(() => {
-    const interval = setInterval(() => {
-      fetchMessages(true);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [fetchMessages]);
+    if (user) {
+      teamChatWebSocket.connect(user);
+    }
+
+    const unsubscribe = teamChatWebSocket.onMessage((incomingMsg) => {
+      const isCurrentConversation =
+        (chatType === 'group' && incomingMsg.channel === 'general') ||
+        (chatType === 'p2p' &&
+          selectedUser &&
+          ((incomingMsg.userId === selectedUser.id && incomingMsg.recipientId === currentUserId) ||
+            (incomingMsg.userId === currentUserId && incomingMsg.recipientId === selectedUser.id)));
+
+      if (isCurrentConversation) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === incomingMsg.id)) return prev;
+          return [...prev, incomingMsg];
+        });
+        setTimeout(() => scrollToBottom(true), 60);
+      } else {
+        // Message is from another contact/room: display Apple HIG banner popup!
+        notificationBannerService.show({
+          title: `New Message from ${incomingMsg.userName}`,
+          description: incomingMsg.content || 'Sent an attachment in Team Chat',
+          type: 'CHAT',
+          timestamp: 'now',
+          url: '/chat',
+        });
+      }
+    });
+
+    return () => unsubscribe();
+  }, [chatType, selectedUser, currentUserId, user]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -233,6 +263,19 @@ export default function Chat() {
     setInputText('');
     clearPendingFile();
     setTimeout(() => scrollToBottom(true), 50);
+
+    // Real-Time WebSocket Microservice Broadcast
+    teamChatWebSocket.sendMessage({
+      content: trimmed,
+      channel,
+      recipientId,
+      userId: currentUserId,
+      userName: currentUserName,
+      mediaUrl: uploadedMediaUrl,
+      mediaType: uploadedMediaType,
+      fileName: uploadedFileName,
+      fileSize: uploadedFileSize,
+    });
 
     try {
       const response = await chatService.sendMessage({
