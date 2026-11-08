@@ -826,16 +826,6 @@ export default function CalendarPage() {
               </div>
             </div>
 
-            {/* Notification alert details */}
-            <p className="text-[11px] text-[#86868b] mt-3 font-normal flex items-center justify-center gap-1">
-              <span>🔔</span>
-              <span>
-                {successReminder.remindBeforeMinutes > 0
-                  ? `Notification alert ${successReminder.remindBeforeMinutes} minutes before`
-                  : 'Notification alert at scheduled time'}
-              </span>
-            </p>
-
             {/* Apple iOS Primary Action Button */}
             <div className="mt-5">
               <button
