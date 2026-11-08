@@ -796,33 +796,27 @@ export default function CalendarPage() {
               <X size={13} strokeWidth={2.5} />
             </button>
 
-            {/* Apple iOS Icon with Ambient Glow */}
-            <div className="mx-auto w-14 h-14 rounded-[20px] bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-300 text-white flex items-center justify-center shadow-lg shadow-amber-500/30 mb-3.5">
-              <Bell size={26} strokeWidth={2.3} className="drop-shadow-xs" />
+            {/* Apple iOS System Icon */}
+            <div className="mx-auto w-12 h-12 rounded-full bg-[#0071e3]/10 text-[#0071e3] flex items-center justify-center mb-3">
+              <CheckCircle2 size={24} strokeWidth={2.2} />
             </div>
 
-            {/* iOS Status Pill */}
-            <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-800 text-[10px] font-semibold tracking-wider uppercase mb-2">
-              <CheckCircle2 size={11} className="text-amber-700" />
-              <span>Reminder Scheduled</span>
-            </div>
-
-            {/* Event Title */}
-            <h3 className="text-[16px] font-semibold text-[#1d1d1f] tracking-tight line-clamp-2 px-1">
-              {successReminder.title}
+            {/* Clean Apple iOS Header & Title */}
+            <h3 className="text-[17px] font-semibold text-[#1d1d1f] tracking-tight">
+              Reminder Scheduled
             </h3>
+            <p className="text-[13px] text-[#86868b] mt-1 font-normal line-clamp-2 px-1">
+              {successReminder.title}
+            </p>
 
-            {/* Prominent iOS Duration Card */}
-            <div className="mt-4 p-4 rounded-[20px] bg-gradient-to-b from-[#f5f5f7] to-[#ebebee] border border-black/[0.04]">
-              <span className="block text-[10px] uppercase font-semibold text-[#86868b] tracking-wider mb-1">
-                Time Remaining
-              </span>
-              <div className="text-[19px] font-bold text-[#1d1d1f] tracking-tight flex items-center justify-center gap-1.5">
-                <Clock size={17} className="text-[#0071e3]" />
-                <span>{successReminder.remainingText}</span>
-              </div>
-              <div className="text-[11px] text-[#515154] mt-1.5 font-medium">
+            {/* iOS Grouped Inset Card */}
+            <div className="mt-4 p-3.5 rounded-[16px] bg-[#f5f5f7] border border-black/[0.03]">
+              <div className="text-[13px] font-medium text-[#1d1d1f]">
                 {formatEventReadable(successReminder.eventDate, successReminder.eventTime)}
+              </div>
+              <div className="text-[12px] font-medium text-[#0071e3] mt-1 flex items-center justify-center gap-1.5">
+                <Clock size={13} strokeWidth={2.2} />
+                <span>{successReminder.remainingText} remaining</span>
               </div>
             </div>
 
@@ -831,7 +825,7 @@ export default function CalendarPage() {
               <button
                 type="button"
                 onClick={() => setSuccessReminder(null)}
-                className="w-full py-2.5 px-4 rounded-full bg-[#0071e3] hover:bg-[#0077ED] text-white text-[13px] font-semibold shadow-xs transition-all active:scale-98"
+                className="w-full py-2.5 px-4 rounded-full bg-[#0071e3] hover:bg-[#0077ED] text-white text-[14px] font-semibold shadow-xs transition-all active:scale-98"
               >
                 Done
               </button>
