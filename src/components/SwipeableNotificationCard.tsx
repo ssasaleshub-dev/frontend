@@ -266,11 +266,6 @@ export default function SwipeableNotificationCard({
             >
               {formattedTimestamp}
             </span>
-            {!item.isRead && (
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0071e3] bg-[#0071e3]/10 px-1.5 py-0.2 rounded-md">
-                Unread
-              </span>
-            )}
           </div>
         </div>
       </div>
