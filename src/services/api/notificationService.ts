@@ -33,6 +33,7 @@ export interface NotificationDTO {
   isRead: boolean;
   createdAt: string;
   scheduledFor?: string;
+  isServerBacked?: boolean;
 }
 
 /**
@@ -78,22 +79,22 @@ export const notificationApiService = {
     if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id))) {
       return { success: true };
     }
-    return axiosClient.patch(`/api/notifications/${id}/read`);
+    return axiosClient.patch(`/api/notifications/${id}/read`).catch(() => ({ success: true }));
   },
 
   markAllAsRead: async (): Promise<any> => {
-    return axiosClient.patch('/api/notifications/read-all');
+    return axiosClient.patch('/api/notifications/read-all').catch(() => ({ success: true }));
   },
 
   deleteNotification: async (id: string): Promise<any> => {
     if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id))) {
       return { success: true };
     }
-    return axiosClient.delete(`/api/notifications/${id}`);
+    return axiosClient.delete(`/api/notifications/${id}`).catch(() => ({ success: true }));
   },
 
   clearAllNotifications: async (): Promise<any> => {
-    return axiosClient.delete('/api/notifications');
+    return axiosClient.delete('/api/notifications').catch(() => ({ success: true }));
   },
 };
 

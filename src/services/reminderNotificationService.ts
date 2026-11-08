@@ -49,6 +49,7 @@ export const INDIAN_HOLIDAYS: IndianHoliday[] = [
 const EVENTS_CACHE_KEY = 'ssa_calendar_events_v2';
 const NOTIFICATIONS_CACHE_KEY = 'ssa_notifications_v2';
 const NOTIFIED_EVENT_IDS_KEY = 'ssa_notified_event_ids_v1';
+const SERVER_NOTIF_IDS_KEY = 'ssa_server_notif_ids_v1';
 
 class ReminderNotificationService {
   private checkInterval: any = null;
@@ -287,7 +288,11 @@ class ReminderNotificationService {
         const cached = this.getCachedNotifications();
         const map = new Map<string, NotificationDTO>();
         cached.forEach((n) => map.set(n.id, n));
-        serverNotifs.forEach((n) => map.set(n.id, n));
+        serverNotifs.forEach((n) => {
+          n.isServerBacked = true;
+          this.recordServerNotificationId(n.id);
+          map.set(n.id, n);
+        });
         const merged = Array.from(map.values()).sort(
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
@@ -298,6 +303,32 @@ class ReminderNotificationService {
     } catch {}
 
     return this.getCachedNotifications();
+  }
+
+  public getServerNotificationIds(): Set<string> {
+    try {
+      const raw = localStorage.getItem(SERVER_NOTIF_IDS_KEY);
+      return new Set(raw ? JSON.parse(raw) : []);
+    } catch {
+      return new Set();
+    }
+  }
+
+  public recordServerNotificationId(id: string): void {
+    if (!id) return;
+    const set = this.getServerNotificationIds();
+    set.add(String(id));
+    localStorage.setItem(SERVER_NOTIF_IDS_KEY, JSON.stringify(Array.from(set)));
+  }
+
+  public isServerNotification(id: string): boolean {
+    if (!id) return false;
+    const cached = this.getCachedNotifications();
+    const item = cached.find((n) => String(n.id) === String(id));
+    if (item && item.isServerBacked === false) {
+      return false;
+    }
+    return this.getServerNotificationIds().has(String(id));
   }
 
   public getCachedNotifications(): NotificationDTO[] {
@@ -336,6 +367,7 @@ class ReminderNotificationService {
       id: generateUUID(),
       isRead: false,
       createdAt: new Date().toISOString(),
+      isServerBacked: false,
     };
 
     const cached = this.getCachedNotifications();
@@ -375,9 +407,11 @@ class ReminderNotificationService {
       window.dispatchEvent(new CustomEvent('ssa_notifications_updated'));
     }
 
-    try {
-      await notificationApiService.markAsRead(id);
-    } catch {}
+    if (this.isServerNotification(id)) {
+      try {
+        await notificationApiService.markAsRead(id);
+      } catch {}
+    }
   }
 
   public async markAllAsRead(): Promise<void> {
@@ -392,13 +426,16 @@ class ReminderNotificationService {
   }
 
   public async deleteNotification(id: string): Promise<void> {
+    const isServer = this.isServerNotification(id);
     const cached = this.getCachedNotifications().filter((n) => String(n.id) !== String(id));
     localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(cached));
     window.dispatchEvent(new CustomEvent('ssa_notifications_updated'));
 
-    try {
-      await notificationApiService.deleteNotification(id);
-    } catch {}
+    if (isServer) {
+      try {
+        await notificationApiService.deleteNotification(id);
+      } catch {}
+    }
   }
 
   public async clearAllNotifications(): Promise<void> {
@@ -416,6 +453,8 @@ class ReminderNotificationService {
   public addIncomingNotification(notification: NotificationDTO): void {
     const cached = this.getCachedNotifications();
     if (cached.some((n) => n.id === notification.id)) return;
+    notification.isServerBacked = true;
+    this.recordServerNotificationId(notification.id);
     cached.unshift(notification);
     localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(cached));
     window.dispatchEvent(new CustomEvent('ssa_notifications_updated'));
