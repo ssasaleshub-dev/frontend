@@ -438,7 +438,8 @@ class ReminderNotificationService {
     try {
       const serverNotifs = await notificationApiService.getNotifications(targetUser);
       if (Array.isArray(serverNotifs)) {
-        // 1. Process server notifications and clean up any previously deleted on client
+        // 1. Process server notifications and track current active server IDs
+        const currentServerIds = new Set<string>();
         const validServerNotifs: NotificationDTO[] = [];
         for (const n of serverNotifs) {
           if (this.isDeletedNotification(n)) {
@@ -447,15 +448,18 @@ class ReminderNotificationService {
             } catch {}
           } else {
             n.isServerBacked = true;
-            this.recordServerNotificationId(n.id);
+            currentServerIds.add(String(n.id));
             validServerNotifs.push(n);
           }
         }
 
+        // Store exact active server IDs (never accumulate stale/deleted IDs)
+        this.setServerNotificationIds(currentServerIds);
+
         // 2. Load cached notifications and filter out any deleted ones
         const cached = this.getCachedNotifications().filter((n) => !this.isDeletedNotification(n));
 
-        // 3. Deduplicate merge: server notifications take precedence over matching client-only items
+        // 3. Deduplicate merge: server notifications take precedence
         const deduplicatedList: NotificationDTO[] = [];
 
         for (const sNotif of validServerNotifs) {
@@ -468,6 +472,10 @@ class ReminderNotificationService {
         }
 
         for (const cNotif of cached) {
+          // If notification was marked server-backed but no longer exists on server, it was deleted! Do not re-add!
+          if (cNotif.isServerBacked && !currentServerIds.has(String(cNotif.id))) {
+            continue;
+          }
           const alreadyInList = deduplicatedList.some((item) => this.isSameNotification(item, cNotif));
           if (!alreadyInList) {
             deduplicatedList.push(cNotif);
@@ -495,11 +503,24 @@ class ReminderNotificationService {
     }
   }
 
+  public setServerNotificationIds(ids: Set<string>): void {
+    try {
+      localStorage.setItem(SERVER_NOTIF_IDS_KEY, JSON.stringify(Array.from(ids)));
+    } catch {}
+  }
+
   public recordServerNotificationId(id: string): void {
     if (!id) return;
     const set = this.getServerNotificationIds();
     set.add(String(id));
-    localStorage.setItem(SERVER_NOTIF_IDS_KEY, JSON.stringify(Array.from(set)));
+    this.setServerNotificationIds(set);
+  }
+
+  public removeServerNotificationId(id: string): void {
+    if (!id) return;
+    const set = this.getServerNotificationIds();
+    set.delete(String(id));
+    this.setServerNotificationIds(set);
   }
 
   public isServerNotification(id: string): boolean {
@@ -535,7 +556,13 @@ class ReminderNotificationService {
           }
         }
       }
-      return deduped.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      const sorted = deduped.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      if (deduped.length !== list.length) {
+        try {
+          localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(sorted));
+        } catch {}
+      }
+      return sorted;
     } catch {
       return [];
     }
@@ -622,12 +649,12 @@ class ReminderNotificationService {
     const item = cached.find((n) => String(n.id) === strId);
     if (!item) return;
 
-    const newReadState = !item.isRead;
     const serverIdsToSync = new Set<string>();
 
     cached.forEach((n) => {
       if (String(n.id) === strId || this.isSameNotification(n, item)) {
-        n.isRead = newReadState;
+        n.isRead = true;
+        n.readAt = new Date().toISOString();
         if (this.isServerNotification(n.id) && this.getServerNotificationIds().has(String(n.id))) {
           serverIdsToSync.add(String(n.id));
         }
@@ -644,13 +671,19 @@ class ReminderNotificationService {
     for (const serverId of serverIdsToSync) {
       try {
         await notificationApiService.markAsRead(serverId);
-      } catch {}
+      } catch (err: any) {
+        this.removeServerNotificationId(serverId);
+      }
     }
   }
 
   public async markAllAsRead(): Promise<void> {
     const cached = this.getCachedNotifications();
-    cached.forEach((n) => (n.isRead = true));
+    const nowIso = new Date().toISOString();
+    cached.forEach((n) => {
+      n.isRead = true;
+      n.readAt = nowIso;
+    });
     localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(cached));
     window.dispatchEvent(new CustomEvent('ssa_notifications_updated'));
 
@@ -717,7 +750,7 @@ class ReminderNotificationService {
       console.warn('Storage tombstone error:', e);
     }
 
-    // Dispatch DELETE request to backend for all real server-backed IDs found
+    // Dispatch DELETE request to backend for all real active server-backed IDs found
     const serverIdsToDelete = new Set<string>();
     if (this.isServerNotification(strId) && this.getServerNotificationIds().has(strId)) {
       serverIdsToDelete.add(strId);
@@ -731,8 +764,8 @@ class ReminderNotificationService {
     for (const serverId of serverIdsToDelete) {
       try {
         await notificationApiService.deleteNotification(serverId);
-      } catch (err) {
-        console.warn('Backend delete notification sync error:', err);
+      } catch (err: any) {
+        this.removeServerNotificationId(serverId);
       }
     }
   }

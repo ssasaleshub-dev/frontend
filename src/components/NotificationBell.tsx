@@ -85,15 +85,33 @@ export default function NotificationBell() {
 
   const handleMarkAsRead = async (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
+    const target = notifications.find((n) => String(n.id) === String(id));
+    setNotifications((prev) =>
+      prev.map((n) => {
+        if (String(n.id) === String(id) || (target && reminderNotificationService.isSameNotification(n, target))) {
+          return { ...n, isRead: true };
+        }
+        return n;
+      })
+    );
     await reminderNotificationService.markAsRead(id);
   };
 
   const handleMarkAllRead = async () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     await reminderNotificationService.markAllAsRead();
   };
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    const target = notifications.find((n) => String(n.id) === String(id));
+    setNotifications((prev) =>
+      prev.filter((n) => {
+        if (String(n.id) === String(id)) return false;
+        if (target && reminderNotificationService.isSameNotification(n, target)) return false;
+        return true;
+      })
+    );
     await reminderNotificationService.deleteNotification(id);
   };
 
@@ -111,6 +129,14 @@ export default function NotificationBell() {
 
   const handleNotificationClick = async (item: NotificationItem) => {
     if (!item.isRead) {
+      setNotifications((prev) =>
+        prev.map((n) => {
+          if (String(n.id) === String(item.id) || reminderNotificationService.isSameNotification(n, item)) {
+            return { ...n, isRead: true };
+          }
+          return n;
+        })
+      );
       await reminderNotificationService.markAsRead(item.id);
     }
     setIsOpen(false);

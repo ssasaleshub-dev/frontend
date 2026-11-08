@@ -114,9 +114,9 @@ export default function AttendancePage() {
     return { from: formatYMD(firstDay), to: formatYMD(today) };
   }, [dateFilter]);
 
-  // Load personal today's punch
+  // Load personal today's punch (Staff / Counselors Only)
   const loadMyToday = async () => {
-    if (!currentUserId) return;
+    if (!currentUserId || isAdmin) return;
     try {
       const res = await attendanceService.getTodayAttendance(currentUserId);
       setMyTodayRecord(res);
@@ -239,9 +239,28 @@ export default function AttendancePage() {
     }
   };
 
-  // Filtered Roster for Table
+  // Filtered Roster for Table (Excludes Administrator Accounts)
   const filteredRoster = useMemo(() => {
     return rosterRecords.filter((rec) => {
+      // Exclude admin / administrator accounts from staff roster table
+      const lowerUserId = (rec.userId || '').toLowerCase().trim();
+      const lowerRole = (rec.userRole || '').toLowerCase().trim();
+      const lowerName = (rec.userName || '').toLowerCase().trim();
+      if (
+        lowerUserId === 'admin' ||
+        lowerUserId === 'administrator' ||
+        lowerRole === 'admin' ||
+        lowerRole === 'administrator' ||
+        lowerName.includes('administrator') ||
+        systemUsers.some(
+          (u) =>
+            u.login?.toLowerCase() === lowerUserId &&
+            (u.login?.toLowerCase() === 'admin' || u.authorities?.includes('ROLE_ADMIN'))
+        )
+      ) {
+        return false;
+      }
+
       // Staff filter
       if (staffFilter !== 'ALL' && rec.userId !== staffFilter) {
         return false;
@@ -266,7 +285,7 @@ export default function AttendancePage() {
       }
       return true;
     });
-  }, [rosterRecords, staffFilter, statusFilter, searchQuery]);
+  }, [rosterRecords, staffFilter, statusFilter, searchQuery, systemUsers]);
 
   // Export full register to CSV
   const handleExportCSV = () => {
@@ -332,72 +351,74 @@ export default function AttendancePage() {
         </div>
       )}
 
-      {/* Top Banner: Personal Shift Punch Bar */}
-      <div className="bg-white rounded-3xl border border-black/[0.06] p-5 shadow-xs">
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5">
-          {/* Identity & Status */}
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#007aff] flex items-center justify-center font-bold shrink-0">
-              <Clock size={22} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-base font-bold text-slate-900">{displayName}</h2>
-                <span className="text-xs text-slate-500 font-medium">({badgeInfo.displayText})</span>
-                {isWorkingNow ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-emerald-600/20 bg-emerald-500/[0.08] text-emerald-950 text-xs font-medium shadow-xs">
-                    <span className="font-semibold text-emerald-900 tracking-tight">On Duty</span>
-                    <span className="text-[11px] text-emerald-700/80 font-mono pl-1 border-l border-emerald-600/20">
-                      {liveDuration || 'Shift Active'}
+      {/* Top Banner: Personal Shift Punch Bar (Counselors & Staff Only - Hidden for Admin) */}
+      {!isAdmin && (
+        <div className="bg-white rounded-3xl border border-black/[0.06] p-5 shadow-xs">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5">
+            {/* Identity & Status */}
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#007aff] flex items-center justify-center font-bold shrink-0">
+                <Clock size={22} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-base font-bold text-slate-900">{displayName}</h2>
+                  <span className="text-xs text-slate-500 font-medium">({badgeInfo.displayText})</span>
+                  {isWorkingNow ? (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-emerald-600/20 bg-emerald-500/[0.08] text-emerald-950 text-xs font-medium shadow-xs">
+                      <span className="font-semibold text-emerald-900 tracking-tight">On Duty</span>
+                      <span className="text-[11px] text-emerald-700/80 font-mono pl-1 border-l border-emerald-600/20">
+                        {liveDuration || 'Shift Active'}
+                      </span>
                     </span>
-                  </span>
-                ) : isCheckedOut ? (
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                    Shift Ended ({myTodayRecord?.totalHoursFormatted})
-                  </span>
-                ) : (
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                    Not Punched In
-                  </span>
-                )}
+                  ) : isCheckedOut ? (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                      Shift Ended ({myTodayRecord?.totalHoursFormatted})
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                      Not Punched In
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {currentDateFormatted} • <span className="font-mono font-semibold text-slate-700">{currentTime} IST</span>
+                </p>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">
-                {currentDateFormatted} • <span className="font-mono font-semibold text-slate-700">{currentTime} IST</span>
-              </p>
             </div>
-          </div>
 
-          {/* Simple One-Click Punch Action (No forms, no notes) */}
-          <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-            {!isCheckedIn ? (
-              <button
-                type="button"
-                onClick={handleCheckIn}
-                disabled={punching}
-                className="px-4 py-2 rounded-xl bg-[#007aff] hover:bg-[#0062cc] text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 active:scale-95"
-              >
-                {punching ? <Loader2 size={13} className="animate-spin" /> : <Clock size={14} />}
-                <span>Check In for Today</span>
-              </button>
-            ) : isWorkingNow ? (
-              <button
-                type="button"
-                onClick={handleCheckOut}
-                disabled={punching}
-                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 active:scale-95"
-              >
-                {punching ? <Loader2 size={13} className="animate-spin" /> : <LogOut size={14} />}
-                <span>Check Out</span>
-              </button>
-            ) : (
-              <div className="flex items-center gap-2 text-xs text-slate-700 bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200">
-                <CheckCircle2 size={15} className="text-emerald-600" />
-                <span>Today's shift logged ({myTodayRecord?.totalHoursFormatted})</span>
-              </div>
-            )}
+            {/* Simple One-Click Punch Action (No forms, no notes) */}
+            <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+              {!isCheckedIn ? (
+                <button
+                  type="button"
+                  onClick={handleCheckIn}
+                  disabled={punching}
+                  className="px-4 py-2 rounded-xl bg-[#007aff] hover:bg-[#0062cc] text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 active:scale-95"
+                >
+                  {punching ? <Loader2 size={13} className="animate-spin" /> : <Clock size={14} />}
+                  <span>Check In for Today</span>
+                </button>
+              ) : isWorkingNow ? (
+                <button
+                  type="button"
+                  onClick={handleCheckOut}
+                  disabled={punching}
+                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 active:scale-95"
+                >
+                  {punching ? <Loader2 size={13} className="animate-spin" /> : <LogOut size={14} />}
+                  <span>Check Out</span>
+                </button>
+              ) : (
+                <div className="flex items-center gap-2 text-xs text-slate-700 bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200">
+                  <CheckCircle2 size={15} className="text-emerald-600" />
+                  <span>Today's shift logged ({myTodayRecord?.totalHoursFormatted})</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Admin KPI Overview Cards (MNC Level) */}
       {isAdmin && (
@@ -543,7 +564,7 @@ export default function AttendancePage() {
               </button>
             </div>
 
-            {/* Dynamic Staff Selector (Admin only) */}
+            {/* Dynamic Staff Selector (Admin only - Counselors and Staff) */}
             {isAdmin && (
               <select
                 value={staffFilter}
@@ -551,11 +572,18 @@ export default function AttendancePage() {
                 className="px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 shrink-0"
               >
                 <option value="ALL">All Staff Members</option>
-                {systemUsers.map((u) => (
-                  <option key={u.id || u.login} value={u.login}>
-                    {u.firstName || u.lastName ? `${u.firstName || ''} ${u.lastName || ''} (@${u.login})` : u.login}
-                  </option>
-                ))}
+                {systemUsers
+                  .filter(
+                    (u) =>
+                      u.login?.toLowerCase() !== 'admin' &&
+                      u.login?.toLowerCase() !== 'administrator' &&
+                      !u.authorities?.includes('ROLE_ADMIN')
+                  )
+                  .map((u) => (
+                    <option key={u.id || u.login} value={u.login}>
+                      {u.firstName || u.lastName ? `${u.firstName || ''} ${u.lastName || ''} (@${u.login})` : u.login}
+                    </option>
+                  ))}
               </select>
             )}
 

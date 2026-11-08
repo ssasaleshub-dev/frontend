@@ -47,7 +47,7 @@ export default function NotificationsPage() {
     setNotifications((prev) =>
       prev.map((n) => {
         if (String(n.id) === String(id) || (target && reminderNotificationService.isSameNotification(n, target))) {
-          return { ...n, isRead: !n.isRead };
+          return { ...n, isRead: true };
         }
         return n;
       })
@@ -69,12 +69,21 @@ export default function NotificationsPage() {
 
   const handleClearAll = async () => {
     if (window.confirm('Clear all notifications?')) {
+      setNotifications([]);
       await reminderNotificationService.clearAllNotifications();
     }
   };
 
   const handleNotificationClick = async (item: NotificationItem) => {
     if (!item.isRead) {
+      setNotifications((prev) =>
+        prev.map((n) => {
+          if (String(n.id) === String(item.id) || reminderNotificationService.isSameNotification(n, item)) {
+            return { ...n, isRead: true };
+          }
+          return n;
+        })
+      );
       await reminderNotificationService.markAsRead(item.id);
     }
 
