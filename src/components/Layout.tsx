@@ -208,7 +208,11 @@ export default function Layout() {
   const pageInfo = getPageInfo();
 
   return (
-    <div className="min-h-screen bg-[#f2f2f7] flex flex-col md:flex-row font-sans text-slate-900 antialiased selection:bg-[#007aff] selection:text-white">
+    <div
+      className={`min-h-screen ${
+        currentPath.startsWith('/notifications') ? 'bg-white' : 'bg-[#f2f2f7]'
+      } flex flex-col md:flex-row font-sans text-slate-900 antialiased selection:bg-[#007aff] selection:text-white`}
+    >
       {/* Apple HIG Real-Time In-App Notification Banner Popup */}
       <AppleNotificationBanner />
 
@@ -517,7 +521,13 @@ export default function Layout() {
         </header>
 
         {/* Dynamic Route Content */}
-        <main className="flex-1 p-3.5 sm:p-5 lg:p-6 max-w-[1440px] w-full mx-auto">
+        <main
+          className={`flex-1 ${
+            currentPath.startsWith('/notifications')
+              ? 'p-0 bg-white max-w-2xl'
+              : 'p-3.5 sm:p-5 lg:p-6 max-w-[1440px]'
+          } w-full mx-auto`}
+        >
           <Outlet />
         </main>
       </div>

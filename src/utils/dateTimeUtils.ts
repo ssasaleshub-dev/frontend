@@ -140,8 +140,19 @@ export function cleanNotificationMessage(msg?: string, title?: string): string {
   cleaned = cleaned.replace(/^Reminder scheduled for \d{1,2}:\d{2}(\s*(AM|PM))?\.?/i, '');
   cleaned = cleaned.replace(/^Scheduled for \d{1,2}:\d{2}(\s*(AM|PM))?\.?/i, '');
   cleaned = cleaned.trim();
-  // If after stripping, the cleaned message is identical to the title, return empty string so it doesn't duplicate
-  if (title && cleaned.toLowerCase() === title.trim().toLowerCase()) {
+  // If cleaned message is just a generic category name or identical to title, return empty string
+  const lower = cleaned.toLowerCase();
+  if (
+    lower === 'reminder' ||
+    lower === 'general reminder' ||
+    lower === 'candidate callback' ||
+    lower === 'callback' ||
+    lower === 'follow-up' ||
+    lower === 'followup' ||
+    lower === 'event' ||
+    lower === 'meeting' ||
+    (title && lower === title.trim().toLowerCase())
+  ) {
     return '';
   }
   return cleaned;

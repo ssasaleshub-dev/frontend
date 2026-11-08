@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Capacitor } from '@capacitor/core';
 import {
   ChevronLeft,
   Calendar,
@@ -18,14 +17,7 @@ export default function NotificationsPage() {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [filterTab, setFilterTab] = useState<'ALL' | 'UNREAD'>('ALL');
-  const [categoryFilter, setCategoryFilter] = useState<'ALL' | 'REMINDER' | 'CALL' | 'LEAD'>('ALL');
   const [loading, setLoading] = useState(false);
-  const [hasPermission, setHasPermission] = useState<boolean>(
-    typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted'
-  );
-
-  const isNative = Capacitor.isNativePlatform();
-  const isMobile = typeof window !== 'undefined' && (window.innerWidth < 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
 
   const loadNotifications = useCallback(async () => {
     setLoading(true);
@@ -52,13 +44,7 @@ export default function NotificationsPage() {
 
   const unreadCount = useMemo(() => notifications.filter((n) => !n.isRead).length, [notifications]);
 
-  const handleRequestPermission = async () => {
-    const granted = await reminderNotificationService.requestNotificationPermission();
-    setHasPermission(granted);
-  };
-
-  const handleMarkAsRead = async (id: string, e?: React.MouseEvent) => {
-    e?.stopPropagation();
+  const handleMarkAsRead = async (id: string) => {
     await reminderNotificationService.markAsRead(id);
   };
 
@@ -66,13 +52,12 @@ export default function NotificationsPage() {
     await reminderNotificationService.markAllAsRead();
   };
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDelete = async (id: string) => {
     await reminderNotificationService.deleteNotification(id);
   };
 
   const handleClearAll = async () => {
-    if (window.confirm('Clear all notifications from your feed?')) {
+    if (window.confirm('Clear all notifications?')) {
       await reminderNotificationService.clearAllNotifications();
     }
   };
@@ -109,18 +94,14 @@ export default function NotificationsPage() {
     }
   };
 
-  // Filter tab (All vs Unread) & Category filter
   const filteredNotifications = useMemo(() => {
-    return notifications.filter((item) => {
-      if (filterTab === 'UNREAD' && item.isRead) return false;
-      if (categoryFilter === 'REMINDER' && item.type !== 'REMINDER') return false;
-      if (categoryFilter === 'CALL' && item.type !== 'CALL') return false;
-      if (categoryFilter === 'LEAD' && item.referenceType !== 'LEAD' && item.type !== 'LEAD_ASSIGNED') return false;
-      return true;
-    });
-  }, [notifications, filterTab, categoryFilter]);
+    if (filterTab === 'UNREAD') {
+      return notifications.filter((item) => !item.isRead);
+    }
+    return notifications;
+  }, [notifications, filterTab]);
 
-  // Group by Today, Yesterday, Earlier (Apple iOS Notification Center)
+  // Group by Today, Yesterday, Earlier (Instagram Activity Center)
   const groupedNotifications = useMemo(() => {
     const today: NotificationItem[] = [];
     const yesterday: NotificationItem[] = [];
@@ -161,25 +142,30 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-4 pb-12 font-sf-display text-[#1d1d1f]">
-      {/* Apple iOS Page Navigation Bar */}
-      <div className="flex items-center justify-between pt-1">
-        <button
-          type="button"
-          onClick={handleBack}
-          className="inline-flex items-center gap-1 text-[#0071e3] hover:text-[#0077ED] font-medium text-sm -ml-1 py-1.5 px-2 rounded-xl active:bg-black/[0.05] transition-all cursor-pointer"
-        >
-          <ChevronLeft size={20} strokeWidth={2.2} />
-          <span>Back</span>
-        </button>
+    <div className="w-full min-h-screen bg-white font-sf-display text-[#1d1d1f]">
+      {/* Instagram-style Top Navigation Header on Pure White */}
+      <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-black/[0.06] px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleBack}
+            className="p-1 -ml-1 text-[#1d1d1f] hover:text-[#0071e3] active:scale-95 transition-all cursor-pointer"
+            aria-label="Back"
+          >
+            <ChevronLeft size={24} strokeWidth={2.4} />
+          </button>
+          <h1 className="text-lg font-bold tracking-tight text-[#1d1d1f]">
+            Notifications
+          </h1>
+        </div>
 
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={loadNotifications}
             disabled={loading}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-[#86868b] hover:text-[#1d1d1f] hover:bg-black/[0.05] active:scale-95 transition-all cursor-pointer"
-            title="Refresh notifications"
+            className="p-1.5 rounded-full text-[#8e8e93] hover:text-[#1d1d1f] active:scale-95 transition-all cursor-pointer"
+            title="Refresh"
           >
             <RefreshCw size={15} className={loading ? 'animate-spin text-[#0071e3]' : ''} />
           </button>
@@ -188,7 +174,7 @@ export default function NotificationsPage() {
             <button
               type="button"
               onClick={handleMarkAllRead}
-              className="text-[13px] font-semibold text-[#0071e3] hover:text-[#0077ED] active:opacity-60 transition-opacity px-2.5 py-1 rounded-lg cursor-pointer"
+              className="text-[13px] font-semibold text-[#0071e3] hover:text-[#0077ED] active:opacity-60 transition-opacity px-2 py-1 cursor-pointer"
             >
               Mark All Read
             </button>
@@ -198,7 +184,7 @@ export default function NotificationsPage() {
             <button
               type="button"
               onClick={handleClearAll}
-              className="text-[13px] font-medium text-[#86868b] hover:text-[#ff3b30] active:opacity-60 transition-colors px-2 py-1 rounded-lg cursor-pointer"
+              className="text-[13px] font-medium text-[#8e8e93] hover:text-[#ff3b30] active:opacity-60 transition-colors px-2 py-1 cursor-pointer"
             >
               Clear
             </button>
@@ -206,128 +192,53 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      {/* Page Title Header */}
-      <div className="px-1">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1d1d1f]">
-          Notifications
-        </h1>
-      </div>
-
-      {/* Apple HIG Segmented Control: [ All | Unread ] */}
-      <div className="p-1 bg-black/[0.05] rounded-2xl flex items-center gap-1">
+      {/* Instagram-style Minimalist Tab Bar */}
+      <div className="flex items-center border-b border-black/[0.06] bg-white text-xs">
         <button
           type="button"
           onClick={() => setFilterTab('ALL')}
-          className={`flex-1 py-2 rounded-xl text-center text-xs font-semibold transition-all cursor-pointer ${
+          className={`flex-1 py-3 text-center font-semibold transition-all relative cursor-pointer ${
             filterTab === 'ALL'
-              ? 'bg-white text-[#1d1d1f] shadow-xs'
-              : 'text-[#86868b] hover:text-[#1d1d1f]'
+              ? 'text-[#1d1d1f]'
+              : 'text-[#8e8e93] hover:text-[#1d1d1f]'
           }`}
         >
-          All ({notifications.length})
+          <span>All ({notifications.length})</span>
+          {filterTab === 'ALL' && (
+            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#1d1d1f]" />
+          )}
         </button>
         <button
           type="button"
           onClick={() => setFilterTab('UNREAD')}
-          className={`flex-1 py-2 rounded-xl text-center text-xs font-semibold transition-all cursor-pointer ${
+          className={`flex-1 py-3 text-center font-semibold transition-all relative cursor-pointer ${
             filterTab === 'UNREAD'
-              ? 'bg-white text-[#1d1d1f] shadow-xs'
-              : 'text-[#86868b] hover:text-[#1d1d1f]'
+              ? 'text-[#1d1d1f]'
+              : 'text-[#8e8e93] hover:text-[#1d1d1f]'
           }`}
         >
-          Unread ({unreadCount})
+          <span>Unread ({unreadCount})</span>
+          {filterTab === 'UNREAD' && (
+            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#1d1d1f]" />
+          )}
         </button>
       </div>
 
-      {/* Category Filter Pills (All / Reminders / Callbacks / Leads) */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-0.5 no-scrollbar">
-        <button
-          type="button"
-          onClick={() => setCategoryFilter('ALL')}
-          className={`px-3 py-1.5 rounded-full text-xs font-medium shrink-0 transition-all cursor-pointer ${
-            categoryFilter === 'ALL'
-              ? 'bg-[#1d1d1f] text-white shadow-2xs'
-              : 'bg-white text-[#86868b] border border-black/[0.06] hover:text-[#1d1d1f]'
-          }`}
-        >
-          All Types
-        </button>
-        <button
-          type="button"
-          onClick={() => setCategoryFilter('REMINDER')}
-          className={`px-3 py-1.5 rounded-full text-xs font-medium shrink-0 transition-all cursor-pointer ${
-            categoryFilter === 'REMINDER'
-              ? 'bg-[#1d1d1f] text-white shadow-2xs'
-              : 'bg-white text-[#86868b] border border-black/[0.06] hover:text-[#1d1d1f]'
-          }`}
-        >
-          Reminders
-        </button>
-        <button
-          type="button"
-          onClick={() => setCategoryFilter('CALL')}
-          className={`px-3 py-1.5 rounded-full text-xs font-medium shrink-0 transition-all cursor-pointer ${
-            categoryFilter === 'CALL'
-              ? 'bg-[#1d1d1f] text-white shadow-2xs'
-              : 'bg-white text-[#86868b] border border-black/[0.06] hover:text-[#1d1d1f]'
-          }`}
-        >
-          Callbacks
-        </button>
-        <button
-          type="button"
-          onClick={() => setCategoryFilter('LEAD')}
-          className={`px-3 py-1.5 rounded-full text-xs font-medium shrink-0 transition-all cursor-pointer ${
-            categoryFilter === 'LEAD'
-              ? 'bg-[#1d1d1f] text-white shadow-2xs'
-              : 'bg-white text-[#86868b] border border-black/[0.06] hover:text-[#1d1d1f]'
-          }`}
-        >
-          Lead Updates
-        </button>
-      </div>
-
-      {/* Notification Permission Card (Apple HIG Managing Notifications) */}
-      {!hasPermission && !isNative && (
-        <div className="p-4 bg-white rounded-2xl border border-[#0071e3]/20 shadow-xs flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-full bg-[#0071e3]/10 text-[#0071e3] flex items-center justify-center shrink-0">
-              <AppleBellIcon size={20} strokeWidth={2} />
-            </div>
-            <div className="min-w-0">
-              <h4 className="text-[13px] font-semibold text-[#1d1d1f] truncate">
-                {isMobile ? 'Enable Mobile Push Alerts' : 'Enable Desktop Notifications'}
-              </h4>
-              <p className="text-[12px] text-[#86868b] leading-tight mt-0.5">
-                Receive instant alerts for candidate callback times and task deadlines.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleRequestPermission}
-            className="px-4 py-2 bg-[#0071e3] hover:bg-[#0077ED] text-white text-xs font-semibold rounded-full shrink-0 shadow-xs active:scale-95 transition-all cursor-pointer"
-          >
-            Allow
-          </button>
-        </div>
-      )}
-
-      {/* Grouped Notification List */}
-      <div className="space-y-6 pt-1">
+      {/* Instagram-style Flat Notification Feed (No Card Boxes, No Gray Background) */}
+      <div className="bg-white">
         {groupedNotifications.length === 0 ? (
-          /* Apple iOS Clean Empty State */
-          <div className="py-16 px-4 text-center bg-white rounded-3xl border border-black/[0.05] shadow-xs">
-            <div className="w-16 h-16 rounded-full bg-black/[0.04] flex items-center justify-center text-[#86868b] mx-auto mb-4">
-              <AppleBellIcon size={28} strokeWidth={1.5} />
+          /* Clean Minimal Empty State */
+          <div className="py-24 px-4 text-center bg-white">
+            <div className="w-14 h-14 rounded-full bg-slate-50 flex items-center justify-center text-[#8e8e93] mx-auto mb-3.5">
+              <AppleBellIcon size={24} strokeWidth={1.6} />
             </div>
             <h3 className="text-base font-semibold text-[#1d1d1f] tracking-tight">
               {filterTab === 'UNREAD' ? 'No Unread Notifications' : 'No Notifications'}
             </h3>
-            <p className="text-[13px] text-[#86868b] max-w-sm mx-auto mt-1 font-normal">
+            <p className="text-[13px] text-[#8e8e93] max-w-xs mx-auto mt-1 font-normal">
               {filterTab === 'UNREAD'
-                ? 'You have caught up with all candidate callbacks and reminders.'
-                : 'When candidate callbacks, scheduled events, or team notices are due, they will appear here.'}
+                ? 'You are all caught up.'
+                : 'Activity and reminders will appear here.'}
             </p>
             <div className="mt-5">
               <button
@@ -336,20 +247,20 @@ export default function NotificationsPage() {
                 className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0071e3] hover:bg-[#0077ED] text-white text-xs font-semibold rounded-full shadow-xs active:scale-95 transition-all cursor-pointer"
               >
                 <Calendar size={14} />
-                <span>Open Calendar & Reminders</span>
+                <span>Go to Calendar</span>
               </button>
             </div>
           </div>
         ) : (
           groupedNotifications.map((group) => (
-            <div key={group.label} className="space-y-2">
-              {/* Apple HIG Group Header */}
-              <div className="px-2 text-[12px] font-bold uppercase tracking-wider text-[#86868b]">
+            <div key={group.label}>
+              {/* Instagram Group Header */}
+              <div className="px-4 py-2 bg-slate-50/70 border-b border-black/[0.03] text-[11px] font-bold uppercase tracking-wider text-[#8e8e93]">
                 {group.label}
               </div>
 
-              {/* Group Items Inset */}
-              <div className="space-y-2.5">
+              {/* Flat List Rows (Divide Hairline) */}
+              <div className="divide-y divide-black/[0.04]">
                 {group.items.map((item) => {
                   const cleanTitle = item.title
                     .replace(/^🔔\s*/, '')
@@ -363,8 +274,8 @@ export default function NotificationsPage() {
                       cleanTitle={cleanTitle}
                       formattedTimestamp={formatTimestamp(item.createdAt)}
                       onClick={handleNotificationClick}
-                      onMarkAsRead={(id) => reminderNotificationService.markAsRead(id)}
-                      onDelete={(id) => reminderNotificationService.deleteNotification(id)}
+                      onMarkAsRead={handleMarkAsRead}
+                      onDelete={handleDelete}
                     />
                   );
                 })}
@@ -373,8 +284,6 @@ export default function NotificationsPage() {
           ))
         )}
       </div>
-
     </div>
   );
 }
-

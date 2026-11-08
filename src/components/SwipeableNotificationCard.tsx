@@ -2,6 +2,10 @@ import React, { useState, useRef } from 'react';
 import {
   Check,
   Trash2,
+  Clock,
+  Phone,
+  User,
+  Bell,
 } from 'lucide-react';
 import { NotificationItem } from '../services/reminderNotificationService';
 import { cleanNotificationMessage } from '../utils/dateTimeUtils';
@@ -63,7 +67,6 @@ export default function SwipeableNotificationCard({
 
     if (isHorizontalSwipe.current) {
       hasMoved.current = true;
-      // Damped rubber-band resistance
       let clamped = diffX;
       if (diffX > 90) clamped = 90 + (diffX - 90) * 0.3;
       if (diffX < -90) clamped = -90 + (diffX + 90) * 0.3;
@@ -75,10 +78,8 @@ export default function SwipeableNotificationCard({
     setIsDragging(false);
     if (isHorizontalSwipe.current) {
       if (offsetX > 60) {
-        // Right swipe: Mark as Read
         onMarkAsRead(item.id);
       } else if (offsetX < -60) {
-        // Left swipe: Delete
         onDelete(item.id);
       }
     }
@@ -87,7 +88,7 @@ export default function SwipeableNotificationCard({
     isVerticalScroll.current = false;
   };
 
-  // --- MOUSE DRAG HANDLERS (Desktop Drag Support) ---
+  // --- MOUSE DRAG HANDLERS ---
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
     startX.current = e.clientX;
@@ -141,12 +142,14 @@ export default function SwipeableNotificationCard({
   const isSwipingRight = offsetX > 0;
   const isSwipingLeft = offsetX < 0;
 
+  const displayMessage = cleanNotificationMessage(item.message, cleanTitle);
+
   return (
-    <div className="relative overflow-hidden rounded-2xl select-none touch-pan-y group">
-      {/* BACKGROUND ACTION: Right Swipe = Mark as Read (Apple Blue) */}
+    <div className="relative overflow-hidden bg-white select-none touch-pan-y group">
+      {/* BACKGROUND ACTION: Right Swipe = Mark as Read (Apple/Instagram Blue) */}
       <div
         onClick={() => onMarkAsRead(item.id)}
-        className={`absolute inset-y-0 left-0 w-full flex items-center justify-start pl-5 pr-4 bg-[#0071e3] text-white transition-opacity duration-150 cursor-pointer ${
+        className={`absolute inset-y-0 left-0 w-full flex items-center justify-start pl-6 pr-4 bg-[#0071e3] text-white transition-opacity duration-150 cursor-pointer ${
           isSwipingRight ? 'opacity-100 z-0' : 'opacity-0 -z-10'
         }`}
       >
@@ -161,10 +164,10 @@ export default function SwipeableNotificationCard({
         </div>
       </div>
 
-      {/* BACKGROUND ACTION: Left Swipe = Delete (Apple Red) */}
+      {/* BACKGROUND ACTION: Left Swipe = Delete (Instagram Red) */}
       <div
         onClick={() => onDelete(item.id)}
-        className={`absolute inset-y-0 right-0 w-full flex items-center justify-end pr-5 pl-4 bg-[#ff3b30] text-white transition-opacity duration-150 cursor-pointer ${
+        className={`absolute inset-y-0 right-0 w-full flex items-center justify-end pr-6 pl-4 bg-[#ff3b30] text-white transition-opacity duration-150 cursor-pointer ${
           isSwipingLeft ? 'opacity-100 z-0' : 'opacity-0 -z-10'
         }`}
       >
@@ -179,7 +182,7 @@ export default function SwipeableNotificationCard({
         </div>
       </div>
 
-      {/* FOREGROUND CARD: Clean Apple HIG card (NO blue dot, NO cluttered static icons) */}
+      {/* FOREGROUND ROW: Instagram-style Flat White Row (No floating model, no bubble borders) */}
       <div
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -191,93 +194,48 @@ export default function SwipeableNotificationCard({
           transform: `translateX(${offsetX}px)`,
           transition: isDragging ? 'none' : 'transform 0.28s cubic-bezier(0.18, 0.89, 0.32, 1.15)',
         }}
-        className={`p-4 rounded-2xl border flex flex-col gap-2 relative z-10 cursor-pointer ${
-          item.isRead
-            ? 'bg-white/80 hover:bg-white border-black/[0.05] shadow-2xs'
-            : 'bg-white hover:bg-white border-[#0071e3]/30 shadow-xs ring-1 ring-[#0071e3]/10'
+        className={`px-4 py-3.5 bg-white hover:bg-[#fafafa] active:bg-[#f5f5f5] flex items-center gap-3.5 border-b border-black/[0.04] relative z-10 cursor-pointer transition-colors ${
+          !item.isRead ? 'bg-blue-50/[0.25]' : ''
         }`}
       >
-        {/* Top Row: Category Badge + Timestamp (Zero Dot, Zero Clutter) */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <span
-              className={`text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${
-                item.type === 'CALL'
-                  ? 'bg-emerald-500/10 text-emerald-700'
-                  : item.type === 'REMINDER'
-                  ? 'bg-orange-500/10 text-orange-700'
-                  : item.type === 'LEAD_ASSIGNED'
-                  ? 'bg-purple-500/10 text-purple-700'
-                  : 'bg-blue-500/10 text-blue-700'
-              }`}
-            >
-              {item.type === 'CALL'
-                ? 'Candidate Callback'
-                : item.type === 'REMINDER'
-                ? 'Reminder'
-                : item.type === 'LEAD_ASSIGNED'
-                ? 'Lead Assignment'
-                : item.type && item.type.startsWith('CLOSING_MILESTONE_')
-                ? 'Milestone'
-                : 'SSA Sales Hub'}
-            </span>
-
-            <span className="text-[11px] text-[#86868b] font-normal truncate">
-              {formattedTimestamp}
-            </span>
-          </div>
-
-          {/* Desktop Hover Shortcut Pills (Zero Dot) */}
-          <div className="hidden sm:flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            {!item.isRead && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onMarkAsRead(item.id);
-                }}
-                title="Mark as read (or swipe right)"
-                className="p-1 rounded-md text-[#86868b] hover:text-[#0071e3] hover:bg-black/[0.05] transition-colors"
-              >
-                <Check size={13} strokeWidth={2.5} />
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(item.id);
-              }}
-              title="Delete notification (or swipe left)"
-              className="p-1 rounded-md text-[#86868b] hover:text-[#ff3b30] hover:bg-black/[0.05] transition-colors"
-            >
-              <Trash2 size={13} strokeWidth={2} />
-            </button>
-          </div>
+        {/* Left: Instagram-style circular icon avatar */}
+        <div
+          className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 border border-black/[0.04] ${
+            item.type === 'CALL'
+              ? 'bg-emerald-50 text-emerald-600'
+              : item.type === 'REMINDER'
+              ? 'bg-orange-50 text-orange-600'
+              : item.type === 'LEAD_ASSIGNED'
+              ? 'bg-purple-50 text-purple-600'
+              : 'bg-blue-50 text-[#0071e3]'
+          }`}
+        >
+          {item.type === 'CALL' ? (
+            <Phone size={18} strokeWidth={2.2} />
+          ) : item.type === 'LEAD_ASSIGNED' ? (
+            <User size={18} strokeWidth={2.2} />
+          ) : (
+            <Clock size={18} strokeWidth={2.2} />
+          )}
         </div>
 
-        {/* Content Body - Only displays real user-entered data */}
-        {(() => {
-          const displayMessage = cleanNotificationMessage(item.message, cleanTitle);
-          return (
-            <div className="space-y-1">
-              <h4
-                className={`text-[14px] leading-snug tracking-tight ${
-                  item.isRead ? 'font-medium text-[#1d1d1f]' : 'font-semibold text-[#1d1d1f]'
-                }`}
-              >
-                {cleanTitle}
-              </h4>
-              {displayMessage && (
-                <p className="text-[13px] text-[#515154] leading-relaxed font-normal">
-                  {displayMessage}
-                </p>
-              )}
-            </div>
-          );
-        })()}
+        {/* Center: Instagram-style inline notification text */}
+        <div className="flex-1 min-w-0 pr-1">
+          <p className="text-[14px] leading-snug text-[#1d1d1f]">
+            <span className={item.isRead ? 'font-medium' : 'font-semibold'}>
+              {cleanTitle}
+            </span>
+            {displayMessage && (
+              <span className="text-[#515154] font-normal ml-1.5">
+                {displayMessage}
+              </span>
+            )}
+          </p>
+          <span className="text-[12px] text-[#8e8e93] mt-1 block font-normal">
+            {formattedTimestamp}
+          </span>
+        </div>
       </div>
     </div>
   );
 }
-
