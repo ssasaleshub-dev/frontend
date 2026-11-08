@@ -2,10 +2,6 @@ import React, { useState, useRef } from 'react';
 import {
   Check,
   Trash2,
-  Clock,
-  Phone,
-  User,
-  Bell,
 } from 'lucide-react';
 import { NotificationItem } from '../services/reminderNotificationService';
 import { cleanNotificationMessage } from '../utils/dateTimeUtils';
@@ -182,7 +178,7 @@ export default function SwipeableNotificationCard({
         </div>
       </div>
 
-      {/* FOREGROUND ROW: Instagram-style Flat White Row (No floating model, no bubble borders) */}
+      {/* FOREGROUND ROW: Pure Apple iOS Clean List Item */}
       <div
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -194,47 +190,26 @@ export default function SwipeableNotificationCard({
           transform: `translateX(${offsetX}px)`,
           transition: isDragging ? 'none' : 'transform 0.28s cubic-bezier(0.18, 0.89, 0.32, 1.15)',
         }}
-        className={`px-4 py-3.5 bg-white hover:bg-[#fafafa] active:bg-[#f5f5f5] flex items-center gap-3.5 border-b border-black/[0.04] relative z-10 cursor-pointer transition-colors ${
-          !item.isRead ? 'bg-blue-50/[0.25]' : ''
-        }`}
+        className="px-4 py-3.5 bg-white hover:bg-[#fafafa] active:bg-[#f2f2f7] border-b border-[#e5e5ea]/70 relative z-10 cursor-pointer transition-colors flex flex-col justify-center"
       >
-        {/* Left: Instagram-style circular icon avatar */}
-        <div
-          className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 border border-black/[0.04] ${
-            item.type === 'CALL'
-              ? 'bg-emerald-50 text-emerald-600'
-              : item.type === 'REMINDER'
-              ? 'bg-orange-50 text-orange-600'
-              : item.type === 'LEAD_ASSIGNED'
-              ? 'bg-purple-50 text-purple-600'
-              : 'bg-blue-50 text-[#0071e3]'
-          }`}
-        >
-          {item.type === 'CALL' ? (
-            <Phone size={18} strokeWidth={2.2} />
-          ) : item.type === 'LEAD_ASSIGNED' ? (
-            <User size={18} strokeWidth={2.2} />
-          ) : (
-            <Clock size={18} strokeWidth={2.2} />
-          )}
-        </div>
-
-        {/* Center: Instagram-style inline notification text */}
-        <div className="flex-1 min-w-0 pr-1">
-          <p className="text-[14px] leading-snug text-[#1d1d1f]">
-            <span className={item.isRead ? 'font-medium' : 'font-semibold'}>
-              {cleanTitle}
-            </span>
-            {displayMessage && (
-              <span className="text-[#515154] font-normal ml-1.5">
-                {displayMessage}
-              </span>
-            )}
-          </p>
-          <span className="text-[12px] text-[#8e8e93] mt-1 block font-normal">
+        <div className="flex items-baseline justify-between gap-3">
+          <h4
+            className={`text-[15px] leading-snug tracking-tight truncate ${
+              item.isRead ? 'font-normal text-[#1c1c1e]' : 'font-semibold text-[#000000]'
+            }`}
+          >
+            {cleanTitle}
+          </h4>
+          <span className="text-[12px] text-[#8e8e93] shrink-0 font-normal">
             {formattedTimestamp}
           </span>
         </div>
+
+        {displayMessage && (
+          <p className="text-[13px] text-[#636366] leading-normal font-normal mt-0.5 line-clamp-2">
+            {displayMessage}
+          </p>
+        )}
       </div>
     </div>
   );

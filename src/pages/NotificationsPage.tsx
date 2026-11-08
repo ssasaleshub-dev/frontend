@@ -159,36 +159,32 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      {/* Instagram-style Minimalist Tab Bar */}
-      <div className="flex items-center border-b border-black/[0.06] bg-white text-xs">
-        <button
-          type="button"
-          onClick={() => setFilterTab('ALL')}
-          className={`flex-1 py-3 text-center font-semibold transition-all relative cursor-pointer ${
-            filterTab === 'ALL'
-              ? 'text-[#1d1d1f]'
-              : 'text-[#8e8e93] hover:text-[#1d1d1f]'
-          }`}
-        >
-          <span>All ({notifications.length})</span>
-          {filterTab === 'ALL' && (
-            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#1d1d1f]" />
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={() => setFilterTab('UNREAD')}
-          className={`flex-1 py-3 text-center font-semibold transition-all relative cursor-pointer ${
-            filterTab === 'UNREAD'
-              ? 'text-[#1d1d1f]'
-              : 'text-[#8e8e93] hover:text-[#1d1d1f]'
-          }`}
-        >
-          <span>Unread ({unreadCount})</span>
-          {filterTab === 'UNREAD' && (
-            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#1d1d1f]" />
-          )}
-        </button>
+      {/* iOS Segmented Control */}
+      <div className="px-4 py-2.5 bg-white border-b border-[#e5e5ea]/60">
+        <div className="flex p-0.5 bg-[#767680]/[0.12] rounded-[9px] text-[13px]">
+          <button
+            type="button"
+            onClick={() => setFilterTab('ALL')}
+            className={`flex-1 py-1.5 rounded-[7px] font-medium transition-all cursor-pointer ${
+              filterTab === 'ALL'
+                ? 'bg-white text-[#000000] shadow-[0_1px_3px_rgba(0,0,0,0.12)] font-semibold'
+                : 'text-[#000000]/60 hover:text-[#000000]'
+            }`}
+          >
+            All {notifications.length > 0 ? `(${notifications.length})` : ''}
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterTab('UNREAD')}
+            className={`flex-1 py-1.5 rounded-[7px] font-medium transition-all cursor-pointer ${
+              filterTab === 'UNREAD'
+                ? 'bg-white text-[#000000] shadow-[0_1px_3px_rgba(0,0,0,0.12)] font-semibold'
+                : 'text-[#000000]/60 hover:text-[#000000]'
+            }`}
+          >
+            Unread {unreadCount > 0 ? `(${unreadCount})` : ''}
+          </button>
+        </div>
       </div>
 
       {/* Instagram-style Flat Notification Feed (No Card Boxes, No Gray Background) */}
@@ -221,8 +217,8 @@ export default function NotificationsPage() {
         ) : (
           groupedNotifications.map((group) => (
             <div key={group.label}>
-              {/* Instagram Group Header */}
-              <div className="px-4 py-2 bg-slate-50/70 border-b border-black/[0.03] text-[11px] font-bold uppercase tracking-wider text-[#8e8e93]">
+              {/* Apple iOS Group Header */}
+              <div className="px-4 py-1.5 bg-[#f2f2f7]/80 text-[11px] font-semibold uppercase tracking-wider text-[#8e8e93]">
                 {group.label}
               </div>
 
