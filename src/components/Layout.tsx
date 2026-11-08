@@ -18,6 +18,7 @@ import {
   Clock,
   User,
   CheckCircle2,
+  Bell,
 } from 'lucide-react';
 import NotificationBell from './NotificationBell';
 import AppleNotificationBanner from './AppleNotificationBanner';
@@ -157,6 +158,13 @@ export default function Layout() {
       exact: false,
     },
     {
+      id: 'notifications',
+      label: 'Notifications',
+      icon: Bell,
+      to: '/notifications',
+      exact: false,
+    },
+    {
       id: 'profile',
       label: 'My Profile Desk',
       icon: User,
@@ -192,6 +200,7 @@ export default function Layout() {
     if (currentPath.startsWith('/profile')) return { title: 'Staff Profile & Shift Desk', subtitle: 'Counselor credentials, shift records, and personal attendance history' };
     if (currentPath.startsWith('/import')) return { title: 'Data Ingestion', subtitle: 'Import Meta ads export spreadsheets & raw lead data' };
     if (currentPath.startsWith('/chat')) return { title: 'Team Chat', subtitle: 'Internal messaging and staff communication' };
+    if (currentPath.startsWith('/notifications')) return { title: 'Notifications', subtitle: 'Scheduled reminders, candidate callbacks & team alerts' };
     if (currentPath.startsWith('/users')) return { title: 'Team & Permissions', subtitle: 'Manage counselor assignments, roles, and access desks' };
     return { title: 'SSA CRM', subtitle: 'Work & Study Visa Consultancy' };
   };
@@ -209,13 +218,16 @@ export default function Layout() {
           <img src={brandLogo} alt="SSA Logo" className="w-8 h-8 rounded-xl object-cover shadow-xs border border-black/[0.06]" />
           <h1 className="font-bold text-sm tracking-tight text-slate-900 leading-tight">SSA CRM</h1>
         </div>
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="p-2 text-slate-700 hover:text-slate-900 rounded-xl hover:bg-black/[0.05] transition-colors"
-          aria-label="Toggle menu"
-        >
-          {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="p-2 text-slate-700 hover:text-slate-900 rounded-xl hover:bg-black/[0.05] transition-colors"
+            aria-label="Toggle menu"
+          >
+            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </div>
       </div>
 
       {/* Apple macOS Frosted Sidebar */}
@@ -430,7 +442,9 @@ export default function Layout() {
                 <Calendar size={17} strokeWidth={2} />
               </button>
 
-              <NotificationBell />
+              <div className="hidden md:block">
+                <NotificationBell />
+              </div>
             </div>
 
             {/* Header User Section - Click avatar for dropdown, logout inside */}

@@ -16,6 +16,7 @@ import CandidateDetail from './pages/CandidateDetail';
 import CalendarPage from './pages/CalendarPage';
 import AttendancePage from './pages/AttendancePage';
 import StaffProfile from './pages/StaffProfile';
+import NotificationsPage from './pages/NotificationsPage';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import DataDeletion from './pages/DataDeletion';
 import TermsOfService from './pages/TermsOfService';
@@ -83,6 +84,7 @@ export default function App() {
               <Route path="attendance" element={<AttendancePage />} />
               <Route path="profile" element={<StaffProfile />} />
               <Route path="chat" element={<Chat />} />
+              <Route path="notifications" element={<NotificationsPage />} />
               <Route
                 path="users"
                 element={

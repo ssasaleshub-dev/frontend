@@ -122,6 +122,10 @@ class PushNotificationService {
             window.dispatchEvent(
               new CustomEvent('ssa_navigate_to', { detail: { path: data.route } })
             );
+          } else {
+            window.dispatchEvent(
+              new CustomEvent('ssa_navigate_to', { detail: { path: '/notifications' } })
+            );
           }
         }
       );
@@ -140,6 +144,10 @@ class PushNotificationService {
             } else if (extra.eventId) {
               window.dispatchEvent(
                 new CustomEvent('ssa_navigate_to', { detail: { path: '/calendar' } })
+              );
+            } else {
+              window.dispatchEvent(
+                new CustomEvent('ssa_navigate_to', { detail: { path: '/notifications' } })
               );
             }
           }
