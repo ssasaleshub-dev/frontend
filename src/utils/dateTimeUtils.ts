@@ -123,3 +123,28 @@ export function formatIndianDate(
   }
 }
 
+/**
+ * Strips unwanted static boilerplate prefixes/suffixes from reminder messages
+ * so that only user-entered data is displayed.
+ */
+export function cleanNotificationMessage(msg?: string, title?: string): string {
+  if (!msg) return '';
+  let cleaned = msg.trim();
+  // Strip robotic boilerplate prefixes
+  cleaned = cleaned.replace(/^Reminder for candidate\s*/i, '');
+  cleaned = cleaned.replace(/^Reminder for\s*/i, '');
+  cleaned = cleaned.replace(/^Candidate:\s*/i, '');
+  // Strip trailing " (Scheduled for ...)" or " scheduled at ..." or " scheduled for ..."
+  cleaned = cleaned.replace(/\s*\(Scheduled for[^)]*\)/i, '');
+  cleaned = cleaned.replace(/\s*scheduled (at|for) \d{1,2}:\d{2}(\s*(AM|PM))?\.?/i, '');
+  cleaned = cleaned.replace(/^Reminder scheduled for \d{1,2}:\d{2}(\s*(AM|PM))?\.?/i, '');
+  cleaned = cleaned.replace(/^Scheduled for \d{1,2}:\d{2}(\s*(AM|PM))?\.?/i, '');
+  cleaned = cleaned.trim();
+  // If after stripping, the cleaned message is identical to the title, return empty string so it doesn't duplicate
+  if (title && cleaned.toLowerCase() === title.trim().toLowerCase()) {
+    return '';
+  }
+  return cleaned;
+}
+
+

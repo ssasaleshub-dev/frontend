@@ -13,7 +13,7 @@ import notificationApiService, {
 } from './api/notificationService';
 import pushNotificationService from './pushNotificationService';
 import notificationBannerService from './banner/notificationBannerService';
-import { format12HourTime, IST_TIMEZONE } from '../utils/dateTimeUtils';
+import { format12HourTime, IST_TIMEZONE, cleanNotificationMessage } from '../utils/dateTimeUtils';
 
 export type { CalendarEventDTO as CalendarEvent, NotificationDTO as NotificationItem, EventType, EventPriority, NotificationType };
 
@@ -86,15 +86,22 @@ class ReminderNotificationService {
         try {
           const parsed = JSON.parse(rawNotifs);
           const realOnly = Array.isArray(parsed)
-            ? parsed.filter(
-                (n: any) =>
-                  n.id !== 'notif-welcome' &&
-                  n.referenceId !== 'evt-1' &&
-                  n.referenceId !== 'evt-2' &&
-                  !n.title?.includes('Schengen Visa') &&
-                  !n.title?.includes('Follow up with Praveen') &&
-                  !n.title?.includes('Internal Notification System Online')
-              )
+            ? parsed
+                .filter(
+                  (n: any) =>
+                    n.id !== 'notif-welcome' &&
+                    n.referenceId !== 'evt-1' &&
+                    n.referenceId !== 'evt-2' &&
+                    !n.title?.includes('Schengen Visa') &&
+                    !n.title?.includes('Follow up with Praveen') &&
+                    !n.title?.includes('Internal Notification System Online')
+                )
+                .map((n: any) => {
+                  if (n.message) {
+                    n.message = cleanNotificationMessage(n.message, n.title);
+                  }
+                  return n;
+                })
             : [];
           localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(realOnly));
         } catch {
@@ -445,11 +452,10 @@ class ReminderNotificationService {
           const cleanCandidate = rawCandidate ? rawCandidate.replace(/^Candidate:\s*/i, '').trim() : '';
           const formattedTime12h = format12HourTime(timePart);
 
+          // Only use user-entered notes/description; never generate static boilerplate
           let msg = evt.description && evt.description.trim() ? evt.description.trim() : '';
-          if (!msg) {
-            msg = cleanCandidate
-              ? `Reminder for ${cleanCandidate} scheduled at ${formattedTime12h}.`
-              : `Reminder scheduled for ${formattedTime12h}.`;
+          if (!msg && cleanCandidate && cleanCandidate.toLowerCase() !== evt.title.toLowerCase()) {
+            msg = cleanCandidate;
           }
 
           console.log(`[Reminders] 🔔 Reminder due! Triggering banner & sound for: "${evt.title}" (${formattedTime12h})`);

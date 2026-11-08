@@ -7,6 +7,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { NotificationItem } from '../services/reminderNotificationService';
+import { cleanNotificationMessage } from '../utils/dateTimeUtils';
 
 interface SwipeableNotificationCardProps {
   item: NotificationItem;
@@ -258,19 +259,26 @@ export default function SwipeableNotificationCard({
           </div>
         </div>
 
-        {/* Content Body */}
-        <div className="space-y-1">
-          <h4
-            className={`text-[14px] leading-snug tracking-tight ${
-              item.isRead ? 'font-medium text-[#1d1d1f]' : 'font-semibold text-[#1d1d1f]'
-            }`}
-          >
-            {cleanTitle}
-          </h4>
-          <p className="text-[13px] text-[#515154] leading-relaxed font-normal">
-            {item.message}
-          </p>
-        </div>
+        {/* Content Body - Only displays real user-entered data */}
+        {(() => {
+          const displayMessage = cleanNotificationMessage(item.message, cleanTitle);
+          return (
+            <div className="space-y-1">
+              <h4
+                className={`text-[14px] leading-snug tracking-tight ${
+                  item.isRead ? 'font-medium text-[#1d1d1f]' : 'font-semibold text-[#1d1d1f]'
+                }`}
+              >
+                {cleanTitle}
+              </h4>
+              {displayMessage && (
+                <p className="text-[13px] text-[#515154] leading-relaxed font-normal">
+                  {displayMessage}
+                </p>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Bottom Link Hint if lead or event attached */}
         {(item.referenceType === 'LEAD' || item.referenceType === 'EVENT' || item.type === 'REMINDER') && (
@@ -295,3 +303,4 @@ export default function SwipeableNotificationCard({
     </div>
   );
 }
+

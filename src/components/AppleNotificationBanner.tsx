@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { X, MessageSquare, Clock, Phone, User, Calendar, Bell } from 'lucide-react';
 import notificationBannerService, { AppleBannerPayload } from '../services/banner/notificationBannerService';
 import { AppleBellIcon } from './icons/BrandIcons';
+import { cleanNotificationMessage } from '../utils/dateTimeUtils';
 
 /**
  * Apple HIG In-App Notification Banner Popup
@@ -94,23 +95,31 @@ export default function AppleNotificationBanner() {
           </div>
         </div>
 
-        {/* Center: Title & Description */}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <h4 className="text-[13.5px] font-semibold text-white tracking-tight truncate leading-snug">
-              {banner.title.replace(/^🔔\s*/, '').replace(/^Reminder:\s*/i, '').trim()}
-            </h4>
+        {/* Center: Title & Description (User-entered only) */}
+        {(() => {
+          const cleanTitle = banner.title.replace(/^🔔\s*/, '').replace(/^Reminder:\s*/i, '').trim();
+          const cleanDesc = cleanNotificationMessage(banner.description, cleanTitle);
+          return (
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-2">
+                <h4 className="text-[13.5px] font-semibold text-white tracking-tight truncate leading-snug">
+                  {cleanTitle}
+                </h4>
 
-            {/* Right: "now" timestamp from Apple HIG spec */}
-            <span className="text-[11px] text-white/50 font-normal shrink-0 tracking-tight pt-0.5">
-              {banner.timestamp || 'now'}
-            </span>
-          </div>
+                {/* Right: "now" timestamp from Apple HIG spec */}
+                <span className="text-[11px] text-white/50 font-normal shrink-0 tracking-tight pt-0.5">
+                  {banner.timestamp || 'now'}
+                </span>
+              </div>
 
-          <p className="text-[12px] text-white/80 line-clamp-2 leading-relaxed mt-0.5 font-normal">
-            {banner.description}
-          </p>
-        </div>
+              {cleanDesc && (
+                <p className="text-[12px] text-white/80 line-clamp-2 leading-relaxed mt-0.5 font-normal">
+                  {cleanDesc}
+                </p>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Dismiss Button (visible on hover or tap) */}
         <button

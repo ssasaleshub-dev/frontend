@@ -13,7 +13,7 @@ import reminderNotificationService, {
   NotificationItem,
 } from '../services/reminderNotificationService';
 import { encryptLeadId } from '../utils/leadIdCrypto';
-import { formatIndianTime, formatIndianDate } from '../utils/dateTimeUtils';
+import { formatIndianTime, formatIndianDate, cleanNotificationMessage } from '../utils/dateTimeUtils';
 
 export default function NotificationBell() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -382,19 +382,27 @@ export default function NotificationBell() {
                           </div>
                         </div>
 
-                        {/* Body Content */}
-                        <div className="pr-1 mt-1">
-                          <p
-                            className={`text-[13px] leading-snug truncate ${
-                              item.isRead ? 'font-medium text-[#1d1d1f]' : 'font-semibold text-[#1d1d1f]'
-                            }`}
-                          >
-                            {item.title.replace(/^🔔\s*/, '').replace(/^Reminder:\s*/i, '').trim()}
-                          </p>
-                          <p className="text-[12px] text-[#515154] leading-relaxed line-clamp-2 mt-0.5 font-normal">
-                            {item.message}
-                          </p>
-                        </div>
+                        {/* Body Content - Only user entered data */}
+                        {(() => {
+                          const cleanTitle = item.title.replace(/^🔔\s*/, '').replace(/^Reminder:\s*/i, '').trim();
+                          const displayMessage = cleanNotificationMessage(item.message, cleanTitle);
+                          return (
+                            <div className="pr-1 mt-1">
+                              <p
+                                className={`text-[13px] leading-snug truncate ${
+                                  item.isRead ? 'font-medium text-[#1d1d1f]' : 'font-semibold text-[#1d1d1f]'
+                                }`}
+                              >
+                                {cleanTitle}
+                              </p>
+                              {displayMessage && (
+                                <p className="text-[12px] text-[#515154] leading-relaxed line-clamp-2 mt-0.5 font-normal">
+                                  {displayMessage}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                     ))}
                   </div>
