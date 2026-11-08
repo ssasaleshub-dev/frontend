@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ChevronLeft,
-  Calendar,
 } from 'lucide-react';
 import { AppleBellIcon } from '../components/icons/BrandIcons';
 import SwipeableNotificationCard from '../components/SwipeableNotificationCard';
@@ -202,21 +201,6 @@ export default function NotificationsPage() {
             <h3 className="text-base font-semibold text-[#1d1d1f] tracking-tight">
               {filterTab === 'UNREAD' ? 'No Unread Notifications' : 'No Notifications'}
             </h3>
-            <p className="text-[13px] text-[#8e8e93] max-w-xs mx-auto mt-1 font-normal">
-              {filterTab === 'UNREAD'
-                ? 'You are all caught up.'
-                : 'Activity and reminders will appear here.'}
-            </p>
-            <div className="mt-5">
-              <button
-                type="button"
-                onClick={() => navigate('/calendar')}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0071e3] hover:bg-[#0077ED] text-white text-xs font-semibold rounded-full shadow-xs active:scale-95 transition-all cursor-pointer"
-              >
-                <Calendar size={14} />
-                <span>Go to Calendar</span>
-              </button>
-            </div>
           </div>
         ) : (
           groupedNotifications.map((group) => (

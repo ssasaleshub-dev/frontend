@@ -87,3 +87,4 @@ class AppleSoundSynthesizer {
 export const appleSoundSynthesizer = new AppleSoundSynthesizer();
 export const playIPhoneNotificationSound = () => appleSoundSynthesizer.playIPhoneChime();
 export default playIPhoneNotificationSound;
+
