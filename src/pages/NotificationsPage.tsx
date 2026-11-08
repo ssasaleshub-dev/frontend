@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import {
   ChevronLeft,
   Calendar,
-  RefreshCw,
 } from 'lucide-react';
 import { AppleBellIcon } from '../components/icons/BrandIcons';
 import SwipeableNotificationCard from '../components/SwipeableNotificationCard';
@@ -157,38 +156,6 @@ export default function NotificationsPage() {
           <h1 className="text-lg font-bold tracking-tight text-[#1d1d1f]">
             Notifications
           </h1>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={loadNotifications}
-            disabled={loading}
-            className="p-1.5 rounded-full text-[#8e8e93] hover:text-[#1d1d1f] active:scale-95 transition-all cursor-pointer"
-            title="Refresh"
-          >
-            <RefreshCw size={15} className={loading ? 'animate-spin text-[#0071e3]' : ''} />
-          </button>
-
-          {unreadCount > 0 && (
-            <button
-              type="button"
-              onClick={handleMarkAllRead}
-              className="text-[13px] font-semibold text-[#0071e3] hover:text-[#0077ED] active:opacity-60 transition-opacity px-2 py-1 cursor-pointer"
-            >
-              Mark All Read
-            </button>
-          )}
-
-          {notifications.length > 0 && (
-            <button
-              type="button"
-              onClick={handleClearAll}
-              className="text-[13px] font-medium text-[#8e8e93] hover:text-[#ff3b30] active:opacity-60 transition-colors px-2 py-1 cursor-pointer"
-            >
-              Clear
-            </button>
-          )}
         </div>
       </div>
 
