@@ -6,6 +6,8 @@
  * and user tap-through navigation.
  */
 
+import { playIPhoneNotificationSound } from '../../utils/appleSound';
+
 export interface AppleBannerPayload {
   id?: string;
   title: string;
@@ -17,7 +19,8 @@ export interface AppleBannerPayload {
   referenceType?: string;
   icon?: string;
   onClick?: () => void;
-  durationMs?: number; // default: 5000ms
+  durationMs?: number; // default: 5000ms (5 seconds)
+  playSound?: boolean;
 }
 
 type BannerListener = (banner: AppleBannerPayload | null) => void;
@@ -36,13 +39,15 @@ class NotificationBannerService {
   }
 
   /**
-   * Triggers an Apple HIG Notification Popup Banner
+   * Triggers an Apple HIG Notification Popup Banner with iPhone chime and 5-second auto-hide
    */
   public show(payload: AppleBannerPayload): void {
     if (this.dismissTimer) {
       clearTimeout(this.dismissTimer);
       this.dismissTimer = null;
     }
+
+    const duration = payload.durationMs ?? 5000;
 
     const banner: AppleBannerPayload = {
       id: payload.id || `banner_${Date.now()}`,
@@ -55,16 +60,25 @@ class NotificationBannerService {
       referenceType: payload.referenceType,
       icon: payload.icon,
       onClick: payload.onClick,
-      durationMs: payload.durationMs ?? 5000,
+      durationMs: duration,
     };
+
+    // Play authentic Apple iPhone notification sound
+    if (payload.playSound !== false) {
+      try {
+        playIPhoneNotificationSound();
+      } catch (e) {
+        console.warn('[NotificationBannerService] Sound error:', e);
+      }
+    }
 
     this.currentBanner = banner;
     this.notify();
 
-    // Auto dismiss after specified duration
+    // Auto dismiss strictly after 5 seconds
     this.dismissTimer = setTimeout(() => {
       this.dismiss();
-    }, banner.durationMs);
+    }, duration);
   }
 
   /**

@@ -48,6 +48,7 @@ export const INDIAN_HOLIDAYS: IndianHoliday[] = [
 
 const EVENTS_CACHE_KEY = 'ssa_calendar_events_v2';
 const NOTIFICATIONS_CACHE_KEY = 'ssa_notifications_v2';
+const NOTIFIED_EVENT_IDS_KEY = 'ssa_notified_event_ids_v1';
 
 class ReminderNotificationService {
   private checkInterval: any = null;
@@ -313,7 +314,10 @@ class ReminderNotificationService {
     return this.getCachedNotifications().filter((n) => !n.isRead).length;
   }
 
-  public addNotification(notification: Omit<NotificationDTO, 'id' | 'createdAt' | 'isRead'>): NotificationDTO {
+  public addNotification(
+    notification: Omit<NotificationDTO, 'id' | 'createdAt' | 'isRead'>,
+    showBanner = true
+  ): NotificationDTO {
     const generateUUID = () => {
       if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
         try {
@@ -339,21 +343,24 @@ class ReminderNotificationService {
     localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(cached));
     window.dispatchEvent(new CustomEvent('ssa_notifications_updated'));
 
-    // Trigger browser notification
-    this.sendBrowserNotification(newItem.title, newItem.message);
+    if (showBanner) {
+      // Trigger browser notification
+      this.sendBrowserNotification(newItem.title, newItem.message);
 
-    // Trigger Apple HIG In-App Notification Banner Popup
-    try {
-      notificationBannerService.show({
-        id: newItem.id,
-        title: newItem.title.replace(/^🔔\s*/, ''),
-        description: newItem.message,
-        type: (newItem.type as any) || 'REMINDER',
-        timestamp: 'now',
-        url: newItem.referenceType === 'LEAD' && newItem.referenceId ? `/leads/${newItem.referenceId}` : '/calendar',
-      });
-    } catch (bannerErr) {
-      console.warn('Banner show error:', bannerErr);
+      // Trigger Apple HIG In-App Notification Banner Popup
+      try {
+        notificationBannerService.show({
+          id: newItem.id,
+          title: newItem.title.replace(/^🔔\s*/, ''),
+          description: newItem.message,
+          type: (newItem.type as any) || 'REMINDER',
+          timestamp: 'now',
+          durationMs: 5000,
+          url: newItem.referenceType === 'LEAD' && newItem.referenceId ? `/leads/${newItem.referenceId}` : '/calendar',
+        });
+      } catch (bannerErr) {
+        console.warn('Banner show error:', bannerErr);
+      }
     }
 
     return newItem;
@@ -416,29 +423,92 @@ class ReminderNotificationService {
 
   // --- BACKGROUND TICKER & REAL-TIME REMINDER EVALUATOR ---
 
+  public getNotifiedEventIds(): Set<string> {
+    try {
+      const raw = localStorage.getItem(NOTIFIED_EVENT_IDS_KEY);
+      return new Set(raw ? JSON.parse(raw) : []);
+    } catch {
+      return new Set();
+    }
+  }
+
+  public markPastEventsNotified(events?: CalendarEventDTO[]): void {
+    const list = events || this.getCachedEvents();
+    const now = Date.now();
+    const notified = this.getNotifiedEventIds();
+    let updated = false;
+
+    list.forEach((evt) => {
+      if (!evt.id) return;
+      const strId = String(evt.id);
+      if (evt.isCompleted || evt.notificationSent) {
+        if (!notified.has(strId)) {
+          notified.add(strId);
+          updated = true;
+        }
+        return;
+      }
+      try {
+        if (!evt.eventDate) return;
+        const timePart = evt.eventTime || '09:00';
+        const [hours, minutes] = timePart.split(':').map(Number);
+        const dateParts = evt.eventDate.split('-').map(Number);
+        if (dateParts.length < 3) return;
+
+        const eventDateTime = new Date(dateParts[0], dateParts[1] - 1, dateParts[2], hours, minutes, 0, 0);
+        const leadOffset = (Number(evt.remindBeforeMinutes) || 0) * 60 * 1000;
+        const triggerTime = eventDateTime.getTime() - leadOffset;
+
+        // Any reminder whose scheduled time is ALREADY in the past on startup:
+        // Mark as already notified so it NEVER pops up on page refresh!
+        if (triggerTime <= now) {
+          notified.add(strId);
+          evt.notificationSent = true;
+          updated = true;
+        }
+      } catch {}
+    });
+
+    localStorage.setItem(NOTIFIED_EVENT_IDS_KEY, JSON.stringify(Array.from(notified)));
+    if (updated) {
+      localStorage.setItem(EVENTS_CACHE_KEY, JSON.stringify(list));
+    }
+  }
+
   public startBackgroundWorkers() {
     if (this.checkInterval) return;
 
-    // Check reminders locally in memory every 10 seconds for real-time responsiveness (zero network calls)
+    // Check reminders locally in memory every 10 seconds for real-time exact-minute responsiveness
     this.checkInterval = setInterval(() => {
       this.checkDueReminders();
     }, 10000);
 
-    // Initial snapshot load on startup only (zero recurring polling - all real-time events use WebSocket)
-    setTimeout(() => {
-      this.fetchEvents();
-      this.fetchNotifications();
-      this.checkDueReminders();
-    }, 1500);
+    // Initial snapshot load on startup: fetch events and notifications, mark existing past events as already notified silently (NO BANNER ON REFRESH!)
+    setTimeout(async () => {
+      try {
+        const events = await this.fetchEvents();
+        this.fetchNotifications();
+        // Silently mark past events as notified so they NEVER trigger banners on page reload
+        this.markPastEventsNotified(events);
+      } catch {}
+    }, 1200);
   }
 
   public checkDueReminders() {
     const events = this.getCachedEvents();
     const now = new Date();
+    const nowMs = now.getTime();
+    const notified = this.getNotifiedEventIds();
     let updated = false;
 
     events.forEach((evt) => {
-      if (evt.isCompleted || evt.notificationSent) return;
+      if (!evt.id) return;
+      const strId = String(evt.id);
+
+      // If already completed or already notified, DO NOTHING
+      if (evt.isCompleted || evt.notificationSent || notified.has(strId)) {
+        return;
+      }
 
       try {
         if (!evt.eventDate) return;
@@ -453,12 +523,12 @@ class ReminderNotificationService {
         const leadOffset = (Number(evt.remindBeforeMinutes) || 0) * 60 * 1000;
         const triggerTime = new Date(eventDateTime.getTime() - leadOffset);
 
-        const diffMs = now.getTime() - triggerTime.getTime();
-        const twoDaysMs = 48 * 60 * 60 * 1000;
+        const diffMs = nowMs - triggerTime.getTime();
 
-        // Trigger when current time is at or past the scheduled trigger time (within 48h active window)
-        if (diffMs >= 0 && diffMs <= twoDaysMs) {
+        // ONLY trigger if the reminder is due RIGHT NOW (within a narrow 30-second window while tab is open)
+        if (diffMs >= 0 && diffMs <= 30000) {
           evt.notificationSent = true;
+          notified.add(strId);
           updated = true;
 
           const rawCandidate = evt.candidateName;
@@ -471,17 +541,25 @@ class ReminderNotificationService {
             msg = cleanCandidate;
           }
 
-          console.log(`[Reminders] 🔔 Reminder due! Triggering banner & sound for: "${evt.title}" (${formattedTime12h})`);
+          console.log(`[Reminders] 🔔 Exact-time reminder reached: "${evt.title}" (${formattedTime12h})`);
 
-          this.addNotification({
-            userId: evt.userId || this.getCurrentUserLogin(),
-            title: evt.title,
-            message: msg,
-            type: 'REMINDER',
-            referenceId: evt.id,
-            referenceType: 'EVENT',
-            scheduledFor: eventDateTime.toISOString(),
-          });
+          this.addNotification(
+            {
+              userId: evt.userId || this.getCurrentUserLogin(),
+              title: evt.title,
+              message: msg,
+              type: 'REMINDER',
+              referenceId: evt.id,
+              referenceType: 'EVENT',
+              scheduledFor: eventDateTime.toISOString(),
+            },
+            true // Show banner with iPhone sound & 5s auto-hide
+          );
+        } else if (diffMs > 30000) {
+          // If it was already past (e.g. browser was sleeping or old reminder), silently mark notified
+          evt.notificationSent = true;
+          notified.add(strId);
+          updated = true;
         }
       } catch (err) {
         console.warn('Reminder calculation error:', err);
@@ -489,6 +567,7 @@ class ReminderNotificationService {
     });
 
     if (updated) {
+      localStorage.setItem(NOTIFIED_EVENT_IDS_KEY, JSON.stringify(Array.from(notified)));
       localStorage.setItem(EVENTS_CACHE_KEY, JSON.stringify(events));
       window.dispatchEvent(new CustomEvent('ssa_events_updated'));
     }
