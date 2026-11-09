@@ -234,7 +234,7 @@ export default function Customers() {
         </div>
       </div>
 
-      {/* Customers Table */}
+      {/* Customers List / Table Container */}
       <div className="ios-card overflow-hidden">
         {/* Background refresh indicator */}
         {refreshing && (
@@ -243,7 +243,125 @@ export default function Customers() {
             Syncing latest data...
           </div>
         )}
-        <div className="overflow-x-auto">
+
+        {/* Mobile View: Zero Side-Scroll iOS Grouped List (md:hidden) */}
+        <div className="md:hidden divide-y divide-black/[0.06]">
+          {filteredCustomers.length === 0 ? (
+            <div className="py-12 px-4 text-center text-[#8e8e93]">
+              {loading ? (
+                <span className="flex items-center justify-center gap-2 text-xs">
+                  <RefreshCw size={16} className="animate-spin text-[#007aff]" />
+                  Loading contacts...
+                </span>
+              ) : (
+                <div>
+                  <p className="text-[#1c1c1e] font-semibold text-sm">No contacts found</p>
+                  <p className="text-[#8e8e93] text-xs mt-1">
+                    Click "New Contact" to register contacts or import leads.
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            filteredCustomers.map((cust) => (
+              <div
+                key={cust.id}
+                className="p-3.5 hover:bg-black/[0.02] active:bg-black/[0.04] transition-colors space-y-2.5"
+              >
+                {/* Header row: Name, ID, Actions */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-sm text-[#1c1c1e] truncate">
+                        {cust.fullName || 'Unnamed Contact'}
+                      </h3>
+                      <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-[#f2f2f7] text-[#8e8e93]">
+                        #{cust.id}
+                      </span>
+                    </div>
+
+                    {cust.location && (
+                      <div className="flex items-center gap-1 text-[11px] text-[#8e8e93] mt-0.5">
+                        <MapPin size={11} className="text-[#8e8e93] shrink-0" />
+                        <span className="truncate capitalize">{cust.location}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Quick Action Touch Buttons */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {cust.phoneNumber && (
+                      <>
+                        <a
+                          href={`https://wa.me/${cust.phoneNumber.replace(
+                            /\D/g,
+                            ''
+                          )}?text=Hello%20${encodeURIComponent(
+                            cust.fullName || ''
+                          )},%20reaching%20out%20from%20SSA%20Sales%20Hub.`}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="WhatsApp Contact"
+                          className="w-8 h-8 rounded-full flex items-center justify-center bg-[#34c759]/10 text-[#34c759] active:scale-90 transition-transform"
+                        >
+                          <MessageCircle size={15} />
+                        </a>
+                        <a
+                          href={`tel:${cust.phoneNumber}`}
+                          title="Call Contact"
+                          className="w-8 h-8 rounded-full flex items-center justify-center bg-[#007aff]/10 text-[#007aff] active:scale-90 transition-transform"
+                        >
+                          <Phone size={15} />
+                        </a>
+                      </>
+                    )}
+                    <button
+                      onClick={() => startEdit(cust)}
+                      title="Edit Contact"
+                      className="w-8 h-8 rounded-full flex items-center justify-center bg-black/[0.05] text-[#1c1c1e] active:scale-90 transition-transform"
+                    >
+                      <Edit3 size={14} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCustomer(cust.id, cust.fullName)}
+                      title="Delete Contact"
+                      className="w-8 h-8 rounded-full flex items-center justify-center bg-[#ff3b30]/10 text-[#ff3b30] active:scale-90 transition-transform"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Info row: Phone & Created Date */}
+                <div className="flex items-center justify-between text-xs pt-1.5 border-t border-black/[0.04]">
+                  <div className="min-w-0 pr-2">
+                    {cust.phoneNumber ? (
+                      <a
+                        href={`tel:${cust.phoneNumber}`}
+                        className="font-semibold text-[#1c1c1e] hover:text-[#007aff] transition-colors"
+                      >
+                        {cust.phoneNumber}
+                      </a>
+                    ) : (
+                      <span className="text-[#8e8e93] text-xs">No phone number</span>
+                    )}
+                    {cust.rawPhoneNumber && cust.rawPhoneNumber !== cust.phoneNumber && (
+                      <span className="text-[10px] text-[#8e8e93] font-mono ml-1.5">
+                        (Raw: {cust.rawPhoneNumber})
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[11px] text-[#8e8e93] shrink-0 font-medium">
+                    {formatDate(cust.createdAt)}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop View: Full Table (hidden md:block) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase font-semibold text-[11px]">
               <tr>
