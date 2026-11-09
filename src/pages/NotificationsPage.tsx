@@ -8,6 +8,7 @@ import SwipeableNotificationCard from '../components/SwipeableNotificationCard';
 import reminderNotificationService, {
   NotificationItem,
 } from '../services/reminderNotificationService';
+import pushNotificationService from '../services/pushNotificationService';
 import { encryptLeadId } from '../utils/leadIdCrypto';
 import { formatIndianTime, formatIndianDate } from '../utils/dateTimeUtils';
 
@@ -16,6 +17,22 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [filterTab, setFilterTab] = useState<'ALL' | 'UNREAD'>('ALL');
   const [loading, setLoading] = useState(false);
+  const [showWebPushBanner, setShowWebPushBanner] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        setShowWebPushBanner(true);
+      }
+    }
+  }, []);
+
+  const handleEnableWebPush = async () => {
+    const granted = await pushNotificationService.requestWebPushPermission();
+    if (granted || Notification.permission === 'granted') {
+      setShowWebPushBanner(false);
+    }
+  };
 
   const loadNotifications = useCallback(async () => {
     setLoading(true);
@@ -211,6 +228,22 @@ export default function NotificationsPage() {
           )}
         </button>
       </div>
+
+      {showWebPushBanner && (
+        <div className="m-3 p-3 bg-blue-50/90 border border-blue-200/80 rounded-xl flex items-center justify-between gap-3 text-xs text-blue-900 shadow-sm animate-in fade-in duration-200">
+          <div className="flex items-center gap-2.5">
+            <AppleBellIcon size={18} className="text-[#0071e3] shrink-0" />
+            <span>Enable Chrome desktop notifications to receive instant CRM and chat alerts on this PC.</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleEnableWebPush}
+            className="shrink-0 px-3 py-1.5 bg-[#0071e3] hover:bg-[#0077ed] text-white font-medium rounded-lg shadow-sm transition active:scale-95 cursor-pointer"
+          >
+            Enable
+          </button>
+        </div>
+      )}
 
       {/* Instagram-style Flat Notification Feed (No Card Boxes, No Gray Background) */}
       <div className="bg-white">

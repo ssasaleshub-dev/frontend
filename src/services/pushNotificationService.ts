@@ -11,25 +11,38 @@ import {
   PushNotificationSchema,
   ActionPerformed,
 } from '@capacitor/push-notifications';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
 import axiosClient from './api/axiosClient';
 import { encryptLeadId } from '../utils/leadIdCrypto';
 
 const FCM_TOKEN_STORAGE_KEY = 'ssa_fcm_token';
+const VAPID_KEY = 'BDrOMLhjXKW08RO8-cYa5EH3aQM4SFLvDYL1HAyRiiuz4iBUaofBBU7hPIdYfokjvgMAuMsjh0HcxVF8_w_bISI';
+
+const firebaseWebConfig = {
+  apiKey: "AIzaSyA620dxJm4OogLpWi3v3A3kXil-8vMOyQg",
+  authDomain: "ssa-sales-hub.firebaseapp.com",
+  projectId: "ssa-sales-hub",
+  storageBucket: "ssa-sales-hub.firebasestorage.app",
+  messagingSenderId: "701029569745",
+  appId: "1:701029569745:android:a6cc3a97fbe3cd8c46a1f0",
+};
 
 class PushNotificationService {
   private isInitialized = false;
 
   public async initialize(): Promise<void> {
     if (this.isInitialized) return;
+    this.isInitialized = true;
 
     if (!Capacitor.isNativePlatform()) {
-      console.info('[PushNotifications] Web environment detected. Native FCM listeners skipped.');
+      console.info('[PushNotifications] Web environment detected. Initializing Firebase Web Push...');
+      await this.initializeWeb();
       return;
     }
 
     try {
-      this.isInitialized = true;
-      console.info('[PushNotifications] Initializing Firebase Push Notifications...');
+      console.info('[PushNotifications] Initializing Firebase Push Notifications on native device...');
 
       // 1. Create notification channel on Android 8.0+ first
       await this.createDefaultNotificationChannel();
@@ -241,6 +254,174 @@ class PushNotificationService {
    */
   public getStoredToken(): string | null {
     return localStorage.getItem(FCM_TOKEN_STORAGE_KEY);
+  }
+
+  /**
+   * Initialize Firebase Web Messaging for desktop / Chrome PC
+   */
+  private async initializeWeb(): Promise<void> {
+    try {
+      if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('Notification' in window)) {
+        console.info('[PushNotifications] Web Push not supported on this browser.');
+        return;
+      }
+
+      const supported = await isSupported().catch(() => false);
+      if (!supported) {
+        console.info('[PushNotifications] Firebase Web Messaging is not supported in this environment.');
+        return;
+      }
+
+      const app = getApps().length === 0 ? initializeApp(firebaseWebConfig) : getApp();
+      const messaging = getMessaging(app);
+
+      // Register or find service worker
+      let swReg: ServiceWorkerRegistration;
+      try {
+        swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        await navigator.serviceWorker.ready;
+        console.info('[PushNotifications] Firebase Messaging Service Worker ready.');
+      } catch (swErr) {
+        console.error('[PushNotifications] Failed to register service worker:', swErr);
+        return;
+      }
+
+      // Attach foreground message listener
+      onMessage(messaging, (payload) => {
+        console.info('[PushNotifications] Web push received in foreground:', payload);
+        this.handleIncomingWebMessage(payload);
+      });
+
+      // If permission is already granted, register Web FCM token immediately
+      if (Notification.permission === 'granted') {
+        await this.registerWebPushToken(messaging, swReg);
+      } else if (Notification.permission === 'default') {
+        // Request permission with gentle delay so the app layout renders smoothly
+        setTimeout(async () => {
+          try {
+            const perm = await Notification.requestPermission();
+            if (perm === 'granted') {
+              await this.registerWebPushToken(messaging, swReg);
+            }
+          } catch (permErr) {
+            console.warn('[PushNotifications] Notification permission prompt error:', permErr);
+          }
+        }, 3000);
+      }
+    } catch (err) {
+      console.error('[PushNotifications] Failed to initialize web push:', err);
+    }
+  }
+
+  /**
+   * Public helper to request notification permission via user click (e.g. settings or notifications banner)
+   */
+  public async requestWebPushPermission(): Promise<boolean> {
+    if (Capacitor.isNativePlatform()) {
+      const req = await PushNotifications.requestPermissions();
+      if (req.receive === 'granted') {
+        await PushNotifications.register();
+        return true;
+      }
+      return false;
+    }
+
+    try {
+      if (typeof window === 'undefined' || !('Notification' in window)) return false;
+      const perm = await Notification.requestPermission();
+      if (perm === 'granted') {
+        const supported = await isSupported().catch(() => false);
+        if (supported) {
+          const app = getApps().length === 0 ? initializeApp(firebaseWebConfig) : getApp();
+          const messaging = getMessaging(app);
+          const swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+          await navigator.serviceWorker.ready;
+          await this.registerWebPushToken(messaging, swReg);
+          return true;
+        }
+      }
+    } catch (e) {
+      console.warn('[PushNotifications] Error requesting web push permission:', e);
+    }
+    return false;
+  }
+
+  private async registerWebPushToken(messaging: any, swReg: ServiceWorkerRegistration): Promise<string | null> {
+    try {
+      const token = await getToken(messaging, {
+        vapidKey: VAPID_KEY,
+        serviceWorkerRegistration: swReg,
+      });
+
+      if (token) {
+        console.info('[PushNotifications] Web FCM Token received:', token);
+        localStorage.setItem(FCM_TOKEN_STORAGE_KEY, token);
+        await this.syncTokenWithBackend(token);
+        window.dispatchEvent(
+          new CustomEvent('ssa_fcm_token_registered', { detail: { token } })
+        );
+        return token;
+      }
+    } catch (err) {
+      console.error('[PushNotifications] Error getting Web FCM token:', err);
+    }
+    return null;
+  }
+
+  private handleIncomingWebMessage(payload: any): void {
+    const title = payload.notification?.title || payload.data?.title || 'SSA Sales Hub';
+    const body = payload.notification?.body || payload.data?.body || '';
+    const data = payload.data || {};
+
+    // 1. Show In-App Banner
+    if (data.type === 'CHAT' || data.route === '/chat') {
+      import('./banner/notificationBannerService').then((m) => {
+        m.default.show({
+          title: title || 'New Chat Message',
+          description: body || 'You received a new message in Team Chat',
+          type: 'CHAT',
+          timestamp: 'now',
+          url: '/chat',
+        });
+      }).catch(() => {});
+    }
+
+    // 2. Add to internal notifications inbox
+    import('./reminderNotificationService').then((m) => {
+      m.default.addNotification({
+        userId: data.userId || 'current',
+        title: title,
+        message: body,
+        type: (data.type as any) || 'SYSTEM',
+        referenceId: data.referenceId || data.leadId || data.eventId,
+        referenceType: data.referenceType || (data.leadId ? 'LEAD' : 'EVENT'),
+      });
+    }).catch(() => {});
+
+    // 3. Native browser desktop notification (visible even when user is on another tab/window)
+    if (Notification.permission === 'granted') {
+      try {
+        const desktopNotif = new Notification(title, {
+          body: body,
+          icon: '/favicon.png',
+          badge: '/favicon.png',
+          data: data,
+        });
+        desktopNotif.onclick = () => {
+          window.focus();
+          desktopNotif.close();
+          const targetPath = data.type === 'CHAT' || data.route === '/chat' ? '/chat' : data.route || '/notifications';
+          window.dispatchEvent(new CustomEvent('ssa_navigate_to', { detail: { path: targetPath } }));
+        };
+      } catch (e) {
+        console.warn('[PushNotifications] Browser Notification API warning:', e);
+      }
+    }
+
+    // 4. Dispatch custom event
+    window.dispatchEvent(
+      new CustomEvent('ssa_push_notification_received', { detail: payload })
+    );
   }
 }
 

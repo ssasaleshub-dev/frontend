@@ -19,6 +19,7 @@
   "theme_color": "#007aff",
   "display": "standalone",
   "orientation": "portrait-primary",
+  "gcm_sender_id": "103953800507",
   "scope": "/"
 }
 
