@@ -14,7 +14,6 @@ import {
   Loader2,
   ExternalLink,
   ChevronLeft,
-  Bell,
   ZoomIn,
   ZoomOut,
   Download,
@@ -52,45 +51,6 @@ export default function Chat() {
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
   const [uploadingFile, setUploadingFile] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  // Web Push notification permission state for Chrome / PC
-  const [permissionState, setPermissionState] = useState<'default' | 'granted' | 'denied'>(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      return Notification.permission;
-    }
-    return 'default';
-  });
-  const [statusBanner, setStatusBanner] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      setPermissionState(Notification.permission);
-    }
-  }, []);
-
-  const handleEnableWebPush = async () => {
-    const granted = await pushNotificationService.requestWebPushPermission();
-    const current = typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default';
-    setPermissionState(current);
-
-    if (granted || current === 'granted') {
-      playIPhoneNotificationSound();
-      pushNotificationService.sendTestDesktopNotification();
-      setStatusBanner('🎉 Notifications enabled! A test alert was sent to your desktop.');
-      setTimeout(() => setStatusBanner(null), 6000);
-    }
-  };
-
-  const handleSendTestNotification = () => {
-    playIPhoneNotificationSound();
-    const result = pushNotificationService.sendTestDesktopNotification();
-    if (result.success) {
-      setStatusBanner('🔔 Test alert sent! Look for the popup in the bottom-right corner of your desktop.');
-    } else {
-      setStatusBanner(result.message);
-    }
-    setTimeout(() => setStatusBanner(null), 8000);
-  };
 
   // In-app media lightbox viewer state (Never opens separate tab, never exposes raw public URL)
   const [lightboxMedia, setLightboxMedia] = useState<{
@@ -907,98 +867,8 @@ export default function Chat() {
               </p>
             </div>
 
-            <div className="w-8 shrink-0 flex items-center justify-end">
-              {permissionState === 'granted' ? (
-                <button
-                  type="button"
-                  onClick={handleSendTestNotification}
-                  title="Desktop notifications active - click to send test alert"
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-emerald-600 hover:bg-emerald-50 active:scale-95 transition cursor-pointer relative"
-                >
-                  <Bell size={16} />
-                  <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleEnableWebPush}
-                  title="Click to enable desktop notifications in Chrome"
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-amber-500 hover:bg-amber-50 active:scale-95 transition cursor-pointer"
-                >
-                  <Bell size={16} />
-                </button>
-              )}
-            </div>
+            <div className="w-8 shrink-0" />
           </div>
-
-          {statusBanner && (
-            <div className="bg-slate-900 text-white text-xs px-4 py-2 flex items-center justify-between animate-in fade-in">
-              <div className="flex items-center gap-2">
-                <Bell size={14} className="text-sky-400 shrink-0" />
-                <span>{statusBanner}</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setStatusBanner(null)}
-                className="p-1 text-slate-400 hover:text-white cursor-pointer"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          )}
-
-          {permissionState === 'default' && (
-            <div className="bg-sky-50 border-b border-sky-200/80 px-4 py-2 flex items-center justify-between text-xs text-sky-950 animate-in fade-in">
-              <div className="flex items-center gap-2">
-                <Bell size={15} className="text-[#007aff] shrink-0" />
-                <span>Enable desktop notifications to get instant alerts on your PC when new messages arrive.</span>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={handleEnableWebPush}
-                  className="px-3 py-1 bg-[#007aff] hover:bg-[#0071e3] text-white rounded-md font-medium text-[11px] shadow-sm transition active:scale-95 cursor-pointer"
-                >
-                  Enable
-                </button>
-              </div>
-            </div>
-          )}
-
-          {permissionState === 'denied' && (
-            <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-between text-xs text-amber-950 animate-in fade-in">
-              <div className="flex items-center gap-2">
-                <span className="text-sm shrink-0">⚠️</span>
-                <span>
-                  <strong>Notifications blocked in Chrome:</strong> Click the padlock / tune icon (next to URL), set <strong>Notifications</strong> to <strong>Allow</strong>, then refresh.
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setPermissionState(typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default')}
-                className="px-2 py-0.5 bg-amber-200/70 hover:bg-amber-200 text-amber-900 rounded text-[11px] font-medium shrink-0 cursor-pointer"
-              >
-                Re-check
-              </button>
-            </div>
-          )}
-
-          {permissionState === 'granted' && !statusBanner && (
-            <div className="bg-emerald-50/60 border-b border-emerald-200/50 px-4 py-1.5 flex items-center justify-between text-xs text-emerald-950">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                <span className="text-[11px] text-emerald-800 font-medium">Desktop notifications active</span>
-              </div>
-              <button
-                type="button"
-                onClick={handleSendTestNotification}
-                className="px-2 py-0.5 bg-white hover:bg-emerald-50 border border-emerald-200 text-emerald-800 rounded text-[10px] font-medium shadow-2xs transition active:scale-95 cursor-pointer"
-                title="Send a test notification to verify Chrome and Windows alerts"
-              >
-                🔔 Send Test Alert
-              </button>
-            </div>
-          )}
 
           {/* Messages Feed */}
           <div
