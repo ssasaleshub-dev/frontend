@@ -36,13 +36,37 @@ const MONTH_NAMES = [
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+function formatEventDateBadge(dateStr: string): string {
+  if (!dateStr) return '';
+  const today = new Date().toISOString().split('T')[0];
+  if (dateStr === today) return 'Today';
+
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  const yesterday = d.toISOString().split('T')[0];
+  if (dateStr === yesterday) return 'Yesterday';
+
+  const t = new Date();
+  t.setDate(t.getDate() + 1);
+  const tomorrow = t.toISOString().split('T')[0];
+  if (dateStr === tomorrow) return 'Tomorrow';
+
+  const [y, m, day] = dateStr.split('-').map(Number);
+  const eventDate = new Date(y, m - 1, day);
+  return eventDate.toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+  });
+}
+
 interface SwipeableAgendaItemProps {
   evt: CalendarEvent;
+  showDateBadge?: boolean;
   onToggleComplete: (id: string, e?: any) => void;
   onDelete: (id: string, e?: any) => void;
 }
 
-function SwipeableAgendaItem({ evt, onToggleComplete, onDelete }: SwipeableAgendaItemProps) {
+function SwipeableAgendaItem({ evt, showDateBadge, onToggleComplete, onDelete }: SwipeableAgendaItemProps) {
   const [offsetX, setOffsetX] = useState(0);
   const [isSwiped, setIsSwiped] = useState(false);
   const startXRef = useRef(0);
@@ -182,9 +206,16 @@ function SwipeableAgendaItem({ evt, onToggleComplete, onDelete }: SwipeableAgend
             <p className={`text-[13px] font-medium truncate ${evt.isCompleted ? 'line-through text-[#86868b]' : 'text-[#1d1d1f]'}`}>
               {evt.title}
             </p>
-            <span className="text-[10px] font-mono text-[#86868b] shrink-0">
-              {evt.eventTime ? format12HourTime(evt.eventTime) : 'All Day'}
-            </span>
+            <div className="text-right shrink-0">
+              <span className="text-[10px] font-mono text-[#86868b] block">
+                {evt.eventTime ? format12HourTime(evt.eventTime) : 'All Day'}
+              </span>
+              {showDateBadge && (
+                <span className="text-[9px] text-[#8e8e93] block font-medium">
+                  {formatEventDateBadge(evt.eventDate)}
+                </span>
+              )}
+            </div>
           </div>
 
           {evt.description && (
@@ -209,9 +240,20 @@ function SwipeableAgendaItem({ evt, onToggleComplete, onDelete }: SwipeableAgend
                 {evt.priority}
               </span>
             ) : null}
-            {!evt.isCompleted && (() => {
+            {evt.isCompleted ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#34c759]/10 text-[#34c759] rounded-full text-[9px] font-medium">
+                Completed
+              </span>
+            ) : (() => {
               const rem = getRemainingTimeInfo(evt.eventDate, evt.eventTime);
-              if (!rem || rem.isPast) return null;
+              if (!rem) return null;
+              if (rem.isPast) {
+                return (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-black/[0.04] text-[#8e8e93] rounded-full text-[9px] font-medium">
+                    Past
+                  </span>
+                );
+              }
               return (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#0071e3]/10 text-[#0071e3] rounded-full text-[10px] font-medium">
                   <Clock size={10} />
@@ -308,6 +350,7 @@ export default function CalendarPage() {
     const today = new Date();
     setCurrentDate(today);
     setSelectedDateStr(today.toISOString().split('T')[0]);
+    setHistoryTab('ALL');
   };
 
   const handleSelectDate = (dateStr: string, targetYear?: number, targetMonth?: number) => {
@@ -315,6 +358,7 @@ export default function CalendarPage() {
     if (targetYear !== undefined && targetMonth !== undefined && (targetYear !== year || targetMonth !== month)) {
       setCurrentDate(new Date(targetYear, targetMonth, 1));
     }
+    setHistoryTab('SELECTED');
   };
 
   // Apple HIG Date Grid: Leading days, current month days, and trailing days
@@ -385,6 +429,45 @@ export default function CalendarPage() {
   const selectedDateEvents = useMemo(() => {
     return eventsByDate[selectedDateStr] || [];
   }, [eventsByDate, selectedDateStr]);
+
+  const [historyTab, setHistoryTab] = useState<'ALL' | 'SELECTED' | 'COMPLETED'>('ALL');
+
+  // User configured reminders history (sorted with most recent dates first, and chronological within each date)
+  const allUserReminders = useMemo(() => {
+    return [...events].sort((a, b) => {
+      const dateA = a.eventDate || '';
+      const dateB = b.eventDate || '';
+      if (dateA !== dateB) {
+        return dateB.localeCompare(dateA);
+      }
+      return (a.eventTime || '').localeCompare(b.eventTime || '');
+    });
+  }, [events]);
+
+  const completedEvents = useMemo(() => {
+    return allUserReminders.filter((e) => e.isCompleted);
+  }, [allUserReminders]);
+
+  const selectedDateShort = useMemo(() => {
+    if (!selectedDateStr) return 'Selected';
+    const today = new Date().toISOString().split('T')[0];
+    if (selectedDateStr === today) return 'Today';
+    const [y, m, d] = selectedDateStr.split('-').map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+    });
+  }, [selectedDateStr]);
+
+  const displayEvents = useMemo(() => {
+    if (historyTab === 'SELECTED') {
+      return selectedDateEvents;
+    }
+    if (historyTab === 'COMPLETED') {
+      return completedEvents;
+    }
+    return allUserReminders;
+  }, [historyTab, selectedDateEvents, completedEvents, allUserReminders]);
 
   const selectedDateDisplay = useMemo(() => {
     if (!selectedDateStr) return '';
@@ -600,45 +683,86 @@ export default function CalendarPage() {
 
         {/* Right Sidebar: Selected Day Agenda & Reminders (5 Cols) */}
         <div className="lg:col-span-5 space-y-4">
-          {/* Selected Date Dossier / Reminders */}
+          {/* Selected Date Dossier / Configured Reminders History */}
           <div className="bg-white rounded-[22px] border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-4 space-y-3.5">
             <div className="flex items-center justify-between pb-2.5 border-b border-black/[0.04]">
               <div>
                 <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#86868b]">
-                  Daily Agenda
+                  {historyTab === 'SELECTED' ? 'Daily Agenda' : 'Reminders History'}
                 </h3>
                 <p className="text-[15px] font-semibold text-[#1d1d1f] mt-0.5">
-                  {selectedDateDisplay}
+                  {historyTab === 'SELECTED'
+                    ? selectedDateDisplay
+                    : historyTab === 'COMPLETED'
+                    ? 'Completed Reminders'
+                    : 'Configured Reminders'}
                 </p>
               </div>
 
+              {/* Total count badge (replacing old + Add button) */}
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-black/[0.04] rounded-full text-[12px] font-medium text-[#1d1d1f]">
+                <Clock size={12} className="text-[#0071e3]" />
+                <span>{displayEvents.length} {displayEvents.length === 1 ? 'Reminder' : 'Reminders'}</span>
+              </div>
+            </div>
+
+            {/* iOS Segmented View Switcher */}
+            <div className="flex p-0.5 bg-black/[0.04] rounded-full text-[12px] font-medium">
               <button
                 type="button"
-                onClick={() => handleOpenModal(selectedDateStr)}
-                className="inline-flex items-center gap-1 px-3 py-1 bg-[#1d1d1f] hover:bg-black text-white rounded-full text-[12px] font-medium transition-all active:scale-95 shadow-2xs"
+                onClick={() => setHistoryTab('ALL')}
+                className={`flex-1 py-1.5 px-2.5 rounded-full text-center transition-all cursor-pointer ${
+                  historyTab === 'ALL'
+                    ? 'bg-white text-[#1d1d1f] shadow-2xs font-semibold'
+                    : 'text-[#86868b] hover:text-[#1d1d1f]'
+                }`}
               >
-                <Plus size={11} strokeWidth={2.5} />
-                <span>Add</span>
+                All History ({events.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setHistoryTab('SELECTED')}
+                className={`flex-1 py-1.5 px-2.5 rounded-full text-center transition-all cursor-pointer ${
+                  historyTab === 'SELECTED'
+                    ? 'bg-white text-[#1d1d1f] shadow-2xs font-semibold'
+                    : 'text-[#86868b] hover:text-[#1d1d1f]'
+                }`}
+              >
+                {selectedDateShort} ({selectedDateEvents.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setHistoryTab('COMPLETED')}
+                className={`flex-1 py-1.5 px-2.5 rounded-full text-center transition-all cursor-pointer ${
+                  historyTab === 'COMPLETED'
+                    ? 'bg-white text-[#1d1d1f] shadow-2xs font-semibold'
+                    : 'text-[#86868b] hover:text-[#1d1d1f]'
+                }`}
+              >
+                Completed ({completedEvents.length})
               </button>
             </div>
 
-            {/* Reminders List for Selected Day */}
-            <div className="space-y-2">
-              {selectedDateEvents.length === 0 ? (
-                <div className="py-7 text-center text-[#86868b]">
+            {/* Reminders List for Selected View */}
+            <div className="space-y-2 max-h-[540px] overflow-y-auto pr-0.5">
+              {displayEvents.length === 0 ? (
+                <div className="py-8 text-center text-[#86868b]">
                   <div className="w-10 h-10 rounded-full bg-black/[0.03] flex items-center justify-center mx-auto mb-2 text-[#86868b]">
                     <CalendarCheck size={18} strokeWidth={1.8} />
                   </div>
-                  <p className="text-[13px] font-medium text-[#1d1d1f]">No events or reminders</p>
+                  <p className="text-[13px] font-medium text-[#1d1d1f]">
+                    {historyTab === 'COMPLETED' ? 'No completed reminders' : 'No configured reminders'}
+                  </p>
                   <p className="text-[11px] text-[#86868b] mt-0.5">
-                    Tap "Add" to schedule a callback or task.
+                    Tap the + button in the bottom right corner to schedule a reminder.
                   </p>
                 </div>
               ) : (
-                selectedDateEvents.map((evt) => (
+                displayEvents.map((evt) => (
                   <SwipeableAgendaItem
                     key={evt.id}
                     evt={evt}
+                    showDateBadge={historyTab !== 'SELECTED'}
                     onToggleComplete={handleToggleComplete}
                     onDelete={handleDeleteEvent}
                   />
