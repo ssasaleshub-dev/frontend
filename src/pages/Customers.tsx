@@ -258,49 +258,7 @@ export default function Customers() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 ios-card p-4 sm:p-5">
-        <div>
-          <h2 className="text-base font-bold text-[#1c1c1e]">
-            Contacts
-          </h2>
-          <p className="text-xs text-[#8e8e93] mt-0.5">
-            Managing <strong className="text-[#1c1c1e]">{totalElements > 0 ? totalElements : customers.length}</strong> contact records
-            {customers.length > 0 && totalElements > customers.length && (
-              <span className="text-[11px] text-[#007aff] font-medium ml-1.5">
-                (Loaded {customers.length} of {totalElements})
-              </span>
-            )}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              try { sessionStorage.removeItem(CACHE_KEY); } catch {}
-              fetchInitialCustomers(false);
-            }}
-            disabled={loading || refreshing}
-            className="ios-btn-gray text-xs"
-          >
-            <RefreshCw size={13} className={loading || refreshing ? 'animate-spin text-[#007aff]' : 'text-[#8e8e93]'} />
-            <span>Refresh</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setFormData({ fullName: '', phoneNumber: '', location: '' });
-              setShowAddModal(true);
-            }}
-            className="ios-btn-primary text-xs"
-          >
-            <Plus size={14} />
-            <span>New Contact</span>
-          </button>
-        </div>
-      </div>
-
+    <div className="space-y-4 pb-24">
       {error && (
         <div className="p-3.5 rounded-2xl bg-[#ff3b30]/10 border border-[#ff3b30]/20 text-xs text-[#ff3b30] flex items-center justify-between font-medium">
           <div className="flex items-center gap-2">
@@ -313,16 +271,16 @@ export default function Customers() {
         </div>
       )}
 
-      {/* Search Bar */}
+      {/* Search Bar + Quick Actions */}
       <div className="ios-card p-3 sm:p-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="relative flex-1 max-w-md">
+        <div className="flex items-center justify-between gap-2.5">
+          <div className="relative flex-1">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#8e8e93]">
               <Search size={15} />
             </div>
             <input
               type="text"
-              placeholder="Search by name, phone, or location..."
+              placeholder="Search contacts by name, phone, or location..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="ios-input w-full pl-9 pr-8 py-2 text-xs"
@@ -336,12 +294,35 @@ export default function Customers() {
               </button>
             )}
           </div>
-          {searchTerm && (
-            <div className="text-[11px] text-[#8e8e93] font-medium self-end sm:self-center">
-              Found <strong className="text-[#1c1c1e]">{filteredCustomers.length}</strong> matching contact{filteredCustomers.length === 1 ? '' : 's'}
-            </div>
-          )}
+
+          <div className="flex items-center gap-2 shrink-0">
+            {totalElements > 0 && (
+              <span className="text-[11px] text-[#8e8e93] font-medium hidden sm:inline px-2">
+                {searchTerm
+                  ? `${filteredCustomers.length} of ${totalElements}`
+                  : `${totalElements} contacts`}
+              </span>
+            )}
+
+            <button
+              onClick={() => {
+                try { sessionStorage.removeItem(CACHE_KEY); } catch {}
+                fetchInitialCustomers(false);
+              }}
+              disabled={loading || refreshing}
+              title="Refresh contacts"
+              className="p-2 rounded-xl bg-black/[0.04] hover:bg-black/[0.08] active:scale-95 text-[#8e8e93] hover:text-[#007aff] transition-all"
+            >
+              <RefreshCw size={14} className={loading || refreshing ? 'animate-spin text-[#007aff]' : ''} />
+            </button>
+          </div>
         </div>
+
+        {searchTerm && (
+          <div className="text-[11px] text-[#8e8e93] font-medium mt-2 sm:hidden">
+            Found <strong className="text-[#1c1c1e]">{filteredCustomers.length}</strong> matching contact{filteredCustomers.length === 1 ? '' : 's'}
+          </div>
+        )}
       </div>
 
       {/* Customers List / Table Container */}
@@ -611,6 +592,20 @@ export default function Customers() {
           </div>
         )}
       </div>
+
+      {/* Floating Action Button (FAB) at Bottom Right Corner */}
+      <button
+        type="button"
+        onClick={() => {
+          setFormData({ fullName: '', phoneNumber: '', location: '' });
+          setShowAddModal(true);
+        }}
+        title="Create New Contact"
+        aria-label="Create New Contact"
+        className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-40 w-14 h-14 rounded-full bg-[#007aff] hover:bg-[#0062cc] active:scale-90 text-white shadow-[0_10px_25px_rgba(0,122,255,0.45)] hover:shadow-[0_14px_30px_rgba(0,122,255,0.55)] flex items-center justify-center transition-all duration-200 group focus:outline-none cursor-pointer"
+      >
+        <Plus size={28} strokeWidth={2.5} className="group-hover:rotate-90 transition-transform duration-200" />
+      </button>
 
       {/* Add / Edit Customer Modal (Zoho CRM Modal & Field UI) */}
       {(showAddModal || editingCustomer) && (
