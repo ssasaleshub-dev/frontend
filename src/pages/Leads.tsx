@@ -1339,7 +1339,7 @@ export default function Leads() {
             <h1 className="text-2xl font-bold tracking-tight text-[#1c1c1e] font-sf-display">
               Candidates
             </h1>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-black/[0.05] text-[#3c3c43]">
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-black/[0.05] text-[#3c3c43] whitespace-nowrap shrink-0">
               {filteredLeads.length}
             </span>
           </div>
@@ -1589,14 +1589,14 @@ export default function Leads() {
         /* ── Candidate Table Directory (Responsive with smooth horizontal scroll) ── */
         <div className="space-y-2.5">
             {/* Apple HIG Grouped Table View Header */}
-            <div className="flex items-center justify-between px-3 text-[12px] font-semibold tracking-wider text-[#6e6e73] uppercase select-none">
-              <div className="flex items-center gap-2">
-                <span>Candidate Table Directory</span>
-                <span className="text-[11px] font-normal normal-case text-[#86868b] bg-black/[0.04] px-2.5 py-0.5 rounded-full border border-black/[0.04]">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-3 text-[12px] font-semibold tracking-wider text-[#6e6e73] uppercase select-none">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="whitespace-nowrap">Candidate Table Directory</span>
+                <span className="text-[11px] font-normal normal-case text-[#86868b] bg-black/[0.04] px-2.5 py-0.5 rounded-full border border-black/[0.04] whitespace-nowrap shrink-0">
                   {filteredLeads.length} {filteredLeads.length === 1 ? 'candidate' : 'candidates'}
                 </span>
               </div>
-              <span className="text-[11px] font-medium normal-case text-[#86868b]">
+              <span className="text-[11px] font-medium normal-case text-[#86868b] whitespace-nowrap shrink-0 ml-auto">
                 Page {currentPage} of {totalPages}
               </span>
             </div>

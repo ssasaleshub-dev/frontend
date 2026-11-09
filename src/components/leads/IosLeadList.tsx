@@ -216,14 +216,14 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
   return (
     <div className="space-y-2.5">
       {/* ── Apple HIG: Grouped Table View Header ── */}
-      <div className="flex items-center justify-between px-3 text-[12px] font-semibold tracking-wider text-[#6e6e73] uppercase select-none">
-        <div className="flex items-center gap-2">
-          <span>Candidate Directory</span>
-          <span className="text-[11px] font-normal normal-case text-[#86868b] bg-black/[0.04] px-2.5 py-0.5 rounded-full border border-black/[0.04]">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 text-[12px] font-semibold tracking-wider text-[#6e6e73] uppercase select-none">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="whitespace-nowrap">Candidate Directory</span>
+          <span className="text-[11px] font-normal normal-case text-[#86868b] bg-black/[0.04] px-2.5 py-0.5 rounded-full border border-black/[0.04] whitespace-nowrap shrink-0">
             {totalLeads} {totalLeads === 1 ? 'candidate' : 'candidates'}
           </span>
         </div>
-        <span className="text-[11px] font-medium normal-case text-[#86868b]">
+        <span className="text-[11px] font-medium normal-case text-[#86868b] whitespace-nowrap shrink-0 ml-auto">
           Page {currentPage} of {totalPages}
         </span>
       </div>
