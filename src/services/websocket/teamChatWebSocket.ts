@@ -102,11 +102,8 @@ class TeamChatWebSocket {
   public connect(user?: any): void {
     if (user) this.currentUser = user;
 
-    // Connect WebSocket
+    // Connect Primary Real-Time WebSocket (/api/ws/chat)
     this.connectWs();
-
-    // Connect SSE stream in parallel for guaranteed real-time delivery
-    this.connectSSE();
   }
 
   private connectWs(): void {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   ArrowUp,
+  ArrowDown,
   Plus,
   Trash2,
   Search,
@@ -79,6 +80,13 @@ export default function Chat() {
     }
   };
 
+  const PAGE_SIZE = 25;
+  const [visibleCount, setVisibleCount] = useState<number>(PAGE_SIZE);
+  const [loadingOlder, setLoadingOlder] = useState<boolean>(false);
+  const [isNearBottom, setIsNearBottom] = useState<boolean>(true);
+  const isInitialLoadRef = useRef<boolean>(true);
+
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -90,9 +98,29 @@ export default function Chat() {
     ? `${authService.getUser()?.firstName} ${authService.getUser()?.lastName || ''}`.trim()
     : user?.login || authService.getUser()?.login || 'User';
 
-  const scrollToBottom = (smooth = true) => {
-    messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
-  };
+  const scrollToBottom = useCallback((smooth = false) => {
+    const container = messagesContainerRef.current;
+    if (container) {
+      if (smooth) {
+        container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+      } else {
+        container.scrollTop = container.scrollHeight;
+      }
+    }
+    messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'end' });
+  }, []);
+
+  const handleImageLoad = useCallback(() => {
+    if (isInitialLoadRef.current || isNearBottom) {
+      scrollToBottom(false);
+    }
+  }, [isNearBottom, scrollToBottom]);
+
+  // Reset pagination window whenever switching between group chat and P2P user
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+    isInitialLoadRef.current = true;
+  }, [chatType, selectedUser?.id]);
 
   const parseMessageList = (res: any): ChatMessage[] => {
     if (Array.isArray(res)) return res;
@@ -176,7 +204,13 @@ export default function Chat() {
 
         setApiNotice(null);
         if (!isSilent) {
-          setTimeout(() => scrollToBottom(false), 80);
+          scrollToBottom(false);
+          setTimeout(() => scrollToBottom(false), 50);
+          setTimeout(() => scrollToBottom(false), 150);
+          setTimeout(() => {
+            scrollToBottom(false);
+            isInitialLoadRef.current = false;
+          }, 350);
         }
       } catch (err: any) {
         if (!isSilent) {
@@ -227,6 +261,7 @@ export default function Chat() {
         (user?.login && incomingMsg.userLogin && user.login.toLowerCase() === incomingMsg.userLogin.toLowerCase());
 
       if (isGroup || isP2p) {
+        setVisibleCount((prev) => prev + 1);
         setMessages((prev) => {
           if (prev.some((m) => m.id === incomingMsg.id)) return prev;
 
@@ -378,6 +413,7 @@ export default function Chat() {
       createdAt: new Date().toISOString(),
     };
 
+    setVisibleCount((prev) => prev + 1);
     setMessages((prev) => [...prev, optimisticMessage]);
     setInputText('');
     clearPendingFile();
@@ -457,6 +493,54 @@ export default function Chat() {
     const q = searchQuery.toLowerCase();
     return text.includes(q) || author.includes(q) || file.includes(q);
   });
+
+  // Lazy loading pagination for chat history:
+  // Starts on the most recent messages at the bottom; user scrolling UP loads earlier messages.
+  const totalMessagesCount = filteredMessages.length;
+  const hasMoreOlder = visibleCount < totalMessagesCount;
+
+  const displayedMessages = useMemo(() => {
+    if (totalMessagesCount <= visibleCount) {
+      return filteredMessages;
+    }
+    return filteredMessages.slice(totalMessagesCount - visibleCount);
+  }, [filteredMessages, visibleCount, totalMessagesCount]);
+
+  const loadOlderMessages = useCallback(() => {
+    if (loadingOlder || !hasMoreOlder) return;
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    setLoadingOlder(true);
+    const prevScrollHeight = container.scrollHeight;
+    const prevScrollTop = container.scrollTop;
+
+    setTimeout(() => {
+      setVisibleCount((prev) => Math.min(totalMessagesCount, prev + PAGE_SIZE));
+      setLoadingOlder(false);
+
+      // Restore scroll offset so prepending older items causes zero visual jump
+      requestAnimationFrame(() => {
+        if (container) {
+          const newScrollHeight = container.scrollHeight;
+          container.scrollTop = newScrollHeight - prevScrollHeight + prevScrollTop;
+        }
+      });
+    }, 120);
+  }, [loadingOlder, hasMoreOlder, totalMessagesCount, PAGE_SIZE]);
+
+  const handleScroll = () => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    setIsNearBottom(distanceFromBottom < 120);
+
+    // When scrolled near the top (< 60px), automatically lazy-load previous batch of messages
+    if (container.scrollTop < 60 && hasMoreOlder && !loadingOlder) {
+      loadOlderMessages();
+    }
+  };
 
   const getTargetUserName = (target: User) => {
     if (target.firstName || target.lastName) {
@@ -699,7 +783,7 @@ export default function Chat() {
         <div
           className={`${
             mobileView === 'list' ? 'hidden md:flex' : 'flex'
-          } flex-1 flex-col min-w-0 bg-white`}
+          } flex-1 flex-col min-w-0 bg-white relative`}
         >
           {/* iOS Top Bar Header (Apple HIG Regular Material & Centered Contact Name) */}
           <div className="h-14 px-3 sm:px-6 ios-material-regular flex items-center justify-between shrink-0">
@@ -803,13 +887,45 @@ export default function Chat() {
           )}
 
           {/* Messages Feed */}
-          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2 bg-[#ffffff] select-text">
+          <div
+            ref={messagesContainerRef}
+            onScroll={handleScroll}
+            className="flex-1 overflow-y-auto px-5 py-4 space-y-2 bg-[#ffffff] select-text"
+          >
+            {/* Lazy Loading Header for Earlier Messages (Scroll UP to load) */}
+            {hasMoreOlder && (
+              <div className="py-2.5 flex items-center justify-center">
+                {loadingOlder ? (
+                  <div className="flex items-center gap-2 text-xs text-[#8e8e93] py-1 bg-slate-50 px-3.5 rounded-full border border-black/[0.04] shadow-xs">
+                    <RefreshCw size={13} className="animate-spin text-[#007aff]" />
+                    <span>Loading earlier messages...</span>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={loadOlderMessages}
+                    className="text-[11px] font-medium text-[#007aff] hover:text-[#005bb5] bg-[#007aff]/10 hover:bg-[#007aff]/15 px-3.5 py-1 rounded-full transition cursor-pointer active:scale-95 shadow-xs"
+                  >
+                    Load earlier messages ({totalMessagesCount - visibleCount} more)
+                  </button>
+                )}
+              </div>
+            )}
+
+            {!hasMoreOlder && displayedMessages.length > 0 && (
+              <div className="py-3 flex items-center justify-center">
+                <span className="text-[10px] font-medium text-[#8e8e93] bg-[#f2f2f7] px-3 py-1 rounded-full border border-black/[0.04] uppercase tracking-wider">
+                  Beginning of conversation
+                </span>
+              </div>
+            )}
+
             {loading && messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-[#8e8e93] gap-2 select-none">
                 <RefreshCw size={20} className="animate-spin text-[#007aff]" />
                 <span className="text-xs">Loading iMessage...</span>
               </div>
-            ) : filteredMessages.length === 0 ? (
+            ) : displayedMessages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-[#8e8e93] py-12 select-none">
                 <div className="w-12 h-12 rounded-full bg-[#f2f2f7] flex items-center justify-center mb-2 text-[#8e8e93]">
                   {chatType === 'group' ? (
@@ -834,8 +950,8 @@ export default function Chat() {
                 </p>
               </div>
             ) : (
-              filteredMessages.map((msg, index) => {
-                const prevMsg = index > 0 ? filteredMessages[index - 1] : undefined;
+              displayedMessages.map((msg, index) => {
+                const prevMsg = index > 0 ? displayedMessages[index - 1] : undefined;
                 const dateDivider = renderDateDivider(
                   msg.createdAt || msg.timestamp,
                   prevMsg?.createdAt || prevMsg?.timestamp
@@ -887,6 +1003,8 @@ export default function Chat() {
                               <img
                                 src={msg.mediaUrl}
                                 alt={msg.fileName || 'Attached photo'}
+                                loading="lazy"
+                                onLoad={handleImageLoad}
                                 className="max-w-full max-h-80 object-cover block"
                               />
                             </a>
@@ -896,6 +1014,7 @@ export default function Chat() {
                               <video
                                 src={msg.mediaUrl}
                                 controls
+                                onLoadedData={handleImageLoad}
                                 className="max-w-full max-h-80 block"
                               />
                             </div>
@@ -919,6 +1038,8 @@ export default function Chat() {
                               <img
                                 src={msg.mediaUrl}
                                 alt={msg.fileName || 'Attached photo'}
+                                loading="lazy"
+                                onLoad={handleImageLoad}
                                 className="w-full max-h-80 object-cover block"
                               />
                             </a>
@@ -928,6 +1049,7 @@ export default function Chat() {
                               <video
                                 src={msg.mediaUrl}
                                 controls
+                                onLoadedData={handleImageLoad}
                                 className="w-full max-h-80 block"
                               />
                             </div>
@@ -1020,6 +1142,20 @@ export default function Chat() {
             )}
             <div ref={messagesEndRef} />
           </div>
+
+          {/* Scroll to Latest Floating Pill Button */}
+          {!isNearBottom && (
+            <div className="absolute bottom-20 right-6 z-10 animate-in fade-in duration-200">
+              <button
+                type="button"
+                onClick={() => scrollToBottom(true)}
+                className="px-3.5 py-1.5 bg-white/95 hover:bg-white text-[#007aff] border border-black/10 rounded-full shadow-md flex items-center gap-1.5 text-xs font-semibold backdrop-blur-md active:scale-95 transition cursor-pointer"
+              >
+                <ArrowDown size={14} strokeWidth={2.5} />
+                <span>Latest</span>
+              </button>
+            </div>
+          )}
 
           {/* Authentic Apple iOS iMessage Input Bar */}
           <form

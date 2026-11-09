@@ -4,8 +4,6 @@ import { Capacitor } from '@capacitor/core';
 import {
   Check,
   Trash2,
-  Calendar,
-  ChevronRight,
   ExternalLink,
 } from 'lucide-react';
 import { AppleBellIcon } from './icons/BrandIcons';
@@ -336,11 +334,6 @@ export default function NotificationBell() {
                 <p className="text-[14px] font-semibold text-[#1d1d1f] tracking-tight">
                   {filterTab === 'UNREAD' ? 'No Unread Notifications' : 'No Notifications'}
                 </p>
-                <p className="text-[12px] text-[#86868b] mt-1 font-normal">
-                  {filterTab === 'UNREAD'
-                    ? 'You are all caught up on your reminders.'
-                    : 'Reminders, callbacks, and calendar alerts will appear here.'}
-                </p>
               </div>
             ) : (
               groupedNotifications.map((group) => (
@@ -436,34 +429,6 @@ export default function NotificationBell() {
               ))
             )}
           </div>
-
-          {/* Apple HIG Footer: Full Page View + Calendar Link */}
-          <div className="px-4 py-2.5 bg-[#f5f5f7]/80 border-t border-black/[0.04] flex items-center justify-between text-xs">
-            <button
-              type="button"
-              onClick={() => {
-                setIsOpen(false);
-                navigate('/notifications');
-              }}
-              className="text-[#0071e3] hover:text-[#0077ED] font-semibold text-[12px] flex items-center gap-1 transition-colors cursor-pointer"
-            >
-              <span>View All in Page</span>
-              <ChevronRight size={12} strokeWidth={2.5} />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setIsOpen(false);
-                navigate('/calendar');
-              }}
-              className="text-[#86868b] hover:text-[#1d1d1f] font-normal text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
-            >
-              <Calendar size={12} />
-              <span>Calendar</span>
-            </button>
-          </div>
-
         </div>
       )}
     </div>
