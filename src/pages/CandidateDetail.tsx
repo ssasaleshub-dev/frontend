@@ -344,8 +344,22 @@ export default function CandidateDetail() {
         oldValue: oldStatusLabel,
         newValue: newStatusLabel,
       });
+
+      // Authentic Apple iOS Status Updated Success Modal
+      showAlert({
+        title: 'Status Updated',
+        message: `Candidate stage moved to "${newStatusLabel}".`,
+        icon: 'success',
+        buttonText: 'Done',
+        autoCloseMs: 2200,
+      });
     } catch (err: any) {
-      alert(`Status update failed: ${err?.message || 'Server error'}`);
+      showAlert({
+        title: 'Update Failed',
+        message: err?.message || 'Server error while updating status.',
+        icon: 'error',
+        buttonText: 'OK',
+      });
     }
   };
 

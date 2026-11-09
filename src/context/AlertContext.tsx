@@ -1,9 +1,12 @@
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
+import { Check, AlertTriangle, XCircle, Info } from 'lucide-react';
 
 export interface AlertOptions {
   title?: string;
   message: string;
   buttonText?: string;
+  icon?: 'success' | 'warning' | 'error' | 'info';
+  autoCloseMs?: number;
   onConfirm?: () => void;
 }
 
@@ -31,6 +34,7 @@ interface AlertState {
   confirmText: string;
   cancelText: string;
   isDestructive: boolean;
+  icon?: 'success' | 'warning' | 'error' | 'info';
   resolveRef?: (val: any) => void;
   onConfirmCallback?: () => void;
 }
@@ -48,12 +52,51 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
 
   const resolveCallbackRef = useRef<((val: any) => void) | null>(null);
   const onConfirmCallbackRef = useRef<(() => void) | null>(null);
+  const autoCloseTimerRef = useRef<any>(null);
+
+  const handleConfirm = useCallback(() => {
+    if (autoCloseTimerRef.current) {
+      clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = null;
+    }
+    setAlertState((prev) => ({ ...prev, isOpen: false }));
+    if (onConfirmCallbackRef.current) {
+      onConfirmCallbackRef.current();
+    }
+    if (resolveCallbackRef.current) {
+      resolveCallbackRef.current(true);
+      resolveCallbackRef.current = null;
+    }
+  }, []);
+
+  const handleCancel = useCallback(() => {
+    if (autoCloseTimerRef.current) {
+      clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = null;
+    }
+    setAlertState((prev) => ({ ...prev, isOpen: false }));
+    if (resolveCallbackRef.current) {
+      resolveCallbackRef.current(false);
+      resolveCallbackRef.current = null;
+    }
+  }, []);
 
   const showAlert = useCallback((options: AlertOptions | string): Promise<void> => {
     return new Promise((resolve) => {
       const opts: AlertOptions = typeof options === 'string' ? { message: options } : options;
       resolveCallbackRef.current = () => resolve();
       onConfirmCallbackRef.current = opts.onConfirm || null;
+
+      if (autoCloseTimerRef.current) {
+        clearTimeout(autoCloseTimerRef.current);
+        autoCloseTimerRef.current = null;
+      }
+
+      if (opts.autoCloseMs && opts.autoCloseMs > 0) {
+        autoCloseTimerRef.current = setTimeout(() => {
+          handleConfirm();
+        }, opts.autoCloseMs);
+      }
 
       setAlertState({
         isOpen: true,
@@ -63,15 +106,21 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
         confirmText: opts.buttonText || 'OK',
         cancelText: 'Cancel',
         isDestructive: false,
+        icon: opts.icon,
       });
     });
-  }, []);
+  }, [handleConfirm]);
 
   const showConfirm = useCallback((options: ConfirmOptions | string): Promise<boolean> => {
     return new Promise((resolve) => {
       const opts: ConfirmOptions = typeof options === 'string' ? { message: options } : options;
       resolveCallbackRef.current = (val: boolean) => resolve(val);
       onConfirmCallbackRef.current = null;
+
+      if (autoCloseTimerRef.current) {
+        clearTimeout(autoCloseTimerRef.current);
+        autoCloseTimerRef.current = null;
+      }
 
       setAlertState({
         isOpen: true,
@@ -85,26 +134,11 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const handleConfirm = () => {
-    setAlertState((prev) => ({ ...prev, isOpen: false }));
-    if (onConfirmCallbackRef.current) {
-      onConfirmCallbackRef.current();
-    }
-    if (resolveCallbackRef.current) {
-      resolveCallbackRef.current(true);
-      resolveCallbackRef.current = null;
-    }
-  };
-
-  const handleCancel = () => {
-    setAlertState((prev) => ({ ...prev, isOpen: false }));
-    if (resolveCallbackRef.current) {
-      resolveCallbackRef.current(false);
-      resolveCallbackRef.current = null;
-    }
-  };
-
   const closeAlert = useCallback(() => {
+    if (autoCloseTimerRef.current) {
+      clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = null;
+    }
     setAlertState((prev) => ({ ...prev, isOpen: false }));
     if (resolveCallbackRef.current) {
       resolveCallbackRef.current(false);
@@ -136,19 +170,41 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/35 backdrop-blur-md transition-opacity duration-150 animate-in fade-in"
+          onClick={handleConfirm}
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-md transition-opacity duration-150 animate-in fade-in"
         >
           <div
-            className="w-[270px] max-w-[85vw] bg-white rounded-[16px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.35)] overflow-hidden text-center select-none border border-black/[0.08] transform transition-transform duration-150 animate-in zoom-in-95"
+            className="w-[280px] max-w-[85vw] bg-white rounded-[18px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.4)] overflow-hidden text-center select-none border border-black/[0.08] transform transition-transform duration-150 animate-in zoom-in-95"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header / Body */}
-            <div className="px-4 pt-5 pb-4">
+            <div className="px-5 pt-6 pb-4">
+              {alertState.icon === 'success' && (
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[#34c759]/15 text-[#34c759] flex items-center justify-center animate-in zoom-in-75 duration-150">
+                  <Check size={26} strokeWidth={2.8} />
+                </div>
+              )}
+              {alertState.icon === 'warning' && (
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[#ff9500]/15 text-[#ff9500] flex items-center justify-center animate-in zoom-in-75 duration-150">
+                  <AlertTriangle size={26} strokeWidth={2.4} />
+                </div>
+              )}
+              {alertState.icon === 'error' && (
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[#ff3b30]/15 text-[#ff3b30] flex items-center justify-center animate-in zoom-in-75 duration-150">
+                  <XCircle size={26} strokeWidth={2.4} />
+                </div>
+              )}
+              {alertState.icon === 'info' && (
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[#007aff]/15 text-[#007aff] flex items-center justify-center animate-in zoom-in-75 duration-150">
+                  <Info size={26} strokeWidth={2.4} />
+                </div>
+              )}
+
               <h3 className="font-semibold text-[17px] text-[#1c1c1e] leading-snug tracking-tight">
                 {alertState.title}
               </h3>
               {alertState.message && (
-                <p className="mt-1 text-[13px] text-[#3c3c43] leading-[1.35] tracking-tight whitespace-pre-line">
+                <p className="mt-1.5 text-[13px] text-[#3c3c43] leading-[1.35] tracking-tight whitespace-pre-line">
                   {alertState.message}
                 </p>
               )}

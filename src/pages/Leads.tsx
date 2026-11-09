@@ -390,6 +390,7 @@ export default function Leads() {
   const handleUpdateStatus = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!statusModalLead) return;
+    const targetStatusLabel = LEAD_STATUSES[statusForm.status]?.label || statusForm.status;
     try {
       await crmService.updateLeadStatus(statusModalLead.id, statusForm.status, statusForm.notes);
       setStatusModalLead(null);
@@ -397,8 +398,21 @@ export default function Leads() {
         setDossierLead({ ...dossierLead, status: statusForm.status, notes: statusForm.notes });
       }
       await fetchLeads();
+
+      showAlert({
+        title: 'Status Updated',
+        message: `Candidate status updated to "${targetStatusLabel}".`,
+        icon: 'success',
+        buttonText: 'Done',
+        autoCloseMs: 2200,
+      });
     } catch (err: any) {
-      showAlert({ title: 'App', message: `Status update failed: ${err?.message || 'Server error'}` });
+      showAlert({
+        title: 'Update Failed',
+        message: err?.message || 'Server error while updating status.',
+        icon: 'error',
+        buttonText: 'OK',
+      });
     }
   };
 
@@ -406,6 +420,7 @@ export default function Leads() {
     e.stopPropagation();
     const isCurrentlyActive = leadItem.status !== 'CREATED' && leadItem.status !== 'LOST';
     const newStatus = isCurrentlyActive ? 'CREATED' : 'CONTACTED';
+    const targetLabel = LEAD_STATUSES[newStatus]?.label || (newStatus === 'CONTACTED' ? 'Contacted' : 'New Lead');
 
     // Optimistically update raw leads
     setRawLeads((prev) =>
@@ -414,12 +429,24 @@ export default function Leads() {
 
     try {
       await crmService.updateLeadStatus(leadItem.id, newStatus);
+      showAlert({
+        title: 'Status Updated',
+        message: `Candidate marked as "${targetLabel}".`,
+        icon: 'success',
+        buttonText: 'Done',
+        autoCloseMs: 2000,
+      });
     } catch (err: any) {
       // Revert on failure
       setRawLeads((prev) =>
         prev.map((l) => (l.id === leadItem.id ? { ...l, status: leadItem.status } : l))
       );
-      showAlert({ title: 'App', message: `Status update failed: ${err?.message || 'Server error'}` });
+      showAlert({
+        title: 'Update Failed',
+        message: err?.message || 'Server error while updating status.',
+        icon: 'error',
+        buttonText: 'OK',
+      });
     }
   };
 
