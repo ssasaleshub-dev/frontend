@@ -332,18 +332,59 @@ class PushNotificationService {
       if (perm === 'granted') {
         const supported = await isSupported().catch(() => false);
         if (supported) {
-          const app = getApps().length === 0 ? initializeApp(firebaseWebConfig) : getApp();
-          const messaging = getMessaging(app);
-          const swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-          await navigator.serviceWorker.ready;
-          await this.registerWebPushToken(messaging, swReg);
-          return true;
+          try {
+            const app = getApps().length === 0 ? initializeApp(firebaseWebConfig) : getApp();
+            const messaging = getMessaging(app);
+            const swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+            await navigator.serviceWorker.ready;
+            await this.registerWebPushToken(messaging, swReg);
+          } catch (fcmErr) {
+            console.warn('[PushNotifications] Firebase Web Push init notice:', fcmErr);
+          }
         }
+        return true;
       }
     } catch (e) {
       console.warn('[PushNotifications] Error requesting web push permission:', e);
     }
     return false;
+  }
+
+  /**
+   * Send a diagnostic test notification to verify Chrome and Windows OS alert permissions
+   */
+  public sendTestDesktopNotification(): { success: boolean; message: string } {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      return { success: false, message: 'This browser does not support desktop notifications.' };
+    }
+    if (Notification.permission === 'denied') {
+      return {
+        success: false,
+        message: 'Notifications are blocked in Chrome. Click the padlock/tune icon in the URL bar (next to https://ssasaleshub.cloud) and set Notifications to "Allow".',
+      };
+    }
+    if (Notification.permission === 'default') {
+      return {
+        success: false,
+        message: 'Notification permission has not been granted yet. Click "Enable" first.',
+      };
+    }
+
+    try {
+      const notif = new Notification('SSA Sales Hub', {
+        body: '🎉 Desktop notifications are active! You will receive live alerts for all chat messages and reminders.',
+        icon: '/favicon.png',
+        badge: '/favicon.png',
+        tag: `test-notif-${Date.now()}`,
+      });
+      notif.onclick = () => {
+        window.focus();
+        notif.close();
+      };
+      return { success: true, message: 'Test notification sent to your desktop!' };
+    } catch (e: any) {
+      return { success: false, message: `Notification display error: ${e?.message || e}` };
+    }
   }
 
   private async registerWebPushToken(messaging: any, swReg: ServiceWorkerRegistration): Promise<string | null> {

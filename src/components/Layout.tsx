@@ -96,10 +96,8 @@ export default function Layout() {
       const senderName = incomingMsg.userName || incomingMsg.userLogin || 'Colleague';
       const messagePreview = incomingMsg.content || (incomingMsg.mediaUrl ? '📎 Sent an attachment' : 'Sent a message');
 
-      // 1. Play Apple notification tone if tab is in background or not on chat page
-      if (!isOnChatPage || isDocumentHidden) {
-        playIPhoneNotificationSound();
-      }
+      // 1. Play Apple notification tone whenever another person sends a message
+      playIPhoneNotificationSound();
 
       // 2. If not on chat page, show the in-app Apple Notification Banner
       if (!isOnChatPage) {
@@ -114,7 +112,9 @@ export default function Layout() {
 
       // 3. Show native Chrome / Windows desktop notification if permission is granted
       if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-        if (!isOnChatPage || isDocumentHidden) {
+        const isWindowFocused = typeof document !== 'undefined' && document.hasFocus();
+        // Show desktop alert if window is not focused, or tab is hidden, or user is browsing another page
+        if (!isWindowFocused || isDocumentHidden || !isOnChatPage) {
           try {
             const notif = new Notification(senderName, {
               body: messagePreview,

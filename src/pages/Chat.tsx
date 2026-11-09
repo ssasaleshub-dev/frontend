@@ -15,6 +15,9 @@ import {
   ExternalLink,
   ChevronLeft,
   Bell,
+  ZoomIn,
+  ZoomOut,
+  Download,
 } from 'lucide-react';
 import chatService from '../services/api/chatService';
 import fileService from '../services/api/fileService';
@@ -51,34 +54,104 @@ export default function Chat() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Web Push notification permission state for Chrome / PC
-  const [showNotifPrompt, setShowNotifPrompt] = useState<boolean>(false);
-  const [permissionBlocked, setPermissionBlocked] = useState<boolean>(false);
+  const [permissionState, setPermissionState] = useState<'default' | 'granted' | 'denied'>(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      return Notification.permission;
+    }
+    return 'default';
+  });
+  const [statusBanner, setStatusBanner] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
-      if (Notification.permission === 'default') {
-        setShowNotifPrompt(true);
-      }
+      setPermissionState(Notification.permission);
     }
   }, []);
 
   const handleEnableWebPush = async () => {
     const granted = await pushNotificationService.requestWebPushPermission();
-    if (granted || (typeof Notification !== 'undefined' && Notification.permission === 'granted')) {
-      setShowNotifPrompt(false);
-      setPermissionBlocked(false);
+    const current = typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default';
+    setPermissionState(current);
+
+    if (granted || current === 'granted') {
       playIPhoneNotificationSound();
-      try {
-        new Notification('SSA Sales Hub', {
-          body: '🔔 Chat desktop notifications are now active on your PC!',
-          icon: '/favicon.png',
-        });
-      } catch {}
-    } else if (typeof Notification !== 'undefined' && Notification.permission === 'denied') {
-      setShowNotifPrompt(false);
-      setPermissionBlocked(true);
+      pushNotificationService.sendTestDesktopNotification();
+      setStatusBanner('🎉 Notifications enabled! A test alert was sent to your desktop.');
+      setTimeout(() => setStatusBanner(null), 6000);
     }
   };
+
+  const handleSendTestNotification = () => {
+    playIPhoneNotificationSound();
+    const result = pushNotificationService.sendTestDesktopNotification();
+    if (result.success) {
+      setStatusBanner('🔔 Test alert sent! Look for the popup in the bottom-right corner of your desktop.');
+    } else {
+      setStatusBanner(result.message);
+    }
+    setTimeout(() => setStatusBanner(null), 8000);
+  };
+
+  // In-app media lightbox viewer state (Never opens separate tab, never exposes raw public URL)
+  const [lightboxMedia, setLightboxMedia] = useState<{
+    url: string;
+    type: 'IMAGE' | 'VIDEO' | 'FILE';
+    fileName?: string;
+    senderName?: string;
+    timestamp?: string;
+  } | null>(null);
+  const [lightboxZoom, setLightboxZoom] = useState<number>(1);
+
+  const handleOpenMedia = (msg: ChatMessage) => {
+    if (!msg.mediaUrl) return;
+    const isImg = isImageMedia(msg);
+    const isVid = isVideoMedia(msg);
+    setLightboxZoom(1);
+    setLightboxMedia({
+      url: msg.mediaUrl,
+      type: isImg ? 'IMAGE' : isVid ? 'VIDEO' : 'FILE',
+      fileName: msg.fileName,
+      senderName: msg.userName || msg.userLogin,
+      timestamp: msg.createdAt ? formatIndianTime(msg.createdAt) : undefined,
+    });
+  };
+
+  const handleCloseLightbox = () => {
+    setLightboxMedia(null);
+    setLightboxZoom(1);
+  };
+
+  const handleDownloadMedia = async (url: string, fileName?: string) => {
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = fileName || 'attachment';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName || 'attachment';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && lightboxMedia) {
+        handleCloseLightbox();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [lightboxMedia]);
 
   const PAGE_SIZE = 25;
   const [visibleCount, setVisibleCount] = useState<number>(PAGE_SIZE);
@@ -835,7 +908,17 @@ export default function Chat() {
             </div>
 
             <div className="w-8 shrink-0 flex items-center justify-end">
-              {typeof window !== 'undefined' && 'Notification' in window && Notification.permission !== 'granted' && (
+              {permissionState === 'granted' ? (
+                <button
+                  type="button"
+                  onClick={handleSendTestNotification}
+                  title="Desktop notifications active - click to send test alert"
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-emerald-600 hover:bg-emerald-50 active:scale-95 transition cursor-pointer relative"
+                >
+                  <Bell size={16} />
+                  <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" />
+                </button>
+              ) : (
                 <button
                   type="button"
                   onClick={handleEnableWebPush}
@@ -848,7 +931,23 @@ export default function Chat() {
             </div>
           </div>
 
-          {showNotifPrompt && (
+          {statusBanner && (
+            <div className="bg-slate-900 text-white text-xs px-4 py-2 flex items-center justify-between animate-in fade-in">
+              <div className="flex items-center gap-2">
+                <Bell size={14} className="text-sky-400 shrink-0" />
+                <span>{statusBanner}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStatusBanner(null)}
+                className="p-1 text-slate-400 hover:text-white cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
+
+          {permissionState === 'default' && (
             <div className="bg-sky-50 border-b border-sky-200/80 px-4 py-2 flex items-center justify-between text-xs text-sky-950 animate-in fade-in">
               <div className="flex items-center gap-2">
                 <Bell size={15} className="text-[#007aff] shrink-0" />
@@ -862,26 +961,41 @@ export default function Chat() {
                 >
                   Enable
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setShowNotifPrompt(false)}
-                  className="p-1 text-slate-400 hover:text-slate-600 rounded cursor-pointer"
-                >
-                  <X size={14} />
-                </button>
               </div>
             </div>
           )}
 
-          {permissionBlocked && (
+          {permissionState === 'denied' && (
             <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-between text-xs text-amber-950 animate-in fade-in">
-              <span>⚠️ Notifications blocked in Chrome. Click the 🔒 lock icon in Chrome's URL bar and set Notifications to "Allow".</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm shrink-0">⚠️</span>
+                <span>
+                  <strong>Notifications blocked in Chrome:</strong> Click the padlock / tune icon (next to URL), set <strong>Notifications</strong> to <strong>Allow</strong>, then refresh.
+                </span>
+              </div>
               <button
                 type="button"
-                onClick={() => setPermissionBlocked(false)}
-                className="p-1 text-amber-600 hover:text-amber-800 cursor-pointer"
+                onClick={() => setPermissionState(typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default')}
+                className="px-2 py-0.5 bg-amber-200/70 hover:bg-amber-200 text-amber-900 rounded text-[11px] font-medium shrink-0 cursor-pointer"
               >
-                <X size={14} />
+                Re-check
+              </button>
+            </div>
+          )}
+
+          {permissionState === 'granted' && !statusBanner && (
+            <div className="bg-emerald-50/60 border-b border-emerald-200/50 px-4 py-1.5 flex items-center justify-between text-xs text-emerald-950">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                <span className="text-[11px] text-emerald-800 font-medium">Desktop notifications active</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleSendTestNotification}
+                className="px-2 py-0.5 bg-white hover:bg-emerald-50 border border-emerald-200 text-emerald-800 rounded text-[10px] font-medium shadow-2xs transition active:scale-95 cursor-pointer"
+                title="Send a test notification to verify Chrome and Windows alerts"
+              >
+                🔔 Send Test Alert
               </button>
             </div>
           )}
@@ -993,12 +1107,11 @@ export default function Chat() {
                           } shadow-xs select-none`}
                         >
                           {isImg && (
-                            <a
-                              href={msg.mediaUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="block hover:opacity-95 transition-opacity"
-                              title="Click to view full photo"
+                            <button
+                              type="button"
+                              onClick={() => handleOpenMedia(msg)}
+                              className="block hover:opacity-95 transition-opacity text-left cursor-pointer w-full group relative focus:outline-none"
+                              title="Click to view full photo in app"
                             >
                               <img
                                 src={msg.mediaUrl}
@@ -1007,10 +1120,15 @@ export default function Chat() {
                                 onLoad={handleImageLoad}
                                 className="max-w-full max-h-80 object-cover block"
                               />
-                            </a>
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors flex items-center justify-center pointer-events-none">
+                                <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/65 text-white text-[11px] px-2.5 py-1 rounded-full font-medium shadow-md">
+                                  View Photo
+                                </span>
+                              </div>
+                            </button>
                           )}
                           {isVid && (
-                            <div className="bg-black">
+                            <div className="bg-black relative">
                               <video
                                 src={msg.mediaUrl}
                                 controls
@@ -1028,12 +1146,11 @@ export default function Chat() {
                           }`}
                         >
                           {isImg && (
-                            <a
-                              href={msg.mediaUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="block hover:opacity-95 transition-opacity"
-                              title="Click to view full photo"
+                            <button
+                              type="button"
+                              onClick={() => handleOpenMedia(msg)}
+                              className="block hover:opacity-95 transition-opacity text-left cursor-pointer w-full group relative focus:outline-none"
+                              title="Click to view full photo in app"
                             >
                               <img
                                 src={msg.mediaUrl}
@@ -1042,7 +1159,12 @@ export default function Chat() {
                                 onLoad={handleImageLoad}
                                 className="w-full max-h-80 object-cover block"
                               />
-                            </a>
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors flex items-center justify-center pointer-events-none">
+                                <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/65 text-white text-[11px] px-2.5 py-1 rounded-full font-medium shadow-md">
+                                  View Photo
+                                </span>
+                              </div>
+                            </button>
                           )}
                           {isVid && (
                             <div className="bg-black">
@@ -1065,27 +1187,27 @@ export default function Chat() {
                             isMe ? 'ios-message-sent' : 'ios-message-received'
                           }`}
                         >
-                          {/* Media Attachment: Document */}
+                          {/* Media Attachment: Document (Downloads cleanly in-app, never opens external URL tab) */}
                           {msg.mediaUrl && !isImg && !isVid && (
-                            <a
-                              href={msg.mediaUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className={`flex items-center gap-2 p-2 rounded-xl transition-colors ${
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadMedia(msg.mediaUrl!, msg.fileName)}
+                              className={`flex items-center gap-2.5 p-2.5 rounded-xl transition-colors w-full text-left cursor-pointer ${
                                 isMe
-                                  ? 'bg-white/15 text-white hover:bg-white/25'
-                                  : 'bg-black/5 text-[#000000] hover:bg-black/10'
+                                  ? 'bg-white/15 text-white hover:bg-white/25 active:bg-white/30'
+                                  : 'bg-black/5 text-[#000000] hover:bg-black/10 active:bg-black/15'
                               }`}
+                              title="Click to download file"
                             >
-                              <FileText size={16} />
+                              <FileText size={18} className="shrink-0" />
                               <div className="min-w-0 flex-1">
                                 <p className="truncate font-medium text-[12px]">{msg.fileName || 'Document'}</p>
                                 {msg.fileSize && (
                                   <p className="text-[10px] opacity-75">{formatFileSize(msg.fileSize)}</p>
                                 )}
                               </div>
-                              <ExternalLink size={12} className="shrink-0 opacity-70" />
-                            </a>
+                              <Download size={14} className="shrink-0 opacity-70" />
+                            </button>
                           )}
 
                           {/* Message Text Content */}
@@ -1258,6 +1380,119 @@ export default function Chat() {
           </form>
         </div>
       </div>
+
+      {/* Apple-grade In-App Media Viewer Lightbox (Never opens separate tab, never exposes raw public URL) */}
+      {lightboxMedia && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 bg-black/92 backdrop-blur-xl flex flex-col justify-between p-3 sm:p-6 animate-in fade-in duration-200 select-none"
+          onClick={handleCloseLightbox}
+        >
+          {/* Top Bar: Sender info + Controls */}
+          <div
+            className="flex items-center justify-between gap-3 text-white w-full max-w-5xl mx-auto shrink-0 z-10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center font-semibold text-sm shrink-0">
+                {(lightboxMedia.senderName?.[0] || 'U').toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold truncate leading-tight">
+                  {lightboxMedia.senderName || 'Team Member'}
+                </p>
+                <p className="text-xs text-white/60 truncate leading-tight mt-0.5">
+                  {lightboxMedia.fileName || (lightboxMedia.type === 'VIDEO' ? 'Video' : 'Photo')}
+                  {lightboxMedia.timestamp && ` • ${lightboxMedia.timestamp}`}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {lightboxMedia.type === 'IMAGE' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setLightboxZoom((z) => Math.max(0.5, z - 0.25))}
+                    className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition cursor-pointer"
+                    title="Zoom Out"
+                  >
+                    <ZoomOut size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLightboxZoom(1)}
+                    className="px-2.5 h-9 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white text-xs font-medium flex items-center justify-center transition cursor-pointer"
+                    title="Reset Zoom"
+                  >
+                    {Math.round(lightboxZoom * 100)}%
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLightboxZoom((z) => Math.min(3, z + 0.25))}
+                    className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition cursor-pointer"
+                    title="Zoom In"
+                  >
+                    <ZoomIn size={16} />
+                  </button>
+                </>
+              )}
+
+              <button
+                type="button"
+                onClick={() => handleDownloadMedia(lightboxMedia.url, lightboxMedia.fileName)}
+                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition cursor-pointer"
+                title="Download file to device"
+              >
+                <Download size={16} />
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCloseLightbox}
+                className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 active:scale-95 text-white flex items-center justify-center transition cursor-pointer ml-1"
+                title="Close (Esc)"
+              >
+                <X size={18} />
+              </button>
+            </div>
+          </div>
+
+          {/* Center Content: Image or Video */}
+          <div
+            className="flex-1 flex items-center justify-center overflow-hidden my-3 min-h-0"
+            onClick={handleCloseLightbox}
+          >
+            {lightboxMedia.type === 'IMAGE' ? (
+              <img
+                src={lightboxMedia.url}
+                alt={lightboxMedia.fileName || 'Full photo'}
+                style={{ transform: `scale(${lightboxZoom})` }}
+                onClick={(e) => e.stopPropagation()}
+                className="max-h-[82vh] max-w-[90vw] object-contain rounded-lg shadow-2xl transition-transform duration-150 cursor-grab active:cursor-grabbing select-none"
+              />
+            ) : lightboxMedia.type === 'VIDEO' ? (
+              <div
+                className="max-h-[82vh] max-w-[90vw] rounded-xl overflow-hidden shadow-2xl bg-black"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <video
+                  src={lightboxMedia.url}
+                  controls
+                  autoPlay
+                  className="max-h-[82vh] max-w-[90vw] block"
+                />
+              </div>
+            ) : null}
+          </div>
+
+          {/* Bottom Bar Hint */}
+          <div className="text-center text-xs text-white/50 py-1 shrink-0">
+            Press <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-white/80 font-mono text-[10px]">ESC</kbd> or click anywhere to return to chat
+          </div>
+        </div>
+      )}
     </div>
   );
 }

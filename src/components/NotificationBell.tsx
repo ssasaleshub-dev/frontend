@@ -12,6 +12,8 @@ import reminderNotificationService, {
 } from '../services/reminderNotificationService';
 import { encryptLeadId } from '../utils/leadIdCrypto';
 import { formatIndianTime, formatIndianDate, cleanNotificationMessage } from '../utils/dateTimeUtils';
+import playIPhoneNotificationSound from '../utils/appleSound';
+import pushNotificationService from '../services/pushNotificationService';
 
 export default function NotificationBell() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -298,7 +300,7 @@ export default function NotificationBell() {
           </div>
 
           {/* Notification Permission Request Card (Apple HIG Managing Notifications) */}
-          {!hasPermission && (
+          {!hasPermission ? (
             <div className="mx-3.5 mt-2.5 p-3 bg-gradient-to-r from-[#0071e3]/[0.06] to-transparent border border-[#0071e3]/15 rounded-[16px] flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-7 h-7 rounded-full bg-[#0071e3]/15 text-[#0071e3] flex items-center justify-center shrink-0">
@@ -319,6 +321,24 @@ export default function NotificationBell() {
                 className="px-3.5 py-1.5 bg-[#0071e3] hover:bg-[#0077ED] active:scale-95 text-white font-medium rounded-full text-[11px] shrink-0 shadow-xs transition-all cursor-pointer"
               >
                 Allow
+              </button>
+            </div>
+          ) : (
+            <div className="mx-3.5 mt-2.5 px-3 py-2 bg-emerald-500/[0.06] border border-emerald-500/20 rounded-[14px] flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                <span className="text-[11px] font-medium text-emerald-950 truncate">Desktop Alerts Active</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  playIPhoneNotificationSound();
+                  pushNotificationService.sendTestDesktopNotification();
+                }}
+                className="px-2.5 py-1 bg-white hover:bg-slate-50 border border-emerald-200 text-emerald-800 font-medium rounded-full text-[10px] shrink-0 shadow-2xs transition active:scale-95 cursor-pointer"
+                title="Send test desktop notification to verify Chrome and Windows"
+              >
+                Test Alert
               </button>
             </div>
           )}
