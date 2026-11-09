@@ -273,39 +273,6 @@ export default function CalendarPage() {
 
   return (
     <div className="space-y-5 max-w-7xl mx-auto pb-12 font-sf-display">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold tracking-tight text-[#1d1d1f]">
-              Calendar & Reminders
-            </h1>
-          </div>
-          <p className="text-[12px] text-[#86868b] mt-0.5 font-normal">
-            Counselor callback schedules and appointments.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={goToToday}
-            className="px-3.5 py-1.5 bg-black/[0.05] hover:bg-black/[0.08] text-[#1d1d1f] rounded-full text-[12px] font-medium transition-all active:scale-98"
-          >
-            Today
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleOpenModal()}
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#0071e3] hover:bg-[#0077ED] text-white rounded-full text-[12px] font-medium shadow-xs transition-all active:scale-98"
-          >
-            <Plus size={14} strokeWidth={2.5} />
-            <span>New Reminder</span>
-          </button>
-        </div>
-      </div>
-
       {/* Main Grid: 7 Cols Calendar + 5 Cols Sidebar Agenda */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Apple HIG Inline Calendar Card (7 Cols) */}
@@ -319,7 +286,14 @@ export default function CalendarPage() {
                 </h2>
               </div>
 
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={goToToday}
+                  className="px-3 py-1 bg-black/[0.05] hover:bg-black/[0.08] text-[#1d1d1f] rounded-full text-[11px] font-medium transition-all active:scale-95 cursor-pointer mr-1"
+                >
+                  Today
+                </button>
                 <button
                   type="button"
                   onClick={prevMonth}
@@ -822,6 +796,17 @@ export default function CalendarPage() {
           </div>
         </div>
       )}
+
+      {/* Floating Action Button (FAB) at Bottom Right Corner */}
+      <button
+        type="button"
+        onClick={() => handleOpenModal()}
+        title="Create New Reminder"
+        aria-label="Create New Reminder"
+        className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-40 w-14 h-14 rounded-full bg-[#007aff] hover:bg-[#0062cc] active:scale-90 text-white shadow-[0_10px_25px_rgba(0,122,255,0.45)] hover:shadow-[0_14px_30px_rgba(0,122,255,0.55)] flex items-center justify-center transition-all duration-200 group focus:outline-none cursor-pointer"
+      >
+        <Plus size={28} strokeWidth={2.5} className="group-hover:rotate-90 transition-transform duration-200" />
+      </button>
     </div>
   );
 }
