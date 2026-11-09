@@ -931,7 +931,7 @@ export default function Chat() {
             </button>
 
             {/* iOS Capsule Input Pill */}
-            <div className="flex-1 ios-capsule-input px-3.5 py-1.5 flex flex-col justify-center min-h-[38px] transition-all">
+            <div className="flex-1 ios-capsule-input px-3.5 py-1.5 flex flex-col justify-center min-h-[38px] transition-all focus-within:ring-0 focus-within:outline-none">
               {/* Attachment Sticker / Pill INSIDE the Capsule */}
               {pendingFile && (
                 <div className="mb-2 pt-1 select-none">
@@ -979,7 +979,8 @@ export default function Chat() {
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   disabled={chatType === 'p2p' && !selectedUser}
-                  className="flex-1 bg-transparent border-none outline-none text-[14px] text-[#000000] py-0.5"
+                  placeholder={chatType === 'p2p' && !selectedUser ? 'Select a colleague to start chatting' : 'Message'}
+                  className="flex-1 bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus:border-none text-[14px] text-[#000000] py-0.5 shadow-none"
                   aria-label="Message text"
                 />
 
