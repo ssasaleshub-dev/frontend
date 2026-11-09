@@ -11,10 +11,8 @@ import {
   PushNotificationSchema,
   ActionPerformed,
 } from '@capacitor/push-notifications';
-import { LocalNotifications, ActionPerformed as LocalActionPerformed } from '@capacitor/local-notifications';
 import axiosClient from './api/axiosClient';
 import { encryptLeadId } from '../utils/leadIdCrypto';
-import { format12HourTime } from '../utils/dateTimeUtils';
 
 const FCM_TOKEN_STORAGE_KEY = 'ssa_fcm_token';
 
@@ -31,32 +29,26 @@ class PushNotificationService {
 
     try {
       this.isInitialized = true;
-      console.info('[PushNotifications] Initializing Native Push & Local Notifications...');
+      console.info('[PushNotifications] Initializing Firebase Push Notifications...');
 
-      // 1. Create notification channels on Android 8.0+ first
+      // 1. Create notification channel on Android 8.0+ first
       await this.createDefaultNotificationChannel();
 
       // 2. Request user permissions for Push Notifications
-      let permStatus = await PushNotifications.checkPermissions();
-      if (permStatus.receive !== 'granted') {
-        permStatus = await PushNotifications.requestPermissions();
-      }
-
-      // 3. Request permissions for Local Notifications
       try {
-        let localPerm = await LocalNotifications.checkPermissions();
-        if (localPerm.display !== 'granted') {
-          localPerm = await LocalNotifications.requestPermissions();
+        let permStatus = await PushNotifications.checkPermissions();
+        if (permStatus.receive !== 'granted') {
+          permStatus = await PushNotifications.requestPermissions();
         }
-      } catch (localErr) {
-        console.warn('[PushNotifications] Local notifications permission check warning:', localErr);
+      } catch (permErr) {
+        console.warn('[PushNotifications] Permission check warning:', permErr);
       }
 
-      if (permStatus.receive !== 'granted') {
-        console.warn('[PushNotifications] Push notification permission was not granted:', permStatus.receive);
-      } else {
-        // Register with Google FCM / Apple APNS
+      // 3. Always register with Google FCM / Apple APNS to obtain device token
+      try {
         await PushNotifications.register();
+      } catch (regErr) {
+        console.error('[PushNotifications] Error calling PushNotifications.register():', regErr);
       }
 
       // 4. Listen for FCM registration token
@@ -129,32 +121,6 @@ class PushNotificationService {
           }
         }
       );
-
-      // 8. Handle Local Notification action tap (Navigates when user clicks native local alarm)
-      try {
-        await LocalNotifications.addListener(
-          'localNotificationActionPerformed',
-          (action: LocalActionPerformed) => {
-            console.info('[PushNotifications] Local notification action performed:', action);
-            const extra = action.notification.extra || {};
-            if (extra.leadId) {
-              window.dispatchEvent(
-                new CustomEvent('ssa_navigate_to', { detail: { path: `/leads/${encryptLeadId(extra.leadId)}` } })
-              );
-            } else if (extra.eventId) {
-              window.dispatchEvent(
-                new CustomEvent('ssa_navigate_to', { detail: { path: '/calendar' } })
-              );
-            } else {
-              window.dispatchEvent(
-                new CustomEvent('ssa_navigate_to', { detail: { path: '/notifications' } })
-              );
-            }
-          }
-        );
-      } catch (localListenerErr) {
-        console.warn('[PushNotifications] Local notification listener warning:', localListenerErr);
-      }
     } catch (err) {
       console.error('[PushNotifications] Failed to initialize push notifications:', err);
     }
@@ -174,11 +140,12 @@ class PushNotificationService {
           visibility: 1,
           sound: 'default',
           vibration: true,
+          lights: true,
+          lightColor: '#0071e3',
         };
 
         await PushNotifications.createChannel(channelConfig).catch(() => {});
-        await LocalNotifications.createChannel(channelConfig).catch(() => {});
-        console.info('[PushNotifications] Default notification channels created.');
+        console.info('[PushNotifications] Default push notification channel created.');
       }
     } catch (e) {
       console.warn('[PushNotifications] Channel creation warning:', e);
@@ -186,89 +153,27 @@ class PushNotificationService {
   }
 
   /**
-   * Schedule Native Android Local Reminder Notification
-   * Works offline & when app is closed via Android AlarmManager
+   * Reminder scheduling: In-app & Firebase Push only.
+   * NEVER schedules local Android AlarmManager alarms to prevent "Alarms & reminders" OS settings redirects.
    */
-  public async scheduleLocalReminder(event: {
+  public async scheduleLocalReminder(_event: {
     id?: string;
     title: string;
     candidateName?: string;
-    eventDate: string; // YYYY-MM-DD
-    eventTime?: string; // HH:mm
+    eventDate: string;
+    eventTime?: string;
     remindBeforeMinutes?: number;
     description?: string;
     candidateId?: string | number;
   }): Promise<void> {
-    if (!Capacitor.isNativePlatform()) {
-      return;
-    }
-
-    try {
-      const timePart = event.eventTime || '09:00';
-      const [hours, minutes] = timePart.split(':').map(Number);
-      const parts = event.eventDate.split('-').map(Number);
-      const targetDate = new Date(parts[0], parts[1] - 1, parts[2], hours, minutes, 0, 0);
-
-      const offsetMinutes = Number(event.remindBeforeMinutes) || 0;
-      const triggerTime = new Date(targetDate.getTime() - offsetMinutes * 60 * 1000);
-      const now = new Date();
-
-      // Stable 32-bit integer ID for LocalNotifications
-      let notifId = Math.floor(Math.random() * 1000000);
-      if (event.id) {
-        let hash = 0;
-        for (let i = 0; i < event.id.length; i++) {
-          hash = (hash << 5) - hash + event.id.charCodeAt(i);
-          hash |= 0;
-        }
-        notifId = Math.abs(hash);
-      }
-
-      const candidateText = event.candidateName ? ` for ${event.candidateName}` : '';
-      const formattedTime = format12HourTime(timePart);
-      const dueBody = `Reminder: "${event.title}"${candidateText} scheduled at ${formattedTime}.`;
-
-      const notificationsToSchedule: any[] = [];
-
-      // 1. Schedule native alarm at triggerTime (only the original reminder when due)
-      if (triggerTime.getTime() > now.getTime()) {
-        notificationsToSchedule.push({
-          id: notifId,
-          title: event.title,
-          body: dueBody,
-          channelId: 'fcm_default_channel',
-          schedule: { at: triggerTime },
-          sound: 'default',
-          extra: {
-            leadId: event.candidateId,
-            eventId: event.id,
-          },
-        });
-        console.info('[PushNotifications] Native reminder alarm scheduled for:', triggerTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true }));
-      }
-
-      if (notificationsToSchedule.length > 0) {
-        await LocalNotifications.schedule({ notifications: notificationsToSchedule });
-      }
-    } catch (err) {
-      console.warn('[PushNotifications] Failed to schedule native local reminder:', err);
-    }
+    // Zero exact-alarm scheduling; handled purely via in-app alerts and backend FCM push
   }
 
   /**
-   * Cancel scheduled native reminder
+   * Cancel scheduled reminder
    */
-  public async cancelLocalReminder(id: string): Promise<void> {
-    if (!Capacitor.isNativePlatform()) return;
-    try {
-      let hash = 0;
-      for (let i = 0; i < id.length; i++) {
-        hash = (hash << 5) - hash + id.charCodeAt(i);
-        hash |= 0;
-      }
-      const notifId = Math.abs(hash);
-      await LocalNotifications.cancel({ notifications: [{ id: notifId }, { id: notifId + 1 }] });
-    } catch {}
+  public async cancelLocalReminder(_id: string): Promise<void> {
+    // No-op (no native alarm to cancel)
   }
 
   /**
@@ -276,12 +181,12 @@ class PushNotificationService {
    */
   public async syncTokenWithBackend(token: string, userId?: string): Promise<void> {
     try {
-      const storedUser = localStorage.getItem('ssa_user');
+      const storedUser = localStorage.getItem('ssa_user') || localStorage.getItem('user');
       let currentUserId = userId;
       if (!currentUserId && storedUser) {
         try {
           const parsed = JSON.parse(storedUser);
-          currentUserId = parsed.login;
+          currentUserId = parsed.login || parsed.username;
         } catch {}
       }
 
@@ -296,12 +201,10 @@ class PushNotificationService {
 
       // Try sending to standard backend FCM registration endpoint if available
       await axiosClient.post('/api/notifications/fcm-token', payload).catch(() => {
-        // Fallback for custom backend routes
         return axiosClient.post('/api/account/fcm-token', payload);
       });
       console.info('[PushNotifications] FCM token successfully synced to backend for user:', currentUserId);
     } catch {
-      // Backend may not have endpoint ready yet - silent fail gracefully
       console.warn('[PushNotifications] Backend token sync deferred until API endpoint available.');
     }
   }
@@ -316,4 +219,5 @@ class PushNotificationService {
 
 export const pushNotificationService = new PushNotificationService();
 export default pushNotificationService;
+
 

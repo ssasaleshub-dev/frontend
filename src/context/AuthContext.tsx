@@ -34,6 +34,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [token]);
 
+  useEffect(() => {
+    const handleFcmTokenRegistered = (e: any) => {
+      const fcmToken = e.detail?.token;
+      if (fcmToken && user?.login) {
+        pushNotificationService.syncTokenWithBackend(fcmToken, user.login);
+      }
+    };
+    window.addEventListener('ssa_fcm_token_registered', handleFcmTokenRegistered);
+    return () => {
+      window.removeEventListener('ssa_fcm_token_registered', handleFcmTokenRegistered);
+    };
+  }, [user]);
+
   const login = async (username: string, password: string, rememberMe: boolean = true) => {
     hasFetchedRef.current = true;
     const data = await authService.login(username, password, rememberMe);
