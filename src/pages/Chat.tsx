@@ -124,18 +124,37 @@ export default function Chat() {
         }
         const data = parseMessageList(res);
 
-        setMessages(data);
+        setMessages((prev) => {
+          if (isSilent) {
+            // If message list hasn't changed, retain previous reference to avoid unnecessary DOM re-renders
+            if (
+              prev.length === data.length &&
+              prev[prev.length - 1]?.id === data[data.length - 1]?.id
+            ) {
+              return prev;
+            }
+            // Retain any pending optimistic messages that haven't been confirmed yet
+            const pending = prev.filter(
+              (m) => typeof m.id === 'number' && m.id < 0
+            );
+            return [...data, ...pending];
+          }
+          return data;
+        });
+
         setApiNotice(null);
         if (!isSilent) {
           setTimeout(() => scrollToBottom(false), 80);
         }
       } catch (err: any) {
-        if (err.message?.includes('404')) {
-          setApiNotice(
-            'Backend messages endpoint is not yet mounted. Running in offline preview mode.'
-          );
-        } else {
-          setApiNotice(`API Notice: ${err.message}`);
+        if (!isSilent) {
+          if (err.message?.includes('404')) {
+            setApiNotice(
+              'Backend messages endpoint is not yet mounted. Running in offline preview mode.'
+            );
+          } else {
+            setApiNotice(`API Notice: ${err.message}`);
+          }
         }
       } finally {
         if (!isSilent) setLoading(false);
@@ -148,30 +167,55 @@ export default function Chat() {
     fetchMessages();
   }, [fetchMessages]);
 
-  // Real-Time Team Chat WebSocket Microservice Integration
+  // Active Background Live Polling (every 2.5s) to guarantee zero message loss
+  useEffect(() => {
+    const pollTimer = setInterval(() => {
+      fetchMessages(true);
+    }, 2500);
+
+    return () => clearInterval(pollTimer);
+  }, [fetchMessages]);
+
+  // Real-Time Team Chat WebSocket & SSE Live Push Integration
   useEffect(() => {
     if (user) {
       teamChatWebSocket.connect(user);
     }
 
     const unsubscribe = teamChatWebSocket.onMessage((incomingMsg) => {
-      const isCurrentConversation =
-        (chatType === 'group' && incomingMsg.channel === 'general') ||
-        (chatType === 'p2p' &&
-          selectedUser &&
-          ((incomingMsg.userId === selectedUser.id && incomingMsg.recipientId === currentUserId) ||
-            (incomingMsg.userId === currentUserId && incomingMsg.recipientId === selectedUser.id)));
+      const isGroup = chatType === 'group' && (!incomingMsg.recipientId || incomingMsg.channel === 'general');
+      const isP2p =
+        chatType === 'p2p' &&
+        selectedUser &&
+        ((Number(incomingMsg.userId) === Number(selectedUser.id) && Number(incomingMsg.recipientId) === Number(currentUserId)) ||
+          (Number(incomingMsg.userId) === Number(currentUserId) && Number(incomingMsg.recipientId) === Number(selectedUser.id)));
 
-      if (isCurrentConversation) {
+      if (isGroup || isP2p) {
         setMessages((prev) => {
           if (prev.some((m) => m.id === incomingMsg.id)) return prev;
+
+          // Replace optimistic pending message if content and sender match
+          const optIdx = prev.findIndex(
+            (m) =>
+              typeof m.id === 'number' &&
+              m.id < 0 &&
+              m.content === incomingMsg.content &&
+              Number(m.userId) === Number(incomingMsg.userId)
+          );
+
+          if (optIdx !== -1) {
+            const updated = [...prev];
+            updated[optIdx] = incomingMsg;
+            return updated;
+          }
+
           return [...prev, incomingMsg];
         });
         setTimeout(() => scrollToBottom(true), 60);
       } else {
-        // Message is from another contact/room: display Apple HIG banner popup!
+        // Message is from another contact/room: display banner popup
         notificationBannerService.show({
-          title: `New Message from ${incomingMsg.userName}`,
+          title: `New Message from ${incomingMsg.userName || 'Staff'}`,
           description: incomingMsg.content || 'Sent an attachment in Team Chat',
           type: 'CHAT',
           timestamp: 'now',
@@ -239,7 +283,7 @@ export default function Chat() {
     const recipientId = isP2p && selectedUser.id ? Number(selectedUser.id) : undefined;
     const channel = isP2p ? 'p2p' : 'general';
 
-    const tempId = Date.now();
+    const tempId = -Date.now();
     const optimisticMessage: ChatMessage = {
       id: tempId,
       content: trimmed,
@@ -815,13 +859,29 @@ export default function Chat() {
                         </div>
                       )}
 
-                      {/* Beneath Outgoing Bubble: Signature Apple Read / Delivered Status */}
-                      {isMe && (
+                      {/* Beneath Outgoing Bubble: Signature WhatsApp Read / Delivered Status */}
+                      {isMe ? (
                         <div className="flex items-center gap-1 mt-0.5 mr-1 text-[11px] text-[#8e8e93] font-normal select-none">
-                          {msg.isRead ? (
-                            <span>Read {formatTimestamp(msg.createdAt || msg.timestamp)}</span>
+                          <span>{formatTimestamp(msg.createdAt || msg.timestamp)}</span>
+
+                          {/* WhatsApp Checkmark / Pending Clock */}
+                          {typeof msg.id === 'number' && msg.id < 0 ? (
+                            <svg className="w-3.5 h-3.5 text-[#8e8e93] animate-pulse" viewBox="0 0 16 16" fill="currentColor">
+                              <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/>
+                              <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/>
+                            </svg>
+                          ) : msg.isRead ? (
+                            // Double blue checkmark (WhatsApp Read)
+                            <svg className="w-4 h-3.5" viewBox="0 0 16 15" fill="none">
+                              <path d="M10.91 3.4L4.97 9.87L2.14 7.04" stroke="#34B7F1" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                              <path d="M14.5 3.4L8.56 9.87L7.5 8.8" stroke="#34B7F1" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
                           ) : (
-                            <span>Delivered</span>
+                            // Double gray checkmark (WhatsApp Delivered)
+                            <svg className="w-4 h-3.5" viewBox="0 0 16 15" fill="none">
+                              <path d="M10.91 3.4L4.97 9.87L2.14 7.04" stroke="#8e8e93" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                              <path d="M14.5 3.4L8.56 9.87L7.5 8.8" stroke="#8e8e93" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
                           )}
 
                           <button
@@ -831,6 +891,10 @@ export default function Chat() {
                           >
                             <Trash2 size={11} />
                           </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 mt-0.5 ml-1 text-[11px] text-[#8e8e93] font-normal select-none">
+                          <span>{formatTimestamp(msg.createdAt || msg.timestamp)}</span>
                         </div>
                       )}
                     </div>

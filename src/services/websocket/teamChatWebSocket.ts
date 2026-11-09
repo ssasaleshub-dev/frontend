@@ -1,12 +1,14 @@
 /**
- * Team Chat WebSocket Client (SSA Microservices)
+ * Team Chat Real-Time Client (Spring WebFlux WebSocket + SSE Stream)
  *
- * Dedicated WebSocket client communicating directly with the `team-chat-service`
- * microservice (port 8085). Handles real-time message streaming, typing status,
- * delivery ACKs, and auto-reconnect.
+ * Provides real-time bi-directional messaging, typing telemetry, and instant message delivery
+ * like WhatsApp. Connects to Spring WebFlux WebSocket (/api/ws/chat) with automatic fallback
+ * to Server-Sent Events (SSE) stream (/api/messages/stream) and auto-reconnect.
  */
 
-import { ChatMessage } from '../../types';
+import { Capacitor } from '@capacitor/core';
+import { API_BASE_URL } from '../../config/constants';
+import type { ChatMessage } from '../../types';
 
 export interface ChatWsMessagePayload {
   content: string;
@@ -27,13 +29,16 @@ type StatusCallback = (isConnected: boolean) => void;
 
 class TeamChatWebSocket {
   private ws: WebSocket | null = null;
-  private url: string;
+  private eventSource: EventSource | null = null;
+  private wsUrl: string = '';
+  private sseUrl: string = '';
   private isConnected: boolean = false;
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 10;
   private reconnectTimer: any = null;
   private pendingQueue: any[] = [];
   private currentUser: any = null;
+  private seenMessageIds: Set<string | number> = new Set();
 
   private messageListeners: Set<MessageCallback> = new Set();
   private typingListeners: Set<TypingCallback> = new Set();
@@ -41,48 +46,87 @@ class TeamChatWebSocket {
   private statusListeners: Set<StatusCallback> = new Set();
 
   constructor() {
-    // Read from env or default to dedicated microservice
-    const envUrl = (import.meta as any).env?.VITE_CHAT_WS_URL;
-    if (envUrl) {
-      this.url = envUrl;
-    } else if (typeof window !== 'undefined') {
+    this.computeEndpoints();
+  }
+
+  /**
+   * Resolves the WebSocket and SSE stream endpoints dynamically based on environment
+   */
+  private computeEndpoints(): void {
+    const envWsUrl = (import.meta as any).env?.VITE_CHAT_WS_URL;
+    const baseApi = API_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+
+    // 1. Resolve SSE Stream Endpoint (HTTPS/HTTP)
+    if (baseApi && baseApi.startsWith('http')) {
+      this.sseUrl = `${baseApi.replace(/\/$/, '')}/api/messages/stream`;
+    } else {
+      this.sseUrl = '/api/messages/stream';
+    }
+
+    // 2. Resolve WebSocket Endpoint (WSS/WS)
+    if (envWsUrl) {
+      this.wsUrl = envWsUrl;
+      return;
+    }
+
+    if (Capacitor.isNativePlatform()) {
+      // Mobile app running on Android / iOS
+      const host = baseApi ? baseApi.replace(/^https?:\/\//, '').replace(/\/$/, '') : 'ssasaleshub.cloud';
+      const isHttps = !baseApi.startsWith('http://');
+      this.wsUrl = `${isHttps ? 'wss:' : 'ws:'}//${host}/api/ws/chat`;
+      return;
+    }
+
+    if (typeof window !== 'undefined') {
       const isHttps = window.location.protocol === 'https:';
       const wsProtocol = isHttps ? 'wss:' : 'ws:';
       const host = window.location.host;
       const hostname = window.location.hostname;
       const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
-      this.url = isLocalhost
-        ? `ws://localhost:8085`
-        : `${wsProtocol}//${host}/ws/chat`;
+
+      if (isLocalhost) {
+        // Local dev: connect to Spring backend on 8080
+        this.wsUrl = 'ws://localhost:8080/api/ws/chat';
+      } else {
+        // Production web browser: route through Cloudflare /api/ws/chat
+        this.wsUrl = `${wsProtocol}//${host}/api/ws/chat`;
+      }
     } else {
-      this.url = 'ws://localhost:8085';
+      this.wsUrl = 'wss://ssasaleshub.cloud/api/ws/chat';
     }
   }
 
   /**
-   * Initializes the WebSocket connection with the Team Chat microservice
+   * Initializes real-time connectivity via WebSocket + SSE fallback
    */
   public connect(user?: any): void {
     if (user) this.currentUser = user;
+
+    // Connect WebSocket
+    this.connectWs();
+
+    // Connect SSE stream in parallel for guaranteed real-time delivery
+    this.connectSSE();
+  }
+
+  private connectWs(): void {
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
       return;
     }
 
     try {
-      this.ws = new WebSocket(this.url);
+      this.ws = new WebSocket(this.wsUrl);
 
       this.ws.onopen = () => {
         this.isConnected = true;
         this.reconnectAttempts = 0;
-        console.log(`[TeamChatWebSocket] 🟢 Pure WebSocket connected: ${this.url}`);
+        console.log(`[TeamChatWebSocket] 🟢 Live WebSocket connected: ${this.wsUrl}`);
         this.notifyStatus(true);
 
-        // Authenticate session
         if (this.currentUser) {
           this.authenticate(this.currentUser);
         }
 
-        // Flush offline queue
         while (this.pendingQueue.length > 0) {
           const item = this.pendingQueue.shift();
           this.sendRaw(item);
@@ -94,7 +138,7 @@ class TeamChatWebSocket {
           const frame = JSON.parse(event.data);
           this.handleFrame(frame);
         } catch (err) {
-          console.error('[TeamChatWebSocket] Error parsing frame:', err);
+          console.debug('[TeamChatWebSocket] Ignored unparsed frame');
         }
       };
 
@@ -105,11 +149,42 @@ class TeamChatWebSocket {
       };
 
       this.ws.onerror = (err) => {
-        console.warn('[TeamChatWebSocket] WebSocket warning/error:', err);
+        console.debug('[TeamChatWebSocket] Connection notice:', err);
+        this.isConnected = false;
       };
     } catch (err) {
-      console.warn('[TeamChatWebSocket] Connection error:', err);
+      console.debug('[TeamChatWebSocket] WS Init Exception:', err);
       this.scheduleReconnect();
+    }
+  }
+
+  /**
+   * Connects to Server-Sent Events (SSE) stream for reliable real-time push over HTTPS
+   */
+  private connectSSE(): void {
+    if (typeof window === 'undefined' || !window.EventSource) return;
+    if (this.eventSource && this.eventSource.readyState !== EventSource.CLOSED) return;
+
+    try {
+      this.eventSource = new EventSource(this.sseUrl);
+
+      this.eventSource.addEventListener('message', (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data && (data.id || data.content)) {
+            this.dispatchIncomingMessage(data);
+          }
+        } catch {
+          // ignore keepalive/ping frame
+        }
+      });
+
+      this.eventSource.onerror = () => {
+        // EventSource will automatically retry in the background
+        console.debug('[TeamChatSSE] SSE reconnecting in background...');
+      };
+    } catch (err) {
+      console.debug('[TeamChatSSE] SSE Init Notice:', err);
     }
   }
 
@@ -119,21 +194,27 @@ class TeamChatWebSocket {
     switch (event) {
       case 'NEW_MESSAGE':
         if (message) {
-          for (const listener of this.messageListeners) {
-            listener(message);
-          }
+          this.dispatchIncomingMessage(message);
         }
         break;
 
       case 'MESSAGE_ACK':
         for (const listener of this.ackListeners) {
-          listener({ messageId, status, message });
+          try {
+            listener({ messageId, status, message });
+          } catch (e) {
+            console.error(e);
+          }
         }
         break;
 
       case 'USER_TYPING':
         for (const listener of this.typingListeners) {
-          listener(rest as any);
+          try {
+            listener(rest as any);
+          } catch (e) {
+            console.error(e);
+          }
         }
         break;
 
@@ -144,6 +225,33 @@ class TeamChatWebSocket {
 
       default:
         break;
+    }
+  }
+
+  /**
+   * Deduplicates and delivers incoming messages to registered listeners
+   */
+  private dispatchIncomingMessage(msg: ChatMessage): void {
+    if (!msg) return;
+
+    if (msg.id != null) {
+      const key = `${msg.id}`;
+      if (this.seenMessageIds.has(key)) return;
+      this.seenMessageIds.add(key);
+
+      // Keep cache size bounded
+      if (this.seenMessageIds.size > 1000) {
+        const first = this.seenMessageIds.values().next().value;
+        if (first !== undefined) this.seenMessageIds.delete(first);
+      }
+    }
+
+    for (const listener of this.messageListeners) {
+      try {
+        listener(msg);
+      } catch (err) {
+        console.error('[TeamChatWebSocket] Error in message listener:', err);
+      }
     }
   }
 
@@ -212,7 +320,6 @@ class TeamChatWebSocket {
   private scheduleReconnect(): void {
     if (this.reconnectTimer) return;
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.warn('[TeamChatWebSocket] Max reconnect attempts reached.');
       return;
     }
 
@@ -220,13 +327,17 @@ class TeamChatWebSocket {
     this.reconnectAttempts++;
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
-      this.connect();
+      this.connectWs();
     }, delay);
   }
 
   private notifyStatus(connected: boolean): void {
     for (const listener of this.statusListeners) {
-      listener(connected);
+      try {
+        listener(connected);
+      } catch (e) {
+        console.error(e);
+      }
     }
   }
 
@@ -239,10 +350,13 @@ class TeamChatWebSocket {
       this.ws.close();
       this.ws = null;
     }
+    if (this.eventSource) {
+      this.eventSource.close();
+      this.eventSource = null;
+    }
     this.isConnected = false;
   }
 }
 
 export const teamChatWebSocket = new TeamChatWebSocket();
 export default teamChatWebSocket;
-
