@@ -24,6 +24,8 @@ import NotificationBell from './NotificationBell';
 import AppleNotificationBanner from './AppleNotificationBanner';
 import notificationWebSocket from '../services/websocket/notificationWebSocket';
 import teamChatWebSocket from '../services/websocket/teamChatWebSocket';
+import notificationBannerService from '../services/banner/notificationBannerService';
+import playIPhoneNotificationSound from '../utils/appleSound';
 import { useAuth } from '../context/AuthContext';
 import { isAdmin as checkIsAdmin, getRoleBadgeInfo, getDisplayName } from '../utils/rbac';
 import fileService from '../services/api/fileService';
@@ -68,6 +70,72 @@ export default function Layout() {
       teamChatWebSocket.connect(user);
     }
   }, [user]);
+
+  // Global Real-Time Chat message listener for cross-page alerts & desktop notifications
+  useEffect(() => {
+    if (!user) return;
+
+    const unsubscribe = teamChatWebSocket.onMessage((incomingMsg) => {
+      // Don't notify the user about their own messages!
+      const currentId = user.id ? Number(user.id) : undefined;
+      const currentLogin = user.login ? user.login.toLowerCase() : '';
+      const msgUserId = incomingMsg.userId ? Number(incomingMsg.userId) : undefined;
+      const msgUserLogin = incomingMsg.userLogin ? incomingMsg.userLogin.toLowerCase() : '';
+
+      if (
+        (currentId && msgUserId && currentId === msgUserId) ||
+        (currentLogin && msgUserLogin && currentLogin === msgUserLogin)
+      ) {
+        return;
+      }
+
+      // Check if user is currently on the chat page and if tab is visible
+      const isOnChatPage = location.pathname.startsWith('/chat');
+      const isDocumentHidden = typeof document !== 'undefined' && document.hidden;
+
+      const senderName = incomingMsg.userName || incomingMsg.userLogin || 'Colleague';
+      const messagePreview = incomingMsg.content || (incomingMsg.mediaUrl ? '📎 Sent an attachment' : 'Sent a message');
+
+      // 1. Play Apple notification tone if tab is in background or not on chat page
+      if (!isOnChatPage || isDocumentHidden) {
+        playIPhoneNotificationSound();
+      }
+
+      // 2. If not on chat page, show the in-app Apple Notification Banner
+      if (!isOnChatPage) {
+        notificationBannerService.show({
+          title: `New Message from ${senderName}`,
+          description: messagePreview,
+          type: 'CHAT',
+          timestamp: 'now',
+          url: '/chat',
+        });
+      }
+
+      // 3. Show native Chrome / Windows desktop notification if permission is granted
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        if (!isOnChatPage || isDocumentHidden) {
+          try {
+            const notif = new Notification(senderName, {
+              body: messagePreview,
+              icon: '/favicon.png',
+              badge: '/favicon.png',
+              tag: `chat-${incomingMsg.id || Date.now()}`,
+            });
+            notif.onclick = () => {
+              window.focus();
+              notif.close();
+              navigate('/chat');
+            };
+          } catch (e) {
+            console.warn('[Layout] Browser Notification error:', e);
+          }
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [user, location.pathname, navigate]);
 
   const handleAvatarSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

@@ -13,6 +13,7 @@ import {
   Loader2,
   ExternalLink,
   ChevronLeft,
+  Bell,
 } from 'lucide-react';
 import chatService from '../services/api/chatService';
 import fileService from '../services/api/fileService';
@@ -22,6 +23,8 @@ import { useAuth } from '../context/AuthContext';
 import { formatIndianTime, formatIndianDate } from '../utils/dateTimeUtils';
 import teamChatWebSocket from '../services/websocket/teamChatWebSocket';
 import notificationBannerService from '../services/banner/notificationBannerService';
+import playIPhoneNotificationSound from '../utils/appleSound';
+import pushNotificationService from '../services/pushNotificationService';
 import type { ChatMessage, User } from '../types';
 
 export default function Chat() {
@@ -45,6 +48,36 @@ export default function Chat() {
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
   const [uploadingFile, setUploadingFile] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Web Push notification permission state for Chrome / PC
+  const [showNotifPrompt, setShowNotifPrompt] = useState<boolean>(false);
+  const [permissionBlocked, setPermissionBlocked] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        setShowNotifPrompt(true);
+      }
+    }
+  }, []);
+
+  const handleEnableWebPush = async () => {
+    const granted = await pushNotificationService.requestWebPushPermission();
+    if (granted || (typeof Notification !== 'undefined' && Notification.permission === 'granted')) {
+      setShowNotifPrompt(false);
+      setPermissionBlocked(false);
+      playIPhoneNotificationSound();
+      try {
+        new Notification('SSA Sales Hub', {
+          body: '🔔 Chat desktop notifications are now active on your PC!',
+          icon: '/favicon.png',
+        });
+      } catch {}
+    } else if (typeof Notification !== 'undefined' && Notification.permission === 'denied') {
+      setShowNotifPrompt(false);
+      setPermissionBlocked(true);
+    }
+  };
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -189,6 +222,10 @@ export default function Chat() {
         ((Number(incomingMsg.userId) === Number(selectedUser.id) && Number(incomingMsg.recipientId) === Number(currentUserId)) ||
           (Number(incomingMsg.userId) === Number(currentUserId) && Number(incomingMsg.recipientId) === Number(selectedUser.id)));
 
+      const isOwnMessage =
+        (user?.id && incomingMsg.userId && Number(user.id) === Number(incomingMsg.userId)) ||
+        (user?.login && incomingMsg.userLogin && user.login.toLowerCase() === incomingMsg.userLogin.toLowerCase());
+
       if (isGroup || isP2p) {
         setMessages((prev) => {
           if (prev.some((m) => m.id === incomingMsg.id)) return prev;
@@ -211,15 +248,54 @@ export default function Chat() {
           return [...prev, incomingMsg];
         });
         setTimeout(() => scrollToBottom(true), 60);
+
+        // If tab is in background and not our own message, chime and show desktop notification
+        if (!isOwnMessage && typeof document !== 'undefined' && document.hidden) {
+          playIPhoneNotificationSound();
+          if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+            try {
+              const sender = incomingMsg.userName || incomingMsg.userLogin || 'Colleague';
+              const notif = new Notification(sender, {
+                body: incomingMsg.content || 'Sent an attachment',
+                icon: '/favicon.png',
+                badge: '/favicon.png',
+                tag: `chat-${incomingMsg.id || Date.now()}`,
+              });
+              notif.onclick = () => {
+                window.focus();
+                notif.close();
+              };
+            } catch {}
+          }
+        }
       } else {
-        // Message is from another contact/room: display banner popup
-        notificationBannerService.show({
-          title: `New Message from ${incomingMsg.userName || 'Staff'}`,
-          description: incomingMsg.content || 'Sent an attachment in Team Chat',
-          type: 'CHAT',
-          timestamp: 'now',
-          url: '/chat',
-        });
+        // Message is from another contact/room: display banner popup + chime
+        if (!isOwnMessage) {
+          playIPhoneNotificationSound();
+          notificationBannerService.show({
+            title: `New Message from ${incomingMsg.userName || 'Staff'}`,
+            description: incomingMsg.content || 'Sent an attachment in Team Chat',
+            type: 'CHAT',
+            timestamp: 'now',
+            url: '/chat',
+          });
+
+          if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+            try {
+              const sender = incomingMsg.userName || incomingMsg.userLogin || 'Staff';
+              const notif = new Notification(sender, {
+                body: incomingMsg.content || 'Sent a message in another chat',
+                icon: '/favicon.png',
+                badge: '/favicon.png',
+                tag: `chat-${incomingMsg.id || Date.now()}`,
+              });
+              notif.onclick = () => {
+                window.focus();
+                notif.close();
+              };
+            } catch {}
+          }
+        }
       }
     });
 
@@ -674,8 +750,57 @@ export default function Chat() {
               </p>
             </div>
 
-            <div className="w-8 shrink-0" />
+            <div className="w-8 shrink-0 flex items-center justify-end">
+              {typeof window !== 'undefined' && 'Notification' in window && Notification.permission !== 'granted' && (
+                <button
+                  type="button"
+                  onClick={handleEnableWebPush}
+                  title="Click to enable desktop notifications in Chrome"
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-amber-500 hover:bg-amber-50 active:scale-95 transition cursor-pointer"
+                >
+                  <Bell size={16} />
+                </button>
+              )}
+            </div>
           </div>
+
+          {showNotifPrompt && (
+            <div className="bg-sky-50 border-b border-sky-200/80 px-4 py-2 flex items-center justify-between text-xs text-sky-950 animate-in fade-in">
+              <div className="flex items-center gap-2">
+                <Bell size={15} className="text-[#007aff] shrink-0" />
+                <span>Enable desktop notifications to get instant alerts on your PC when new messages arrive.</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleEnableWebPush}
+                  className="px-3 py-1 bg-[#007aff] hover:bg-[#0071e3] text-white rounded-md font-medium text-[11px] shadow-sm transition active:scale-95 cursor-pointer"
+                >
+                  Enable
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowNotifPrompt(false)}
+                  className="p-1 text-slate-400 hover:text-slate-600 rounded cursor-pointer"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {permissionBlocked && (
+            <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-between text-xs text-amber-950 animate-in fade-in">
+              <span>⚠️ Notifications blocked in Chrome. Click the 🔒 lock icon in Chrome's URL bar and set Notifications to "Allow".</span>
+              <button
+                type="button"
+                onClick={() => setPermissionBlocked(false)}
+                className="p-1 text-amber-600 hover:text-amber-800 cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
 
           {/* Messages Feed */}
           <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2 bg-[#ffffff] select-text">

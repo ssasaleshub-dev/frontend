@@ -12,23 +12,28 @@ const firebaseConfig = {
   appId: "1:701029569745:android:a6cc3a97fbe3cd8c46a1f0"
 };
 
-firebase.initializeApp(firebaseConfig);
+try {
+  firebase.initializeApp(firebaseConfig);
+  const messaging = firebase.messaging();
 
-const messaging = firebase.messaging();
+  messaging.onBackgroundMessage((payload) => {
+    console.log('[firebase-messaging-sw.js] Received background message: ', payload);
 
-messaging.onBackgroundMessage((payload) => {
-  console.log('[firebase-messaging-sw.js] Received background message: ', payload);
+    const notificationTitle = payload.notification?.title || payload.data?.title || 'SSA Sales Hub';
+    const notificationOptions = {
+      body: payload.notification?.body || payload.data?.body || '',
+      icon: '/favicon.png',
+      badge: '/favicon.png',
+      data: payload.data || {},
+      tag: payload.data?.type === 'CHAT' ? 'chat-message' : 'crm-notification',
+      renotify: true,
+    };
 
-  const notificationTitle = payload.notification?.title || payload.data?.title || 'SSA Sales Hub';
-  const notificationOptions = {
-    body: payload.notification?.body || payload.data?.body || '',
-    icon: '/favicon.png',
-    badge: '/favicon.png',
-    data: payload.data || {},
-  };
-
-  self.registration.showNotification(notificationTitle, notificationOptions);
-});
+    self.registration.showNotification(notificationTitle, notificationOptions);
+  });
+} catch (e) {
+  console.warn('[firebase-messaging-sw.js] Firebase init error:', e);
+}
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
