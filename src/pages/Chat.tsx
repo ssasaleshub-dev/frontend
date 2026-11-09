@@ -28,6 +28,7 @@ import teamChatWebSocket from '../services/websocket/teamChatWebSocket';
 import notificationBannerService from '../services/banner/notificationBannerService';
 import playIPhoneNotificationSound from '../utils/appleSound';
 import pushNotificationService from '../services/pushNotificationService';
+import { Capacitor } from '@capacitor/core';
 import type { ChatMessage, User } from '../types';
 
 export default function Chat() {
@@ -337,16 +338,18 @@ export default function Chat() {
           }
         }
       } else {
-        // Message is from another contact/room: display banner popup + chime
+        // Message is from another contact/room: on Web show banner, on Android never show in-app banner
         if (!isOwnMessage) {
           playIPhoneNotificationSound();
-          notificationBannerService.show({
-            title: `New Message from ${incomingMsg.userName || 'Staff'}`,
-            description: incomingMsg.content || 'Sent an attachment in Team Chat',
-            type: 'CHAT',
-            timestamp: 'now',
-            url: '/chat',
-          });
+          if (!Capacitor.isNativePlatform()) {
+            notificationBannerService.show({
+              title: `New Message from ${incomingMsg.userName || 'Staff'}`,
+              description: incomingMsg.content || 'Sent an attachment in Team Chat',
+              type: 'CHAT',
+              timestamp: 'now',
+              url: '/chat',
+            });
+          }
 
           if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
             try {

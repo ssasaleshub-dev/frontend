@@ -31,6 +31,7 @@ import { isAdmin as checkIsAdmin, getRoleBadgeInfo, getDisplayName } from '../ut
 import fileService from '../services/api/fileService';
 import attendanceService, { StaffAttendanceRecord } from '../services/api/attendanceService';
 import { formatIndianTime } from '../utils/dateTimeUtils';
+import { Capacitor } from '@capacitor/core';
 import brandLogo from '../assets/brand-logo.jpg';
 
 export default function Layout() {
@@ -99,8 +100,8 @@ export default function Layout() {
       // 1. Play Apple notification tone whenever another person sends a message
       playIPhoneNotificationSound();
 
-      // 2. If not on chat page, show the in-app Apple Notification Banner
-      if (!isOnChatPage) {
+      // 2. Show in-app Apple Notification Banner ONLY on Desktop Web, NEVER on Android app!
+      if (!isOnChatPage && !Capacitor.isNativePlatform()) {
         notificationBannerService.show({
           title: `New Message from ${senderName}`,
           description: messagePreview,

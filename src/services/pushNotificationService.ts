@@ -67,16 +67,21 @@ class PushNotificationService {
         (notification: PushNotificationSchema) => {
           console.info('[PushNotifications] Push received in foreground:', notification);
 
-          // Add to internal notifications inbox & cache (lazy loaded to prevent circular dependency)
-          if (notification.data?.type === 'CHAT' || notification.data?.route === '/chat') {
-            import('./banner/notificationBannerService').then((m) => {
-              m.default.show({
-                title: notification.title || 'New Chat Message',
-                description: notification.body || 'You received a new message in Team Chat',
-                type: 'CHAT',
-                timestamp: 'now',
-                url: '/chat',
-              });
+          // On Android native: display native Android system notification (never show in-app banner)
+          if (Capacitor.isNativePlatform()) {
+            import('@capacitor/local-notifications').then(({ LocalNotifications }) => {
+              LocalNotifications.schedule({
+                notifications: [
+                  {
+                    id: Math.floor(Math.random() * 2147483647),
+                    title: notification.title || 'SSA Sales Hub',
+                    body: notification.body || '',
+                    channelId: 'fcm_default_channel',
+                    smallIcon: 'ic_notification',
+                    extra: notification.data || {},
+                  },
+                ],
+              }).catch(() => {});
             }).catch(() => {});
           }
 
@@ -130,6 +135,28 @@ class PushNotificationService {
           }
         }
       );
+
+      // Handle click on native Android local push notifications
+      if (Capacitor.isNativePlatform()) {
+        import('@capacitor/local-notifications').then(({ LocalNotifications }) => {
+          LocalNotifications.addListener('localNotificationActionPerformed', (action: any) => {
+            const data = action.notification?.extra || {};
+            if (data.type === 'CHAT' || data.route === '/chat') {
+              window.dispatchEvent(
+                new CustomEvent('ssa_navigate_to', { detail: { path: '/chat' } })
+              );
+            } else if (data.leadId) {
+              window.dispatchEvent(
+                new CustomEvent('ssa_navigate_to', { detail: { path: `/leads/${encryptLeadId(data.leadId)}` } })
+              );
+            } else if (data.route) {
+              window.dispatchEvent(
+                new CustomEvent('ssa_navigate_to', { detail: { path: data.route } })
+              );
+            }
+          });
+        }).catch(() => {});
+      }
 
       // 3. Check existing permission status
       const permStatus = await PushNotifications.checkPermissions().catch(() => null);
