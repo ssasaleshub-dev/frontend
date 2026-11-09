@@ -281,63 +281,37 @@ export default function Customers() {
 
       {/* Authentic iOS Search Bar */}
       <div className="ios-card p-2.5 sm:p-3">
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1 flex items-center">
-            {/* iOS Magnifying Glass Icon */}
-            <div className="absolute left-3 flex items-center pointer-events-none text-[#8e8e93]">
-              <Search size={16} strokeWidth={2.2} />
-            </div>
-
-            {/* iOS Search Input */}
-            <input
-              type="text"
-              placeholder="Search contacts"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="ios-search-field"
-            />
-
-            {/* iOS Clear Button (xmark.circle.fill) */}
-            {searchTerm && (
-              <button
-                type="button"
-                onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 w-4.5 h-4.5 rounded-full bg-[#8e8e93] hover:bg-[#636366] active:scale-90 text-white flex items-center justify-center transition-all cursor-pointer"
-                title="Clear Search"
-                aria-label="Clear Search"
-              >
-                <X size={10} strokeWidth={3} />
-              </button>
-            )}
+        <div className="relative flex items-center w-full">
+          {/* iOS Magnifying Glass Icon */}
+          <div className="absolute left-3 flex items-center pointer-events-none text-[#8e8e93]">
+            <Search size={16} strokeWidth={2.2} />
           </div>
 
-          {/* Directory Count / Quick Refresh */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            {totalElements > 0 && (
-              <span className="text-[11px] text-[#8e8e93] font-medium hidden sm:inline px-1">
-                {searchTerm
-                  ? `${filteredCustomers.length} of ${totalElements}`
-                  : `${totalElements} contacts`}
-              </span>
-            )}
+          {/* iOS Search Input */}
+          <input
+            type="text"
+            placeholder="Search contacts"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="ios-search-field"
+          />
 
+          {/* iOS Clear Button (xmark.circle.fill) */}
+          {searchTerm && (
             <button
               type="button"
-              onClick={() => {
-                try { sessionStorage.removeItem(CACHE_KEY); } catch {}
-                fetchInitialCustomers(false);
-              }}
-              disabled={loading || refreshing}
-              title="Refresh directory"
-              className="w-9 h-9 rounded-[10px] bg-[#767680]/[0.12] hover:bg-[#767680]/[0.18] active:scale-95 text-[#8e8e93] hover:text-[#007aff] flex items-center justify-center transition-all cursor-pointer shrink-0"
+              onClick={() => setSearchTerm('')}
+              className="absolute right-2.5 w-4.5 h-4.5 rounded-full bg-[#8e8e93] hover:bg-[#636366] active:scale-90 text-white flex items-center justify-center transition-all cursor-pointer"
+              title="Clear Search"
+              aria-label="Clear Search"
             >
-              <RefreshCw size={14} className={loading || refreshing ? 'animate-spin text-[#007aff]' : ''} />
+              <X size={10} strokeWidth={3} />
             </button>
-          </div>
+          )}
         </div>
 
         {searchTerm && (
-          <div className="text-[11px] text-[#8e8e93] font-medium mt-2 px-1 sm:hidden">
+          <div className="text-[11px] text-[#8e8e93] font-medium mt-2 px-1">
             Found <strong className="text-[#1c1c1e]">{filteredCustomers.length}</strong> matching contact{filteredCustomers.length === 1 ? '' : 's'}
           </div>
         )}
