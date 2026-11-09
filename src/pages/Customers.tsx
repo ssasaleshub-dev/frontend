@@ -279,33 +279,42 @@ export default function Customers() {
         </div>
       )}
 
-      {/* Search Bar + Quick Actions */}
-      <div className="ios-card p-3 sm:p-4">
-        <div className="flex items-center justify-between gap-2.5">
-          <div className="relative flex-1">
-            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#8e8e93]">
-              <Search size={15} />
+      {/* Authentic iOS Search Bar */}
+      <div className="ios-card p-2.5 sm:p-3">
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 flex items-center">
+            {/* iOS Magnifying Glass Icon */}
+            <div className="absolute left-3 flex items-center pointer-events-none text-[#8e8e93]">
+              <Search size={16} strokeWidth={2.2} />
             </div>
+
+            {/* iOS Search Input */}
             <input
               type="text"
-              placeholder="Search contacts by name, phone, or location..."
+              placeholder="Search contacts"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="ios-input w-full pl-9 pr-8 py-2 text-xs"
+              className="ios-search-field"
             />
+
+            {/* iOS Clear Button (xmark.circle.fill) */}
             {searchTerm && (
               <button
+                type="button"
                 onClick={() => setSearchTerm('')}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#8e8e93] hover:text-[#1c1c1e]"
+                className="absolute right-2.5 w-4.5 h-4.5 rounded-full bg-[#8e8e93] hover:bg-[#636366] active:scale-90 text-white flex items-center justify-center transition-all cursor-pointer"
+                title="Clear Search"
+                aria-label="Clear Search"
               >
-                <X size={14} />
+                <X size={10} strokeWidth={3} />
               </button>
             )}
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          {/* Directory Count / Quick Refresh */}
+          <div className="flex items-center gap-1.5 shrink-0">
             {totalElements > 0 && (
-              <span className="text-[11px] text-[#8e8e93] font-medium hidden sm:inline px-2">
+              <span className="text-[11px] text-[#8e8e93] font-medium hidden sm:inline px-1">
                 {searchTerm
                   ? `${filteredCustomers.length} of ${totalElements}`
                   : `${totalElements} contacts`}
@@ -313,13 +322,14 @@ export default function Customers() {
             )}
 
             <button
+              type="button"
               onClick={() => {
                 try { sessionStorage.removeItem(CACHE_KEY); } catch {}
                 fetchInitialCustomers(false);
               }}
               disabled={loading || refreshing}
-              title="Refresh contacts"
-              className="p-2 rounded-xl bg-black/[0.04] hover:bg-black/[0.08] active:scale-95 text-[#8e8e93] hover:text-[#007aff] transition-all"
+              title="Refresh directory"
+              className="w-9 h-9 rounded-[10px] bg-[#767680]/[0.12] hover:bg-[#767680]/[0.18] active:scale-95 text-[#8e8e93] hover:text-[#007aff] flex items-center justify-center transition-all cursor-pointer shrink-0"
             >
               <RefreshCw size={14} className={loading || refreshing ? 'animate-spin text-[#007aff]' : ''} />
             </button>
@@ -327,7 +337,7 @@ export default function Customers() {
         </div>
 
         {searchTerm && (
-          <div className="text-[11px] text-[#8e8e93] font-medium mt-2 sm:hidden">
+          <div className="text-[11px] text-[#8e8e93] font-medium mt-2 px-1 sm:hidden">
             Found <strong className="text-[#1c1c1e]">{filteredCustomers.length}</strong> matching contact{filteredCustomers.length === 1 ? '' : 's'}
           </div>
         )}
