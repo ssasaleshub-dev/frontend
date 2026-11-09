@@ -34,24 +34,7 @@ class PushNotificationService {
       // 1. Create notification channel on Android 8.0+ first
       await this.createDefaultNotificationChannel();
 
-      // 2. Request user permissions for Push Notifications
-      try {
-        let permStatus = await PushNotifications.checkPermissions();
-        if (permStatus.receive !== 'granted') {
-          permStatus = await PushNotifications.requestPermissions();
-        }
-      } catch (permErr) {
-        console.warn('[PushNotifications] Permission check warning:', permErr);
-      }
-
-      // 3. Always register with Google FCM / Apple APNS to obtain device token
-      try {
-        await PushNotifications.register();
-      } catch (regErr) {
-        console.error('[PushNotifications] Error calling PushNotifications.register():', regErr);
-      }
-
-      // 4. Listen for FCM registration token
+      // 2. Attach listeners FIRST so no events are missed
       await PushNotifications.addListener('registration', (token: Token) => {
         console.info('[PushNotifications] FCM Device Token received:', token.value);
         localStorage.setItem(FCM_TOKEN_STORAGE_KEY, token.value);
@@ -62,12 +45,10 @@ class PushNotificationService {
         );
       });
 
-      // 5. Handle registration errors
       await PushNotifications.addListener('registrationError', (error: any) => {
         console.error('[PushNotifications] Error on registration:', error);
       });
 
-      // 6. Handle foreground push notification received
       await PushNotifications.addListener(
         'pushNotificationReceived',
         (notification: PushNotificationSchema) => {
@@ -94,7 +75,6 @@ class PushNotificationService {
         }
       );
 
-      // 7. Handle notification click / tap action (Foreground or Background)
       await PushNotifications.addListener(
         'pushNotificationActionPerformed',
         (action: ActionPerformed) => {
@@ -121,6 +101,32 @@ class PushNotificationService {
           }
         }
       );
+
+      // 3. Check existing permission status
+      const permStatus = await PushNotifications.checkPermissions().catch(() => null);
+
+      if (permStatus?.receive === 'granted') {
+        // Permission is already granted: register with FCM immediately with zero dialogs
+        try {
+          await PushNotifications.register();
+        } catch (regErr) {
+          console.error('[PushNotifications] Register error:', regErr);
+        }
+      } else {
+        // Defer permission request dialog so the app finishes cold-start rendering smoothly.
+        // This prevents the Android 13+ "System UI isn't responding" ANR caused by immediate
+        // modal dialog injection during WebView initial layout.
+        setTimeout(async () => {
+          try {
+            const req = await PushNotifications.requestPermissions();
+            if (req.receive === 'granted') {
+              await PushNotifications.register();
+            }
+          } catch (permErr) {
+            console.warn('[PushNotifications] Deferred permission request warning:', permErr);
+          }
+        }, 1800);
+      }
     } catch (err) {
       console.error('[PushNotifications] Failed to initialize push notifications:', err);
     }
