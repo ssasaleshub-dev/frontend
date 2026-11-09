@@ -2,7 +2,7 @@
   "name": "ssa-frontend",
   "productName": "SSA Sales Hub CRM",
   "private": true,
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "SSA Sales Hub CRM Windows Desktop Application",
   "author": "SSA Sales Hub",
   "main": "electron/main.cjs",

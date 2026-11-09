@@ -18,22 +18,45 @@ import type { Customer } from '../types';
 export default function Customers() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [page, setPage] = useState<number>(0);
+  const [hasMore, setHasMore] = useState<boolean>(true);
+  const [totalElements, setTotalElements] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
+
   const hasLoadedRef = useRef<boolean>(false);
+  const pageRef = useRef<number>(0);
+  const hasMoreRef = useRef<boolean>(true);
+  const loadingMoreRef = useRef<boolean>(false);
+  const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
+
+  // Sync refs so callbacks/observers never suffer from stale closures
+  pageRef.current = page;
+  hasMoreRef.current = hasMore;
+  loadingMoreRef.current = loadingMore;
 
   // Stale-while-revalidate cache key
-  const CACHE_KEY = 'ssa_customers_cache_v1';
+  const CACHE_KEY = 'ssa_customers_cache_v2';
 
   const loadFromCache = () => {
     try {
       const raw = sessionStorage.getItem(CACHE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (parsed && Array.isArray(parsed.list) && parsed.list.length > 0) {
+          setCustomers(parsed.list);
+          if (typeof parsed.total === 'number') setTotalElements(parsed.total);
+          if (typeof parsed.hasMore === 'boolean') {
+            setHasMore(parsed.hasMore);
+            hasMoreRef.current = parsed.hasMore;
+          }
+          setLoading(false);
+          return true;
+        } else if (Array.isArray(parsed) && parsed.length > 0) {
           setCustomers(parsed);
-          setLoading(false); // show cached data instantly
+          setLoading(false);
           return true;
         }
       }
@@ -41,7 +64,7 @@ export default function Customers() {
     return false;
   };
 
-  const saveToCache = (data: Customer[]) => {
+  const saveToCache = (data: { list: Customer[]; total: number; hasMore: boolean }) => {
     try {
       sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
     } catch {}
@@ -61,15 +84,23 @@ export default function Customers() {
   });
   const [submitting, setSubmitting] = useState<boolean>(false);
 
-  const fetchCustomers = useCallback(async (isBackground = false) => {
+  const fetchInitialCustomers = useCallback(async (isBackground = false) => {
     if (!isBackground) setLoading(true);
     else setRefreshing(true);
     setError(null);
     try {
-      const res = await crmService.getCustomers(0, 100);
-      const list = Array.isArray(res) ? res : res?.content || [];
+      const res = await crmService.getCustomers(0, 25, true, 'id,desc');
+      const list: Customer[] = Array.isArray(res) ? res : res?.content || [];
+      const total = typeof res?.totalElements === 'number' ? res.totalElements : list.length;
+      const more = typeof res?.hasMore === 'boolean' ? res.hasMore : list.length === 25;
+
       setCustomers(list);
-      saveToCache(list);
+      setTotalElements(total);
+      setPage(0);
+      pageRef.current = 0;
+      setHasMore(more);
+      hasMoreRef.current = more;
+      saveToCache({ list, total, hasMore: more });
     } catch (err: any) {
       setError(err?.message || 'Failed to fetch customer directory');
       if (!isBackground) setCustomers([]);
@@ -79,13 +110,74 @@ export default function Customers() {
     }
   }, []);
 
+  const loadNextPage = useCallback(async () => {
+    if (loadingMoreRef.current || !hasMoreRef.current || loading) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+
+    const nextPage = pageRef.current + 1;
+    try {
+      const res = await crmService.getCustomers(nextPage, 25, true, 'id,desc');
+      const newItems: Customer[] = Array.isArray(res) ? res : res?.content || [];
+      const total = typeof res?.totalElements === 'number' ? res.totalElements : totalElements;
+      const more = typeof res?.hasMore === 'boolean' ? res.hasMore : newItems.length === 25;
+
+      setCustomers((prev) => {
+        const existingIds = new Set(prev.map((c) => c.id));
+        const unique = newItems.filter((c: Customer) => !existingIds.has(c.id));
+        const updated = [...prev, ...unique];
+        saveToCache({ list: updated, total, hasMore: more });
+        return updated;
+      });
+
+      setPage(nextPage);
+      pageRef.current = nextPage;
+      setHasMore(more);
+      hasMoreRef.current = more;
+      if (typeof res?.totalElements === 'number') {
+        setTotalElements(res.totalElements);
+      }
+    } catch (err: any) {
+      console.error('Failed to load next page of customers:', err);
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [loading, totalElements]);
+
   useEffect(() => {
     if (!hasLoadedRef.current) {
       hasLoadedRef.current = true;
-      const hasCached = loadFromCache(); // show instantly if cached
-      fetchCustomers(hasCached);         // then refresh in background if had cache, or full load if not
+      const hasCached = loadFromCache();
+      fetchInitialCustomers(hasCached);
     }
-  }, [fetchCustomers]);
+  }, [fetchInitialCustomers]);
+
+  // Infinite Scroll IntersectionObserver on bottom sentinel
+  useEffect(() => {
+    const sentinel = loadMoreTriggerRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting && hasMoreRef.current && !loadingMoreRef.current && !loading) {
+          loadNextPage();
+        }
+      },
+      {
+        root: null,
+        rootMargin: '250px',
+        threshold: 0.05,
+      }
+    );
+
+    observer.observe(sentinel);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [loadNextPage, loading, hasMore]);
 
   const filteredCustomers = useMemo(() => {
     if (!searchTerm.trim()) return customers;
@@ -106,7 +198,8 @@ export default function Customers() {
       await crmService.createCustomer(formData);
       setShowAddModal(false);
       setFormData({ fullName: '', phoneNumber: '', location: '' });
-      await fetchCustomers();
+      try { sessionStorage.removeItem(CACHE_KEY); } catch {}
+      await fetchInitialCustomers(false);
     } catch (err: any) {
       alert(`Failed to add customer: ${err?.message || 'Server error'}`);
     } finally {
@@ -119,7 +212,7 @@ export default function Customers() {
     if (!editingCustomer) return;
     setSubmitting(true);
     try {
-      await crmService.updateCustomer(editingCustomer.id, {
+      const updated = await crmService.updateCustomer(editingCustomer.id, {
         id: editingCustomer.id,
         fullName: formData.fullName,
         phoneNumber: formData.phoneNumber,
@@ -128,7 +221,10 @@ export default function Customers() {
       });
       setEditingCustomer(null);
       setFormData({ fullName: '', phoneNumber: '', location: '' });
-      await fetchCustomers();
+      // Update local state in place for immediate responsive feel
+      setCustomers((prev) =>
+        prev.map((c) => (c.id === editingCustomer.id ? { ...c, ...updated } : c))
+      );
     } catch (err: any) {
       alert(`Update failed: ${err?.message || 'Server error'}`);
     } finally {
@@ -140,7 +236,8 @@ export default function Customers() {
     if (!window.confirm(`Are you sure you want to delete customer "${name || id}"?`)) return;
     try {
       await crmService.deleteCustomer(id);
-      await fetchCustomers();
+      setCustomers((prev) => prev.filter((c) => c.id !== id));
+      setTotalElements((prev) => Math.max(0, prev - 1));
     } catch (err: any) {
       alert(`Delete failed: ${err?.message || 'Server error'}`);
     }
@@ -169,17 +266,22 @@ export default function Customers() {
             Contacts
           </h2>
           <p className="text-xs text-[#8e8e93] mt-0.5">
-            Managing <strong className="text-[#1c1c1e]">{customers.length}</strong> contact records
+            Managing <strong className="text-[#1c1c1e]">{totalElements > 0 ? totalElements : customers.length}</strong> contact records
+            {customers.length > 0 && totalElements > customers.length && (
+              <span className="text-[11px] text-[#007aff] font-medium ml-1.5">
+                (Loaded {customers.length} of {totalElements})
+              </span>
+            )}
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={() => {
-              try { sessionStorage.removeItem('ssa_customers_cache_v1'); } catch {}
-              fetchCustomers(false);
+              try { sessionStorage.removeItem(CACHE_KEY); } catch {}
+              fetchInitialCustomers(false);
             }}
-            disabled={loading}
+            disabled={loading || refreshing}
             className="ios-btn-gray text-xs"
           >
             <RefreshCw size={13} className={loading || refreshing ? 'animate-spin text-[#007aff]' : 'text-[#8e8e93]'} />
@@ -205,7 +307,7 @@ export default function Customers() {
             <AlertCircle size={16} />
             <span>{error}</span>
           </div>
-          <button onClick={fetchCustomers} className="underline font-semibold hover:opacity-80">
+          <button onClick={() => fetchInitialCustomers(false)} className="underline font-semibold hover:opacity-80">
             Retry
           </button>
         </div>
@@ -213,23 +315,31 @@ export default function Customers() {
 
       {/* Search Bar */}
       <div className="ios-card p-3 sm:p-4">
-        <div className="relative max-w-md">
-          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#8e8e93]">
-            <Search size={15} />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="relative flex-1 max-w-md">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#8e8e93]">
+              <Search size={15} />
+            </div>
+            <input
+              type="text"
+              placeholder="Search by name, phone, or location..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="ios-input w-full pl-9 pr-8 py-2 text-xs"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#8e8e93] hover:text-[#1c1c1e]"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="ios-input w-full pl-9 pr-8 py-2 text-xs"
-          />
           {searchTerm && (
-            <button
-              onClick={() => setSearchTerm('')}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#8e8e93] hover:text-[#1c1c1e]"
-            >
-              <X size={14} />
-            </button>
+            <div className="text-[11px] text-[#8e8e93] font-medium self-end sm:self-center">
+              Found <strong className="text-[#1c1c1e]">{filteredCustomers.length}</strong> matching contact{filteredCustomers.length === 1 ? '' : 's'}
+            </div>
           )}
         </div>
       </div>
@@ -470,6 +580,36 @@ export default function Customers() {
             </tbody>
           </table>
         </div>
+
+        {/* Sentinel for IntersectionObserver to trigger next page */}
+        <div ref={loadMoreTriggerRef} className="h-4 w-full pointer-events-none" />
+
+        {/* Lazy Loading Activity Indicator */}
+        {loadingMore && (
+          <div className="py-3.5 border-t border-black/[0.04] bg-slate-50/50 flex items-center justify-center gap-2 text-xs text-[#007aff] font-medium">
+            <RefreshCw size={14} className="animate-spin text-[#007aff]" />
+            <span>Loading more contacts...</span>
+          </div>
+        )}
+
+        {/* Manual Load More Button fallback if observer hasn't fired yet */}
+        {hasMore && !loadingMore && !loading && customers.length > 0 && (
+          <div className="py-2.5 border-t border-black/[0.04] text-center bg-slate-50/30">
+            <button
+              onClick={() => loadNextPage()}
+              className="text-xs text-[#007aff] font-semibold py-1.5 px-4 rounded-full bg-[#007aff]/10 hover:bg-[#007aff]/15 active:scale-95 transition-all"
+            >
+              Load More Contacts
+            </button>
+          </div>
+        )}
+
+        {/* End of list reached */}
+        {!hasMore && customers.length > 0 && (
+          <div className="py-3 border-t border-black/[0.04] text-center text-[11px] text-[#8e8e93] bg-slate-50/30">
+            All {totalElements || customers.length} contacts loaded
+          </div>
+        )}
       </div>
 
       {/* Add / Edit Customer Modal (Zoho CRM Modal & Field UI) */}

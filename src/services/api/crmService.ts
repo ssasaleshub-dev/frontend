@@ -47,8 +47,15 @@ export const crmService = {
     }),
   seedSampleLeads: (): Promise<any> => axiosClient.post(API_ENDPOINTS.LEADS_IMPORT_SAMPLE),
 
-  getCustomers: (page: number = 0, size: number = 50): Promise<any> =>
-    axiosClient.get(API_ENDPOINTS.CUSTOMERS, { params: { page, size } }),
+  getCustomers: (
+    page: number = 0,
+    size: number = 25,
+    paged: boolean = true,
+    sort: string = 'id,desc'
+  ): Promise<any> =>
+    axiosClient.get(API_ENDPOINTS.CUSTOMERS, {
+      params: { page, size, paged, sort },
+    }),
   getCustomerById: (id: string | number): Promise<Customer> =>
     axiosClient.get(`${API_ENDPOINTS.CUSTOMERS}/${id}`),
   createCustomer: (customerData: Partial<Customer>): Promise<Customer> =>
