@@ -55,6 +55,18 @@ class PushNotificationService {
           console.info('[PushNotifications] Push received in foreground:', notification);
 
           // Add to internal notifications inbox & cache (lazy loaded to prevent circular dependency)
+          if (notification.data?.type === 'CHAT' || notification.data?.route === '/chat') {
+            import('./banner/notificationBannerService').then((m) => {
+              m.default.show({
+                title: notification.title || 'New Chat Message',
+                description: notification.body || 'You received a new message in Team Chat',
+                type: 'CHAT',
+                timestamp: 'now',
+                url: '/chat',
+              });
+            }).catch(() => {});
+          }
+
           import('./reminderNotificationService')
             .then((m) => {
               m.default.addNotification({
@@ -82,7 +94,11 @@ class PushNotificationService {
           const data = action.notification.data || {};
 
           // Dispatch route navigation event for React Router
-          if (data.leadId) {
+          if (data.type === 'CHAT' || data.route === '/chat') {
+            window.dispatchEvent(
+              new CustomEvent('ssa_navigate_to', { detail: { path: '/chat' } })
+            );
+          } else if (data.leadId) {
             window.dispatchEvent(
               new CustomEvent('ssa_navigate_to', { detail: { path: `/leads/${encryptLeadId(data.leadId)}` } })
             );
@@ -189,10 +205,12 @@ class PushNotificationService {
     try {
       const storedUser = localStorage.getItem('ssa_user') || localStorage.getItem('user');
       let currentUserId = userId;
-      if (!currentUserId && storedUser) {
+      let numericId: any = undefined;
+      if (storedUser) {
         try {
           const parsed = JSON.parse(storedUser);
-          currentUserId = parsed.login || parsed.username;
+          if (!currentUserId) currentUserId = parsed.login || parsed.username;
+          numericId = parsed.id;
         } catch {}
       }
 
@@ -204,12 +222,15 @@ class PushNotificationService {
       if (currentUserId) {
         payload.userId = currentUserId;
       }
+      if (numericId) {
+        payload.numericId = String(numericId);
+      }
 
       // Try sending to standard backend FCM registration endpoint if available
       await axiosClient.post('/api/notifications/fcm-token', payload).catch(() => {
         return axiosClient.post('/api/account/fcm-token', payload);
       });
-      console.info('[PushNotifications] FCM token successfully synced to backend for user:', currentUserId);
+      console.info('[PushNotifications] FCM token successfully synced to backend for user:', currentUserId, 'numericId:', numericId);
     } catch {
       console.warn('[PushNotifications] Backend token sync deferred until API endpoint available.');
     }
