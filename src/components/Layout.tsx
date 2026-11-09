@@ -166,19 +166,20 @@ export default function Layout() {
     const currentUserId = user?.login || (user?.id ? String(user.id) : '');
     if (!currentUserId) return;
 
-    const fetchAttendance = async () => {
+    const fetchAttendance = async (force = false) => {
       try {
-        const res = await attendanceService.getTodayAttendance(currentUserId);
+        const res = await attendanceService.getTodayAttendance(currentUserId, force);
         setTodayAttendance(res);
       } catch {
         // fallback
       }
     };
 
-    fetchAttendance();
-    window.addEventListener('ssa_attendance_updated', fetchAttendance);
-    return () => window.removeEventListener('ssa_attendance_updated', fetchAttendance);
-  }, [user]);
+    fetchAttendance(false);
+    const handleUpdate = () => fetchAttendance(true);
+    window.addEventListener('ssa_attendance_updated', handleUpdate);
+    return () => window.removeEventListener('ssa_attendance_updated', handleUpdate);
+  }, [user?.login || user?.id]);
 
   const currentPath = location.pathname;
 

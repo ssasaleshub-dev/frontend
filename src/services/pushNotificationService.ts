@@ -238,10 +238,15 @@ class PushNotificationService {
     // No-op (no native alarm to cancel)
   }
 
+  private lastSyncedTokenKey: string | null = null;
+  private isSyncingToken = false;
+
   /**
-   * Synchronize the FCM token with the backend server
+   * Synchronize the FCM token with the backend server (deduplicated & cached)
    */
   public async syncTokenWithBackend(token: string, userId?: string): Promise<void> {
+    if (!token) return;
+
     try {
       const storedUser = localStorage.getItem('ssa_user') || localStorage.getItem('user');
       let currentUserId = userId;
@@ -253,6 +258,14 @@ class PushNotificationService {
           numericId = parsed.id;
         } catch {}
       }
+
+      const dedupKey = `${token}_${currentUserId || 'anon'}_${numericId || ''}`;
+      // Prevent duplicate concurrent or repeated sync calls for the exact same token and user
+      if (this.lastSyncedTokenKey === dedupKey || this.isSyncingToken) {
+        return;
+      }
+
+      this.isSyncingToken = true;
 
       const payload: any = {
         token,
@@ -266,13 +279,13 @@ class PushNotificationService {
         payload.numericId = String(numericId);
       }
 
-      // Try sending to standard backend FCM registration endpoint if available
-      await axiosClient.post('/api/notifications/fcm-token', payload).catch(() => {
-        return axiosClient.post('/api/account/fcm-token', payload);
-      });
-      console.info('[PushNotifications] FCM token successfully synced to backend for user:', currentUserId, 'numericId:', numericId);
+      await axiosClient.post('/api/notifications/fcm-token', payload);
+      this.lastSyncedTokenKey = dedupKey;
+      console.info('[PushNotifications] FCM token successfully synced to backend for user:', currentUserId);
     } catch {
       console.warn('[PushNotifications] Backend token sync deferred until API endpoint available.');
+    } finally {
+      this.isSyncingToken = false;
     }
   }
 

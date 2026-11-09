@@ -128,20 +128,37 @@ class ReminderNotificationService {
     }
   }
 
-  // --- CALENDAR EVENTS & REMINDERS (DYNAMIC API WITH FALLBACK) ---
+  // --- CALENDAR EVENTS & REMINDERS (DYNAMIC API WITH FALLBACK & DEDUPLICATION) ---
+  private inFlightFetchEvents: Promise<CalendarEventDTO[]> | null = null;
+  private lastFetchEventsTime = 0;
 
-  public async fetchEvents(params?: { month?: number; year?: number }): Promise<CalendarEventDTO[]> {
-    try {
-      const serverEvents = await notificationApiService.getEvents(params);
-      if (Array.isArray(serverEvents)) {
-        localStorage.setItem(EVENTS_CACHE_KEY, JSON.stringify(serverEvents));
-        window.dispatchEvent(new CustomEvent('ssa_events_updated'));
-        return serverEvents;
-      }
-    } catch {
-      // Backend not yet deployed or offline: fallback to resilient local cache
+  public async fetchEvents(params?: { month?: number; year?: number }, force = false): Promise<CalendarEventDTO[]> {
+    if (!force && !params && Date.now() - this.lastFetchEventsTime < 20000) {
+      return this.getCachedEvents();
     }
-    return this.getCachedEvents();
+    if (!force && !params && this.inFlightFetchEvents) {
+      return this.inFlightFetchEvents;
+    }
+
+    const fetchPromise = (async () => {
+      try {
+        const serverEvents = await notificationApiService.getEvents(params);
+        if (Array.isArray(serverEvents)) {
+          this.lastFetchEventsTime = Date.now();
+          localStorage.setItem(EVENTS_CACHE_KEY, JSON.stringify(serverEvents));
+          window.dispatchEvent(new CustomEvent('ssa_events_updated'));
+          return serverEvents;
+        }
+      } catch {
+        // Backend not yet deployed or offline: fallback to resilient local cache
+      } finally {
+        if (!params) this.inFlightFetchEvents = null;
+      }
+      return this.getCachedEvents();
+    })();
+
+    if (!params) this.inFlightFetchEvents = fetchPromise;
+    return fetchPromise;
   }
 
   public getCachedEvents(): CalendarEventDTO[] {
@@ -433,65 +450,85 @@ class ReminderNotificationService {
     return false;
   }
 
-  public async fetchNotifications(userId?: string): Promise<NotificationDTO[]> {
+  private inFlightFetchNotifications: Promise<NotificationDTO[]> | null = null;
+  private lastFetchNotificationsTime = 0;
+
+  public async fetchNotifications(userId?: string, force = false): Promise<NotificationDTO[]> {
     const targetUser = userId || this.getCurrentUserLogin();
-    try {
-      const serverNotifs = await notificationApiService.getNotifications(targetUser);
-      if (Array.isArray(serverNotifs)) {
-        // 1. Process server notifications and track current active server IDs
-        const currentServerIds = new Set<string>();
-        const validServerNotifs: NotificationDTO[] = [];
-        for (const n of serverNotifs) {
-          if (this.isDeletedNotification(n)) {
-            try {
-              notificationApiService.deleteNotification(n.id);
-            } catch {}
-          } else {
-            n.isServerBacked = true;
-            currentServerIds.add(String(n.id));
-            validServerNotifs.push(n);
+
+    if (!force && Date.now() - this.lastFetchNotificationsTime < 15000) {
+      return this.getCachedNotifications().filter((n) => !this.isDeletedNotification(n));
+    }
+
+    if (!force && this.inFlightFetchNotifications) {
+      return this.inFlightFetchNotifications;
+    }
+
+    const fetchPromise = (async () => {
+      try {
+        const serverNotifs = await notificationApiService.getNotifications(targetUser);
+        if (Array.isArray(serverNotifs)) {
+          this.lastFetchNotificationsTime = Date.now();
+          // 1. Process server notifications and track current active server IDs
+          const currentServerIds = new Set<string>();
+          const validServerNotifs: NotificationDTO[] = [];
+          for (const n of serverNotifs) {
+            if (this.isDeletedNotification(n)) {
+              try {
+                notificationApiService.deleteNotification(n.id);
+              } catch {}
+            } else {
+              n.isServerBacked = true;
+              currentServerIds.add(String(n.id));
+              validServerNotifs.push(n);
+            }
           }
+
+          // Store exact active server IDs (never accumulate stale/deleted IDs)
+          this.setServerNotificationIds(currentServerIds);
+
+          // 2. Load cached notifications and filter out any deleted ones
+          const cached = this.getCachedNotifications().filter((n) => !this.isDeletedNotification(n));
+
+          // 3. Deduplicate merge: server notifications take precedence
+          const deduplicatedList: NotificationDTO[] = [];
+
+          for (const sNotif of validServerNotifs) {
+            const existingIdx = deduplicatedList.findIndex((item) => this.isSameNotification(item, sNotif));
+            if (existingIdx === -1) {
+              deduplicatedList.push(sNotif);
+            } else {
+              deduplicatedList[existingIdx] = sNotif;
+            }
+          }
+
+          for (const cNotif of cached) {
+            // If notification was marked server-backed but no longer exists on server, it was deleted! Do not re-add!
+            if (cNotif.isServerBacked && !currentServerIds.has(String(cNotif.id))) {
+              continue;
+            }
+            const alreadyInList = deduplicatedList.some((item) => this.isSameNotification(item, cNotif));
+            if (!alreadyInList) {
+              deduplicatedList.push(cNotif);
+            }
+          }
+
+          deduplicatedList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+          localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(deduplicatedList));
+          window.dispatchEvent(new CustomEvent('ssa_notifications_updated'));
+          return deduplicatedList;
         }
-
-        // Store exact active server IDs (never accumulate stale/deleted IDs)
-        this.setServerNotificationIds(currentServerIds);
-
-        // 2. Load cached notifications and filter out any deleted ones
-        const cached = this.getCachedNotifications().filter((n) => !this.isDeletedNotification(n));
-
-        // 3. Deduplicate merge: server notifications take precedence
-        const deduplicatedList: NotificationDTO[] = [];
-
-        for (const sNotif of validServerNotifs) {
-          const existingIdx = deduplicatedList.findIndex((item) => this.isSameNotification(item, sNotif));
-          if (existingIdx === -1) {
-            deduplicatedList.push(sNotif);
-          } else {
-            deduplicatedList[existingIdx] = sNotif;
-          }
-        }
-
-        for (const cNotif of cached) {
-          // If notification was marked server-backed but no longer exists on server, it was deleted! Do not re-add!
-          if (cNotif.isServerBacked && !currentServerIds.has(String(cNotif.id))) {
-            continue;
-          }
-          const alreadyInList = deduplicatedList.some((item) => this.isSameNotification(item, cNotif));
-          if (!alreadyInList) {
-            deduplicatedList.push(cNotif);
-          }
-        }
-
-        deduplicatedList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-        localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(deduplicatedList));
-        window.dispatchEvent(new CustomEvent('ssa_notifications_updated'));
-        return deduplicatedList;
+      } catch {} finally {
+        this.inFlightFetchNotifications = null;
       }
-    } catch {}
 
-    const validCached = this.getCachedNotifications().filter((n) => !this.isDeletedNotification(n));
-    return validCached;
+      const validCached = this.getCachedNotifications().filter((n) => !this.isDeletedNotification(n));
+      return validCached;
+    })();
+
+    this.inFlightFetchNotifications = fetchPromise;
+    return fetchPromise;
   }
 
   public getServerNotificationIds(): Set<string> {

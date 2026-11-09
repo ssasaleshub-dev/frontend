@@ -41,6 +41,8 @@ export interface AttendanceAdminSummary {
 }
 
 const STORAGE_PREFIX = 'ssa_attendance_';
+const inFlightTodayMap = new Map<string, Promise<StaffAttendanceRecord | null>>();
+const todayCacheMap = new Map<string, { record: StaffAttendanceRecord | null; timestamp: number }>();
 
 export const attendanceService = {
   /**
@@ -86,6 +88,7 @@ export const attendanceService = {
     };
 
     // Save locally
+    todayCacheMap.delete(params.userId);
     this.saveLocalRecord(params.userId, optimisticRecord);
     this.broadcastUpdate();
 
@@ -123,6 +126,7 @@ export const attendanceService = {
     }
 
     try {
+      todayCacheMap.delete(params.userId);
       const res = await axiosClient.post<StaffAttendanceRecord>('/api/attendance/check-out', {
         userId: params.userId,
         note: params.note || '',
@@ -141,24 +145,43 @@ export const attendanceService = {
   },
 
   /**
-   * Get today's attendance for user
+   * Get today's attendance for user (deduplicated with 30s cache)
    */
-  async getTodayAttendance(userId: string): Promise<StaffAttendanceRecord | null> {
+  async getTodayAttendance(userId: string, force = false): Promise<StaffAttendanceRecord | null> {
     if (!userId) return null;
 
-    try {
-      const res = await axiosClient.get<StaffAttendanceRecord>('/api/attendance/today', {
-        params: { userId },
-      });
-      if (res && res.attendanceDate) {
-        this.saveLocalRecord(userId, res);
-        return res;
-      }
-    } catch {
-      // fallback
+    const cached = todayCacheMap.get(userId);
+    if (!force && cached && Date.now() - cached.timestamp < 30000) {
+      return cached.record;
     }
 
-    return this.getLocalRecord(userId);
+    if (!force && inFlightTodayMap.has(userId)) {
+      return inFlightTodayMap.get(userId)!;
+    }
+
+    const fetchPromise = (async () => {
+      try {
+        const res = await axiosClient.get<StaffAttendanceRecord>('/api/attendance/today', {
+          params: { userId },
+        });
+        if (res && res.attendanceDate) {
+          this.saveLocalRecord(userId, res);
+          todayCacheMap.set(userId, { record: res, timestamp: Date.now() });
+          return res;
+        }
+      } catch {
+        // fallback
+      } finally {
+        inFlightTodayMap.delete(userId);
+      }
+
+      const local = this.getLocalRecord(userId);
+      todayCacheMap.set(userId, { record: local, timestamp: Date.now() });
+      return local;
+    })();
+
+    inFlightTodayMap.set(userId, fetchPromise);
+    return fetchPromise;
   },
 
   /**
