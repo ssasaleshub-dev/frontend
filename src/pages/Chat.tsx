@@ -436,47 +436,10 @@ export default function Chat() {
             <h1 className="text-[20px] font-bold text-[#000000] tracking-tight">
               Messages
             </h1>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setMobileView('chat')}
-                className="md:hidden text-[12px] font-semibold text-[#007aff] px-2.5 py-1 rounded-full bg-[#007aff]/10 active:scale-95 transition-all cursor-pointer"
-                title="View active chat"
-              >
-                Open Chat →
-              </button>
-              <button
-                onClick={() => {
-                  fetchUsers();
-                  fetchMessages(false);
-                }}
-                title="Refresh messages"
-                className="w-7 h-7 rounded-full bg-black/[0.04] hover:bg-black/[0.08] active:scale-95 text-[#636366] hover:text-[#000000] flex items-center justify-center transition-all cursor-pointer"
-              >
-                <RefreshCw
-                  size={13}
-                  className={loading || loadingUsers ? 'animate-spin text-[#007aff]' : ''}
-                />
-              </button>
-            </div>
           </div>
 
-          {/* Search Bar & Segmented Switch */}
-          <div className="px-3 pt-2.5 pb-2 space-y-2 border-b border-[rgba(60,60,67,0.08)]">
-            <div className="relative">
-              <Search
-                size={14}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8e8e93]"
-              />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-[#e3e3e8] rounded-xl pl-8 pr-3 py-1.5 text-[13px] text-[#1c1c1e] border-none outline-none focus:ring-1 focus:ring-[#007aff]"
-                aria-label="Search conversations"
-              />
-            </div>
-
+          {/* Segmented Switch */}
+          <div className="p-3 border-b border-[rgba(60,60,67,0.08)]">
             {/* Apple Segmented Control */}
             <div className="ios-segmented w-full flex">
               <button
