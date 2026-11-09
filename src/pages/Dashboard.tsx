@@ -136,17 +136,16 @@ export default function Dashboard() {
   // 2. Filter by selected desk tab (for Admin toggle or active counselor desk)
   const displayLeads = useMemo(() => {
     if (deskFilter === 'ALL') return roleScopedLeads;
-    if (deskFilter === 'STUDY_VISA') {
-      return roleScopedLeads.filter((l) => isStudyVisaType(l.visaType));
-    }
-    if (deskFilter === 'WORK_VISA') {
-      return roleScopedLeads.filter((l) => isWorkVisaType(l.visaType));
-    }
-    if (deskFilter === 'OTHER_VISA') {
-      return roleScopedLeads.filter((l) => isOtherVisaType(l.visaType));
-    }
-    return roleScopedLeads;
-  }, [roleScopedLeads, deskFilter]);
+    const userLogin = (currentUser?.login || '').toLowerCase();
+    return roleScopedLeads.filter((l) => {
+      // If a candidate is directly assigned to the logged-in counselor, always display it
+      if (!isAdmin && !!userLogin && (l.assignedTo || '').toLowerCase() === userLogin) return true;
+      if (deskFilter === 'STUDY_VISA') return isStudyVisaType(l.visaType);
+      if (deskFilter === 'WORK_VISA') return isWorkVisaType(l.visaType);
+      if (deskFilter === 'OTHER_VISA') return isOtherVisaType(l.visaType);
+      return true;
+    });
+  }, [roleScopedLeads, deskFilter, isAdmin, currentUser?.login]);
 
   // Derived metrics
   const metrics = useMemo(() => {

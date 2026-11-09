@@ -275,6 +275,7 @@ export default function Leads() {
         email: l.email || l.customer?.email || '',
         city: l.city || l.location || l.customer?.location || l.customer?.city || '',
         visaType: l.visaType || l.leadPreference?.visaType || l.preference?.visaType || '',
+        assignedTo: l.assignedTo || l.leadPreference?.assignedTo || l.preference?.assignedTo || '',
       }));
       setRawLeads(normalized);
     } catch (err: any) {
@@ -311,26 +312,37 @@ export default function Leads() {
     }
   }, [searchParams, rawLeads]);
 
-  // 1. Role Scoping
+  // 1. Role Scoping: Ensure user only accesses leads within their role permissions
   const roleScopedLeads = useMemo(() => {
     return filterLeadsByUserRole(rawLeads, currentUser);
   }, [rawLeads, currentUser]);
 
-  // 2. Multi-Dimension Filtering & Search
-  const filteredLeads = useMemo(() => {
-    let result = roleScopedLeads.filter((lead) => {
-      // Visa Type filter
-      if (visaTypeFilter !== 'ALL') {
+  // 2. Desk & Platform Scoping: Used for Status Tabs counts and preserving counselor-assigned candidates
+  const deskAndPlatformScopedLeads = useMemo(() => {
+    const userLogin = (currentUser?.login || '').toLowerCase();
+    return roleScopedLeads.filter((lead) => {
+      // If a candidate is directly assigned to the logged-in counselor, always keep it in their view
+      const isAssignedToMe = !isAdmin && !!userLogin && (lead.assignedTo || '').toLowerCase() === userLogin;
+
+      // Visa Type / Desk filter (only filter out if not assigned to this counselor)
+      if (visaTypeFilter !== 'ALL' && !isAssignedToMe) {
         if (visaTypeFilter === 'STUDY_VISA' && !isStudyVisaType(lead.visaType)) return false;
         if (visaTypeFilter === 'WORK_VISA' && !isWorkVisaType(lead.visaType)) return false;
         if (visaTypeFilter === 'OTHER_VISA' && !isOtherVisaType(lead.visaType)) return false;
       }
 
-      // Status filter
-      if (statusFilter !== 'ALL' && lead.status !== statusFilter) return false;
-
       // Platform filter
       if (platformFilter !== 'ALL' && lead.platform !== platformFilter) return false;
+
+      return true;
+    });
+  }, [roleScopedLeads, visaTypeFilter, platformFilter, isAdmin, currentUser?.login]);
+
+  // 3. Multi-Dimension Filtering (Status & Instant Search) & Sorting
+  const filteredLeads = useMemo(() => {
+    let result = deskAndPlatformScopedLeads.filter((lead) => {
+      // Status filter
+      if (statusFilter !== 'ALL' && lead.status !== statusFilter) return false;
 
       // Search term
       if (searchTerm.trim()) {
@@ -359,7 +371,7 @@ export default function Leads() {
     });
 
     return result;
-  }, [roleScopedLeads, visaTypeFilter, statusFilter, platformFilter, searchTerm, sortBy]);
+  }, [deskAndPlatformScopedLeads, statusFilter, searchTerm, sortBy]);
 
   // Reset to page 1 on filter changes
   useEffect(() => {
@@ -1436,10 +1448,10 @@ export default function Leads() {
                 : 'text-[#8e8e93] hover:text-[#1c1c1e] hover:bg-black/[0.04]'
             }`}
           >
-            All Candidates ({roleScopedLeads.length})
+            All Candidates ({deskAndPlatformScopedLeads.length})
           </button>
           {LEAD_STATUS_LIST.map((st) => {
-            const count = roleScopedLeads.filter((l) => l.status === st.value).length;
+            const count = deskAndPlatformScopedLeads.filter((l) => l.status === st.value).length;
             const active = statusFilter === st.value;
             return (
               <button
