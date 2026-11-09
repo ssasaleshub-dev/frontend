@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Lead } from '../../types';
 import { encryptLeadId } from '../../utils/leadIdCrypto';
+import { formatCurrencyDisplay } from '../../utils/formatUtils';
 
 interface IosLeadListProps {
   leads: Lead[];
@@ -268,6 +269,7 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
           const cachedBudget = localStorage.getItem(`ssa_lead_budget_${lead.id}`);
           const cachedPayment = localStorage.getItem(`ssa_lead_payment_status_${lead.id}`);
           const b = (lead as any).budgetRange || (lead as any).clientBudget || cachedBudget;
+          const formattedBudget = formatCurrencyDisplay(b);
           const p = ((lead as any).paymentStatus || cachedPayment || '').toUpperCase();
 
           return (
@@ -344,9 +346,9 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
                   >
                     <span className={stageTextColor}>{stageLabel}</span>
                   </button>
-                  {b && (
+                  {formattedBudget && (
                     <span className="text-[11px] font-semibold text-[#1c1c1e]">
-                      ₹{b}
+                      {formattedBudget}
                     </span>
                   )}
                   <span className="text-[10px] text-[#8e8e93]">
@@ -363,8 +365,8 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  {b ? (
-                    <span className="text-[11px] font-semibold text-[#1c1c1e]">₹{b}</span>
+                  {formattedBudget ? (
+                    <span className="text-[11px] font-semibold text-[#1c1c1e]">{formattedBudget}</span>
                   ) : (
                     <span className="text-[11px] text-[#8e8e93]">Budget: —</span>
                   )}

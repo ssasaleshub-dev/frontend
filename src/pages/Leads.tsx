@@ -56,6 +56,7 @@ import { useAlert } from '../context/AlertContext';
 import { Lead } from '../types';
 import { encryptLeadId, formatMaskedLeadRef } from '../utils/leadIdCrypto';
 import { formatIndianDateTime, formatIndianDate, formatIndianTime } from '../utils/dateTimeUtils';
+import { formatCurrencyDisplay } from '../utils/formatUtils';
 
 export interface ParsedLeadPreview {
   id: number;
@@ -1242,12 +1243,13 @@ export default function Leads() {
     const cachedBudget = localStorage.getItem(`ssa_lead_budget_${leadItem.id}`);
     const cachedPayment = localStorage.getItem(`ssa_lead_payment_status_${leadItem.id}`);
     const b = (leadItem as any).budgetRange || (leadItem as any).clientBudget || cachedBudget;
+    const formattedBudget = formatCurrencyDisplay(b);
     const p = ((leadItem as any).paymentStatus || cachedPayment || '').toUpperCase();
 
-    if (b || (p && p !== 'UNPAID')) {
+    if (formattedBudget || (p && p !== 'UNPAID')) {
       return (
         <div className="flex flex-col items-start gap-1">
-          {b && <span className="font-semibold text-[#007aff]">₹{b}</span>}
+          {formattedBudget && <span className="font-semibold text-[#007aff]">{formattedBudget}</span>}
           {p === 'PAID' && (
             <span className="text-[11px] font-semibold text-emerald-700">
               Paid

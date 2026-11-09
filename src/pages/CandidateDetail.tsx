@@ -54,6 +54,7 @@ import {
 import { isAdmin as checkIsAdmin } from '../utils/rbac';
 import { useAuth } from '../context/AuthContext';
 import { formatIndianDateTime, formatIndianDate } from '../utils/dateTimeUtils';
+import { formatCurrencyDisplay } from '../utils/formatUtils';
 import { Lead, LeadActivity } from '../types';
 import { encryptLeadId, decryptLeadId, formatMaskedLeadRef } from '../utils/leadIdCrypto';
 
@@ -426,7 +427,7 @@ export default function CandidateDetail() {
 
   const handleUpdateBudget = async (newBudget: string) => {
     if (!lead) return;
-    const trimmed = newBudget.trim();
+    const trimmed = formatCurrencyDisplay(newBudget) || newBudget.trim();
     const oldBudget = lead.budgetRange || '';
 
     // Optimistically update
@@ -1327,7 +1328,7 @@ export default function CandidateDetail() {
                   </button>
                 </div>
                 <p className="text-sm font-bold text-[#1c1c1e] mt-1">
-                  {lead.budgetRange || <span className="text-[#8e8e93] font-normal italic">Not specified</span>}
+                  {formatCurrencyDisplay(lead.budgetRange) || <span className="text-[#8e8e93] font-normal italic">Not specified</span>}
                 </p>
               </div>
 
@@ -1474,7 +1475,7 @@ export default function CandidateDetail() {
               ) : (
                 <div className="flex items-baseline gap-2">
                   <span className="text-xl font-bold tracking-tight text-[#1c1c1e]">
-                    {lead.budgetRange ? lead.budgetRange : 'Not Specified'}
+                    {formatCurrencyDisplay(lead.budgetRange) || 'Not Specified'}
                   </span>
                 </div>
               )}
