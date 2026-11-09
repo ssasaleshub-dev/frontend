@@ -141,7 +141,7 @@ class PushNotificationService {
           sound: 'default',
           vibration: true,
           lights: true,
-          lightColor: '#0071e3',
+          lightColor: '#029858',
         };
 
         await PushNotifications.createChannel(channelConfig).catch(() => {});
