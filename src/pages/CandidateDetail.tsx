@@ -1462,11 +1462,6 @@ export default function CandidateDetail() {
                   <span className="text-xl font-bold tracking-tight text-[#1c1c1e]">
                     {lead.budgetRange ? lead.budgetRange : 'Not Specified'}
                   </span>
-                  {lead.budgetRange && (
-                    <span className="text-[11px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                      Budget Saved
-                    </span>
-                  )}
                 </div>
               )}
             </div>
