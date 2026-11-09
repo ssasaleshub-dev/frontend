@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -35,6 +35,209 @@ const MONTH_NAMES = [
 ];
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+interface SwipeableAgendaItemProps {
+  evt: CalendarEvent;
+  onToggleComplete: (id: string, e?: any) => void;
+  onDelete: (id: string, e?: any) => void;
+}
+
+function SwipeableAgendaItem({ evt, onToggleComplete, onDelete }: SwipeableAgendaItemProps) {
+  const [offsetX, setOffsetX] = useState(0);
+  const [isSwiped, setIsSwiped] = useState(false);
+  const startXRef = useRef(0);
+  const startYRef = useRef(0);
+  const isDraggingRef = useRef(false);
+  const isHorizontalSwipeRef = useRef(false);
+
+  const handleTouchStart = (e: React.TouchEvent | React.MouseEvent) => {
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    startXRef.current = clientX;
+    startYRef.current = clientY;
+    isDraggingRef.current = true;
+    isHorizontalSwipeRef.current = false;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent | React.MouseEvent) => {
+    if (!isDraggingRef.current) return;
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    const deltaX = clientX - startXRef.current;
+    const deltaY = clientY - startYRef.current;
+
+    // Detect horizontal swipe vs vertical scroll
+    if (!isHorizontalSwipeRef.current) {
+      if (Math.abs(deltaY) > Math.abs(deltaX)) {
+        isDraggingRef.current = false;
+        return;
+      }
+      if (Math.abs(deltaX) > 6) {
+        isHorizontalSwipeRef.current = true;
+      }
+    }
+
+    if (isHorizontalSwipeRef.current) {
+      const baseOffset = isSwiped ? (offsetX > 0 ? 80 : -80) : 0;
+      const raw = baseOffset + deltaX;
+      // Damped clamp between -130 and 130
+      const clamped = Math.max(-130, Math.min(130, raw));
+      setOffsetX(clamped);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+
+    // Fast full swipe (> 110px) directly prompts/triggers delete
+    if (Math.abs(offsetX) > 110) {
+      onDelete(evt.id);
+      setOffsetX(0);
+      setIsSwiped(false);
+      return;
+    }
+
+    // Reveal threshold: 40px
+    if (offsetX > 40) {
+      // Swiped right -> reveal left delete button
+      setOffsetX(80);
+      setIsSwiped(true);
+    } else if (offsetX < -40) {
+      // Swiped left -> reveal right delete button
+      setOffsetX(-80);
+      setIsSwiped(true);
+    } else {
+      // Snap back closed
+      setOffsetX(0);
+      setIsSwiped(false);
+    }
+  };
+
+  const handleCardClick = () => {
+    if (isSwiped) {
+      setOffsetX(0);
+      setIsSwiped(false);
+    }
+  };
+
+  return (
+    <div className="relative overflow-hidden rounded-[16px] select-none group">
+      {/* Background Swipe Actions: Apple Red Delete Buttons */}
+      <div
+        className={`absolute inset-0 bg-[#ff3b30] flex items-center ${
+          offsetX > 0 ? 'justify-start pl-4' : 'justify-end pr-4'
+        }`}
+      >
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(evt.id, e);
+          }}
+          className="flex items-center gap-1.5 text-white font-semibold text-[13px] px-2 py-1.5 rounded-xl active:scale-90 transition-transform cursor-pointer"
+          title="Delete Reminder"
+        >
+          <Trash2 size={16} strokeWidth={2.4} />
+          <span>Delete</span>
+        </button>
+      </div>
+
+      {/* Foreground Sliding Card */}
+      <div
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onMouseDown={handleTouchStart}
+        onMouseMove={handleTouchMove}
+        onMouseUp={handleTouchEnd}
+        onClick={handleCardClick}
+        style={{
+          transform: `translateX(${offsetX}px)`,
+          transition: isDraggingRef.current ? 'none' : 'transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
+        }}
+        className={`relative z-10 p-3 rounded-[16px] border transition-colors flex items-start gap-2.5 cursor-grab active:cursor-grabbing ${
+          evt.isCompleted
+            ? 'bg-[#fbfbfd] border-black/[0.04] text-[#86868b]'
+            : 'bg-white border-black/[0.06] shadow-2xs hover:shadow-xs'
+        }`}
+      >
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleComplete(evt.id, e);
+          }}
+          className="mt-0.5 text-[#86868b] hover:text-[#34c759] transition-colors shrink-0 cursor-pointer"
+        >
+          {evt.isCompleted ? (
+            <CheckCircle2 size={16} className="text-[#34c759]" strokeWidth={2.2} />
+          ) : (
+            <Circle size={16} strokeWidth={1.8} />
+          )}
+        </button>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-1">
+            <p className={`text-[13px] font-medium truncate ${evt.isCompleted ? 'line-through text-[#86868b]' : 'text-[#1d1d1f]'}`}>
+              {evt.title}
+            </p>
+            <span className="text-[10px] font-mono text-[#86868b] shrink-0">
+              {evt.eventTime ? format12HourTime(evt.eventTime) : 'All Day'}
+            </span>
+          </div>
+
+          {evt.description && (
+            <p className="text-[11px] text-[#515154] mt-0.5 leading-relaxed font-normal">
+              {evt.description}
+            </p>
+          )}
+
+          {evt.candidateName && (
+            <div className="flex items-center gap-1 mt-1 text-[11px] text-[#0071e3] font-medium">
+              <User size={11} strokeWidth={2} />
+              <span>Candidate: {evt.candidateName}</span>
+            </div>
+          )}
+
+          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+            <span className="px-2 py-0.2 bg-black/[0.04] text-[#515154] rounded-full text-[9px] font-medium uppercase">
+              {evt.eventType}
+            </span>
+            {evt.priority === 'HIGH' || evt.priority === 'URGENT' ? (
+              <span className="px-2 py-0.2 bg-[#ff3b30]/10 text-[#ff3b30] rounded-full text-[9px] font-semibold uppercase">
+                {evt.priority}
+              </span>
+            ) : null}
+            {!evt.isCompleted && (() => {
+              const rem = getRemainingTimeInfo(evt.eventDate, evt.eventTime);
+              if (!rem || rem.isPast) return null;
+              return (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#0071e3]/10 text-[#0071e3] rounded-full text-[10px] font-medium">
+                  <Clock size={10} />
+                  {rem.text}
+                </span>
+              );
+            })()}
+          </div>
+        </div>
+
+        {/* Desktop Quick Delete Button (revealed on hover) */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(evt.id, e);
+          }}
+          className="opacity-0 group-hover:opacity-100 p-1 text-[#86868b] hover:text-[#ff3b30] rounded-full transition-all shrink-0 cursor-pointer"
+          title="Delete reminder"
+        >
+          <Trash2 size={13} />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function CalendarPage() {
   const { user } = useAuth();
@@ -257,15 +460,15 @@ export default function CalendarPage() {
     }
   };
 
-  const handleDeleteEvent = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDeleteEvent = async (id: string, e?: any) => {
+    e?.stopPropagation?.();
     if (confirm('Delete this reminder?')) {
       await reminderNotificationService.deleteEvent(id);
     }
   };
 
-  const handleToggleComplete = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleToggleComplete = async (id: string, e?: any) => {
+    e?.stopPropagation?.();
     await reminderNotificationService.toggleEventComplete(id);
   };
 
@@ -433,80 +636,12 @@ export default function CalendarPage() {
                 </div>
               ) : (
                 selectedDateEvents.map((evt) => (
-                  <div
+                  <SwipeableAgendaItem
                     key={evt.id}
-                    className={`p-3 rounded-[16px] border transition-all flex items-start gap-2.5 group ${
-                      evt.isCompleted
-                        ? 'bg-black/[0.02] border-black/[0.04] text-[#86868b]'
-                        : 'bg-white border-black/[0.05] shadow-2xs hover:shadow-xs'
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      onClick={(e) => handleToggleComplete(evt.id, e)}
-                      className="mt-0.5 text-[#86868b] hover:text-[#34c759] transition-colors shrink-0"
-                    >
-                      {evt.isCompleted ? (
-                        <CheckCircle2 size={16} className="text-[#34c759]" strokeWidth={2.2} />
-                      ) : (
-                        <Circle size={16} strokeWidth={1.8} />
-                      )}
-                    </button>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-1">
-                        <p className={`text-[13px] font-medium truncate ${evt.isCompleted ? 'line-through text-[#86868b]' : 'text-[#1d1d1f]'}`}>
-                          {evt.title}
-                        </p>
-                        <span className="text-[10px] font-mono text-[#86868b] shrink-0">
-                          {evt.eventTime ? format12HourTime(evt.eventTime) : 'All Day'}
-                        </span>
-                      </div>
-
-                      {evt.description && (
-                        <p className="text-[11px] text-[#515154] mt-0.5 leading-relaxed font-normal">
-                          {evt.description}
-                        </p>
-                      )}
-
-                      {evt.candidateName && (
-                        <div className="flex items-center gap-1 mt-1 text-[11px] text-[#0071e3] font-medium">
-                          <User size={11} strokeWidth={2} />
-                          <span>Candidate: {evt.candidateName}</span>
-                        </div>
-                      )}
-
-                      <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                        <span className="px-2 py-0.2 bg-black/[0.04] text-[#515154] rounded-full text-[9px] font-medium uppercase">
-                          {evt.eventType}
-                        </span>
-                        {evt.priority === 'HIGH' || evt.priority === 'URGENT' ? (
-                          <span className="px-2 py-0.2 bg-[#ff3b30]/10 text-[#ff3b30] rounded-full text-[9px] font-semibold uppercase">
-                            {evt.priority}
-                          </span>
-                        ) : null}
-                        {!evt.isCompleted && (() => {
-                          const rem = getRemainingTimeInfo(evt.eventDate, evt.eventTime);
-                          if (!rem || rem.isPast) return null;
-                          return (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#0071e3]/10 text-[#0071e3] rounded-full text-[10px] font-medium">
-                              <Clock size={10} />
-                              {rem.text}
-                            </span>
-                          );
-                        })()}
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={(e) => handleDeleteEvent(evt.id, e)}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-[#86868b] hover:text-[#ff3b30] rounded-full transition-all shrink-0"
-                      title="Delete reminder"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
+                    evt={evt}
+                    onToggleComplete={handleToggleComplete}
+                    onDelete={handleDeleteEvent}
+                  />
                 ))
               )}
             </div>
