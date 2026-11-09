@@ -667,18 +667,7 @@ export default function CalendarPage() {
             </div>
           </div>
 
-          {/* Apple HIG Legend Footer */}
-          <div className="pt-3 mt-2 border-t border-black/[0.04] flex items-center justify-between text-[11px] text-[#86868b] flex-wrap gap-2">
-            <div className="flex items-center gap-3">
-              <span className="text-[#0071e3] font-semibold">Reminder</span>
-              <span className="text-[#34c759] font-semibold">Call</span>
-              <span className="text-[#ff3b30] font-semibold">Urgent</span>
-            </div>
 
-            <span className="font-mono text-[10px] text-[#86868b]">
-              IST (Asia/Kolkata)
-            </span>
-          </div>
         </div>
 
         {/* Right Sidebar: Selected Day Agenda & Reminders (5 Cols) */}
