@@ -12,7 +12,6 @@ import {
   X,
   Loader2,
   ExternalLink,
-  Info,
   ChevronLeft,
 } from 'lucide-react';
 import chatService from '../services/api/chatService';
@@ -675,15 +674,7 @@ export default function Chat() {
               </p>
             </div>
 
-            <div className="w-8 flex justify-end shrink-0">
-              <button
-                onClick={() => fetchMessages(false)}
-                title="Refresh thread"
-                className="text-[#007aff] hover:opacity-75 transition-opacity cursor-pointer p-1"
-              >
-                <Info size={16} />
-              </button>
-            </div>
+            <div className="w-8 shrink-0" />
           </div>
 
           {/* Messages Feed */}
