@@ -17,3 +17,4 @@ export function formatCurrencyDisplay(val?: string | null): string {
   if (!cleaned) return '';
   return `₹${cleaned}`;
 }
+

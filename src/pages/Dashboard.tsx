@@ -420,7 +420,7 @@ export default function Dashboard() {
                 {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
                   ? 'Course & eligibility prep'
                   : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
-                  ? 'Employer screening pipeline'
+                  ? 'Employer screening process'
                   : 'International job & permits'}
               </span>
             </div>
@@ -501,7 +501,7 @@ export default function Dashboard() {
           <div>
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
               <Layers size={14} className="text-blue-600" />
-              <span>Counseling Pipeline Funnel</span>
+              <span>Counseling Stages & Progress</span>
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">Click any stage to filter candidate records</p>
           </div>
@@ -509,7 +509,7 @@ export default function Dashboard() {
             onClick={() => navigate('/leads')}
             className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-0.5"
           >
-            <span>Full Pipeline</span>
+            <span>View All Candidates</span>
             <ChevronRight size={13} />
           </button>
         </div>
@@ -695,7 +695,7 @@ export default function Dashboard() {
               <span>Status Distribution</span>
             </h3>
             <span className="text-xs font-medium text-slate-500 bg-white border border-slate-200 px-2.5 py-0.5 rounded">
-              Pipeline Stages
+              Candidate Stages
             </span>
           </div>
 

@@ -261,7 +261,7 @@ export default function ImportLeads() {
               onClick={() => navigate('/leads')}
               className="flex items-center gap-1 text-xs font-semibold text-[#007aff] hover:underline"
             >
-              <span>View in Pipeline</span>
+              <span>View Candidates</span>
               <ArrowRight size={13} />
             </button>
           </div>

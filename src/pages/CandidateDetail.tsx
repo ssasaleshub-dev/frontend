@@ -897,7 +897,7 @@ export default function CandidateDetail() {
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-black/[0.03] text-[#1c1c1e] rounded-xl text-xs font-semibold border border-black/[0.08] shadow-2xs transition-all active:scale-95 cursor-pointer"
             >
               <ChevronLeft size={13} />
-              <span>Return to Pipeline</span>
+              <span>Back to Candidates</span>
             </button>
           </div>
         </div>
@@ -920,7 +920,7 @@ export default function CandidateDetail() {
           className="inline-flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-black/[0.03] text-[#1c1c1e] rounded-xl text-xs font-semibold border border-black/[0.08] shadow-2xs transition-all active:scale-95 cursor-pointer"
         >
           <ChevronLeft size={13} />
-          <span>Return to Pipeline</span>
+          <span>Back to Candidates</span>
         </button>
       </div>
     );

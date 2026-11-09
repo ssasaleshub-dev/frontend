@@ -266,8 +266,8 @@ export default function Layout() {
   ];
 
   const getPageInfo = () => {
-    if (currentPath === '/') return { title: 'Executive Overview', subtitle: 'Real-time candidate metrics & counselor pipelines' };
-    if (currentPath.startsWith('/leads')) return { title: 'Candidate Leads Pipeline', subtitle: 'Filter, triage, and contact international visa candidates' };
+    if (currentPath === '/') return { title: 'Executive Overview', subtitle: 'Real-time candidate metrics & counseling progress' };
+    if (currentPath.startsWith('/leads')) return { title: 'Candidates & Leads Directory', subtitle: 'Filter, triage, and contact international visa candidates' };
     if (currentPath.startsWith('/customers')) return { title: 'Contacts', subtitle: 'Verified contacts and customer records' };
     if (currentPath.startsWith('/calendar')) return { title: 'Calendar & Reminders', subtitle: 'Indian public holidays, counselor callbacks & appointment schedule' };
     if (currentPath.startsWith('/attendance')) return { title: 'Staff Attendance & Roster', subtitle: 'Daily check-in, check-out punches, duration tracking, and corporate register' };
