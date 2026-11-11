@@ -55,7 +55,7 @@ import { useAuth } from '../context/AuthContext';
 import { useAlert } from '../context/AlertContext';
 import { Lead } from '../types';
 import { encryptLeadId, formatMaskedLeadRef } from '../utils/leadIdCrypto';
-import { formatIndianDateTime, formatIndianDate, formatIndianTime } from '../utils/dateTimeUtils';
+import { formatIndianDateTime, formatIndianDate, formatIndianTime, toISTDateKey } from '../utils/dateTimeUtils';
 import { formatCurrencyDisplay } from '../utils/formatUtils';
 
 export interface ParsedLeadPreview {
@@ -87,6 +87,221 @@ export interface ParsedLeadPreview {
   duplicateReason?: string;
   isValid: boolean;
 }
+
+interface ColumnFiltersState {
+  campaignName: string;
+  candidateName: string;
+  mobileNumber: string;
+  whatsapp: string;
+  city: string;
+  budget: string;
+  quality: string;
+  followUpDate: string;
+  followUpStatus: string;
+  remarks: string;
+}
+
+const DEFAULT_COLUMN_FILTERS: ColumnFiltersState = {
+  campaignName: 'ALL',
+  candidateName: '',
+  mobileNumber: '',
+  whatsapp: 'ALL',
+  city: '',
+  budget: 'ALL',
+  quality: 'ALL',
+  followUpDate: '',
+  followUpStatus: 'ALL',
+  remarks: '',
+};
+
+type TableColumnKey =
+  | 'leadSource'
+  | 'campaignName'
+  | 'candidateName'
+  | 'mobileNumber'
+  | 'whatsapp'
+  | 'city'
+  | 'budget'
+  | 'quality'
+  | 'followUpDate'
+  | 'followUpStatus'
+  | 'currentStage'
+  | 'remarks'
+  | 'actions';
+
+const TABLE_COLUMNS: Array<{ key: TableColumnKey; label: string; alignRight?: boolean }> = [
+  { key: 'leadSource', label: 'Lead Source' },
+  { key: 'campaignName', label: 'Campaign Name' },
+  { key: 'candidateName', label: 'Candidate Name' },
+  { key: 'mobileNumber', label: 'Mobile Number' },
+  { key: 'whatsapp', label: 'WhatsApp Number' },
+  { key: 'city', label: 'City' },
+  { key: 'budget', label: 'Budget / Payment' },
+  { key: 'quality', label: 'Lead Quality' },
+  { key: 'followUpDate', label: 'Follow-up Date' },
+  { key: 'followUpStatus', label: 'Follow-up Status' },
+  { key: 'currentStage', label: 'Current Stage' },
+  { key: 'remarks', label: 'Remarks' },
+  { key: 'actions', label: 'Actions', alignRight: true },
+];
+
+const DEFAULT_TABLE_COLUMN_WIDTHS: Record<TableColumnKey, number> = {
+  leadSource: 110,
+  campaignName: 145,
+  candidateName: 185,
+  mobileNumber: 135,
+  whatsapp: 120,
+  city: 115,
+  budget: 130,
+  quality: 100,
+  followUpDate: 155,
+  followUpStatus: 125,
+  currentStage: 125,
+  remarks: 180,
+  actions: 175,
+};
+
+const TABLE_COL_WIDTHS_STORAGE_KEY = 'ssa_leads_table_col_widths_v1';
+const MIN_COLUMN_WIDTH = 70;
+const MAX_COLUMN_WIDTH = 640;
+
+let textMeasureCtx: CanvasRenderingContext2D | null = null;
+function measureTextPx(text: string, font = '500 13px "SF Pro Display", -apple-system, sans-serif'): number {
+  if (!text) return 0;
+  if (typeof document === 'undefined') return text.length * 7;
+  if (!textMeasureCtx) {
+    const canvas = document.createElement('canvas');
+    textMeasureCtx = canvas.getContext('2d');
+  }
+  if (!textMeasureCtx) return text.length * 7;
+  textMeasureCtx.font = font;
+  return textMeasureCtx.measureText(text).width;
+}
+
+interface LeadBudgetDetails {
+  formattedBudget: string;
+  paymentStatus: string;
+  fallbackLabel: string;
+}
+
+/**
+ * Resolves the formatted budget amount, payment status, or readiness label for a lead.
+ */
+function getLeadBudgetDetails(leadItem: Lead): LeadBudgetDetails {
+  const cachedBudget = localStorage.getItem(`ssa_lead_budget_${leadItem.id}`);
+  const cachedPayment = localStorage.getItem(`ssa_lead_payment_status_${leadItem.id}`);
+  const rawBudget = (leadItem as any).budgetRange || (leadItem as any).clientBudget || cachedBudget;
+  const formattedBudget = formatCurrencyDisplay(rawBudget);
+  const paymentStatus = ((leadItem as any).paymentStatus || cachedPayment || '').toUpperCase();
+
+  if (formattedBudget || (paymentStatus && paymentStatus !== 'UNPAID')) {
+    return { formattedBudget, paymentStatus, fallbackLabel: '' };
+  }
+
+  let fallbackLabel = '—';
+  if (leadItem.budgetReady) {
+    fallbackLabel = leadItem.budgetReady;
+  } else {
+    const notesLower = (leadItem.notes || '').toLowerCase();
+    if (notesLower.includes('budget: no') || notesLower.includes('budget no') || notesLower.includes('budget_ready: no')) {
+      fallbackLabel = 'No';
+    } else if (notesLower.includes('budget: yes') || notesLower.includes('budget yes') || notesLower.includes('budget_ready: yes')) {
+      fallbackLabel = 'Yes';
+    } else if (leadItem.status === 'CONVERTED' || leadItem.status === 'WON' || leadItem.status === 'QUALIFIED') {
+      fallbackLabel = 'Yes';
+    }
+  }
+
+  return { formattedBudget: '', paymentStatus, fallbackLabel };
+}
+
+/**
+ * Computes the displayed quality tier ('Hot' | 'Warm' | 'Cold' | '—') for a lead.
+ */
+function getLeadQualityText(leadItem: Lead): string {
+  if (leadItem.leadQuality) return leadItem.leadQuality;
+  const n = (leadItem.notes || '').toLowerCase();
+  if (n.includes('quality: hot') || n.includes('hot')) return 'Hot';
+  if (n.includes('quality: warm') || n.includes('warm')) return 'Warm';
+  if (n.includes('quality: cold') || n.includes('cold')) return 'Cold';
+  if (leadItem.status === 'QUALIFIED' || leadItem.status === 'CONVERTED' || leadItem.status === 'WON') return 'Hot';
+  if (leadItem.status === 'CONTACTED' || leadItem.status === 'PROPOSAL_SENT') return 'Warm';
+  return '—';
+}
+
+/**
+ * Computes the displayed follow-up status text for a lead.
+ */
+function getFollowUpStatusText(leadItem: Lead): string {
+  return leadItem.followUpStatus || leadItem.leadConfirm || ((leadItem.status || 'CREATED') === 'CREATED' ? 'Pending' : 'Interested');
+}
+
+const TableTextFilterCell: React.FC<{
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  ariaLabel: string;
+}> = ({ value, onChange, placeholder, ariaLabel }) => {
+  const active = value.trim().length > 0;
+  return (
+    <th className="py-2 px-2 align-middle font-normal overflow-hidden border-r border-black/[0.04] last:border-r-0">
+      <div className="relative w-full min-w-0">
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          aria-label={ariaLabel}
+          className={`font-sf h-[30px] w-full min-w-0 pl-2.5 pr-6 rounded-[8px] text-[12px] font-normal border transition-colors focus:outline-none focus:bg-white focus:border-[#007aff]/50 ${
+            active
+              ? 'bg-white border-black/[0.16] text-[#1c1c1e] shadow-[0_1px_2px_rgba(0,0,0,0.04)]'
+              : 'bg-[#767680]/[0.08] hover:bg-[#767680]/[0.12] border-transparent text-[#1c1c1e] placeholder:text-[#8e8e93]'
+          }`}
+        />
+        {active && (
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            title={`Clear ${ariaLabel}`}
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[#8e8e93] hover:text-[#1c1c1e] p-0.5 cursor-pointer"
+          >
+            <X size={12} />
+          </button>
+        )}
+      </div>
+    </th>
+  );
+};
+
+const TableSelectFilterCell: React.FC<{
+  value: string;
+  onChange: (value: string) => void;
+  options: Array<{ value: string; label: string }>;
+  defaultValue?: string;
+  ariaLabel: string;
+}> = ({ value, onChange, options, defaultValue = 'ALL', ariaLabel }) => {
+  const active = value !== defaultValue;
+  return (
+    <th className="py-2 px-2 align-middle font-normal overflow-hidden border-r border-black/[0.04] last:border-r-0">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label={ariaLabel}
+        className={`font-sf h-[30px] w-full min-w-0 px-2 rounded-[8px] text-[12px] border transition-colors cursor-pointer focus:outline-none focus:bg-white focus:border-[#007aff]/50 ${
+          active
+            ? 'bg-white border-black/[0.16] text-[#1c1c1e] font-medium shadow-[0_1px_2px_rgba(0,0,0,0.04)]'
+            : 'bg-[#767680]/[0.08] hover:bg-[#767680]/[0.12] border-transparent text-[#3c3c43] font-normal'
+        }`}
+      >
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value} className="bg-white text-[#1c1c1e] font-normal">
+            {opt.label}
+          </option>
+        ))}
+      </select>
+    </th>
+  );
+};
 
 export default function Leads() {
   const [searchParams] = useSearchParams();
@@ -151,9 +366,179 @@ export default function Leads() {
     return 'table';
   });
 
+  // Column-wise Table Filters
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(DEFAULT_COLUMN_FILTERS);
+  const [showColumnFilters, setShowColumnFilters] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('ssa_leads_show_col_filters');
+      return saved === null ? true : saved === 'true';
+    }
+    return true;
+  });
 
+  const updateColumnFilter = useCallback(
+    <K extends keyof ColumnFiltersState>(key: K, value: ColumnFiltersState[K]) => {
+      setColumnFilters((prev) => ({ ...prev, [key]: value }));
+    },
+    []
+  );
 
+  const toggleColumnFiltersRow = useCallback(() => {
+    setShowColumnFilters((prev) => {
+      const next = !prev;
+      localStorage.setItem('ssa_leads_show_col_filters', String(next));
+      return next;
+    });
+  }, []);
 
+  // Excel-like Adjustable Column Widths (persisted in localStorage)
+  const tableRef = useRef<HTMLTableElement | null>(null);
+  const resizeCleanupRef = useRef<(() => void) | null>(null);
+  const [resizingCol, setResizingCol] = useState<TableColumnKey | null>(null);
+  const [columnWidths, setColumnWidths] = useState<Record<TableColumnKey, number>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem(TABLE_COL_WIDTHS_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw) as Partial<Record<TableColumnKey, unknown>>;
+          const merged = { ...DEFAULT_TABLE_COLUMN_WIDTHS };
+          (Object.keys(DEFAULT_TABLE_COLUMN_WIDTHS) as TableColumnKey[]).forEach((k) => {
+            const val = Number(parsed[k]);
+            if (Number.isFinite(val) && val >= MIN_COLUMN_WIDTH && val <= MAX_COLUMN_WIDTH) {
+              merged[k] = Math.round(val);
+            }
+          });
+          return merged;
+        }
+      } catch {
+        // Ignore malformed saved widths
+      }
+    }
+    return { ...DEFAULT_TABLE_COLUMN_WIDTHS };
+  });
+
+  useEffect(() => {
+    return () => {
+      resizeCleanupRef.current?.();
+    };
+  }, []);
+
+  const persistColumnWidths = useCallback((widths: Record<TableColumnKey, number>) => {
+    try {
+      localStorage.setItem(TABLE_COL_WIDTHS_STORAGE_KEY, JSON.stringify(widths));
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
+
+  const totalTableWidth = useMemo(
+    () => (Object.values(columnWidths) as number[]).reduce((sum, w) => sum + w, 0),
+    [columnWidths]
+  );
+
+  const hasCustomColumnWidths = useMemo(
+    () =>
+      (Object.keys(DEFAULT_TABLE_COLUMN_WIDTHS) as TableColumnKey[]).some(
+        (k) => columnWidths[k] !== DEFAULT_TABLE_COLUMN_WIDTHS[k]
+      ),
+    [columnWidths]
+  );
+
+  const resetColumnWidths = useCallback(() => {
+    const defaults = { ...DEFAULT_TABLE_COLUMN_WIDTHS };
+    setColumnWidths(defaults);
+    try {
+      localStorage.removeItem(TABLE_COL_WIDTHS_STORAGE_KEY);
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
+
+  const handleStartColumnResize = useCallback(
+    (colKey: TableColumnKey, e: React.PointerEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      resizeCleanupRef.current?.();
+
+      const startX = e.clientX;
+      const startWidth = columnWidths[colKey] ?? DEFAULT_TABLE_COLUMN_WIDTHS[colKey];
+      const minWidth = colKey === 'actions' ? 110 : MIN_COLUMN_WIDTH;
+      let latestWidth = startWidth;
+
+      setResizingCol(colKey);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+
+      const handlePointerMove = (moveEvent: PointerEvent) => {
+        const deltaX = moveEvent.clientX - startX;
+        const nextWidth = Math.round(
+          Math.max(minWidth, Math.min(MAX_COLUMN_WIDTH, startWidth + deltaX))
+        );
+        latestWidth = nextWidth;
+        setColumnWidths((prev) =>
+          prev[colKey] === nextWidth ? prev : { ...prev, [colKey]: nextWidth }
+        );
+      };
+
+      const cleanup = () => {
+        window.removeEventListener('pointermove', handlePointerMove);
+        window.removeEventListener('pointerup', handlePointerUp);
+        window.removeEventListener('pointercancel', handlePointerUp);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        setResizingCol(null);
+        resizeCleanupRef.current = null;
+      };
+
+      const handlePointerUp = () => {
+        cleanup();
+        if (latestWidth !== startWidth) {
+          persistColumnWidths({ ...columnWidths, [colKey]: latestWidth });
+        }
+      };
+
+      resizeCleanupRef.current = cleanup;
+      window.addEventListener('pointermove', handlePointerMove);
+      window.addEventListener('pointerup', handlePointerUp);
+      window.addEventListener('pointercancel', handlePointerUp);
+    },
+    [columnWidths, persistColumnWidths]
+  );
+
+  const handleAutoFitColumn = useCallback(
+    (colKey: TableColumnKey) => {
+      let targetWidth = DEFAULT_TABLE_COLUMN_WIDTHS.actions;
+
+      if (colKey !== 'actions') {
+        const headerDef = TABLE_COLUMNS.find((c) => c.key === colKey);
+        let maxTextPx = measureTextPx(headerDef?.label || '');
+
+        const tableEl = tableRef.current;
+        if (tableEl) {
+          const cells = tableEl.querySelectorAll<HTMLElement>(`tbody td[data-col="${colKey}"]`);
+          cells.forEach((cell) => {
+            const lines = (cell.innerText || cell.textContent || '')
+              .split(/\r?\n/)
+              .map((s) => s.trim())
+              .filter(Boolean);
+            lines.forEach((line) => {
+              const px = measureTextPx(line);
+              if (px > maxTextPx) maxTextPx = px;
+            });
+          });
+        }
+
+        targetWidth = Math.round(
+          Math.max(MIN_COLUMN_WIDTH, Math.min(MAX_COLUMN_WIDTH, maxTextPx + 36))
+        );
+      }
+
+      const next = { ...columnWidths, [colKey]: targetWidth };
+      setColumnWidths(next);
+      persistColumnWidths(next);
+    },
+    [columnWidths, persistColumnWidths]
+  );
 
   // Slide-over Drawer Dossier & Modals
   const [dossierLead, setDossierLead] = useState<Lead | null>(null);
@@ -333,19 +718,129 @@ export default function Leads() {
       }
 
       // Platform filter
-      if (platformFilter !== 'ALL' && lead.platform !== platformFilter) return false;
+      if (platformFilter !== 'ALL') {
+        const normalizedPlatform =
+          lead.platform && PLATFORMS[lead.platform] ? lead.platform : 'OTHER';
+        if (normalizedPlatform !== platformFilter) return false;
+      }
 
       return true;
     });
   }, [roleScopedLeads, visaTypeFilter, platformFilter, isAdmin, currentUser?.login]);
 
-  // 3. Multi-Dimension Filtering (Status & Instant Search) & Sorting
-  const filteredLeads = useMemo(() => {
-    let result = deskAndPlatformScopedLeads.filter((lead) => {
-      // Status filter
-      if (statusFilter !== 'ALL' && lead.status !== statusFilter) return false;
+  // Cache resolved budget/payment metadata once per scoped lead list so typing in column filters stays instant
+  const budgetMetaByLeadId = useMemo(() => {
+    const map = new Map<string | number, LeadBudgetDetails>();
+    roleScopedLeads.forEach((lead) => {
+      map.set(lead.id, getLeadBudgetDetails(lead));
+    });
+    return map;
+  }, [roleScopedLeads]);
 
-      // Search term
+  // Dynamic dropdown option lists derived from active desk/platform scope
+  const { campaignFilterOptions, budgetFilterOptions, followUpStatusFilterOptions } = useMemo(() => {
+    const campaigns = new Set<string>();
+    let hasEmptyCampaign = false;
+    const budgetAmounts = new Set<string>();
+    const followUpStatuses = new Set<string>();
+
+    deskAndPlatformScopedLeads.forEach((lead) => {
+      const camp = (lead.campaignName || '').trim();
+      if (camp) campaigns.add(camp);
+      else hasEmptyCampaign = true;
+
+      const meta = budgetMetaByLeadId.get(lead.id) ?? getLeadBudgetDetails(lead);
+      if (meta.formattedBudget) budgetAmounts.add(meta.formattedBudget);
+
+      followUpStatuses.add(getFollowUpStatusText(lead));
+    });
+
+    const sortedCampaigns = Array.from(campaigns).sort((a, b) => a.localeCompare(b));
+    if (
+      columnFilters.campaignName !== 'ALL' &&
+      columnFilters.campaignName !== '__NONE__' &&
+      !campaigns.has(columnFilters.campaignName)
+    ) {
+      sortedCampaigns.unshift(columnFilters.campaignName);
+    }
+
+    const campaignOpts: Array<{ value: string; label: string }> = [
+      { value: 'ALL', label: 'All' },
+      ...sortedCampaigns.map((c) => ({ value: c, label: c })),
+      ...(hasEmptyCampaign ? [{ value: '__NONE__', label: 'No Campaign (—)' }] : []),
+    ];
+
+    const sortedAmounts = Array.from(budgetAmounts).sort((a, b) => a.localeCompare(b));
+    const budgetOpts: Array<{ value: string; label: string }> = [
+      { value: 'ALL', label: 'All' },
+      { value: 'HAS_VALUE', label: 'Has Budget / Yes' },
+      { value: 'PAID', label: 'Paid' },
+      { value: 'PARTIAL', label: 'Partial' },
+      { value: 'YES', label: 'Yes' },
+      { value: 'NO', label: 'No' },
+      { value: 'NONE', label: 'Not Set (—)' },
+      ...sortedAmounts.map((amt) => ({ value: `AMT:${amt}`, label: amt })),
+    ];
+
+    const sortedFollowUps = Array.from(followUpStatuses).sort((a, b) => a.localeCompare(b));
+    if (
+      columnFilters.followUpStatus !== 'ALL' &&
+      !followUpStatuses.has(columnFilters.followUpStatus)
+    ) {
+      sortedFollowUps.unshift(columnFilters.followUpStatus);
+    }
+    const followUpOpts: Array<{ value: string; label: string }> = [
+      { value: 'ALL', label: 'All' },
+      ...sortedFollowUps.map((st) => ({ value: st, label: st })),
+    ];
+
+    return {
+      campaignFilterOptions: campaignOpts,
+      budgetFilterOptions: budgetOpts,
+      followUpStatusFilterOptions: followUpOpts,
+    };
+  }, [deskAndPlatformScopedLeads, budgetMetaByLeadId, columnFilters.campaignName, columnFilters.followUpStatus]);
+
+  const activeColumnFilterCount = useMemo(() => {
+    let count = 0;
+    if (platformFilter !== 'ALL') count += 1;
+    if (statusFilter !== 'ALL') count += 1;
+    if (columnFilters.campaignName !== 'ALL') count += 1;
+    if (columnFilters.candidateName.trim()) count += 1;
+    if (columnFilters.mobileNumber.trim()) count += 1;
+    if (columnFilters.whatsapp !== 'ALL') count += 1;
+    if (columnFilters.city.trim()) count += 1;
+    if (columnFilters.budget !== 'ALL') count += 1;
+    if (columnFilters.quality !== 'ALL') count += 1;
+    if (columnFilters.followUpDate) count += 1;
+    if (columnFilters.followUpStatus !== 'ALL') count += 1;
+    if (columnFilters.remarks.trim()) count += 1;
+    return count;
+  }, [platformFilter, statusFilter, columnFilters]);
+
+  const clearColumnFilters = useCallback((clearGlobalSearch = false) => {
+    setColumnFilters(DEFAULT_COLUMN_FILTERS);
+    setPlatformFilter('ALL');
+    setStatusFilter('ALL');
+    if (clearGlobalSearch) {
+      setSearchTerm('');
+    }
+  }, []);
+
+  // 3. Multi-Dimension Filtering (Status, Global Search & Column Filters) & Sorting
+  const filteredLeads = useMemo(() => {
+    const candQuery = columnFilters.candidateName.trim().toLowerCase();
+    const mobileQuery = columnFilters.mobileNumber.trim().toLowerCase();
+    const mobileDigits = columnFilters.mobileNumber.replace(/\D/g, '');
+    const cityQuery = columnFilters.city.trim().toLowerCase();
+    const remarksQuery = columnFilters.remarks.trim().toLowerCase();
+
+    let result = deskAndPlatformScopedLeads.filter((lead) => {
+      // Status / Current Stage filter
+      const leadStatus = lead.status || 'CREATED';
+      if (statusFilter !== 'ALL' && leadStatus !== statusFilter) return false;
+
+      // Global search term
       if (searchTerm.trim()) {
         const query = searchTerm.toLowerCase();
         const nameMatch = (lead.customerName || '').toLowerCase().includes(query);
@@ -355,7 +850,109 @@ export default function Leads() {
         const campMatch = (lead.campaignName || '').toLowerCase().includes(query);
         const qualMatch = (lead.educationalQualification || '').toLowerCase().includes(query);
         const idMatch = String(lead.id).includes(query) || (lead.externalId || '').toLowerCase().includes(query);
-        return nameMatch || phoneMatch || emailMatch || cityMatch || campMatch || qualMatch || idMatch;
+        if (!(nameMatch || phoneMatch || emailMatch || cityMatch || campMatch || qualMatch || idMatch)) {
+          return false;
+        }
+      }
+
+      // Column: Campaign Name
+      if (columnFilters.campaignName !== 'ALL') {
+        const camp = (lead.campaignName || '').trim();
+        if (columnFilters.campaignName === '__NONE__') {
+          if (camp) return false;
+        } else if (camp !== columnFilters.campaignName) {
+          return false;
+        }
+      }
+
+      // Column: Candidate Name / Email / ID
+      if (candQuery) {
+        const nameMatch = (lead.customerName || '').toLowerCase().includes(candQuery);
+        const emailMatch = (lead.email || '').toLowerCase().includes(candQuery);
+        const idMatch =
+          String(lead.id).includes(candQuery) ||
+          (lead.externalId || '').toLowerCase().includes(candQuery);
+        if (!nameMatch && !emailMatch && !idMatch) return false;
+      }
+
+      // Column: Mobile Number
+      if (mobileQuery) {
+        const phoneStr = (lead.phoneNumber || '').toLowerCase();
+        const rawDigits = phoneStr.replace(/\D/g, '');
+        const textMatches = phoneStr.includes(mobileQuery);
+        const digitMatches =
+          mobileDigits.length > 0 &&
+          /^[\d+\s()-]+$/.test(mobileQuery) &&
+          rawDigits.includes(mobileDigits);
+        if (!textMatches && !digitMatches) return false;
+      }
+
+      // Column: WhatsApp Number
+      if (columnFilters.whatsapp !== 'ALL') {
+        const hasPhone = Boolean(lead.phoneNumber && String(lead.phoneNumber).trim());
+        if (columnFilters.whatsapp === 'YES' && !hasPhone) return false;
+        if (columnFilters.whatsapp === 'NO' && hasPhone) return false;
+      }
+
+      // Column: City
+      if (cityQuery) {
+        const leadCity = (lead.city || lead.location || '').toLowerCase();
+        if (!leadCity.includes(cityQuery)) return false;
+      }
+
+      // Column: Budget / Payment
+      if (columnFilters.budget !== 'ALL') {
+        const meta = budgetMetaByLeadId.get(lead.id) ?? getLeadBudgetDetails(lead);
+        const fBudget = columnFilters.budget;
+        if (fBudget === 'NONE') {
+          if (meta.formattedBudget || (meta.paymentStatus && meta.paymentStatus !== 'UNPAID') || meta.fallbackLabel !== '—') {
+            return false;
+          }
+        } else if (fBudget === 'PAID') {
+          if (meta.paymentStatus !== 'PAID') return false;
+        } else if (fBudget === 'PARTIAL') {
+          if (meta.paymentStatus !== 'PARTIAL') return false;
+        } else if (fBudget === 'YES') {
+          if (meta.fallbackLabel.trim().toLowerCase() !== 'yes') return false;
+        } else if (fBudget === 'NO') {
+          if (meta.fallbackLabel.trim().toLowerCase() !== 'no') return false;
+        } else if (fBudget === 'HAS_VALUE') {
+          const hasPositive =
+            Boolean(meta.formattedBudget) ||
+            meta.paymentStatus === 'PAID' ||
+            meta.paymentStatus === 'PARTIAL' ||
+            meta.fallbackLabel.toLowerCase() === 'yes';
+          if (!hasPositive) return false;
+        } else if (fBudget.startsWith('AMT:')) {
+          if (meta.formattedBudget !== fBudget.slice(4)) return false;
+        }
+      }
+
+      // Column: Lead Quality
+      if (columnFilters.quality !== 'ALL') {
+        const q = getLeadQualityText(lead);
+        if (columnFilters.quality === 'NONE') {
+          if (q !== '—') return false;
+        } else if (q !== columnFilters.quality) {
+          return false;
+        }
+      }
+
+      // Column: Follow-up Date
+      if (columnFilters.followUpDate) {
+        const dateKey = toISTDateKey(lead.followUpDate || lead.createdTime || lead.createdAt);
+        if (dateKey !== columnFilters.followUpDate) return false;
+      }
+
+      // Column: Follow-up Status
+      if (columnFilters.followUpStatus !== 'ALL') {
+        if (getFollowUpStatusText(lead) !== columnFilters.followUpStatus) return false;
+      }
+
+      // Column: Remarks
+      if (remarksQuery) {
+        const notesStr = (lead.notes || '').toLowerCase();
+        if (!notesStr.includes(remarksQuery)) return false;
       }
 
       return true;
@@ -372,12 +969,12 @@ export default function Leads() {
     });
 
     return result;
-  }, [deskAndPlatformScopedLeads, statusFilter, searchTerm, sortBy]);
+  }, [deskAndPlatformScopedLeads, statusFilter, searchTerm, sortBy, columnFilters, budgetMetaByLeadId]);
 
   // Reset to page 1 on filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter, platformFilter, visaTypeFilter, pageSize]);
+  }, [searchTerm, statusFilter, platformFilter, visaTypeFilter, pageSize, columnFilters]);
 
   // 3. Pagination Slicing for 1000s of records
   const totalPages = Math.ceil(filteredLeads.length / pageSize) || 1;
@@ -1228,49 +1825,37 @@ export default function Leads() {
     );
   };
 
-  const getLeadQuality = (leadItem: Lead): string => {
-    if (leadItem.leadQuality) return leadItem.leadQuality;
-    const n = (leadItem.notes || '').toLowerCase();
-    if (n.includes('quality: hot') || n.includes('hot')) return 'Hot';
-    if (n.includes('quality: warm') || n.includes('warm')) return 'Warm';
-    if (n.includes('quality: cold') || n.includes('cold')) return 'Cold';
-    if (leadItem.status === 'QUALIFIED' || leadItem.status === 'CONVERTED' || leadItem.status === 'WON') return 'Hot';
-    if (leadItem.status === 'CONTACTED' || leadItem.status === 'PROPOSAL_SENT') return 'Warm';
-    return '—';
-  };
+  const getLeadQuality = useCallback((leadItem: Lead): string => {
+    return getLeadQualityText(leadItem);
+  }, []);
 
-  const getBudgetReady = (leadItem: Lead): React.ReactNode => {
-    const cachedBudget = localStorage.getItem(`ssa_lead_budget_${leadItem.id}`);
-    const cachedPayment = localStorage.getItem(`ssa_lead_payment_status_${leadItem.id}`);
-    const b = (leadItem as any).budgetRange || (leadItem as any).clientBudget || cachedBudget;
-    const formattedBudget = formatCurrencyDisplay(b);
-    const p = ((leadItem as any).paymentStatus || cachedPayment || '').toUpperCase();
+  const getBudgetReady = useCallback(
+    (leadItem: Lead): React.ReactNode => {
+      const meta = budgetMetaByLeadId.get(leadItem.id) ?? getLeadBudgetDetails(leadItem);
+      const { formattedBudget, paymentStatus, fallbackLabel } = meta;
 
-    if (formattedBudget || (p && p !== 'UNPAID')) {
-      return (
-        <div className="flex flex-col items-start gap-1">
-          {formattedBudget && <span className="font-semibold text-[#007aff]">{formattedBudget}</span>}
-          {p === 'PAID' && (
-            <span className="text-[11px] font-semibold text-emerald-700">
-              Paid
-            </span>
-          )}
-          {p === 'PARTIAL' && (
-            <span className="text-[11px] font-medium text-amber-700">
-              Partial
-            </span>
-          )}
-        </div>
-      );
-    }
+      if (formattedBudget || (paymentStatus && paymentStatus !== 'UNPAID')) {
+        return (
+          <div className="flex flex-col items-start gap-1">
+            {formattedBudget && <span className="font-semibold text-[#007aff]">{formattedBudget}</span>}
+            {paymentStatus === 'PAID' && (
+              <span className="text-[11px] font-semibold text-emerald-700">
+                Paid
+              </span>
+            )}
+            {paymentStatus === 'PARTIAL' && (
+              <span className="text-[11px] font-medium text-amber-700">
+                Partial
+              </span>
+            )}
+          </div>
+        );
+      }
 
-    if (leadItem.budgetReady) return leadItem.budgetReady;
-    const n = (leadItem.notes || '').toLowerCase();
-    if (n.includes('budget: no') || n.includes('budget no') || n.includes('budget_ready: no')) return 'No';
-    if (n.includes('budget: yes') || n.includes('budget yes') || n.includes('budget_ready: yes')) return 'Yes';
-    if (leadItem.status === 'CONVERTED' || leadItem.status === 'WON' || leadItem.status === 'QUALIFIED') return 'Yes';
-    return '—';
-  };
+      return fallbackLabel;
+    },
+    [budgetMetaByLeadId]
+  );
 
   const getCounselorDisplayName = (leadItem: Lead): string => {
     // 1. If explicitly assigned in lead record, return staff name if matched or the login
@@ -1452,6 +2037,7 @@ export default function Leads() {
               <option value="IG">Instagram</option>
               <option value="FB">Facebook</option>
               <option value="WHATSAPP">WhatsApp</option>
+              <option value="OTHER">Direct / Walk-in</option>
             </select>
 
             {/* Sort */}
@@ -1480,7 +2066,7 @@ export default function Leads() {
             All Candidates ({deskAndPlatformScopedLeads.length})
           </button>
           {LEAD_STATUS_LIST.map((st) => {
-            const count = deskAndPlatformScopedLeads.filter((l) => l.status === st.value).length;
+            const count = deskAndPlatformScopedLeads.filter((l) => (l.status || 'CREATED') === st.value).length;
             const active = statusFilter === st.value;
             return (
               <button
@@ -1563,64 +2149,282 @@ export default function Leads() {
       {/* ── Apple HIG Lists and Tables (https://developer.apple.com/design/human-interface-guidelines/lists-and-tables) ── */}
       {viewMode === 'list' ? (
         /* ── Full Cross-Device Apple Inset Grouped List View ── */
-        <IosLeadList
-          leads={paginatedLeads}
-          loading={loading}
-          totalLeads={filteredLeads.length}
-          currentPage={currentPage}
-          pageSize={pageSize}
-          onPageChange={setCurrentPage}
-          onPageSizeChange={setPageSize}
-          onToggleContacted={handleToggleContacted}
-          onOpenStatusModal={(lead, e) => {
-            e.stopPropagation();
-            setStatusModalLead(lead);
-            setStatusForm({
-              status: lead.status || 'CONTACTED',
-              notes: lead.notes || '',
-            });
-          }}
-          onDeleteLead={handleDeleteLead}
-          getLeadQuality={getLeadQuality}
-          getBudgetReady={getBudgetReady}
-          formatDate={formatDate}
-        />
+        <div className="space-y-2.5">
+          {activeColumnFilterCount > 0 && (
+            <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-2xl bg-white border border-black/[0.06] text-[13px] font-sf">
+              <span className="text-[#3c3c43]">
+                Filtered to {filteredLeads.length} of {deskAndPlatformScopedLeads.length} candidates
+              </span>
+              <button
+                type="button"
+                onClick={() => clearColumnFilters(false)}
+                className="text-[#007aff] font-normal hover:opacity-70 transition-opacity cursor-pointer"
+              >
+                Clear
+              </button>
+            </div>
+          )}
+          <IosLeadList
+            leads={paginatedLeads}
+            loading={loading}
+            totalLeads={filteredLeads.length}
+            currentPage={currentPage}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            onToggleContacted={handleToggleContacted}
+            onOpenStatusModal={(lead, e) => {
+              e.stopPropagation();
+              setStatusModalLead(lead);
+              setStatusForm({
+                status: lead.status || 'CONTACTED',
+                notes: lead.notes || '',
+              });
+            }}
+            onDeleteLead={handleDeleteLead}
+            getLeadQuality={getLeadQuality}
+            getBudgetReady={getBudgetReady}
+            formatDate={formatDate}
+          />
+        </div>
       ) : (
         /* ── Candidate Table Directory (Responsive with smooth horizontal scroll) ── */
         <div className="space-y-2.5">
             {/* Apple HIG Grouped Table View Header */}
-            <div className="flex flex-wrap items-center justify-between gap-2 px-3 text-[12px] font-semibold tracking-wider text-[#6e6e73] uppercase select-none">
+            <div className="flex flex-wrap items-center justify-between gap-3 px-3 font-sf select-none">
               <div className="flex items-center gap-2 min-w-0">
-                <span className="whitespace-nowrap">Candidate Table Directory</span>
-                <span className="text-[11px] font-normal normal-case text-[#86868b] bg-black/[0.04] px-2.5 py-0.5 rounded-full border border-black/[0.04] whitespace-nowrap shrink-0">
-                  {filteredLeads.length} {filteredLeads.length === 1 ? 'candidate' : 'candidates'}
+                <span className="text-[12px] font-semibold tracking-wider text-[#6e6e73] uppercase whitespace-nowrap">
+                  Candidate Table Directory
+                </span>
+                <span className="text-[12px] font-normal text-[#86868b] bg-black/[0.04] px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0">
+                  {activeColumnFilterCount > 0 && filteredLeads.length !== deskAndPlatformScopedLeads.length
+                    ? `${filteredLeads.length} of ${deskAndPlatformScopedLeads.length}`
+                    : `${filteredLeads.length} ${filteredLeads.length === 1 ? 'candidate' : 'candidates'}`}
                 </span>
               </div>
-              <span className="text-[11px] font-medium normal-case text-[#86868b] whitespace-nowrap shrink-0 ml-auto">
-                Page {currentPage} of {totalPages}
-              </span>
+
+              <div className="flex items-center gap-4 ml-auto shrink-0">
+                {activeColumnFilterCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => clearColumnFilters(false)}
+                    className="text-[13px] font-normal text-[#007aff] hover:opacity-70 active:opacity-50 transition-opacity cursor-pointer whitespace-nowrap"
+                  >
+                    Clear
+                  </button>
+                )}
+                {hasCustomColumnWidths && (
+                  <button
+                    type="button"
+                    onClick={resetColumnWidths}
+                    className="text-[13px] font-normal text-[#007aff] hover:opacity-70 active:opacity-50 transition-opacity cursor-pointer whitespace-nowrap"
+                  >
+                    Reset Widths
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={toggleColumnFiltersRow}
+                  className="text-[13px] font-normal text-[#007aff] hover:opacity-70 active:opacity-50 transition-opacity cursor-pointer whitespace-nowrap"
+                >
+                  {showColumnFilters ? 'Hide Filters' : 'Filters'}
+                </button>
+                <span className="text-[12px] font-normal text-[#86868b] whitespace-nowrap">
+                  Page {currentPage} of {totalPages}
+                </span>
+              </div>
             </div>
 
             {/* Apple HIG Inset Grouped Table Container */}
-            <div className="bg-white rounded-[18px] sm:rounded-[22px] border border-black/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
+            <div className="bg-white rounded-[18px] sm:rounded-[22px] border border-black/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden font-sf">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse min-w-[1300px]">
+                <table
+                  ref={tableRef}
+                  style={{ width: `${totalTableWidth}px` }}
+                  className="text-left text-xs border-collapse table-fixed"
+                >
+                  <colgroup>
+                    {TABLE_COLUMNS.map((col) => (
+                      <col key={col.key} style={{ width: `${columnWidths[col.key]}px` }} />
+                    ))}
+                  </colgroup>
                   <thead>
-                    <tr className="bg-[#fbfbfd] border-b border-black/[0.06] text-[11px] font-semibold text-[#8e8e93] select-none">
-                      <th className="py-3 px-3.5 whitespace-nowrap">Lead Source</th>
-                      <th className="py-3 px-3.5 whitespace-nowrap">Campaign Name</th>
-                      <th className="py-3 px-3.5 whitespace-nowrap">Candidate Name</th>
-                      <th className="py-3 px-3.5 whitespace-nowrap">Mobile Number</th>
-                      <th className="py-3 px-3.5 whitespace-nowrap">WhatsApp Number</th>
-                      <th className="py-3 px-3.5 whitespace-nowrap">City</th>
-                      <th className="py-3 px-3.5 whitespace-nowrap">Budget / Payment</th>
-                      <th className="py-3 px-3.5 whitespace-nowrap">Lead Quality</th>
-                      <th className="py-3 px-3.5 whitespace-nowrap">Follow-up Date</th>
-                      <th className="py-3 px-3.5 whitespace-nowrap">Follow-up Status</th>
-                      <th className="py-3 px-3.5 whitespace-nowrap">Current Stage</th>
-                      <th className="py-3 px-3.5 whitespace-nowrap">Remarks</th>
-                      <th className="py-3 px-3.5 text-right whitespace-nowrap">Actions</th>
+                    <tr className="bg-[#fbfbfd] border-b border-black/[0.06] text-[12px] font-medium text-[#8e8e93] select-none">
+                      {TABLE_COLUMNS.map((col) => {
+                        const isColFiltered =
+                          (col.key === 'leadSource' && platformFilter !== 'ALL') ||
+                          (col.key === 'campaignName' && columnFilters.campaignName !== 'ALL') ||
+                          (col.key === 'candidateName' && columnFilters.candidateName.trim().length > 0) ||
+                          (col.key === 'mobileNumber' && columnFilters.mobileNumber.trim().length > 0) ||
+                          (col.key === 'whatsapp' && columnFilters.whatsapp !== 'ALL') ||
+                          (col.key === 'city' && columnFilters.city.trim().length > 0) ||
+                          (col.key === 'budget' && columnFilters.budget !== 'ALL') ||
+                          (col.key === 'quality' && columnFilters.quality !== 'ALL') ||
+                          (col.key === 'followUpDate' && Boolean(columnFilters.followUpDate)) ||
+                          (col.key === 'followUpStatus' && columnFilters.followUpStatus !== 'ALL') ||
+                          (col.key === 'currentStage' && statusFilter !== 'ALL') ||
+                          (col.key === 'remarks' && columnFilters.remarks.trim().length > 0);
+
+                        return (
+                          <th
+                            key={col.key}
+                            className={`py-3 px-3.5 whitespace-nowrap relative border-r border-black/[0.06] last:border-r-0 overflow-hidden ${
+                              col.alignRight ? 'text-right' : ''
+                            } ${isColFiltered ? 'text-[#1c1c1e] font-semibold' : ''}`}
+                          >
+                            <div className={`truncate ${col.alignRight ? 'pr-1' : 'pr-1.5'}`}>
+                              {col.label}
+                            </div>
+                            <div
+                              role="separator"
+                              aria-orientation="vertical"
+                              aria-label={`Resize ${col.label} column`}
+                              title="Drag to resize · Double-click to fit"
+                              onPointerDown={(e) => handleStartColumnResize(col.key, e)}
+                              onDoubleClick={(e) => {
+                                e.stopPropagation();
+                                handleAutoFitColumn(col.key);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              className="absolute top-0 right-0 h-full w-2.5 cursor-col-resize z-10 flex justify-end group/resize touch-none"
+                            >
+                              <span
+                                className={`h-full transition-colors ${
+                                  resizingCol === col.key
+                                    ? 'w-[2px] bg-[#007aff]'
+                                    : 'w-[2px] bg-transparent group-hover/resize:bg-[#007aff]/60'
+                                }`}
+                              />
+                            </div>
+                          </th>
+                        );
+                      })}
                     </tr>
+                    {showColumnFilters && (
+                      <tr className="bg-[#fbfbfd] border-b border-black/[0.06]">
+                        <TableSelectFilterCell
+                          value={platformFilter}
+                          onChange={setPlatformFilter}
+                          ariaLabel="Filter by Lead Source"
+                          options={[
+                            { value: 'ALL', label: 'All' },
+                            { value: 'IG', label: 'Instagram' },
+                            { value: 'FB', label: 'Facebook' },
+                            { value: 'WHATSAPP', label: 'WhatsApp' },
+                            { value: 'OTHER', label: 'Direct / Walk-in' },
+                          ]}
+                        />
+                        <TableSelectFilterCell
+                          value={columnFilters.campaignName}
+                          onChange={(val) => updateColumnFilter('campaignName', val)}
+                          ariaLabel="Filter by Campaign Name"
+                          options={campaignFilterOptions}
+                        />
+                        <TableTextFilterCell
+                          value={columnFilters.candidateName}
+                          onChange={(val) => updateColumnFilter('candidateName', val)}
+                          placeholder="Search"
+                          ariaLabel="Filter by Candidate Name"
+                        />
+                        <TableTextFilterCell
+                          value={columnFilters.mobileNumber}
+                          onChange={(val) => updateColumnFilter('mobileNumber', val)}
+                          placeholder="Search"
+                          ariaLabel="Filter by Mobile Number"
+                        />
+                        <TableSelectFilterCell
+                          value={columnFilters.whatsapp}
+                          onChange={(val) => updateColumnFilter('whatsapp', val)}
+                          ariaLabel="Filter by WhatsApp Number"
+                          options={[
+                            { value: 'ALL', label: 'All' },
+                            { value: 'YES', label: 'Yes' },
+                            { value: 'NO', label: 'None (—)' },
+                          ]}
+                        />
+                        <TableTextFilterCell
+                          value={columnFilters.city}
+                          onChange={(val) => updateColumnFilter('city', val)}
+                          placeholder="Search"
+                          ariaLabel="Filter by City"
+                        />
+                        <TableSelectFilterCell
+                          value={columnFilters.budget}
+                          onChange={(val) => updateColumnFilter('budget', val)}
+                          ariaLabel="Filter by Budget / Payment"
+                          options={budgetFilterOptions}
+                        />
+                        <TableSelectFilterCell
+                          value={columnFilters.quality}
+                          onChange={(val) => updateColumnFilter('quality', val)}
+                          ariaLabel="Filter by Lead Quality"
+                          options={[
+                            { value: 'ALL', label: 'All' },
+                            { value: 'Hot', label: 'Hot' },
+                            { value: 'Warm', label: 'Warm' },
+                            { value: 'Cold', label: 'Cold' },
+                            { value: 'NONE', label: 'Not Set (—)' },
+                          ]}
+                        />
+                        <th className="py-2 px-2 align-middle font-normal overflow-hidden border-r border-black/[0.04] last:border-r-0">
+                          <div className="flex items-center gap-1 w-full min-w-0">
+                            <input
+                              type="date"
+                              value={columnFilters.followUpDate}
+                              onChange={(e) => updateColumnFilter('followUpDate', e.target.value)}
+                              aria-label="Filter by Follow-up Date"
+                              className={`font-sf h-[30px] flex-1 min-w-0 px-2 rounded-[8px] text-[12px] border transition-colors focus:outline-none focus:bg-white focus:border-[#007aff]/50 ${
+                                columnFilters.followUpDate
+                                  ? 'bg-white border-black/[0.16] text-[#1c1c1e] font-medium shadow-[0_1px_2px_rgba(0,0,0,0.04)]'
+                                  : 'bg-[#767680]/[0.08] hover:bg-[#767680]/[0.12] border-transparent text-[#3c3c43] font-normal'
+                              }`}
+                            />
+                            {columnFilters.followUpDate && (
+                              <button
+                                type="button"
+                                onClick={() => updateColumnFilter('followUpDate', '')}
+                                title="Clear Follow-up Date"
+                                className="text-[#8e8e93] hover:text-[#1c1c1e] p-1 cursor-pointer shrink-0"
+                              >
+                                <X size={12} />
+                              </button>
+                            )}
+                          </div>
+                        </th>
+                        <TableSelectFilterCell
+                          value={columnFilters.followUpStatus}
+                          onChange={(val) => updateColumnFilter('followUpStatus', val)}
+                          ariaLabel="Filter by Follow-up Status"
+                          options={followUpStatusFilterOptions}
+                        />
+                        <TableSelectFilterCell
+                          value={statusFilter}
+                          onChange={setStatusFilter}
+                          ariaLabel="Filter by Current Stage"
+                          options={[
+                            { value: 'ALL', label: 'All' },
+                            ...LEAD_STATUS_LIST.map((st) => ({ value: st.value, label: st.label })),
+                          ]}
+                        />
+                        <TableTextFilterCell
+                          value={columnFilters.remarks}
+                          onChange={(val) => updateColumnFilter('remarks', val)}
+                          placeholder="Search"
+                          ariaLabel="Filter by Remarks"
+                        />
+                        <th className="py-2 px-3.5 text-right align-middle font-normal overflow-hidden">
+                          {activeColumnFilterCount > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => clearColumnFilters(false)}
+                              className="text-[12px] font-normal text-[#007aff] hover:opacity-70 transition-opacity cursor-pointer whitespace-nowrap"
+                            >
+                              Reset
+                            </button>
+                          )}
+                        </th>
+                      </tr>
+                    )}
                   </thead>
                   <tbody className="divide-y divide-black/[0.04]">
                     {paginatedLeads.length === 0 ? (
@@ -1632,11 +2436,22 @@ export default function Leads() {
                               Loading candidates...
                             </span>
                           ) : (
-                            <div>
-                              <p className="text-[#1c1c1e] font-semibold text-sm">No candidate records match your criteria</p>
-                              <p className="text-[#8e8e93] text-xs mt-1">
-                                Try clearing filters or search keywords, or ingest new records from Meta ads.
-                              </p>
+                            <div className="space-y-2">
+                              <div>
+                                <p className="text-[#1c1c1e] font-semibold text-sm">No candidate records match your criteria</p>
+                                <p className="text-[#8e8e93] text-xs mt-1">
+                                  Try clearing filters or search keywords, or ingest new records from Meta ads.
+                                </p>
+                              </div>
+                              {(activeColumnFilterCount > 0 || searchTerm.trim().length > 0) && (
+                                <button
+                                  type="button"
+                                  onClick={() => clearColumnFilters(true)}
+                                  className="text-[13px] font-medium text-[#007aff] hover:opacity-70 transition-opacity cursor-pointer"
+                                >
+                                  Clear Filters
+                                </button>
+                              )}
                             </div>
                           )}
                         </td>
@@ -1652,112 +2467,112 @@ export default function Leads() {
                             className="hover:bg-[#007aff]/[0.02] transition-colors cursor-pointer group"
                           >
                             {/* Lead Source */}
-                            <td className="py-3 px-3.5 whitespace-nowrap">
-                              <span className="font-semibold text-xs text-[#1c1c1e]">
+                            <td data-col="leadSource" className="py-3 px-3.5 whitespace-nowrap overflow-hidden">
+                              <span className="font-semibold text-xs text-[#1c1c1e] block truncate" title={plat.label}>
                                 {plat.label}
                               </span>
                             </td>
 
                             {/* Campaign Name */}
-                            <td className="py-3 px-3.5">
-                              <div className="font-medium text-[#1c1c1e] text-xs truncate max-w-[160px]" title={lead.campaignName || '—'}>
+                            <td data-col="campaignName" className="py-3 px-3.5 overflow-hidden">
+                              <div className="font-medium text-[#1c1c1e] text-xs truncate w-full" title={lead.campaignName || '—'}>
                                 {lead.campaignName || '—'}
                               </div>
                             </td>
 
                             {/* Candidate Name */}
-                            <td className="py-3 px-3.5">
-                              <div className="font-semibold text-[13px] text-[#1c1c1e] group-hover:text-[#007aff] transition-colors">
+                            <td data-col="candidateName" className="py-3 px-3.5 overflow-hidden">
+                              <div className="font-semibold text-[13px] text-[#1c1c1e] group-hover:text-[#007aff] transition-colors truncate" title={lead.customerName || `Candidate #${lead.id}`}>
                                 {lead.customerName || `Candidate #${lead.id}`}
                               </div>
-                              <div className="flex items-center gap-1.5 text-[11px] text-[#8e8e93] mt-0.5">
-                                {lead.email && <span className="truncate max-w-[140px]">{lead.email}</span>}
-                                {lead.email && <span>·</span>}
-                                <span className="font-sf-mono text-[10px]">
+                              <div className="flex items-center gap-1.5 text-[11px] text-[#8e8e93] mt-0.5 min-w-0">
+                                {lead.email && <span className="truncate">{lead.email}</span>}
+                                {lead.email && <span className="shrink-0">·</span>}
+                                <span className="font-sf-mono text-[10px] truncate">
                                   {lead.externalId ? lead.externalId : `#${lead.id}`}
                                 </span>
                               </div>
                             </td>
 
                             {/* Mobile Number */}
-                            <td className="py-3 px-3.5 whitespace-nowrap">
-                              <span className="font-sf-mono text-[12px] text-[#1c1c1e] font-medium tracking-tight">
+                            <td data-col="mobileNumber" className="py-3 px-3.5 whitespace-nowrap overflow-hidden">
+                              <span className="font-sf-mono text-[12px] text-[#1c1c1e] font-medium tracking-tight block truncate" title={lead.phoneNumber || '—'}>
                                 {lead.phoneNumber || '—'}
                               </span>
                             </td>
 
                             {/* WhatsApp Number */}
-                            <td className="py-3 px-3.5 whitespace-nowrap text-xs text-[#1c1c1e]">
-                              {lead.phoneNumber ? 'Yes' : '—'}
+                            <td data-col="whatsapp" className="py-3 px-3.5 whitespace-nowrap overflow-hidden text-xs text-[#1c1c1e]">
+                              <span className="block truncate">{lead.phoneNumber ? 'Yes' : '—'}</span>
                             </td>
 
                             {/* City */}
-                            <td className="py-3 px-3.5 whitespace-nowrap">
-                              <span className="text-xs text-[#1c1c1e] capitalize">
+                            <td data-col="city" className="py-3 px-3.5 whitespace-nowrap overflow-hidden">
+                              <span className="text-xs text-[#1c1c1e] capitalize block truncate" title={lead.city || lead.location || '—'}>
                                 {lead.city || lead.location || '—'}
                               </span>
                             </td>
 
                             {/* Budget Ready */}
-                            <td className="py-3 px-3.5 whitespace-nowrap text-xs text-[#1c1c1e]">
+                            <td data-col="budget" className="py-3 px-3.5 whitespace-nowrap overflow-hidden text-xs text-[#1c1c1e]">
                               {getBudgetReady(lead)}
                             </td>
 
                             {/* Lead Quality */}
-                            <td className="py-3 px-3.5 whitespace-nowrap text-xs text-[#1c1c1e]">
+                            <td data-col="quality" className="py-3 px-3.5 whitespace-nowrap overflow-hidden text-xs text-[#1c1c1e]">
                               {(() => {
                                 const q = getLeadQuality(lead);
                                 if (q === 'Hot') {
                                   return (
-                                    <span className="text-xs font-semibold text-[#ff3b30]">
+                                    <span className="text-xs font-semibold text-[#ff3b30] block truncate">
                                       Hot
                                     </span>
                                   );
                                 }
                                 if (q === 'Warm') {
                                   return (
-                                    <span className="text-xs font-semibold text-[#ff9500]">
+                                    <span className="text-xs font-semibold text-[#ff9500] block truncate">
                                       Warm
                                     </span>
                                   );
                                 }
                                 if (q === 'Cold') {
                                   return (
-                                    <span className="text-xs font-medium text-[#8e8e93]">
+                                    <span className="text-xs font-medium text-[#8e8e93] block truncate">
                                       Cold
                                     </span>
                                   );
                                 }
-                                return <span className="text-xs text-[#8e8e93]">—</span>;
+                                return <span className="text-xs text-[#8e8e93] block truncate">—</span>;
                               })()}
                             </td>
 
                             {/* Follow-up Date */}
-                            <td className="py-3 px-3.5 text-[#64748b] text-[11px] whitespace-nowrap font-normal">
+                            <td data-col="followUpDate" className="py-3 px-3.5 text-[#64748b] text-[11px] whitespace-nowrap font-normal overflow-hidden text-ellipsis" title={formatDate(lead.followUpDate || lead.createdTime || lead.createdAt)}>
                               {formatDate(lead.followUpDate || lead.createdTime || lead.createdAt)}
                             </td>
 
                             {/* Follow-up Status */}
-                            <td className="py-3 px-3.5 whitespace-nowrap">
-                              <span className="text-xs font-medium text-[#1c1c1e]">
-                                {lead.followUpStatus || lead.leadConfirm || (lead.status === 'CREATED' ? 'Pending' : 'Interested')}
+                            <td data-col="followUpStatus" className="py-3 px-3.5 whitespace-nowrap overflow-hidden">
+                              <span className="text-xs font-medium text-[#1c1c1e] block truncate" title={getFollowUpStatusText(lead)}>
+                                {getFollowUpStatusText(lead)}
                               </span>
                             </td>
 
                             {/* Current Stage */}
-                            <td className="py-3 px-3.5 whitespace-nowrap">
+                            <td data-col="currentStage" className="py-3 px-3.5 whitespace-nowrap overflow-hidden text-ellipsis">
                               {renderStageBadge(lead)}
                             </td>
 
                             {/* Remarks */}
-                            <td className="py-3 px-3.5">
-                              <div className="text-[11px] text-[#475569] truncate max-w-[150px]" title={lead.notes || '—'}>
+                            <td data-col="remarks" className="py-3 px-3.5 overflow-hidden">
+                              <div className="text-[11px] text-[#475569] truncate w-full" title={lead.notes || '—'}>
                                 {lead.notes || '—'}
                               </div>
                             </td>
 
                             {/* Outreach & Actions (Clean macOS Style Icon Buttons with Chevron) */}
-                            <td className="py-3 px-3.5 text-right" onClick={(e) => e.stopPropagation()}>
+                            <td data-col="actions" className="py-3 px-3.5 text-right overflow-hidden" onClick={(e) => e.stopPropagation()}>
                               <div className="flex items-center justify-end gap-0.5">
                                 {lead.phoneNumber && (
                                   <>

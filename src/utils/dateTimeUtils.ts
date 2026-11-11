@@ -124,6 +124,29 @@ export function formatIndianDate(
 }
 
 /**
+ * Formats a Date or ISO timestamp into YYYY-MM-DD in IST (Asia/Kolkata) for date-picker filtering.
+ */
+export function toISTDateKey(dateOrIso?: Date | string | number | null): string {
+  if (!dateOrIso) return '';
+  try {
+    const d =
+      typeof dateOrIso === 'string' || typeof dateOrIso === 'number'
+        ? new Date(dateOrIso)
+        : dateOrIso;
+    if (isNaN(d.getTime())) return '';
+
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: IST_TIMEZONE,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(d);
+  } catch {
+    return '';
+  }
+}
+
+/**
  * Strips unwanted static boilerplate prefixes/suffixes from reminder messages
  * so that only user-entered data is displayed.
  */
