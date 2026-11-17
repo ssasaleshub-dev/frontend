@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users } from 'lucide-react';
+import { Users, Bell } from 'lucide-react';
 
 export interface BrandIconProps {
   size?: number | string;
@@ -153,28 +153,18 @@ export const BrandDossierIcon: React.FC<BrandIconProps> = ({
 
 /**
  * SSA Brand Reminder & Alarm Icon
- * Bespoke clean Apple HIG notification bell with subtle soundwave arc.
+ * Clean, standard Apple HIG / Lucide notification bell.
  */
 export const BrandReminderIcon: React.FC<BrandIconProps> = ({
   size = 14,
   className = '',
   strokeWidth = 1.75,
 }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={strokeWidth}
-    strokeLinecap="round"
-    strokeLinejoin="round"
+  <Bell
+    size={size}
     className={className}
-    aria-hidden="true"
-  >
-    <path d="M6 9a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-    <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-  </svg>
+    strokeWidth={strokeWidth}
+  />
 );
 
 export interface AppleBellIconProps extends BrandIconProps {

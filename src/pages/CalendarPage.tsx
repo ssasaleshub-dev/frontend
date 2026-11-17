@@ -19,6 +19,7 @@ import {
   Bell,
 } from 'lucide-react';
 import { BrandReminderIcon } from '../components/icons/BrandIcons';
+import TimePicker12Hour from '../components/TimePicker12Hour';
 import reminderNotificationService, {
   CalendarEvent,
   EventType,
@@ -779,11 +780,11 @@ export default function CalendarPage() {
             </div>
             <div className="px-5 py-3 border-b border-black/[0.04] flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-full bg-[#ff9500]/10 text-[#ff9500] flex items-center justify-center">
+                <div className="w-7 h-7 rounded-full bg-[#0071e3]/10 text-[#0071e3] flex items-center justify-center">
                   <BrandReminderIcon size={14} strokeWidth={2} />
                 </div>
                 <h3 className="text-[15px] font-semibold text-[#1d1d1f] tracking-tight">
-                  New Reminder / Event
+                  New Reminder
                 </h3>
               </div>
               <button
@@ -824,38 +825,55 @@ export default function CalendarPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1">
-                    Time (IST)
-                  </label>
-                  <input
-                    type="time"
-                    required
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider">
+                      Time (IST)
+                    </label>
+                    <div className="flex items-center gap-1 text-[10px]">
+                      <button
+                        type="button"
+                        onClick={() => setFormData((prev) => ({ ...prev, eventTime: '10:00' }))}
+                        className="px-1.5 py-0.5 rounded bg-black/[0.04] hover:bg-black/[0.08] text-[#515154] font-medium transition-colors cursor-pointer"
+                      >
+                        10 AM
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData((prev) => ({ ...prev, eventTime: '14:30' }))}
+                        className="px-1.5 py-0.5 rounded bg-black/[0.04] hover:bg-black/[0.08] text-[#515154] font-medium transition-colors cursor-pointer"
+                      >
+                        2:30 PM
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData((prev) => ({ ...prev, eventTime: '17:00' }))}
+                        className="px-1.5 py-0.5 rounded bg-black/[0.04] hover:bg-black/[0.08] text-[#515154] font-medium transition-colors cursor-pointer"
+                      >
+                        5 PM
+                      </button>
+                    </div>
+                  </div>
+                  <TimePicker12Hour
                     value={formData.eventTime}
-                    onChange={(e) => setFormData({ ...formData, eventTime: e.target.value })}
-                    className="w-full px-3 py-1.5 bg-[#f5f5f7] border border-black/[0.04] rounded-[12px] text-[12px] text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
+                    onChange={(t) => setFormData((prev) => ({ ...prev, eventTime: t }))}
                   />
                 </div>
               </div>
 
-              {/* Live Dynamic Countdown Preview */}
+              {/* Live Time Status Preview */}
               {(() => {
                 const liveRem = getRemainingTimeInfo(formData.eventDate, formData.eventTime);
                 if (!liveRem) return null;
                 return (
                   <div
-                    className={`flex items-center justify-between px-3 py-2 rounded-[14px] border text-[11px] transition-all ${
+                    className={`flex items-center gap-2 px-3 py-2 rounded-[12px] border text-[11px] transition-all ${
                       liveRem.isPast
                         ? 'bg-[#f2f2f7] border-black/[0.04] text-[#8e8e93]'
-                        : 'bg-[#0071e3]/[0.07] border-[#0071e3]/20 text-[#0071e3]'
+                        : 'bg-[#0071e3]/[0.06] border-[#0071e3]/15 text-[#0071e3]'
                     }`}
                   >
-                    <div className="flex items-center gap-1.5 font-medium truncate">
-                      <Clock size={12} className="shrink-0" />
-                      <span>{liveRem.isPast ? liveRem.text : `⏱ ${liveRem.text}`}</span>
-                    </div>
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/80 shrink-0 shadow-2xs">
-                      {liveRem.isPast ? 'Passed' : 'IST Countdown'}
-                    </span>
+                    <Clock size={13} className="shrink-0" />
+                    <span className="font-medium">{liveRem.text}</span>
                   </div>
                 );
               })()}

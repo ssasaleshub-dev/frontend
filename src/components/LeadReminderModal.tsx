@@ -16,6 +16,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { BrandReminderIcon } from './icons/BrandIcons';
+import TimePicker12Hour from './TimePicker12Hour';
 import notificationApiService, {
   CalendarEventDTO,
   EventPriority,
@@ -434,12 +435,10 @@ export default function LeadReminderModal({
                       </button>
                     </div>
                   </div>
-                  <input
-                    type="time"
+                  <TimePicker12Hour
                     value={eventTime}
-                    onChange={(e) => setEventTime(e.target.value)}
-                    required
-                    className="w-full px-3.5 py-2.5 bg-white border border-black/[0.1] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] transition-all"
+                    onChange={setEventTime}
+                    className="bg-white border-black/[0.1] px-3.5 py-1.5 text-xs rounded-xl"
                   />
                 </div>
               </div>
@@ -450,19 +449,14 @@ export default function LeadReminderModal({
                 if (!liveRem) return null;
                 return (
                   <div
-                    className={`flex items-center justify-between px-3.5 py-2 rounded-xl border text-[11px] font-medium transition-all ${
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-[11px] font-medium transition-all ${
                       liveRem.isPast
                         ? 'bg-amber-500/10 border-amber-500/20 text-amber-900'
                         : 'bg-[#007aff]/[0.08] border-[#007aff]/20 text-[#007aff]'
                     }`}
                   >
-                    <div className="flex items-center gap-1.5 truncate">
-                      <Clock size={12} className="shrink-0" />
-                      <span>{liveRem.isPast ? liveRem.text : `⏱ ${liveRem.text}`}</span>
-                    </div>
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/80 shrink-0 shadow-2xs">
-                      {liveRem.isPast ? 'Passed' : 'Countdown'}
-                    </span>
+                    <Clock size={13} className="shrink-0" />
+                    <span>{liveRem.text}</span>
                   </div>
                 );
               })()}
