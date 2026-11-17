@@ -1,0 +1,35 @@
+name = "ssasaleshub"
+main = "worker.js"
+compatibility_date = "2026-10-13"
+workers_dev = true
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api", "/api/*"]
+
+[vars]
+APP_ENV = "development"
+API_TARGET_URL = "https://srv2054834.hstgr.cloud/dev/"
+R2_PUBLIC_URL = "https://your-bucket.public.r2.dev"
+CORS_ORIGIN = "*"
+
+[env.dev]
+name = "ssasaleshub-dev"
+
+[env.dev.vars]
+APP_ENV = "development"
+API_TARGET_URL = "https://srv2054834.hstgr.cloud/dev/"
+R2_PUBLIC_URL = "https://your-bucket.public.r2.dev"
+CORS_ORIGIN = "*"
+
+[env.production]
+name = "ssasaleshub-prod"
+
+[env.production.vars]
+APP_ENV = "production"
+API_TARGET_URL = "https://srv2054834.hstgr.cloud/prod/"
+R2_PUBLIC_URL = "https://your-prod-bucket.public.r2.dev"
+CORS_ORIGIN = "https://ssasaleshub.cloud"
+

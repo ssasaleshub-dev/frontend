@@ -4,9 +4,28 @@ import { Capacitor } from '@capacitor/core';
  * Application Constants for Overseas Work & Study Visa Consultancy CRM
  */
 
-export const API_BASE_URL: string =
-  import.meta.env.VITE_API_BASE_URL ||
-  (Capacitor.isNativePlatform() ? 'https://ssasaleshub.cloud' : '');
+export const APP_ENV = (import.meta.env.VITE_ENV || 'development').toLowerCase();
+
+export const API_ENV_CONFIG = {
+  local: import.meta.env.VITE_API_LOCAL || 'https://srv2054834.hstgr.cloud/dev/',
+  prod: import.meta.env.VITE_API_PROD || 'https://srv2054834.hstgr.cloud/prod/',
+  base: import.meta.env.VITE_API_BASE_URL,
+};
+
+export const API_BASE_URL: string = (() => {
+  const browserBase = API_ENV_CONFIG.base;
+
+  if (browserBase && browserBase !== '') return browserBase;
+
+  if (Capacitor.isNativePlatform()) {
+    return APP_ENV === 'production' ? API_ENV_CONFIG.prod : API_ENV_CONFIG.local;
+  }
+
+  return '';
+})();
+
+export const R2_PUBLIC_URL =
+  import.meta.env.VITE_R2_PUBLIC_URL || 'https://pub-ssasaleshub.r2.dev';
 
 export const STORAGE_KEYS = {
   TOKEN: 'ssa_id_token',

@@ -1,49 +1,46 @@
-export async function onRequest(context) {
-  const origin = context.request.headers.get('Origin') || '*'
+async function handleApiRequest(request, env) {
+  const origin = request.headers.get('Origin') || '*'
+  const envName = (env.APP_ENV || 'development').toLowerCase()
+  const targetBase = env.API_TARGET_URL || (
+    envName === 'production' ? 'https://api.ssasaleshub.cloud:8080' : 'http://localhost:8080'
+  )
 
-  // Handle CORS preflight (OPTIONS)
-  if (context.request.method === 'OPTIONS') {
+  if (request.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
       headers: {
         'Access-Control-Allow-Origin': origin === 'null' ? '*' : origin,
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD',
-        'Access-Control-Allow-Headers': context.request.headers.get('Access-Control-Request-Headers') || '*',
+        'Access-Control-Allow-Headers': request.headers.get('Access-Control-Request-Headers') || '*',
         'Access-Control-Allow-Credentials': 'true',
         'Access-Control-Max-Age': '86400',
       },
     })
   }
 
-  const url = new URL(context.request.url)
-  const targetUrl = `http://api.ssasaleshub.cloud:8080${url.pathname}${url.search}`
+  const url = new URL(request.url)
+  const targetUrl = `${targetBase.replace(/\/$/, '')}${url.pathname}${url.search}`
 
-  const headers = new Headers(context.request.headers)
+  const headers = new Headers(request.headers)
   headers.delete('origin')
   headers.delete('referer')
-
-  // Secure Worker-to-Origin authentication:
-  // Strip any client-supplied header to prevent spoofing, then inject private secret
   headers.delete('x-origin-verify')
-  headers.delete('X-Origin-Verify')
-  if (context.env && context.env.ORIGIN_SECRET) {
-    headers.set('X-Origin-Verify', context.env.ORIGIN_SECRET)
+  if (env.ORIGIN_SECRET) {
+    headers.set('X-Origin-Verify', env.ORIGIN_SECRET)
   }
 
   const init = {
-    method: context.request.method,
+    method: request.method,
     headers,
     redirect: 'follow',
   }
 
-  if (!['GET', 'HEAD'].includes(context.request.method)) {
-    init.body = context.request.body
+  if (!['GET', 'HEAD'].includes(request.method)) {
+    init.body = request.body
   }
 
   try {
     const response = await fetch(targetUrl, init)
-
-    // Clone headers to inject full CORS support
     const responseHeaders = new Headers(response.headers)
     responseHeaders.set('Access-Control-Allow-Origin', origin === 'null' ? '*' : origin)
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD')
@@ -51,9 +48,7 @@ export async function onRequest(context) {
     responseHeaders.set('Access-Control-Allow-Credentials', 'true')
     responseHeaders.set('Access-Control-Expose-Headers', 'Authorization, Link, X-Total-Count, X-Alert, X-Error')
 
-    const body = [204, 304].includes(response.status) ? null : response.body
-
-    return new Response(body, {
+    return new Response([204, 304].includes(response.status) ? null : response.body, {
       status: response.status,
       statusText: response.statusText,
       headers: responseHeaders,
@@ -72,3 +67,14 @@ export async function onRequest(context) {
   }
 }
 
+export default {
+  async fetch(request, env) {
+    const { pathname } = new URL(request.url)
+
+    if (pathname === '/api' || pathname.startsWith('/api/')) {
+      return handleApiRequest(request, env)
+    }
+
+    return env.ASSETS.fetch(request)
+  },
+}
