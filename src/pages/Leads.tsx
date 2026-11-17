@@ -252,11 +252,10 @@ const TableTextFilterCell: React.FC<{
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           aria-label={ariaLabel}
-          className={`font-sf h-[30px] w-full min-w-0 pl-2.5 pr-6 rounded-[8px] text-[12px] font-normal border transition-colors focus:outline-none focus:bg-white focus:border-[#007aff]/50 ${
-            active
+          className={`font-sf h-[30px] w-full min-w-0 pl-2.5 pr-6 rounded-[8px] text-[12px] font-normal border transition-colors focus:outline-none focus:bg-white focus:border-[#007aff]/50 ${active
               ? 'bg-white border-black/[0.16] text-[#1c1c1e] shadow-[0_1px_2px_rgba(0,0,0,0.04)]'
               : 'bg-[#767680]/[0.08] hover:bg-[#767680]/[0.12] border-transparent text-[#1c1c1e] placeholder:text-[#8e8e93]'
-          }`}
+            }`}
         />
         {active && (
           <button
@@ -287,11 +286,10 @@ const TableSelectFilterCell: React.FC<{
         value={value}
         onChange={(e) => onChange(e.target.value)}
         aria-label={ariaLabel}
-        className={`font-sf h-[30px] w-full min-w-0 px-2 rounded-[8px] text-[12px] border transition-colors cursor-pointer focus:outline-none focus:bg-white focus:border-[#007aff]/50 ${
-          active
+        className={`font-sf h-[30px] w-full min-w-0 px-2 rounded-[8px] text-[12px] border transition-colors cursor-pointer focus:outline-none focus:bg-white focus:border-[#007aff]/50 ${active
             ? 'bg-white border-black/[0.16] text-[#1c1c1e] font-medium shadow-[0_1px_2px_rgba(0,0,0,0.04)]'
             : 'bg-[#767680]/[0.08] hover:bg-[#767680]/[0.12] border-transparent text-[#3c3c43] font-normal'
-        }`}
+          }`}
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value} className="bg-white text-[#1c1c1e] font-normal">
@@ -1736,9 +1734,8 @@ export default function Leads() {
     } else {
       await showAlert({
         title: 'App',
-        message: `Import Summary:\n• ${successCount} new candidate lead${successCount === 1 ? '' : 's'} created\n• ${skippedCount} duplicate lead${skippedCount === 1 ? '' : 's'} skipped${
-          failCount > 0 ? `\n• ${failCount} entries had unexpected errors` : ''
-        }`,
+        message: `Import Summary:\n• ${successCount} new candidate lead${successCount === 1 ? '' : 's'} created\n• ${skippedCount} duplicate lead${skippedCount === 1 ? '' : 's'} skipped${failCount > 0 ? `\n• ${failCount} entries had unexpected errors` : ''
+          }`,
       });
     }
   };
@@ -1933,7 +1930,7 @@ export default function Leads() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => {
               setModalTab('excel');
@@ -1945,7 +1942,6 @@ export default function Leads() {
             <FileSpreadsheet size={13} className="text-[#1366d9]" />
             <span>Import Excel</span>
           </button>
-
 
           <button
             onClick={() => fetchLeads()}
@@ -1974,7 +1970,7 @@ export default function Leads() {
         {/* Row 1: Search, Desk Segmented Control, and Select Filters */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           {/* Instant Search Bar */}
-          <div className="relative flex-1 max-w-md">
+          <div className="relative flex-1 min-w-[180px] max-w-md">
             <Search
               size={14}
               className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8e8e93] pointer-events-none"
@@ -1999,7 +1995,7 @@ export default function Leads() {
           <div className="flex flex-wrap items-center gap-2">
             {/* Visa Segmented Control: Tab filters for Admin */}
             {isAdmin && (
-              <div className="ios-segmented flex items-center">
+              <div className="ios-segmented flex items-center overflow-x-auto no-scrollbar max-w-full">
                 <button
                   onClick={() => handleVisaTabChange('ALL')}
                   className={`ios-segmented-btn ${visaTypeFilter === 'ALL' ? 'active' : ''}`}
@@ -2031,7 +2027,7 @@ export default function Leads() {
             <select
               value={platformFilter}
               onChange={(e) => setPlatformFilter(e.target.value)}
-              className="px-2.5 py-1.5 bg-[#767680]/[0.08] hover:bg-[#767680]/[0.12] border-0 rounded-xl text-xs text-[#1c1c1e] font-medium focus:outline-none focus:bg-white focus:ring-1 focus:ring-black/10 transition-colors cursor-pointer"
+              className="px-2.5 py-1.5 bg-[#767680]/[0.08] hover:bg-[#767680]/[0.12] border-0 rounded-xl text-xs text-[#1c1c1e] font-medium focus:outline-none focus:bg-white focus:ring-1 focus:ring-black/10 transition-colors cursor-pointer min-w-0 max-w-full truncate"
             >
               <option value="ALL">All Sources</option>
               <option value="IG">Instagram</option>
@@ -2044,7 +2040,7 @@ export default function Leads() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-2.5 py-1.5 bg-[#767680]/[0.08] hover:bg-[#767680]/[0.12] border-0 rounded-xl text-xs text-[#1c1c1e] font-medium focus:outline-none focus:bg-white focus:ring-1 focus:ring-black/10 transition-colors cursor-pointer"
+              className="px-2.5 py-1.5 bg-[#767680]/[0.08] hover:bg-[#767680]/[0.12] border-0 rounded-xl text-xs text-[#1c1c1e] font-medium focus:outline-none focus:bg-white focus:ring-1 focus:ring-black/10 transition-colors cursor-pointer min-w-0 max-w-full truncate"
             >
               <option value="NEWEST">Newest Inquiries</option>
               <option value="OLDEST">Oldest Inquiries</option>
@@ -2057,11 +2053,10 @@ export default function Leads() {
         <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pt-2 border-t border-black/[0.05]">
           <button
             onClick={() => setStatusFilter('ALL')}
-            className={`px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
-              statusFilter === 'ALL'
+            className={`px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${statusFilter === 'ALL'
                 ? 'bg-[#1c1c1e] text-white font-semibold shadow-xs'
                 : 'text-[#8e8e93] hover:text-[#1c1c1e] hover:bg-black/[0.04]'
-            }`}
+              }`}
           >
             All Candidates ({deskAndPlatformScopedLeads.length})
           </button>
@@ -2072,18 +2067,16 @@ export default function Leads() {
               <button
                 key={st.value}
                 onClick={() => setStatusFilter(st.value)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
-                  active
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${active
                     ? 'bg-[#1c1c1e] text-white font-semibold shadow-xs'
                     : 'text-[#8e8e93] hover:text-[#1c1c1e] hover:bg-black/[0.04]'
-                }`}
+                  }`}
               >
                 <span>{st.label}</span>
                 {count > 0 && (
                   <span
-                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-semibold ${
-                      active ? 'bg-white/20 text-white' : 'bg-black/[0.06] text-[#1c1c1e]'
-                    }`}
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-semibold ${active ? 'bg-white/20 text-white' : 'bg-black/[0.06] text-[#1c1c1e]'
+                      }`}
                   >
                     {count}
                   </span>
@@ -2101,11 +2094,10 @@ export default function Leads() {
                 localStorage.setItem('ssa_leads_view_mode_v2', 'list');
                 localStorage.setItem('ssa_leads_view_mode', 'list');
               }}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[7px] text-[11px] font-medium transition-all cursor-pointer ${
-                viewMode === 'list'
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[7px] text-[11px] font-medium transition-all cursor-pointer ${viewMode === 'list'
                   ? 'bg-white text-[#1d1d1f] font-semibold shadow-2xs'
                   : 'text-[#86868b] hover:text-[#1d1d1f]'
-              }`}
+                }`}
               title="Apple HIG Grouped List View"
             >
               <LayoutList size={13} strokeWidth={2} />
@@ -2118,11 +2110,10 @@ export default function Leads() {
                 localStorage.setItem('ssa_leads_view_mode_v2', 'table');
                 localStorage.setItem('ssa_leads_view_mode', 'table');
               }}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[7px] text-[11px] font-medium transition-all cursor-pointer ${
-                viewMode === 'table'
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[7px] text-[11px] font-medium transition-all cursor-pointer ${viewMode === 'table'
                   ? 'bg-white text-[#1d1d1f] font-semibold shadow-2xs'
                   : 'text-[#86868b] hover:text-[#1d1d1f]'
-              }`}
+                }`}
               title="Multi-column Table View"
             >
               <Table size={13} strokeWidth={2} />
@@ -2190,509 +2181,502 @@ export default function Leads() {
       ) : (
         /* ── Candidate Table Directory (Responsive with smooth horizontal scroll) ── */
         <div className="space-y-2.5">
-            {/* Apple HIG Grouped Table View Header */}
-            <div className="flex flex-wrap items-center justify-between gap-3 px-3 font-sf select-none">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="text-[12px] font-semibold tracking-wider text-[#6e6e73] uppercase whitespace-nowrap">
-                  Candidate Table Directory
-                </span>
-                <span className="text-[12px] font-normal text-[#86868b] bg-black/[0.04] px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0">
-                  {activeColumnFilterCount > 0 && filteredLeads.length !== deskAndPlatformScopedLeads.length
-                    ? `${filteredLeads.length} of ${deskAndPlatformScopedLeads.length}`
-                    : `${filteredLeads.length} ${filteredLeads.length === 1 ? 'candidate' : 'candidates'}`}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-4 ml-auto shrink-0">
-                {activeColumnFilterCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => clearColumnFilters(false)}
-                    className="text-[13px] font-normal text-[#007aff] hover:opacity-70 active:opacity-50 transition-opacity cursor-pointer whitespace-nowrap"
-                  >
-                    Clear
-                  </button>
-                )}
-                {hasCustomColumnWidths && (
-                  <button
-                    type="button"
-                    onClick={resetColumnWidths}
-                    className="text-[13px] font-normal text-[#007aff] hover:opacity-70 active:opacity-50 transition-opacity cursor-pointer whitespace-nowrap"
-                  >
-                    Reset Widths
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={toggleColumnFiltersRow}
-                  className="text-[13px] font-normal text-[#007aff] hover:opacity-70 active:opacity-50 transition-opacity cursor-pointer whitespace-nowrap"
-                >
-                  {showColumnFilters ? 'Hide Filters' : 'Filters'}
-                </button>
-                <span className="text-[12px] font-normal text-[#86868b] whitespace-nowrap">
-                  Page {currentPage} of {totalPages}
-                </span>
-              </div>
+          {/* Apple HIG Grouped Table View Header */}
+          <div className="flex flex-wrap items-center justify-between gap-3 px-3 font-sf select-none">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-[12px] font-semibold tracking-wider text-[#6e6e73] uppercase whitespace-nowrap">
+                Candidate Table Directory
+              </span>
+              <span className="text-[12px] font-normal text-[#86868b] bg-black/[0.04] px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0">
+                {activeColumnFilterCount > 0 && filteredLeads.length !== deskAndPlatformScopedLeads.length
+                  ? `${filteredLeads.length} of ${deskAndPlatformScopedLeads.length}`
+                  : `${filteredLeads.length} ${filteredLeads.length === 1 ? 'candidate' : 'candidates'}`}
+              </span>
             </div>
 
-            {/* Apple HIG Inset Grouped Table Container */}
-            <div className="bg-white rounded-[18px] sm:rounded-[22px] border border-black/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden font-sf">
-              <div className="overflow-x-auto">
-                <table
-                  ref={tableRef}
-                  style={{ width: `${totalTableWidth}px` }}
-                  className="text-left text-xs border-collapse table-fixed"
+            <div className="flex items-center gap-4 ml-auto shrink-0">
+              {activeColumnFilterCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => clearColumnFilters(false)}
+                  className="text-[13px] font-normal text-[#007aff] hover:opacity-70 active:opacity-50 transition-opacity cursor-pointer whitespace-nowrap"
                 >
-                  <colgroup>
-                    {TABLE_COLUMNS.map((col) => (
-                      <col key={col.key} style={{ width: `${columnWidths[col.key]}px` }} />
-                    ))}
-                  </colgroup>
-                  <thead>
-                    <tr className="bg-[#fbfbfd] border-b border-black/[0.06] text-[12px] font-medium text-[#8e8e93] select-none">
-                      {TABLE_COLUMNS.map((col) => {
-                        const isColFiltered =
-                          (col.key === 'leadSource' && platformFilter !== 'ALL') ||
-                          (col.key === 'campaignName' && columnFilters.campaignName !== 'ALL') ||
-                          (col.key === 'candidateName' && columnFilters.candidateName.trim().length > 0) ||
-                          (col.key === 'mobileNumber' && columnFilters.mobileNumber.trim().length > 0) ||
-                          (col.key === 'whatsapp' && columnFilters.whatsapp !== 'ALL') ||
-                          (col.key === 'city' && columnFilters.city.trim().length > 0) ||
-                          (col.key === 'budget' && columnFilters.budget !== 'ALL') ||
-                          (col.key === 'quality' && columnFilters.quality !== 'ALL') ||
-                          (col.key === 'followUpDate' && Boolean(columnFilters.followUpDate)) ||
-                          (col.key === 'followUpStatus' && columnFilters.followUpStatus !== 'ALL') ||
-                          (col.key === 'currentStage' && statusFilter !== 'ALL') ||
-                          (col.key === 'remarks' && columnFilters.remarks.trim().length > 0);
+                  Clear
+                </button>
+              )}
+              {hasCustomColumnWidths && (
+                <button
+                  type="button"
+                  onClick={resetColumnWidths}
+                  className="text-[13px] font-normal text-[#007aff] hover:opacity-70 active:opacity-50 transition-opacity cursor-pointer whitespace-nowrap"
+                >
+                  Reset Widths
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={toggleColumnFiltersRow}
+                className="text-[13px] font-normal text-[#007aff] hover:opacity-70 active:opacity-50 transition-opacity cursor-pointer whitespace-nowrap"
+              >
+                {showColumnFilters ? 'Hide Filters' : 'Filters'}
+              </button>
+              <span className="text-[12px] font-normal text-[#86868b] whitespace-nowrap">
+                Page {currentPage} of {totalPages}
+              </span>
+            </div>
+          </div>
 
-                        return (
-                          <th
-                            key={col.key}
-                            className={`py-3 px-3.5 whitespace-nowrap relative border-r border-black/[0.06] last:border-r-0 overflow-hidden ${
-                              col.alignRight ? 'text-right' : ''
+          {/* Apple HIG Inset Grouped Table Container */}
+          <div className="bg-white rounded-[18px] sm:rounded-[22px] border border-black/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden font-sf">
+            <div className="overflow-x-auto">
+              <table
+                ref={tableRef}
+                style={{ width: `${totalTableWidth}px` }}
+                className="text-left text-xs border-collapse table-fixed"
+              >
+                <colgroup>
+                  {TABLE_COLUMNS.map((col) => (
+                    <col key={col.key} style={{ width: `${columnWidths[col.key]}px` }} />
+                  ))}
+                </colgroup>
+                <thead>
+                  <tr className="bg-[#fbfbfd] border-b border-black/[0.06] text-[12px] font-medium text-[#8e8e93] select-none">
+                    {TABLE_COLUMNS.map((col) => {
+                      const isColFiltered =
+                        (col.key === 'leadSource' && platformFilter !== 'ALL') ||
+                        (col.key === 'campaignName' && columnFilters.campaignName !== 'ALL') ||
+                        (col.key === 'candidateName' && columnFilters.candidateName.trim().length > 0) ||
+                        (col.key === 'mobileNumber' && columnFilters.mobileNumber.trim().length > 0) ||
+                        (col.key === 'whatsapp' && columnFilters.whatsapp !== 'ALL') ||
+                        (col.key === 'city' && columnFilters.city.trim().length > 0) ||
+                        (col.key === 'budget' && columnFilters.budget !== 'ALL') ||
+                        (col.key === 'quality' && columnFilters.quality !== 'ALL') ||
+                        (col.key === 'followUpDate' && Boolean(columnFilters.followUpDate)) ||
+                        (col.key === 'followUpStatus' && columnFilters.followUpStatus !== 'ALL') ||
+                        (col.key === 'currentStage' && statusFilter !== 'ALL') ||
+                        (col.key === 'remarks' && columnFilters.remarks.trim().length > 0);
+
+                      return (
+                        <th
+                          key={col.key}
+                          className={`py-3 px-3.5 whitespace-nowrap relative border-r border-black/[0.06] last:border-r-0 overflow-hidden ${col.alignRight ? 'text-right' : ''
                             } ${isColFiltered ? 'text-[#1c1c1e] font-semibold' : ''}`}
+                        >
+                          <div className={`truncate ${col.alignRight ? 'pr-1' : 'pr-1.5'}`}>
+                            {col.label}
+                          </div>
+                          <div
+                            role="separator"
+                            aria-orientation="vertical"
+                            aria-label={`Resize ${col.label} column`}
+                            title="Drag to resize · Double-click to fit"
+                            onPointerDown={(e) => handleStartColumnResize(col.key, e)}
+                            onDoubleClick={(e) => {
+                              e.stopPropagation();
+                              handleAutoFitColumn(col.key);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="absolute top-0 right-0 h-full w-2.5 cursor-col-resize z-10 flex justify-end group/resize touch-none"
                           >
-                            <div className={`truncate ${col.alignRight ? 'pr-1' : 'pr-1.5'}`}>
-                              {col.label}
-                            </div>
-                            <div
-                              role="separator"
-                              aria-orientation="vertical"
-                              aria-label={`Resize ${col.label} column`}
-                              title="Drag to resize · Double-click to fit"
-                              onPointerDown={(e) => handleStartColumnResize(col.key, e)}
-                              onDoubleClick={(e) => {
-                                e.stopPropagation();
-                                handleAutoFitColumn(col.key);
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                              className="absolute top-0 right-0 h-full w-2.5 cursor-col-resize z-10 flex justify-end group/resize touch-none"
-                            >
-                              <span
-                                className={`h-full transition-colors ${
-                                  resizingCol === col.key
-                                    ? 'w-[2px] bg-[#007aff]'
-                                    : 'w-[2px] bg-transparent group-hover/resize:bg-[#007aff]/60'
+                            <span
+                              className={`h-full transition-colors ${resizingCol === col.key
+                                  ? 'w-[2px] bg-[#007aff]'
+                                  : 'w-[2px] bg-transparent group-hover/resize:bg-[#007aff]/60'
                                 }`}
-                              />
-                            </div>
-                          </th>
-                        );
-                      })}
-                    </tr>
-                    {showColumnFilters && (
-                      <tr className="bg-[#fbfbfd] border-b border-black/[0.06]">
-                        <TableSelectFilterCell
-                          value={platformFilter}
-                          onChange={setPlatformFilter}
-                          ariaLabel="Filter by Lead Source"
-                          options={[
-                            { value: 'ALL', label: 'All' },
-                            { value: 'IG', label: 'Instagram' },
-                            { value: 'FB', label: 'Facebook' },
-                            { value: 'WHATSAPP', label: 'WhatsApp' },
-                            { value: 'OTHER', label: 'Direct / Walk-in' },
-                          ]}
-                        />
-                        <TableSelectFilterCell
-                          value={columnFilters.campaignName}
-                          onChange={(val) => updateColumnFilter('campaignName', val)}
-                          ariaLabel="Filter by Campaign Name"
-                          options={campaignFilterOptions}
-                        />
-                        <TableTextFilterCell
-                          value={columnFilters.candidateName}
-                          onChange={(val) => updateColumnFilter('candidateName', val)}
-                          placeholder="Search"
-                          ariaLabel="Filter by Candidate Name"
-                        />
-                        <TableTextFilterCell
-                          value={columnFilters.mobileNumber}
-                          onChange={(val) => updateColumnFilter('mobileNumber', val)}
-                          placeholder="Search"
-                          ariaLabel="Filter by Mobile Number"
-                        />
-                        <TableSelectFilterCell
-                          value={columnFilters.whatsapp}
-                          onChange={(val) => updateColumnFilter('whatsapp', val)}
-                          ariaLabel="Filter by WhatsApp Number"
-                          options={[
-                            { value: 'ALL', label: 'All' },
-                            { value: 'YES', label: 'Yes' },
-                            { value: 'NO', label: 'None (—)' },
-                          ]}
-                        />
-                        <TableTextFilterCell
-                          value={columnFilters.city}
-                          onChange={(val) => updateColumnFilter('city', val)}
-                          placeholder="Search"
-                          ariaLabel="Filter by City"
-                        />
-                        <TableSelectFilterCell
-                          value={columnFilters.budget}
-                          onChange={(val) => updateColumnFilter('budget', val)}
-                          ariaLabel="Filter by Budget / Payment"
-                          options={budgetFilterOptions}
-                        />
-                        <TableSelectFilterCell
-                          value={columnFilters.quality}
-                          onChange={(val) => updateColumnFilter('quality', val)}
-                          ariaLabel="Filter by Lead Quality"
-                          options={[
-                            { value: 'ALL', label: 'All' },
-                            { value: 'Hot', label: 'Hot' },
-                            { value: 'Warm', label: 'Warm' },
-                            { value: 'Cold', label: 'Cold' },
-                            { value: 'NONE', label: 'Not Set (—)' },
-                          ]}
-                        />
-                        <th className="py-2 px-2 align-middle font-normal overflow-hidden border-r border-black/[0.04] last:border-r-0">
-                          <div className="flex items-center gap-1 w-full min-w-0">
-                            <input
-                              type="date"
-                              value={columnFilters.followUpDate}
-                              onChange={(e) => updateColumnFilter('followUpDate', e.target.value)}
-                              aria-label="Filter by Follow-up Date"
-                              className={`font-sf h-[30px] flex-1 min-w-0 px-2 rounded-[8px] text-[12px] border transition-colors focus:outline-none focus:bg-white focus:border-[#007aff]/50 ${
-                                columnFilters.followUpDate
-                                  ? 'bg-white border-black/[0.16] text-[#1c1c1e] font-medium shadow-[0_1px_2px_rgba(0,0,0,0.04)]'
-                                  : 'bg-[#767680]/[0.08] hover:bg-[#767680]/[0.12] border-transparent text-[#3c3c43] font-normal'
-                              }`}
                             />
-                            {columnFilters.followUpDate && (
+                          </div>
+                        </th>
+                      );
+                    })}
+                  </tr>
+                  {showColumnFilters && (
+                    <tr className="bg-[#fbfbfd] border-b border-black/[0.06]">
+                      <TableSelectFilterCell
+                        value={platformFilter}
+                        onChange={setPlatformFilter}
+                        ariaLabel="Filter by Lead Source"
+                        options={[
+                          { value: 'ALL', label: 'All' },
+                          { value: 'IG', label: 'Instagram' },
+                          { value: 'FB', label: 'Facebook' },
+                          { value: 'WHATSAPP', label: 'WhatsApp' },
+                          { value: 'OTHER', label: 'Direct / Walk-in' },
+                        ]}
+                      />
+                      <TableSelectFilterCell
+                        value={columnFilters.campaignName}
+                        onChange={(val) => updateColumnFilter('campaignName', val)}
+                        ariaLabel="Filter by Campaign Name"
+                        options={campaignFilterOptions}
+                      />
+                      <TableTextFilterCell
+                        value={columnFilters.candidateName}
+                        onChange={(val) => updateColumnFilter('candidateName', val)}
+                        placeholder="Search"
+                        ariaLabel="Filter by Candidate Name"
+                      />
+                      <TableTextFilterCell
+                        value={columnFilters.mobileNumber}
+                        onChange={(val) => updateColumnFilter('mobileNumber', val)}
+                        placeholder="Search"
+                        ariaLabel="Filter by Mobile Number"
+                      />
+                      <TableSelectFilterCell
+                        value={columnFilters.whatsapp}
+                        onChange={(val) => updateColumnFilter('whatsapp', val)}
+                        ariaLabel="Filter by WhatsApp Number"
+                        options={[
+                          { value: 'ALL', label: 'All' },
+                          { value: 'YES', label: 'Yes' },
+                          { value: 'NO', label: 'None (—)' },
+                        ]}
+                      />
+                      <TableTextFilterCell
+                        value={columnFilters.city}
+                        onChange={(val) => updateColumnFilter('city', val)}
+                        placeholder="Search"
+                        ariaLabel="Filter by City"
+                      />
+                      <TableSelectFilterCell
+                        value={columnFilters.budget}
+                        onChange={(val) => updateColumnFilter('budget', val)}
+                        ariaLabel="Filter by Budget / Payment"
+                        options={budgetFilterOptions}
+                      />
+                      <TableSelectFilterCell
+                        value={columnFilters.quality}
+                        onChange={(val) => updateColumnFilter('quality', val)}
+                        ariaLabel="Filter by Lead Quality"
+                        options={[
+                          { value: 'ALL', label: 'All' },
+                          { value: 'Hot', label: 'Hot' },
+                          { value: 'Warm', label: 'Warm' },
+                          { value: 'Cold', label: 'Cold' },
+                          { value: 'NONE', label: 'Not Set (—)' },
+                        ]}
+                      />
+                      <th className="py-2 px-2 align-middle font-normal overflow-hidden border-r border-black/[0.04] last:border-r-0">
+                        <div className="flex items-center gap-1 w-full min-w-0">
+                          <input
+                            type="date"
+                            value={columnFilters.followUpDate}
+                            onChange={(e) => updateColumnFilter('followUpDate', e.target.value)}
+                            aria-label="Filter by Follow-up Date"
+                            className={`font-sf h-[30px] flex-1 min-w-0 px-2 rounded-[8px] text-[12px] border transition-colors focus:outline-none focus:bg-white focus:border-[#007aff]/50 ${columnFilters.followUpDate
+                                ? 'bg-white border-black/[0.16] text-[#1c1c1e] font-medium shadow-[0_1px_2px_rgba(0,0,0,0.04)]'
+                                : 'bg-[#767680]/[0.08] hover:bg-[#767680]/[0.12] border-transparent text-[#3c3c43] font-normal'
+                              }`}
+                          />
+                          {columnFilters.followUpDate && (
+                            <button
+                              type="button"
+                              onClick={() => updateColumnFilter('followUpDate', '')}
+                              title="Clear Follow-up Date"
+                              className="text-[#8e8e93] hover:text-[#1c1c1e] p-1 cursor-pointer shrink-0"
+                            >
+                              <X size={12} />
+                            </button>
+                          )}
+                        </div>
+                      </th>
+                      <TableSelectFilterCell
+                        value={columnFilters.followUpStatus}
+                        onChange={(val) => updateColumnFilter('followUpStatus', val)}
+                        ariaLabel="Filter by Follow-up Status"
+                        options={followUpStatusFilterOptions}
+                      />
+                      <TableSelectFilterCell
+                        value={statusFilter}
+                        onChange={setStatusFilter}
+                        ariaLabel="Filter by Current Stage"
+                        options={[
+                          { value: 'ALL', label: 'All' },
+                          ...LEAD_STATUS_LIST.map((st) => ({ value: st.value, label: st.label })),
+                        ]}
+                      />
+                      <TableTextFilterCell
+                        value={columnFilters.remarks}
+                        onChange={(val) => updateColumnFilter('remarks', val)}
+                        placeholder="Search"
+                        ariaLabel="Filter by Remarks"
+                      />
+                      <th className="py-2 px-3.5 text-right align-middle font-normal overflow-hidden">
+                        {activeColumnFilterCount > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => clearColumnFilters(false)}
+                            className="text-[12px] font-normal text-[#007aff] hover:opacity-70 transition-opacity cursor-pointer whitespace-nowrap"
+                          >
+                            Reset
+                          </button>
+                        )}
+                      </th>
+                    </tr>
+                  )}
+                </thead>
+                <tbody className="divide-y divide-black/[0.04]">
+                  {paginatedLeads.length === 0 ? (
+                    <tr>
+                      <td colSpan={13} className="py-12 text-center text-[#8e8e93]">
+                        {loading ? (
+                          <span className="flex items-center justify-center gap-2">
+                            <RefreshCw size={15} className="animate-spin text-[#1c1c1e]" />
+                            Loading candidates...
+                          </span>
+                        ) : (
+                          <div className="space-y-2">
+                            <div>
+                              <p className="text-[#1c1c1e] font-semibold text-sm">No candidate records match your criteria</p>
+                            </div>
+                            {(activeColumnFilterCount > 0 || searchTerm.trim().length > 0) && (
                               <button
                                 type="button"
-                                onClick={() => updateColumnFilter('followUpDate', '')}
-                                title="Clear Follow-up Date"
-                                className="text-[#8e8e93] hover:text-[#1c1c1e] p-1 cursor-pointer shrink-0"
+                                onClick={() => clearColumnFilters(true)}
+                                className="text-[13px] font-medium text-[#007aff] hover:opacity-70 transition-opacity cursor-pointer"
                               >
-                                <X size={12} />
+                                Clear Filters
                               </button>
                             )}
                           </div>
-                        </th>
-                        <TableSelectFilterCell
-                          value={columnFilters.followUpStatus}
-                          onChange={(val) => updateColumnFilter('followUpStatus', val)}
-                          ariaLabel="Filter by Follow-up Status"
-                          options={followUpStatusFilterOptions}
-                        />
-                        <TableSelectFilterCell
-                          value={statusFilter}
-                          onChange={setStatusFilter}
-                          ariaLabel="Filter by Current Stage"
-                          options={[
-                            { value: 'ALL', label: 'All' },
-                            ...LEAD_STATUS_LIST.map((st) => ({ value: st.value, label: st.label })),
-                          ]}
-                        />
-                        <TableTextFilterCell
-                          value={columnFilters.remarks}
-                          onChange={(val) => updateColumnFilter('remarks', val)}
-                          placeholder="Search"
-                          ariaLabel="Filter by Remarks"
-                        />
-                        <th className="py-2 px-3.5 text-right align-middle font-normal overflow-hidden">
-                          {activeColumnFilterCount > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => clearColumnFilters(false)}
-                              className="text-[12px] font-normal text-[#007aff] hover:opacity-70 transition-opacity cursor-pointer whitespace-nowrap"
-                            >
-                              Reset
-                            </button>
-                          )}
-                        </th>
-                      </tr>
-                    )}
-                  </thead>
-                  <tbody className="divide-y divide-black/[0.04]">
-                    {paginatedLeads.length === 0 ? (
-                      <tr>
-                        <td colSpan={13} className="py-12 text-center text-[#8e8e93]">
-                          {loading ? (
-                            <span className="flex items-center justify-center gap-2">
-                              <RefreshCw size={15} className="animate-spin text-[#1c1c1e]" />
-                              Loading candidates...
+                        )}
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedLeads.map((lead) => {
+                      const plat = (lead.platform && PLATFORMS[lead.platform]) || PLATFORMS.OTHER;
+
+                      return (
+                        <tr
+                          key={lead.id}
+                          onClick={() => navigate(`/leads/${encryptLeadId(lead.id)}`)}
+                          className="hover:bg-[#007aff]/[0.02] transition-colors cursor-pointer group"
+                        >
+                          {/* Lead Source */}
+                          <td data-col="leadSource" className="py-3 px-3.5 whitespace-nowrap overflow-hidden">
+                            <span className="font-semibold text-xs text-[#1c1c1e] block truncate" title={plat.label}>
+                              {plat.label}
                             </span>
-                          ) : (
-                            <div className="space-y-2">
-                              <div>
-                                <p className="text-[#1c1c1e] font-semibold text-sm">No candidate records match your criteria</p>
-                                <p className="text-[#8e8e93] text-xs mt-1">
-                                  Try clearing filters or search keywords, or ingest new records from Meta ads.
-                                </p>
-                              </div>
-                              {(activeColumnFilterCount > 0 || searchTerm.trim().length > 0) && (
-                                <button
-                                  type="button"
-                                  onClick={() => clearColumnFilters(true)}
-                                  className="text-[13px] font-medium text-[#007aff] hover:opacity-70 transition-opacity cursor-pointer"
-                                >
-                                  Clear Filters
-                                </button>
-                              )}
+                          </td>
+
+                          {/* Campaign Name */}
+                          <td data-col="campaignName" className="py-3 px-3.5 overflow-hidden">
+                            <div className="font-medium text-[#1c1c1e] text-xs truncate w-full" title={lead.campaignName || '—'}>
+                              {lead.campaignName || '—'}
                             </div>
-                          )}
-                        </td>
-                      </tr>
-                    ) : (
-                      paginatedLeads.map((lead) => {
-                        const plat = (lead.platform && PLATFORMS[lead.platform]) || PLATFORMS.OTHER;
+                          </td>
 
-                        return (
-                          <tr
-                            key={lead.id}
-                            onClick={() => navigate(`/leads/${encryptLeadId(lead.id)}`)}
-                            className="hover:bg-[#007aff]/[0.02] transition-colors cursor-pointer group"
-                          >
-                            {/* Lead Source */}
-                            <td data-col="leadSource" className="py-3 px-3.5 whitespace-nowrap overflow-hidden">
-                              <span className="font-semibold text-xs text-[#1c1c1e] block truncate" title={plat.label}>
-                                {plat.label}
+                          {/* Candidate Name */}
+                          <td data-col="candidateName" className="py-3 px-3.5 overflow-hidden">
+                            <div className="font-semibold text-[13px] text-[#1c1c1e] group-hover:text-[#007aff] transition-colors truncate" title={lead.customerName || `Candidate #${lead.id}`}>
+                              {lead.customerName || `Candidate #${lead.id}`}
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[11px] text-[#8e8e93] mt-0.5 min-w-0">
+                              {lead.email && <span className="truncate">{lead.email}</span>}
+                              {lead.email && <span className="shrink-0">·</span>}
+                              <span className="font-sf-mono text-[10px] truncate">
+                                {lead.externalId ? lead.externalId : `#${lead.id}`}
                               </span>
-                            </td>
+                            </div>
+                          </td>
 
-                            {/* Campaign Name */}
-                            <td data-col="campaignName" className="py-3 px-3.5 overflow-hidden">
-                              <div className="font-medium text-[#1c1c1e] text-xs truncate w-full" title={lead.campaignName || '—'}>
-                                {lead.campaignName || '—'}
-                              </div>
-                            </td>
+                          {/* Mobile Number */}
+                          <td data-col="mobileNumber" className="py-3 px-3.5 whitespace-nowrap overflow-hidden">
+                            <span className="font-sf-mono text-[12px] text-[#1c1c1e] font-medium tracking-tight block truncate" title={lead.phoneNumber || '—'}>
+                              {lead.phoneNumber || '—'}
+                            </span>
+                          </td>
 
-                            {/* Candidate Name */}
-                            <td data-col="candidateName" className="py-3 px-3.5 overflow-hidden">
-                              <div className="font-semibold text-[13px] text-[#1c1c1e] group-hover:text-[#007aff] transition-colors truncate" title={lead.customerName || `Candidate #${lead.id}`}>
-                                {lead.customerName || `Candidate #${lead.id}`}
-                              </div>
-                              <div className="flex items-center gap-1.5 text-[11px] text-[#8e8e93] mt-0.5 min-w-0">
-                                {lead.email && <span className="truncate">{lead.email}</span>}
-                                {lead.email && <span className="shrink-0">·</span>}
-                                <span className="font-sf-mono text-[10px] truncate">
-                                  {lead.externalId ? lead.externalId : `#${lead.id}`}
-                                </span>
-                              </div>
-                            </td>
+                          {/* WhatsApp Number */}
+                          <td data-col="whatsapp" className="py-3 px-3.5 whitespace-nowrap overflow-hidden text-xs text-[#1c1c1e]">
+                            <span className="block truncate">{lead.phoneNumber ? 'Yes' : '—'}</span>
+                          </td>
 
-                            {/* Mobile Number */}
-                            <td data-col="mobileNumber" className="py-3 px-3.5 whitespace-nowrap overflow-hidden">
-                              <span className="font-sf-mono text-[12px] text-[#1c1c1e] font-medium tracking-tight block truncate" title={lead.phoneNumber || '—'}>
-                                {lead.phoneNumber || '—'}
-                              </span>
-                            </td>
+                          {/* City */}
+                          <td data-col="city" className="py-3 px-3.5 whitespace-nowrap overflow-hidden">
+                            <span className="text-xs text-[#1c1c1e] capitalize block truncate" title={lead.city || lead.location || '—'}>
+                              {lead.city || lead.location || '—'}
+                            </span>
+                          </td>
 
-                            {/* WhatsApp Number */}
-                            <td data-col="whatsapp" className="py-3 px-3.5 whitespace-nowrap overflow-hidden text-xs text-[#1c1c1e]">
-                              <span className="block truncate">{lead.phoneNumber ? 'Yes' : '—'}</span>
-                            </td>
+                          {/* Budget Ready */}
+                          <td data-col="budget" className="py-3 px-3.5 whitespace-nowrap overflow-hidden text-xs text-[#1c1c1e]">
+                            {getBudgetReady(lead)}
+                          </td>
 
-                            {/* City */}
-                            <td data-col="city" className="py-3 px-3.5 whitespace-nowrap overflow-hidden">
-                              <span className="text-xs text-[#1c1c1e] capitalize block truncate" title={lead.city || lead.location || '—'}>
-                                {lead.city || lead.location || '—'}
-                              </span>
-                            </td>
+                          {/* Lead Quality */}
+                          <td data-col="quality" className="py-3 px-3.5 whitespace-nowrap overflow-hidden text-xs text-[#1c1c1e]">
+                            {(() => {
+                              const q = getLeadQuality(lead);
+                              if (q === 'Hot') {
+                                return (
+                                  <span className="text-xs font-semibold text-[#ff3b30] block truncate">
+                                    Hot
+                                  </span>
+                                );
+                              }
+                              if (q === 'Warm') {
+                                return (
+                                  <span className="text-xs font-semibold text-[#ff9500] block truncate">
+                                    Warm
+                                  </span>
+                                );
+                              }
+                              if (q === 'Cold') {
+                                return (
+                                  <span className="text-xs font-medium text-[#8e8e93] block truncate">
+                                    Cold
+                                  </span>
+                                );
+                              }
+                              return <span className="text-xs text-[#8e8e93] block truncate">—</span>;
+                            })()}
+                          </td>
 
-                            {/* Budget Ready */}
-                            <td data-col="budget" className="py-3 px-3.5 whitespace-nowrap overflow-hidden text-xs text-[#1c1c1e]">
-                              {getBudgetReady(lead)}
-                            </td>
+                          {/* Follow-up Date */}
+                          <td data-col="followUpDate" className="py-3 px-3.5 text-[#64748b] text-[11px] whitespace-nowrap font-normal overflow-hidden text-ellipsis" title={formatDate(lead.followUpDate || lead.createdTime || lead.createdAt)}>
+                            {formatDate(lead.followUpDate || lead.createdTime || lead.createdAt)}
+                          </td>
 
-                            {/* Lead Quality */}
-                            <td data-col="quality" className="py-3 px-3.5 whitespace-nowrap overflow-hidden text-xs text-[#1c1c1e]">
-                              {(() => {
-                                const q = getLeadQuality(lead);
-                                if (q === 'Hot') {
-                                  return (
-                                    <span className="text-xs font-semibold text-[#ff3b30] block truncate">
-                                      Hot
-                                    </span>
-                                  );
-                                }
-                                if (q === 'Warm') {
-                                  return (
-                                    <span className="text-xs font-semibold text-[#ff9500] block truncate">
-                                      Warm
-                                    </span>
-                                  );
-                                }
-                                if (q === 'Cold') {
-                                  return (
-                                    <span className="text-xs font-medium text-[#8e8e93] block truncate">
-                                      Cold
-                                    </span>
-                                  );
-                                }
-                                return <span className="text-xs text-[#8e8e93] block truncate">—</span>;
-                              })()}
-                            </td>
+                          {/* Follow-up Status */}
+                          <td data-col="followUpStatus" className="py-3 px-3.5 whitespace-nowrap overflow-hidden">
+                            <span className="text-xs font-medium text-[#1c1c1e] block truncate" title={getFollowUpStatusText(lead)}>
+                              {getFollowUpStatusText(lead)}
+                            </span>
+                          </td>
 
-                            {/* Follow-up Date */}
-                            <td data-col="followUpDate" className="py-3 px-3.5 text-[#64748b] text-[11px] whitespace-nowrap font-normal overflow-hidden text-ellipsis" title={formatDate(lead.followUpDate || lead.createdTime || lead.createdAt)}>
-                              {formatDate(lead.followUpDate || lead.createdTime || lead.createdAt)}
-                            </td>
+                          {/* Current Stage */}
+                          <td data-col="currentStage" className="py-3 px-3.5 whitespace-nowrap overflow-hidden text-ellipsis">
+                            {renderStageBadge(lead)}
+                          </td>
 
-                            {/* Follow-up Status */}
-                            <td data-col="followUpStatus" className="py-3 px-3.5 whitespace-nowrap overflow-hidden">
-                              <span className="text-xs font-medium text-[#1c1c1e] block truncate" title={getFollowUpStatusText(lead)}>
-                                {getFollowUpStatusText(lead)}
-                              </span>
-                            </td>
+                          {/* Remarks */}
+                          <td data-col="remarks" className="py-3 px-3.5 overflow-hidden">
+                            <div className="text-[11px] text-[#475569] truncate w-full" title={lead.notes || '—'}>
+                              {lead.notes || '—'}
+                            </div>
+                          </td>
 
-                            {/* Current Stage */}
-                            <td data-col="currentStage" className="py-3 px-3.5 whitespace-nowrap overflow-hidden text-ellipsis">
-                              {renderStageBadge(lead)}
-                            </td>
+                          {/* Outreach & Actions (Clean macOS Style Icon Buttons with Chevron) */}
+                          <td data-col="actions" className="py-3 px-3.5 text-right overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-end gap-0.5">
+                              {lead.phoneNumber && (
+                                <>
+                                  <a
+                                    href={`https://wa.me/${lead.phoneNumber.replace(
+                                      /\D/g,
+                                      ''
+                                    )}?text=Hello%20${encodeURIComponent(
+                                      lead.customerName || ''
+                                    )},%20greetings%20from%20our%20Overseas%20Visa%20Consultancy!%20We%20received%20your%20${encodeURIComponent(
+                                      lead.visaType === 'WORK_VISA' ? 'Work Visa' : 'Study Visa'
+                                    )}%20inquiry.`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    title="WhatsApp Direct Chat"
+                                    className="w-7 h-7 rounded-lg flex items-center justify-center text-[#8e8e93] hover:text-[#34c759] hover:bg-[#34c759]/10 transition-colors"
+                                  >
+                                    <MessageCircle size={14} />
+                                  </a>
+                                  <a
+                                    href={`tel:${lead.phoneNumber}`}
+                                    title="Call Candidate"
+                                    className="w-7 h-7 rounded-lg flex items-center justify-center text-[#8e8e93] hover:text-[#007aff] hover:bg-[#007aff]/10 transition-colors"
+                                  >
+                                    <Phone size={14} />
+                                  </a>
+                                </>
+                              )}
+                              <button
+                                onClick={() => navigate(`/leads/${encryptLeadId(lead.id)}`)}
+                                title="Inspect Candidate Dossier"
+                                className="w-7 h-7 rounded-lg flex items-center justify-center text-[#8e8e93] hover:text-[#1c1c1e] hover:bg-black/[0.05] transition-colors"
+                              >
+                                <Eye size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteLead(lead.id, lead.customerName)}
+                                title="Delete Lead"
+                                className="w-7 h-7 rounded-lg flex items-center justify-center text-[#8e8e93] hover:text-[#ff3b30] hover:bg-[#ff3b30]/10 transition-colors"
+                              >
+                                <Trash2 size={14} />
+                              </button>
 
-                            {/* Remarks */}
-                            <td data-col="remarks" className="py-3 px-3.5 overflow-hidden">
-                              <div className="text-[11px] text-[#475569] truncate w-full" title={lead.notes || '—'}>
-                                {lead.notes || '—'}
-                              </div>
-                            </td>
-
-                            {/* Outreach & Actions (Clean macOS Style Icon Buttons with Chevron) */}
-                            <td data-col="actions" className="py-3 px-3.5 text-right overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                              <div className="flex items-center justify-end gap-0.5">
-                                {lead.phoneNumber && (
-                                  <>
-                                    <a
-                                      href={`https://wa.me/${lead.phoneNumber.replace(
-                                        /\D/g,
-                                        ''
-                                      )}?text=Hello%20${encodeURIComponent(
-                                        lead.customerName || ''
-                                      )},%20greetings%20from%20our%20Overseas%20Visa%20Consultancy!%20We%20received%20your%20${encodeURIComponent(
-                                        lead.visaType === 'WORK_VISA' ? 'Work Visa' : 'Study Visa'
-                                      )}%20inquiry.`}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      title="WhatsApp Direct Chat"
-                                      className="w-7 h-7 rounded-lg flex items-center justify-center text-[#8e8e93] hover:text-[#34c759] hover:bg-[#34c759]/10 transition-colors"
-                                    >
-                                      <MessageCircle size={14} />
-                                    </a>
-                                    <a
-                                      href={`tel:${lead.phoneNumber}`}
-                                      title="Call Candidate"
-                                      className="w-7 h-7 rounded-lg flex items-center justify-center text-[#8e8e93] hover:text-[#007aff] hover:bg-[#007aff]/10 transition-colors"
-                                    >
-                                      <Phone size={14} />
-                                    </a>
-                                  </>
-                                )}
-                                <button
-                                  onClick={() => navigate(`/leads/${encryptLeadId(lead.id)}`)}
-                                  title="Inspect Candidate Dossier"
-                                  className="w-7 h-7 rounded-lg flex items-center justify-center text-[#8e8e93] hover:text-[#1c1c1e] hover:bg-black/[0.05] transition-colors"
-                                >
-                                  <Eye size={14} />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteLead(lead.id, lead.customerName)}
-                                  title="Delete Lead"
-                                  className="w-7 h-7 rounded-lg flex items-center justify-center text-[#8e8e93] hover:text-[#ff3b30] hover:bg-[#ff3b30]/10 transition-colors"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-
-                                {/* Apple Disclosure Chevron */}
-                                <button
-                                  type="button"
-                                  onClick={() => navigate(`/leads/${encryptLeadId(lead.id)}`)}
-                                  title="Open Candidate Profile"
-                                  className="p-1 text-[#c7c7cc] group-hover:text-[#007aff] transition-colors ml-0.5"
-                                >
-                                  <ChevronRight size={16} strokeWidth={2.4} />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* High-Capacity Pagination Toolbar (iOS / macOS HIG Status Bar) */}
-              <div className="p-3.5 border-t border-black/[0.05] bg-[#fbfbfd] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-3 text-[#8e8e93]">
-                  <span>
-                    Showing <strong className="text-[#1c1c1e] font-semibold">{filteredLeads.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}</strong> to{' '}
-                    <strong className="text-[#1c1c1e] font-semibold">{Math.min(currentPage * pageSize, filteredLeads.length)}</strong> of{' '}
-                    <strong className="text-[#1c1c1e] font-semibold">{filteredLeads.length}</strong> candidates
-                  </span>
-
-                  {/* Page Size Selector */}
-                  <div className="flex items-center gap-1.5 pl-2 border-l border-black/[0.08]">
-                    <span className="text-[11px] text-[#8e8e93]">Rows:</span>
-                    <select
-                      value={pageSize}
-                      onChange={(e) => setPageSize(Number(e.target.value))}
-                      className="px-2 py-0.5 bg-black/[0.04] hover:bg-black/[0.08] border-0 rounded-md text-xs font-semibold text-[#1c1c1e] focus:outline-none transition-colors cursor-pointer"
-                    >
-                      <option value={10}>10</option>
-                      <option value={25}>25</option>
-                      <option value={50}>50</option>
-                      <option value={100}>100</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Page Switcher */}
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                    disabled={currentPage === 1}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg bg-black/[0.04] hover:bg-black/[0.08] text-[#1c1c1e] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                    title="Previous Page"
-                  >
-                    <ChevronLeft size={14} />
-                  </button>
-
-                  <span className="px-2 font-medium text-[#1c1c1e] text-xs">
-                    Page {currentPage} of {totalPages}
-                  </span>
-
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                    disabled={currentPage === totalPages}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg bg-black/[0.04] hover:bg-black/[0.08] text-[#1c1c1e] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                    title="Next Page"
-                  >
-                    <ChevronRight size={14} />
-                  </button>
-                </div>
-              </div>
+                              {/* Apple Disclosure Chevron */}
+                              <button
+                                type="button"
+                                onClick={() => navigate(`/leads/${encryptLeadId(lead.id)}`)}
+                                title="Open Candidate Profile"
+                                className="p-1 text-[#c7c7cc] group-hover:text-[#007aff] transition-colors ml-0.5"
+                              >
+                                <ChevronRight size={16} strokeWidth={2.4} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
 
-            {/* Apple HIG Grouped Table View Footer */}
-            <div className="px-3 text-[12px] text-[#8e8e93] flex items-center justify-between select-none">
-              <span>Select any row to inspect complete dossier, visa milestones, and timeline.</span>
-              <span>Showing {filteredLeads.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredLeads.length)} of {filteredLeads.length} records</span>
+            {/* High-Capacity Pagination Toolbar (iOS / macOS HIG Status Bar) */}
+            <div className="p-3.5 border-t border-black/[0.05] bg-[#fbfbfd] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-3 text-[#8e8e93]">
+                <span>
+                  Showing <strong className="text-[#1c1c1e] font-semibold">{filteredLeads.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}</strong> to{' '}
+                  <strong className="text-[#1c1c1e] font-semibold">{Math.min(currentPage * pageSize, filteredLeads.length)}</strong> of{' '}
+                  <strong className="text-[#1c1c1e] font-semibold">{filteredLeads.length}</strong> candidates
+                </span>
+
+                {/* Page Size Selector */}
+                <div className="flex items-center gap-1.5 pl-2 border-l border-black/[0.08]">
+                  <span className="text-[11px] text-[#8e8e93]">Rows:</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => setPageSize(Number(e.target.value))}
+                    className="px-2 py-0.5 bg-black/[0.04] hover:bg-black/[0.08] border-0 rounded-md text-xs font-semibold text-[#1c1c1e] focus:outline-none transition-colors cursor-pointer"
+                  >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Page Switcher */}
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg bg-black/[0.04] hover:bg-black/[0.08] text-[#1c1c1e] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  title="Previous Page"
+                >
+                  <ChevronLeft size={14} />
+                </button>
+
+                <span className="px-2 font-medium text-[#1c1c1e] text-xs">
+                  Page {currentPage} of {totalPages}
+                </span>
+
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg bg-black/[0.04] hover:bg-black/[0.08] text-[#1c1c1e] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  title="Next Page"
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
             </div>
           </div>
+
+          {/* Apple HIG Grouped Table View Footer */}
+          <div className="px-3 text-[12px] text-[#8e8e93] flex items-center justify-end select-none">
+            <span>Showing {filteredLeads.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredLeads.length)} of {filteredLeads.length} records</span>
+          </div>
+        </div>
       )}
 
       {/* iOS-Style Slide-Over Candidate Dossier Drawer */}
@@ -3014,9 +2998,8 @@ export default function Leads() {
       {showAddModal && (
         <div className="ios-modal-backdrop">
           <div
-            className={`ios-material-thick rounded-3xl border border-black/[0.08] shadow-2xl ${
-              modalTab === 'excel' && previewRows.length > 0 ? 'max-w-5xl' : 'max-w-xl'
-            } w-full my-auto transition-all duration-150 overflow-hidden flex flex-col`}
+            className={`ios-material-thick rounded-3xl border border-black/[0.08] shadow-2xl ${modalTab === 'excel' && previewRows.length > 0 ? 'max-w-5xl' : 'max-w-xl'
+              } w-full my-auto transition-all duration-150 overflow-hidden flex flex-col`}
           >
             {/* Grabber handle */}
             <div className="pt-3 pb-1">
@@ -3434,13 +3417,12 @@ export default function Leads() {
                                     {r.city || '—'}
                                   </td>
                                   <td className="py-2 px-3 border-l border-[#f1f5f9]">
-                                    <span className={`inline-block px-2 py-0.5 text-[11px] font-medium rounded-[3px] border ${
-                                      currentVisa === 'WORK_VISA'
+                                    <span className={`inline-block px-2 py-0.5 text-[11px] font-medium rounded-[3px] border ${currentVisa === 'WORK_VISA'
                                         ? 'bg-[#f0f4f9] text-[#1e40af] border-[#dbeafe]'
                                         : currentVisa === 'STUDY_VISA'
-                                        ? 'bg-[#f0fdf4] text-[#166534] border-[#bbf7d0]'
-                                        : 'bg-[#fffbeb] text-[#92400e] border-[#fde68a]'
-                                    }`}>
+                                          ? 'bg-[#f0fdf4] text-[#166534] border-[#bbf7d0]'
+                                          : 'bg-[#fffbeb] text-[#92400e] border-[#fde68a]'
+                                      }`}>
                                       {currentVisa === 'WORK_VISA' ? 'Work Visa' : currentVisa === 'STUDY_VISA' ? 'Study Visa' : 'Other Visa'}
                                     </span>
                                   </td>

@@ -455,8 +455,7 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
       </div>
 
       {/* ── Apple HIG: Grouped Table View Footer ── */}
-      <div className="px-3 text-[12px] text-[#8e8e93] flex flex-col sm:flex-row sm:items-center justify-between gap-1 select-none">
-        <span>Tap any candidate row to inspect complete dossier, visa milestones, and timeline.</span>
+      <div className="px-3 text-[12px] text-[#8e8e93] flex items-center justify-end select-none">
         <span>Showing {leads.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, totalLeads)} of {totalLeads} records</span>
       </div>
 

@@ -17,12 +17,14 @@ import {
 } from 'lucide-react';
 import adminService, { type CreateUserData } from '../services/api/adminService';
 import { useAuth } from '../context/AuthContext';
+import { useAlert } from '../context/AlertContext';
 import { USER_ROLE_CONFIG, USER_ROLES } from '../config/constants';
 import { formatIndianDate, formatIndianTime } from '../utils/dateTimeUtils';
 import type { User } from '../types';
 
 export default function Users() {
   const { user: currentUser } = useAuth();
+  const { showAlert } = useAlert();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -290,7 +292,7 @@ export default function Users() {
       setDeletingUser(null);
       await fetchUsers();
     } catch (err: any) {
-      alert(`Failed to delete user: ${err?.message || 'Server error'}`);
+      showAlert({ title: 'User Management', message: `Failed to delete user: ${err?.message || 'Server error'}` });
     } finally {
       setSubmitting(false);
     }
@@ -353,9 +355,6 @@ export default function Users() {
           <h2 className="text-base font-bold text-[#1c1c1e] flex items-center gap-2">
             <span>User Management & Staff Accounts</span>
           </h2>
-          <p className="text-xs text-[#8e8e93] mt-0.5">
-            Administer staff roles, Work Visa, Study Visa, and Domestic College Admission team members.
-          </p>
         </div>
 
         <div className="flex items-center gap-2">

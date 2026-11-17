@@ -27,6 +27,7 @@ import reminderNotificationService, {
   formatEventReadable,
 } from '../services/reminderNotificationService';
 import { useAuth } from '../context/AuthContext';
+import { useAlert } from '../context/AlertContext';
 import { format12HourTime, IST_TIMEZONE } from '../utils/dateTimeUtils';
 
 const MONTH_NAMES = [
@@ -283,6 +284,7 @@ function SwipeableAgendaItem({ evt, showDateBadge, onToggleComplete, onDelete }:
 
 export default function CalendarPage() {
   const { user } = useAuth();
+  const { showConfirm } = useAlert();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [selectedDateStr, setSelectedDateStr] = useState<string>(
@@ -545,7 +547,14 @@ export default function CalendarPage() {
 
   const handleDeleteEvent = async (id: string, e?: any) => {
     e?.stopPropagation?.();
-    if (confirm('Delete this reminder?')) {
+    const confirmed = await showConfirm({
+      title: 'Delete Reminder',
+      message: 'Are you sure you want to delete this reminder?',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      isDestructive: true,
+    });
+    if (confirmed) {
       await reminderNotificationService.deleteEvent(id);
     }
   };
@@ -741,9 +750,6 @@ export default function CalendarPage() {
                   </div>
                   <p className="text-[13px] font-medium text-[#1d1d1f]">
                     {historyTab === 'COMPLETED' ? 'No completed reminders' : 'No configured reminders'}
-                  </p>
-                  <p className="text-[11px] text-[#86868b] mt-0.5">
-                    Tap the + button in the bottom right corner to schedule a reminder.
                   </p>
                 </div>
               ) : (

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Users } from 'lucide-react';
 
 export interface BrandIconProps {
   size?: number | string;
@@ -226,38 +227,18 @@ export const AppleBellIcon: React.FC<AppleBellIconProps> = ({
 
 /**
  * KPI 1 — Total Candidates / All Inquiries
- * A stylised silhouette group with a rising inquiry arc above them —
- * represents a pool of people submitting applications.
+ * Clean, standard Apple HIG / Lucide candidates icon.
  */
 export const KpiCandidatesIcon: React.FC<BrandIconProps> = ({
   size = 18,
   className = '',
-  strokeWidth = 1.6,
+  strokeWidth = 1.75,
 }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={strokeWidth}
-    strokeLinecap="round"
-    strokeLinejoin="round"
+  <Users
+    size={size}
     className={className}
-    aria-hidden="true"
-  >
-    {/* Centre person */}
-    <circle cx="12" cy="7" r="3" />
-    <path d="M6 21v-1a6 6 0 0 1 12 0v1" />
-    {/* Left ghost silhouette */}
-    <circle cx="5" cy="9" r="2.2" opacity="0.45" />
-    <path d="M1.5 21v-.5a3.5 3.5 0 0 1 5-3.18" opacity="0.45" />
-    {/* Right ghost silhouette */}
-    <circle cx="19" cy="9" r="2.2" opacity="0.45" />
-    <path d="M22.5 21v-.5a3.5 3.5 0 0 0-5-3.18" opacity="0.45" />
-    {/* Rising arc — inquiry wave */}
-    <path d="M9 3.5C9.8 2.5 11 2 12 2s2.2.5 3 1.5" strokeWidth="1.3" opacity="0.6" />
-  </svg>
+    strokeWidth={strokeWidth}
+  />
 );
 
 /**

@@ -27,6 +27,7 @@ import teamChatWebSocket from '../services/websocket/teamChatWebSocket';
 import notificationBannerService from '../services/banner/notificationBannerService';
 import playIPhoneNotificationSound from '../utils/appleSound';
 import { useAuth } from '../context/AuthContext';
+import { useAlert } from '../context/AlertContext';
 import { isAdmin as checkIsAdmin, getRoleBadgeInfo, getDisplayName } from '../utils/rbac';
 import fileService from '../services/api/fileService';
 import attendanceService, { StaffAttendanceRecord } from '../services/api/attendanceService';
@@ -36,6 +37,7 @@ import brandLogo from '../assets/brand-logo.jpg';
 
 export default function Layout() {
   const { user, logout, updateUserAvatar } = useAuth();
+  const { showAlert } = useAlert();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -148,7 +150,7 @@ export default function Layout() {
         await updateUserAvatar(res.url);
       }
     } catch (err: any) {
-      alert(`Failed to upload avatar: ${err?.message || 'Server error'}`);
+      showAlert({ title: 'Avatar', message: `Failed to upload avatar: ${err?.message || 'Server error'}` });
     } finally {
       setUploadingAvatar(false);
       if (avatarInputRef.current) avatarInputRef.current.value = '';
@@ -236,37 +238,37 @@ export default function Layout() {
     },
     ...(!isAdmin
       ? [
-          {
-            id: 'profile',
-            label: 'My Profile Desk',
-            icon: User,
-            to: '/profile',
-            exact: false,
-          },
-        ]
+        {
+          id: 'profile',
+          label: 'My Profile Desk',
+          icon: User,
+          to: '/profile',
+          exact: false,
+        },
+      ]
       : []),
     ...(isAdmin
       ? [
-          {
-            id: 'import',
-            label: 'Data Ingestion',
-            icon: UploadCloud,
-            to: '/import',
-            exact: false,
-          },
-          {
-            id: 'users',
-            label: 'User Management',
-            icon: UserCog,
-            to: '/users',
-            exact: false,
-          },
-        ]
+        {
+          id: 'import',
+          label: 'Data Ingestion',
+          icon: UploadCloud,
+          to: '/import',
+          exact: false,
+        },
+        {
+          id: 'users',
+          label: 'User Management',
+          icon: UserCog,
+          to: '/users',
+          exact: false,
+        },
+      ]
       : []),
   ];
 
   const getPageInfo = () => {
-    if (currentPath === '/') return { title: 'Executive Overview', subtitle: 'Real-time candidate metrics & counseling progress' };
+    if (currentPath === '/') return { title: 'Executive Overview' };
     if (currentPath.startsWith('/leads')) return { title: 'Candidates & Leads Directory', subtitle: 'Filter, triage, and contact international visa candidates' };
     if (currentPath.startsWith('/customers')) return { title: 'Contacts', subtitle: 'Verified contacts and customer records' };
     if (currentPath.startsWith('/calendar')) return { title: 'Calendar & Reminders', subtitle: 'Indian public holidays, counselor callbacks & appointment schedule' };
@@ -274,7 +276,7 @@ export default function Layout() {
     if (currentPath.startsWith('/profile')) return { title: 'Staff Profile & Shift Desk', subtitle: 'Counselor credentials, shift records, and personal attendance history' };
     if (currentPath.startsWith('/import')) return { title: 'Data Ingestion', subtitle: 'Import Meta ads export spreadsheets & raw lead data' };
     if (currentPath.startsWith('/chat')) return { title: 'Team Chat', subtitle: 'Internal messaging and staff communication' };
-    if (currentPath.startsWith('/notifications')) return { title: 'Notifications', subtitle: 'Scheduled reminders, candidate callbacks & team alerts' };
+    if (currentPath.startsWith('/notifications')) return { title: 'Notifications' };
     if (currentPath.startsWith('/users')) return { title: 'Team & Permissions', subtitle: 'Manage counselor assignments, roles, and access desks' };
     return { title: 'SSA CRM', subtitle: 'Work & Study Visa Consultancy' };
   };
@@ -283,9 +285,8 @@ export default function Layout() {
 
   return (
     <div
-      className={`min-h-screen ${
-        currentPath.startsWith('/notifications') ? 'bg-white' : 'bg-[#f2f2f7]'
-      } flex flex-col md:flex-row font-sans text-slate-900 antialiased selection:bg-[#007aff] selection:text-white`}
+      className={`min-h-screen ${currentPath.startsWith('/notifications') ? 'bg-white' : 'bg-[#f2f2f7]'
+        } flex flex-col md:flex-row font-sans text-slate-900 antialiased selection:bg-[#007aff] selection:text-white`}
     >
       {/* Apple HIG Real-Time In-App Notification Banner Popup */}
       <AppleNotificationBanner />
@@ -310,9 +311,8 @@ export default function Layout() {
 
       {/* Apple macOS Frosted Sidebar */}
       <aside
-        className={`fixed md:sticky top-0 z-30 inset-y-0 left-0 bg-[#0d1627]/95 backdrop-blur-2xl text-white flex flex-col justify-between border-r border-white/5 transition-all duration-200 ease-out md:translate-x-0 ${
-          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-        } ${sidebarCollapsed ? 'w-18' : 'w-60'} h-screen shrink-0`}
+        className={`fixed md:sticky top-0 z-30 inset-y-0 left-0 bg-[#0d1627]/95 backdrop-blur-2xl text-white flex flex-col justify-between border-r border-white/5 transition-all duration-200 ease-out md:translate-x-0 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+          } ${sidebarCollapsed ? 'w-18' : 'w-60'} h-screen shrink-0`}
       >
         <div className="flex flex-col flex-1 min-h-0">
           {/* Brand Header */}
@@ -351,13 +351,11 @@ export default function Layout() {
                   to={item.to}
                   onClick={() => setMobileMenuOpen(false)}
                   title={item.label}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 ${
-                    sidebarCollapsed ? 'justify-center px-2' : ''
-                  } ${
-                    isActive
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 ${sidebarCollapsed ? 'justify-center px-2' : ''
+                    } ${isActive
                       ? 'bg-[#007aff] text-white shadow-[0_2px_8px_rgba(0,122,255,0.35)]'
                       : 'text-slate-300 hover:text-white hover:bg-white/10'
-                  }`}
+                    }`}
                 >
                   <Icon size={18} className={`shrink-0 ${isActive ? 'text-white' : 'text-slate-300'}`} />
                   {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
@@ -441,9 +439,11 @@ export default function Layout() {
             <h1 className="text-sm font-bold tracking-tight text-slate-900 leading-tight">
               {pageInfo.title}
             </h1>
-            <p className="text-[11px] text-slate-500 truncate hidden sm:block">
-              {pageInfo.subtitle}
-            </p>
+            {pageInfo.subtitle && (
+              <p className="text-[11px] text-slate-500 truncate hidden sm:block">
+                {pageInfo.subtitle}
+              </p>
+            )}
           </div>
 
           <div className="flex items-center gap-2.5">
@@ -480,11 +480,10 @@ export default function Layout() {
               <button
                 type="button"
                 onClick={() => navigate('/calendar')}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all focus:outline-none ${
-                  currentPath.startsWith('/calendar')
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all focus:outline-none ${currentPath.startsWith('/calendar')
                     ? 'bg-[#0071e3]/10 text-[#0071e3]'
                     : 'text-[#48484a] hover:text-[#1d1d1f] hover:bg-black/[0.05] active:bg-black/[0.08]'
-                }`}
+                  }`}
                 title="Calendar & Indian Holidays"
                 aria-label="Calendar"
               >
@@ -578,11 +577,10 @@ export default function Layout() {
 
         {/* Dynamic Route Content */}
         <main
-          className={`flex-1 ${
-            currentPath.startsWith('/notifications')
+          className={`flex-1 ${currentPath.startsWith('/notifications')
               ? 'p-0 bg-white max-w-2xl'
               : 'p-3.5 sm:p-5 lg:p-6 max-w-[1440px]'
-          } w-full mx-auto`}
+            } w-full mx-auto`}
         >
           <Outlet />
         </main>

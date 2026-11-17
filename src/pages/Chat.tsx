@@ -23,6 +23,7 @@ import fileService from '../services/api/fileService';
 import authService from '../services/api/authService';
 import axiosClient from '../services/api/axiosClient';
 import { useAuth } from '../context/AuthContext';
+import { useAlert } from '../context/AlertContext';
 import { formatIndianTime, formatIndianDate } from '../utils/dateTimeUtils';
 import teamChatWebSocket from '../services/websocket/teamChatWebSocket';
 import notificationBannerService from '../services/banner/notificationBannerService';
@@ -33,6 +34,7 @@ import type { ChatMessage, User } from '../types';
 
 export default function Chat() {
   const { user } = useAuth();
+  const { showAlert, showConfirm } = useAlert();
   const [chatType, setChatType] = useState<'group' | 'p2p'>('group');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [usersList, setUsersList] = useState<User[]>([]);
@@ -416,7 +418,7 @@ export default function Chat() {
           uploadedFileSize = uploadRes.fileSize || pendingFile.size;
         }
       } catch (err: any) {
-        alert(`Failed to upload media to R2: ${err?.message || 'Upload error'}`);
+        showAlert({ title: 'Chat Upload', message: `Failed to upload media to R2: ${err?.message || 'Upload error'}` });
         setSending(false);
         setUploadingFile(false);
         return;
@@ -500,7 +502,14 @@ export default function Chat() {
   };
 
   const handleDeleteMessage = async (id: number | string) => {
-    if (!window.confirm('Delete this message?')) return;
+    const confirmed = await showConfirm({
+      title: 'Delete Message',
+      message: 'Are you sure you want to delete this message?',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      isDestructive: true,
+    });
+    if (!confirmed) return;
     setMessages((prev) => prev.filter((m) => m.id !== id));
     try {
       await chatService.deleteMessage(id);

@@ -146,9 +146,11 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Intercept window.alert globally so legacy alert() calls also render as the authentic iOS modal
+  // Intercept window.alert and window.confirm globally so native browser popups never appear
   useEffect(() => {
     const originalAlert = window.alert;
+    const originalConfirm = window.confirm;
+
     window.alert = (msg?: any) => {
       showAlert({
         title: 'App',
@@ -156,8 +158,17 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
       });
     };
 
+    window.confirm = (msg?: string) => {
+      showAlert({
+        title: 'Confirmation Required',
+        message: msg || 'Please confirm this action.',
+      });
+      return false;
+    };
+
     return () => {
       window.alert = originalAlert;
+      window.confirm = originalConfirm;
     };
   }, [showAlert]);
 
@@ -170,7 +181,7 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
         <div
           role="dialog"
           aria-modal="true"
-          onClick={handleConfirm}
+          onClick={alertState.type === 'confirm' ? handleCancel : handleConfirm}
           className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-md transition-opacity duration-150 animate-in fade-in"
         >
           <div

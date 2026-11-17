@@ -15,6 +15,7 @@ import {
   FileSpreadsheet,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useAlert } from '../context/AlertContext';
 import { getDisplayName, getRoleBadgeInfo, isAdmin as checkIsAdmin } from '../utils/rbac';
 import attendanceService, { StaffAttendanceRecord } from '../services/api/attendanceService';
 import fileService from '../services/api/fileService';
@@ -28,6 +29,7 @@ const MONTH_NAMES = [
 
 export default function StaffProfile() {
   const { user, updateUserAvatar } = useAuth();
+  const { showAlert } = useAlert();
   const navigate = useNavigate();
   const isAdmin = checkIsAdmin(user);
 
@@ -105,7 +107,7 @@ export default function StaffProfile() {
       showToast('Checked in successfully!');
       loadAttendance();
     } catch (err: any) {
-      alert(`Check-in failed: ${err?.message || 'Server error'}`);
+      showAlert({ title: 'Profile', message: `Check-in failed: ${err?.message || 'Server error'}` });
     } finally {
       setPunching(false);
     }
@@ -121,7 +123,7 @@ export default function StaffProfile() {
       showToast('Checked out successfully!');
       loadAttendance();
     } catch (err: any) {
-      alert(`Check-out failed: ${err?.message || 'Server error'}`);
+      showAlert({ title: 'Profile', message: `Check-out failed: ${err?.message || 'Server error'}` });
     } finally {
       setPunching(false);
     }
@@ -139,7 +141,7 @@ export default function StaffProfile() {
         showToast('Profile photo updated.');
       }
     } catch (err: any) {
-      alert(`Upload failed: ${err?.message || 'Server error'}`);
+      showAlert({ title: 'Profile', message: `Upload failed: ${err?.message || 'Server error'}` });
     } finally {
       setAvatarUploading(false);
       if (avatarInputRef.current) avatarInputRef.current.value = '';

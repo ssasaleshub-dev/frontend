@@ -40,12 +40,14 @@ import {
   getRoleBadgeInfo,
 } from '../utils/rbac';
 import { useAuth } from '../context/AuthContext';
+import { useAlert } from '../context/AlertContext';
 import { Lead, LeadAnalytics } from '../types';
 import { encryptLeadId, formatMaskedLeadRef } from '../utils/leadIdCrypto';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
+  const { showAlert } = useAlert();
 
   const isAdmin = checkIsAdmin(currentUser);
   const isWorkVisa = isWorkVisaStaff(currentUser);
@@ -244,7 +246,7 @@ export default function Dashboard() {
       setStatusModalLead(null);
       await loadDashboardData();
     } catch (err: any) {
-      alert(`Status update failed: ${err?.message || 'Server error'}`);
+      showAlert({ title: 'Dashboard', message: `Status update failed: ${err?.message || 'Server error'}` });
     }
   };
 
@@ -929,7 +931,6 @@ export default function Dashboard() {
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-[#8e8e93]">
                     <p className="text-xs font-medium text-[#1c1c1e]">No candidate records in this desk yet.</p>
-                    <p className="text-[11px] text-[#8e8e93] mt-1">Use "Ingest Excel" or "+ New Candidate" to ingest records.</p>
                   </td>
                 </tr>
               ) : (

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import crmService from '../services/api/crmService';
 import { formatIndianDate, formatIndianTime } from '../utils/dateTimeUtils';
+import { useAlert } from '../context/AlertContext';
 import type { Customer } from '../types';
 
 function WhatsAppIcon({ className = 'w-3.5 h-3.5' }: { className?: string }) {
@@ -24,6 +25,7 @@ function WhatsAppIcon({ className = 'w-3.5 h-3.5' }: { className?: string }) {
 }
 
 export default function Customers() {
+  const { showAlert, showConfirm } = useAlert();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
@@ -209,7 +211,7 @@ export default function Customers() {
       try { sessionStorage.removeItem(CACHE_KEY); } catch {}
       await fetchInitialCustomers(false);
     } catch (err: any) {
-      alert(`Failed to add customer: ${err?.message || 'Server error'}`);
+      showAlert({ title: 'Customer', message: `Failed to add customer: ${err?.message || 'Server error'}` });
     } finally {
       setSubmitting(false);
     }
@@ -234,20 +236,27 @@ export default function Customers() {
         prev.map((c) => (c.id === editingCustomer.id ? { ...c, ...updated } : c))
       );
     } catch (err: any) {
-      alert(`Update failed: ${err?.message || 'Server error'}`);
+      showAlert({ title: 'Customer', message: `Update failed: ${err?.message || 'Server error'}` });
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDeleteCustomer = async (id: number | string, name?: string) => {
-    if (!window.confirm(`Are you sure you want to delete customer "${name || id}"?`)) return;
+    const confirmed = await showConfirm({
+      title: 'Delete Customer',
+      message: `Are you sure you want to delete customer "${name || id}"?`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      isDestructive: true,
+    });
+    if (!confirmed) return;
     try {
       await crmService.deleteCustomer(id);
       setCustomers((prev) => prev.filter((c) => c.id !== id));
       setTotalElements((prev) => Math.max(0, prev - 1));
     } catch (err: any) {
-      alert(`Delete failed: ${err?.message || 'Server error'}`);
+      showAlert({ title: 'Customer', message: `Delete failed: ${err?.message || 'Server error'}` });
     }
   };
 
@@ -468,9 +477,6 @@ export default function Customers() {
                     ) : (
                       <div>
                         <p className="text-slate-600 font-semibold text-sm">No customers found</p>
-                        <p className="text-slate-400 text-xs mt-1">
-                          Click "New Customer" to register buyers or import Meta leads.
-                        </p>
                       </div>
                     )}
                   </td>

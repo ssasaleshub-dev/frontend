@@ -62,7 +62,7 @@ export default function CandidateDetail() {
   const { id: rawParamId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
-  const { showAlert } = useAlert();
+  const { showAlert, showConfirm } = useAlert();
 
   const resolvedLeadId = decryptLeadId(rawParamId);
 
@@ -309,7 +309,7 @@ export default function CandidateDetail() {
         newValue: newAssignee,
       });
     } catch (err: any) {
-      alert(`Staff assignment failed: ${err?.message || 'Server error'}`);
+      showAlert({ title: 'Candidate', message: `Staff assignment failed: ${err?.message || 'Server error'}` });
     } finally {
       setAssigningStaff(false);
     }
@@ -398,7 +398,7 @@ export default function CandidateDetail() {
         fieldChanged: 'notes',
       });
     } catch (err: any) {
-      alert(`Failed to record discussion note: ${err?.message || 'Server error'}`);
+      showAlert({ title: 'Remarks', message: `Failed to record discussion note: ${err?.message || 'Server error'}` });
     } finally {
       setSubmittingNote(false);
     }
@@ -406,7 +406,14 @@ export default function CandidateDetail() {
 
   const handleDeleteRemark = async (indexToDelete: number) => {
     if (!lead) return;
-    if (!window.confirm('Delete this remark?')) return;
+    const confirmed = await showConfirm({
+      title: 'Delete Remark',
+      message: 'Are you sure you want to delete this remark?',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      isDestructive: true,
+    });
+    if (!confirmed) return;
 
     const updatedHistory = notesHistory.filter((_, idx) => idx !== indexToDelete);
     const updatedNotes = updatedHistory.map((item) => item.note).join(' | ');
@@ -421,7 +428,7 @@ export default function CandidateDetail() {
       setLead({ ...lead, notes: updatedNotes });
       window.dispatchEvent(new CustomEvent('crm-data-updated'));
     } catch (err: any) {
-      alert(`Failed to delete remark: ${err?.message || 'Server error'}`);
+      showAlert({ title: 'Remarks', message: `Failed to delete remark: ${err?.message || 'Server error'}` });
     }
   };
 
@@ -773,7 +780,7 @@ export default function CandidateDetail() {
         });
       }
     } catch (err: any) {
-      alert(`Failed to save candidate changes: ${err?.message || 'Server error'}`);
+      showAlert({ title: 'Candidate', message: `Failed to save candidate changes: ${err?.message || 'Server error'}` });
     } finally {
       setSavingEdit(false);
     }
@@ -781,13 +788,20 @@ export default function CandidateDetail() {
 
   const handleDelete = async () => {
     if (!lead) return;
-    if (!window.confirm(`Permanently delete candidate dossier Ref #${formatMaskedLeadRef(lead.id)} (${lead.customerName || 'record'})? This cannot be undone.`)) return;
+    const confirmed = await showConfirm({
+      title: 'Delete Candidate',
+      message: `Permanently delete candidate dossier Ref #${formatMaskedLeadRef(lead.id)} (${lead.customerName || 'record'})? This cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      isDestructive: true,
+    });
+    if (!confirmed) return;
     try {
       await crmService.deleteLead(lead.id);
       window.dispatchEvent(new CustomEvent('crm-data-updated'));
       navigate('/leads');
     } catch (err: any) {
-      alert(`Delete failed: ${err?.message || 'Server error'}`);
+      showAlert({ title: 'Candidate', message: `Delete failed: ${err?.message || 'Server error'}` });
     }
   };
 
@@ -1244,7 +1258,7 @@ export default function CandidateDetail() {
       {/* Two-Column Dossier Content - Apple Inset Grouped Architecture */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Left Column: Candidate Detailed Profile (7 Cols) */}
-        <div className="lg:col-span-7 space-y-5">
+        <div className="lg:col-span-7 space-y-5 min-w-0">
           {/* Section 1: Contact Information */}
           <div className="ios-card p-6 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
@@ -1262,36 +1276,36 @@ export default function CandidateDetail() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors">
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors min-w-0">
                 <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Primary Phone</span>
-                <p className="font-mono text-sm font-bold text-[#1c1c1e] mt-1">
+                <p className="font-mono text-sm font-bold text-[#1c1c1e] mt-1 truncate">
                   {lead.phoneNumber || '—'}
                 </p>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors">
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors min-w-0">
                 <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Email Address</span>
                 <p className="text-sm font-semibold text-[#1c1c1e] mt-1 truncate">
                   {lead.email || '—'}
                 </p>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors">
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors min-w-0">
                 <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">City / Location</span>
-                <p className="text-sm font-semibold text-[#1c1c1e] mt-1 capitalize">
+                <p className="text-sm font-semibold text-[#1c1c1e] mt-1 capitalize truncate">
                   {lead.city || lead.location || '—'}
                 </p>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors">
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors min-w-0 overflow-hidden">
                 <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider block">Assigned Counselor</span>
                 {isAdmin ? (
-                  <div className="mt-1 flex items-center gap-2">
+                  <div className="mt-1 flex items-center gap-2 min-w-0 w-full">
                     <select
                       value={lead.assignedTo || ''}
                       onChange={(e) => handleAssignStaff(e.target.value)}
                       disabled={assigningStaff}
-                      className="text-xs font-semibold text-slate-800 bg-white border border-black/[0.08] rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 disabled:opacity-50"
+                      className="w-full min-w-0 max-w-full text-xs font-semibold text-slate-800 bg-white border border-black/[0.08] rounded-xl px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 disabled:opacity-50 truncate cursor-pointer"
                     >
                       <option value="">Unassigned (General Pool)</option>
                       {availableStaff.map((staff) => (
@@ -1300,17 +1314,17 @@ export default function CandidateDetail() {
                         </option>
                       ))}
                     </select>
-                    {assigningStaff && <RefreshCw size={12} className="animate-spin text-[#007aff]" />}
+                    {assigningStaff && <RefreshCw size={12} className="animate-spin text-[#007aff] shrink-0" />}
                   </div>
                 ) : (
-                  <p className="text-sm font-semibold text-[#1c1c1e] mt-1">
+                  <p className="text-sm font-semibold text-[#1c1c1e] mt-1 truncate">
                     {lead.assignedTo || 'General Pool'}
                   </p>
                 )}
               </div>
 
               {/* Client Budget Quick Card */}
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors">
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors min-w-0">
                 <div className="flex items-center justify-between">
                   <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1">
                     <CreditCard size={12} className="text-[#007aff]" />
@@ -1327,13 +1341,13 @@ export default function CandidateDetail() {
                     {lead.budgetRange ? 'Change' : '+ Set'}
                   </button>
                 </div>
-                <p className="text-sm font-bold text-[#1c1c1e] mt-1">
+                <p className="text-sm font-bold text-[#1c1c1e] mt-1 truncate">
                   {formatCurrencyDisplay(lead.budgetRange) || <span className="text-[#8e8e93] font-normal italic">Not specified</span>}
                 </p>
               </div>
 
               {/* Payment Status Quick Card */}
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors">
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors min-w-0">
                 <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider block">Payment Status</span>
                 <div className="mt-1 flex items-center gap-2">
                   {(() => {
@@ -1378,7 +1392,7 @@ export default function CandidateDetail() {
               <label className="text-[11px] font-semibold text-[#86868b] uppercase tracking-wider block">
                 Settlement Status (1-Click Toggle)
               </label>
-              <div className="grid grid-cols-3 gap-2 p-1 bg-[#f2f2f7] rounded-2xl border border-black/[0.04]">
+              <div className="grid grid-cols-3 gap-1.5 sm:gap-2 p-1 bg-[#f2f2f7] rounded-2xl border border-black/[0.04]">
                 {[
                   { value: 'UNPAID', label: 'Not Paid', color: 'bg-rose-500 text-white shadow-xs', inactive: 'text-rose-700 hover:bg-rose-500/10' },
                   { value: 'PARTIAL', label: 'Partially Paid', color: 'bg-amber-500 text-white shadow-xs', inactive: 'text-amber-700 hover:bg-amber-500/10' },
@@ -1392,13 +1406,13 @@ export default function CandidateDetail() {
                       type="button"
                       onClick={() => handleUpdatePaymentStatus(st.value as any)}
                       disabled={updatingPayment}
-                      className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all duration-150 flex items-center justify-center cursor-pointer active:scale-95 ${
+                      className={`py-2 px-1.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-semibold transition-all duration-150 flex items-center justify-center cursor-pointer active:scale-95 text-center truncate ${
                         isSelected
                           ? st.color
                           : `${st.inactive} font-medium`
                       }`}
                     >
-                      <span>{st.label}</span>
+                      <span className="truncate">{st.label}</span>
                     </button>
                   );
                 })}
@@ -1428,8 +1442,8 @@ export default function CandidateDetail() {
 
               {isEditingBudget ? (
                 <div className="space-y-2.5 pt-1">
-                  <div className="flex items-center gap-2">
-                    <div className="relative flex-1">
+                  <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+                    <div className="relative flex-1 min-w-[140px]">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#8e8e93]">₹</span>
                       <input
                         type="text"
@@ -1440,20 +1454,22 @@ export default function CandidateDetail() {
                         autoFocus
                       />
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleUpdateBudget(budgetInput)}
-                      className="px-3.5 py-2 bg-[#007aff] text-white rounded-xl text-xs font-semibold hover:bg-[#0071e3] transition-colors cursor-pointer"
-                    >
-                      Save
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsEditingBudget(false)}
-                      className="px-3 py-2 bg-black/[0.05] text-[#1c1c1e] rounded-xl text-xs font-medium hover:bg-black/[0.1] transition-colors cursor-pointer"
-                    >
-                      Cancel
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateBudget(budgetInput)}
+                        className="px-3.5 py-2 bg-[#007aff] text-white rounded-xl text-xs font-semibold hover:bg-[#0071e3] transition-colors cursor-pointer"
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingBudget(false)}
+                        className="px-3 py-2 bg-black/[0.05] text-[#1c1c1e] rounded-xl text-xs font-medium hover:bg-black/[0.1] transition-colors cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </div>
                   {/* Preset quick buttons */}
                   <div className="flex flex-wrap gap-1.5 pt-1">
@@ -1549,15 +1565,15 @@ export default function CandidateDetail() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors">
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors min-w-0">
                 <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Highest Qualification</span>
-                <p className="font-bold text-[#1c1c1e] text-sm mt-1">
+                <p className="font-bold text-[#1c1c1e] text-sm mt-1 truncate">
                   {lead.educationalQualification || '—'}
                 </p>
               </div>
 
               {/* Student Percentage / CGPA (Dynamic & Inline-Editable) */}
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors">
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors min-w-0">
                 <div className="flex items-center justify-between">
                   <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1.5">
                     <Award size={13} className="text-[#007aff]" />
@@ -1579,29 +1595,31 @@ export default function CandidateDetail() {
 
                 {isEditingPercentage ? (
                   <div className="space-y-2 mt-1.5">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex flex-wrap sm:flex-nowrap items-center gap-1.5 min-w-0 w-full">
                       <input
                         type="text"
                         value={percentageInput}
                         onChange={(e) => setPercentageInput(e.target.value)}
                         placeholder="e.g. 75% or 7.8 CGPA or RNR"
-                        className="flex-1 px-2.5 py-1.5 text-xs font-semibold bg-white border border-black/[0.08] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/30"
+                        className="flex-1 min-w-[110px] px-2.5 py-1.5 text-xs font-semibold bg-white border border-black/[0.08] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/30"
                         autoFocus
                       />
-                      <button
-                        type="button"
-                        onClick={() => handleUpdatePercentage(percentageInput)}
-                        className="px-2.5 py-1.5 bg-[#007aff] text-white rounded-xl text-xs font-semibold hover:bg-[#0071e3] transition-colors cursor-pointer"
-                      >
-                        Save
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setIsEditingPercentage(false)}
-                        className="px-2 py-1.5 bg-black/[0.05] text-[#1c1c1e] rounded-xl text-xs font-medium hover:bg-black/[0.1] transition-colors cursor-pointer"
-                      >
-                        ✕
-                      </button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleUpdatePercentage(percentageInput)}
+                          className="px-2.5 py-1.5 bg-[#007aff] text-white rounded-xl text-xs font-semibold hover:bg-[#0071e3] transition-colors cursor-pointer"
+                        >
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingPercentage(false)}
+                          className="px-2 py-1.5 bg-black/[0.05] text-[#1c1c1e] rounded-xl text-xs font-medium hover:bg-black/[0.1] transition-colors cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </div>
                     </div>
                     {/* Quick percentage chips */}
                     <div className="flex flex-wrap gap-1">
@@ -1622,11 +1640,11 @@ export default function CandidateDetail() {
                   </div>
                 ) : (
                   <div className="flex items-baseline gap-2 mt-1">
-                    <p className="font-bold text-[#1c1c1e] text-sm">
+                    <p className="font-bold text-[#1c1c1e] text-sm truncate">
                       {(lead as any).studentPercentage || (lead as any).cgpa || '—'}
                     </p>
                     {((lead as any).studentPercentage || (lead as any).cgpa) && (
-                      <span className="text-[10px] font-semibold text-[#007aff] bg-[#007aff]/10 px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] font-semibold text-[#007aff] bg-[#007aff]/10 px-2 py-0.5 rounded-full shrink-0">
                         Score Set
                       </span>
                     )}
@@ -1634,36 +1652,36 @@ export default function CandidateDetail() {
                 )}
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors">
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors min-w-0">
                 <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Age Demographic</span>
-                <p className="font-bold text-[#1c1c1e] text-sm mt-1">
+                <p className="font-bold text-[#1c1c1e] text-sm mt-1 truncate">
                   {lead.age || '—'}
                 </p>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors">
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors min-w-0">
                 <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Currently Employed?</span>
-                <p className="font-bold text-[#1c1c1e] text-sm mt-1 capitalize">
+                <p className="font-bold text-[#1c1c1e] text-sm mt-1 capitalize truncate">
                   {lead.areYouWorking ? (lead.areYouWorking === 'yes' ? 'Yes, Employed' : 'No / Fresher') : '—'}
                 </p>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors">
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors min-w-0">
                 <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Interested in Visa Process?</span>
-                <p className="font-bold text-[#1c1c1e] text-sm mt-1 capitalize">
+                <p className="font-bold text-[#1c1c1e] text-sm mt-1 capitalize truncate">
                   {lead.areYouInterested ? (lead.areYouInterested === 'yes' ? 'Yes, Ready' : 'Exploring') : '—'}
                 </p>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors">
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors min-w-0">
                 <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Lead Confirmation Status</span>
-                <p className="font-bold text-[#1c1c1e] text-sm mt-1">
+                <p className="font-bold text-[#1c1c1e] text-sm mt-1 truncate">
                   {lead.leadConfirm || 'Confirmed Candidate'}
                 </p>
               </div>
 
               {/* Candidate Remarks Card */}
-              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 col-span-1 sm:col-span-2 space-y-1.5">
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 col-span-1 sm:col-span-2 space-y-1.5 min-w-0">
                 <div className="flex items-center justify-between">
                   <span className="text-amber-900 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5">
                     <FileText size={13} className="text-amber-600" />
@@ -1680,7 +1698,7 @@ export default function CandidateDetail() {
                     + Add New Remark
                   </button>
                 </div>
-                <p className="text-xs font-medium text-slate-800 mt-1.5 whitespace-pre-line leading-relaxed">
+                <p className="text-xs font-medium text-slate-800 mt-1.5 whitespace-pre-line leading-relaxed break-words">
                   {lead.notes || 'No remarks recorded yet.'}
                 </p>
               </div>
@@ -1700,30 +1718,30 @@ export default function CandidateDetail() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors col-span-1 sm:col-span-2">
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors col-span-1 sm:col-span-2 min-w-0">
                 <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Meta Campaign Name</span>
-                <p className="font-bold text-[#1c1c1e] text-sm mt-1">
+                <p className="font-bold text-[#1c1c1e] text-sm mt-1 break-words">
                   {lead.campaignName || 'Direct / Organic Walk-in'}
                 </p>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors">
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors min-w-0">
                 <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Ad Set Name</span>
                 <p className="font-bold text-[#1c1c1e] text-sm mt-1 truncate">
                   {lead.adSetName || '—'}
                 </p>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors">
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors min-w-0">
                 <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Ad Creative</span>
                 <p className="font-bold text-[#1c1c1e] text-sm mt-1 truncate">
                   {lead.adName || '—'}
                 </p>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors col-span-1 sm:col-span-2">
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors col-span-1 sm:col-span-2 min-w-0">
                 <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Meta Instant Form Name / ID</span>
-                <p className="font-bold text-[#1c1c1e] text-sm mt-1">
+                <p className="font-bold text-[#1c1c1e] text-sm mt-1 break-words">
                   {lead.leadFormName || lead.formId || 'Instant Lead Form'}
                 </p>
               </div>
@@ -1732,7 +1750,7 @@ export default function CandidateDetail() {
         </div>
 
         {/* Right Column: Counselor Discussion Notes & Communication (5 Cols) */}
-        <div className="lg:col-span-5 space-y-5">
+        <div className="lg:col-span-5 space-y-5 min-w-0">
           {/* Counselor Note-Taking Box */}
           <div className="ios-card p-6 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">

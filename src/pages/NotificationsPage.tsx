@@ -9,11 +9,13 @@ import reminderNotificationService, {
   NotificationItem,
 } from '../services/reminderNotificationService';
 import pushNotificationService from '../services/pushNotificationService';
+import { useAlert } from '../context/AlertContext';
 import { encryptLeadId } from '../utils/leadIdCrypto';
 import { formatIndianTime, formatIndianDate } from '../utils/dateTimeUtils';
 
 export default function NotificationsPage() {
   const navigate = useNavigate();
+  const { showConfirm } = useAlert();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [filterTab, setFilterTab] = useState<'ALL' | 'UNREAD'>('ALL');
   const [loading, setLoading] = useState(false);
@@ -85,7 +87,14 @@ export default function NotificationsPage() {
   };
 
   const handleClearAll = async () => {
-    if (window.confirm('Clear all notifications?')) {
+    const confirmed = await showConfirm({
+      title: 'Clear Notifications',
+      message: 'Are you sure you want to clear all notifications?',
+      confirmText: 'Clear All',
+      cancelText: 'Cancel',
+      isDestructive: true,
+    });
+    if (confirmed) {
       setNotifications([]);
       await reminderNotificationService.clearAllNotifications();
     }

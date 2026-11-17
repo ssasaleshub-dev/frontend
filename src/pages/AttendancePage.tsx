@@ -21,6 +21,7 @@ import {
   Briefcase,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useAlert } from '../context/AlertContext';
 import { isAdmin as checkIsAdmin, getDisplayName, getRoleBadgeInfo } from '../utils/rbac';
 import attendanceService, {
   StaffAttendanceRecord,
@@ -32,6 +33,7 @@ import type { User } from '../types';
 
 export default function AttendancePage() {
   const { user } = useAuth();
+  const { showAlert, showConfirm } = useAlert();
   const isAdmin = checkIsAdmin(user);
   const displayName = getDisplayName(user);
   const badgeInfo = getRoleBadgeInfo(user);
@@ -212,7 +214,7 @@ export default function AttendancePage() {
       showToast('Checked in successfully!');
       loadAdminData();
     } catch (err: any) {
-      alert(`Check-in failed: ${err?.message || 'Server error'}`);
+      showAlert({ title: 'Attendance', message: `Check-in failed: ${err?.message || 'Server error'}` });
     } finally {
       setPunching(false);
     }
@@ -221,7 +223,13 @@ export default function AttendancePage() {
   // Check Out
   const handleCheckOut = async () => {
     if (!currentUserId) return;
-    if (!confirm('Are you ready to clock out and end your shift?')) return;
+    const confirmed = await showConfirm({
+      title: 'Clock Out',
+      message: 'Are you ready to clock out and end your shift?',
+      confirmText: 'Clock Out',
+      cancelText: 'Cancel',
+    });
+    if (!confirmed) return;
     setPunching(true);
     try {
       const result = await attendanceService.checkOut({
@@ -233,7 +241,7 @@ export default function AttendancePage() {
       showToast('Shift completed and checked out.');
       loadAdminData();
     } catch (err: any) {
-      alert(`Check-out failed: ${err?.message || 'Server error'}`);
+      showAlert({ title: 'Attendance', message: `Check-out failed: ${err?.message || 'Server error'}` });
     } finally {
       setPunching(false);
     }
@@ -290,7 +298,7 @@ export default function AttendancePage() {
   // Export full register to CSV
   const handleExportCSV = () => {
     if (filteredRoster.length === 0) {
-      alert('No attendance records available for this filter to export.');
+      showAlert({ title: 'Export', message: 'No attendance records available for this filter to export.', icon: 'info' });
       return;
     }
     const headers = [
@@ -511,9 +519,9 @@ export default function AttendancePage() {
           </div>
 
           {/* Filters Row */}
-          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 pt-2">
+          <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2.5 pt-2">
             {/* Search Input */}
-            <div className="relative flex-1">
+            <div className="relative flex-1 min-w-[180px]">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
@@ -525,11 +533,11 @@ export default function AttendancePage() {
             </div>
 
             {/* Date Range Quick Selector */}
-            <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200/80 shrink-0">
+            <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200/80 shrink-0 overflow-x-auto no-scrollbar">
               <button
                 type="button"
                 onClick={() => setDateFilter('TODAY')}
-                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                   dateFilter === 'TODAY' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -538,7 +546,7 @@ export default function AttendancePage() {
               <button
                 type="button"
                 onClick={() => setDateFilter('YESTERDAY')}
-                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                   dateFilter === 'YESTERDAY' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -547,7 +555,7 @@ export default function AttendancePage() {
               <button
                 type="button"
                 onClick={() => setDateFilter('LAST_7')}
-                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                   dateFilter === 'LAST_7' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -556,7 +564,7 @@ export default function AttendancePage() {
               <button
                 type="button"
                 onClick={() => setDateFilter('THIS_MONTH')}
-                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                   dateFilter === 'THIS_MONTH' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -569,7 +577,7 @@ export default function AttendancePage() {
               <select
                 value={staffFilter}
                 onChange={(e) => setStaffFilter(e.target.value)}
-                className="px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 shrink-0"
+                className="px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 min-w-0 max-w-full sm:max-w-[240px] truncate cursor-pointer"
               >
                 <option value="ALL">All Staff Members</option>
                 {systemUsers
@@ -591,7 +599,7 @@ export default function AttendancePage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 shrink-0"
+              className="px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 min-w-0 max-w-full sm:max-w-[180px] truncate cursor-pointer"
             >
               <option value="ALL">All Statuses</option>
               <option value="WORKING">Currently On Duty</option>
