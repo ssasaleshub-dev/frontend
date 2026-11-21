@@ -1986,7 +1986,7 @@ export default function Leads() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search candidate name, mobile, email, ref..."
-              className="w-full pl-8.5 pr-8 py-1.5 h-[34px] bg-white hover:border-slate-400 focus:bg-white border border-slate-300 focus:border-blue-500 rounded-md text-xs text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-slate-400"
+              className="w-full pl-9 pr-8 py-1.5 h-[34px] bg-white hover:border-slate-400 focus:bg-white border border-slate-300 focus:border-blue-500 rounded-md text-xs text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-slate-400"
             />
             {searchTerm && (
               <button
