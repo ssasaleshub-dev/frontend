@@ -1053,15 +1053,27 @@ class ReminderNotificationService {
   }
 
   private sendBrowserNotification(title: string, body: string) {
-    if (!('Notification' in window)) return;
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
     if (Notification.permission === 'granted') {
-      try {
-        new Notification(title, {
-          body,
-          icon: '/brand-logo.jpg',
-          badge: '/brand-logo.jpg',
-        });
-      } catch {}
+      const options: NotificationOptions = {
+        body,
+        icon: '/brand-logo.jpg',
+        badge: '/brand-logo.jpg',
+      };
+
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.ready
+          .then((reg) => reg.showNotification(title, options))
+          .catch(() => {
+            try {
+              new Notification(title, options);
+            } catch {}
+          });
+      } else {
+        try {
+          new Notification(title, options);
+        } catch {}
+      }
     }
   }
 

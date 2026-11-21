@@ -48,10 +48,10 @@ class NotificationWebSocket {
       const hostname = window.location.hostname;
       const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
       this.url = isLocalhost
-        ? `ws://localhost:8086`
+        ? `ws://localhost:8080/ws/notifications`
         : `${wsProtocol}//${host}/ws/notifications`;
     } else {
-      this.url = 'ws://localhost:8086';
+      this.url = 'ws://localhost:8080/ws/notifications';
     }
   }
 
@@ -99,7 +99,7 @@ class NotificationWebSocket {
     }
   }
 
-  private handleFrame(frame: any): void {
+  public handleFrame(frame: any): void {
     const { event, data } = frame;
 
     if (event === 'NOTIFICATION' && data) {

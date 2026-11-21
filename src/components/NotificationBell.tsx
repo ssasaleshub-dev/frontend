@@ -7,6 +7,8 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { AppleBellIcon } from './icons/BrandIcons';
+import { useAlert } from '../context/AlertContext';
+import playIPhoneNotificationSound from '../utils/appleSound';
 import reminderNotificationService, {
   NotificationItem,
 } from '../services/reminderNotificationService';
@@ -14,6 +16,7 @@ import { encryptLeadId } from '../utils/leadIdCrypto';
 import { formatIndianTime, formatIndianDate, cleanNotificationMessage } from '../utils/dateTimeUtils';
 
 export default function NotificationBell() {
+  const { showAlert } = useAlert();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [filterTab, setFilterTab] = useState<'ALL' | 'UNREAD'>('ALL');
@@ -77,8 +80,53 @@ export default function NotificationBell() {
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   const handleRequestPermission = async () => {
-    const granted = await reminderNotificationService.requestNotificationPermission();
-    setHasPermission(granted);
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      showAlert({
+        title: 'Notifications Not Supported',
+        message: 'Your browser or device does not support desktop notifications.',
+      });
+      return;
+    }
+
+    if (Notification.permission === 'denied') {
+      showAlert({
+        title: 'Notifications Blocked by Browser',
+        message:
+          'Your browser is currently blocking notifications for this site.\n\nTo enable alerts:\n1. Click the Tune / Padlock icon on the left of your browser address bar.\n2. Change "Notifications" from "Block" to "Allow".\n3. Reload the page.',
+      });
+      return;
+    }
+
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        setHasPermission(true);
+        playIPhoneNotificationSound();
+        try {
+          new Notification('SSA CRM Desktop Alerts Enabled', {
+            body: 'You will now receive desktop alerts for candidate callbacks and messages.',
+            icon: '/brand-logo.jpg',
+            badge: '/brand-logo.jpg',
+          });
+        } catch {
+          // fallback
+        }
+        showAlert({
+          title: 'Desktop Alerts Activated',
+          message: 'Desktop notifications have been successfully enabled! A test notification was sent.',
+          icon: 'success',
+        });
+      } else {
+        setHasPermission(false);
+        showAlert({
+          title: 'Permission Denied',
+          message:
+            'You chose not to allow notifications. To enable alerts later, click the lock icon in your browser address bar and set Notifications to "Allow".',
+        });
+      }
+    } catch (err: any) {
+      console.warn('Notification permission error:', err);
+    }
   };
 
   const handleMarkAsRead = async (id: string, e?: React.MouseEvent) => {
@@ -297,8 +345,8 @@ export default function NotificationBell() {
             </div>
           </div>
 
-          {/* Notification Permission Request Card (Apple HIG Managing Notifications) */}
-          {!hasPermission && (
+          {/* Notification Permission Request Card (Apple HIG Managing Notifications) - Web Desktop Only */}
+          {!hasPermission && !isNative && !isMobileScreen && (
             <div className="mx-3.5 mt-2.5 p-3 bg-gradient-to-r from-[#0071e3]/[0.06] to-transparent border border-[#0071e3]/15 rounded-[16px] flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-7 h-7 rounded-full bg-[#0071e3]/15 text-[#0071e3] flex items-center justify-center shrink-0">

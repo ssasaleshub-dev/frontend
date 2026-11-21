@@ -9,6 +9,7 @@
 import { Capacitor } from '@capacitor/core';
 import { API_BASE_URL } from '../../config/constants';
 import type { ChatMessage } from '../../types';
+import notificationWebSocket from './notificationWebSocket';
 
 export interface ChatWsMessagePayload {
   content: string;
@@ -192,6 +193,16 @@ class TeamChatWebSocket {
       case 'NEW_MESSAGE':
         if (message) {
           this.dispatchIncomingMessage(message);
+        }
+        break;
+
+      case 'NOTIFICATION':
+        if (frame.data) {
+          try {
+            notificationWebSocket.handleFrame(frame);
+          } catch (e) {
+            console.warn('[TeamChatWebSocket] Error forwarding NOTIFICATION frame:', e);
+          }
         }
         break;
 
