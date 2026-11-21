@@ -1047,6 +1047,10 @@ export default function Leads() {
   };
 
   const handleDeleteLead = async (id: number | string, name?: string) => {
+    if (!isAdmin) {
+      showAlert({ title: 'Access Denied', message: 'Only administrators can delete candidate leads.' });
+      return;
+    }
     const confirmed = await showConfirm({
       title: 'App',
       message: `Delete candidate lead #${id} (${name || 'record'})? This action cannot be undone.`,
@@ -2172,7 +2176,7 @@ export default function Leads() {
                 notes: lead.notes || '',
               });
             }}
-            onDeleteLead={handleDeleteLead}
+            onDeleteLead={isAdmin ? handleDeleteLead : undefined}
             getLeadQuality={getLeadQuality}
             getBudgetReady={getBudgetReady}
             formatDate={formatDate}
@@ -2593,13 +2597,15 @@ export default function Leads() {
                               >
                                 <Eye size={14} />
                               </button>
-                              <button
-                                onClick={() => handleDeleteLead(lead.id, lead.customerName)}
-                                title="Delete Lead"
-                                className="w-7 h-7 rounded-lg flex items-center justify-center text-[#8e8e93] hover:text-[#ff3b30] hover:bg-[#ff3b30]/10 transition-colors"
-                              >
-                                <Trash2 size={14} />
-                              </button>
+                              {isAdmin && (
+                                <button
+                                  onClick={() => handleDeleteLead(lead.id, lead.customerName)}
+                                  title="Delete Lead"
+                                  className="w-7 h-7 rounded-lg flex items-center justify-center text-[#8e8e93] hover:text-[#ff3b30] hover:bg-[#ff3b30]/10 transition-colors"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
 
                               {/* Apple Disclosure Chevron */}
                               <button
@@ -2681,7 +2687,7 @@ export default function Leads() {
 
       {/* iOS-Style Slide-Over Candidate Dossier Drawer */}
       {dossierLead && (
-        <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/30 backdrop-blur-2xs transition-opacity animate-in fade-in">
+        <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/40 transition-opacity animate-in fade-in">
           <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
             <div className="w-screen max-w-lg bg-white shadow-2xl border-l border-slate-200 flex flex-col justify-between animate-in slide-in-from-right duration-200">
               {/* Drawer Top Header */}
@@ -2842,12 +2848,16 @@ export default function Leads() {
 
               {/* Drawer Footer Actions */}
               <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                <button
-                  onClick={() => handleDeleteLead(dossierLead.id, dossierLead.customerName)}
-                  className="px-3 py-1.5 text-rose-600 hover:bg-rose-50 rounded-xl font-medium border border-rose-200 transition-colors"
-                >
-                  Delete Record
-                </button>
+                {isAdmin ? (
+                  <button
+                    onClick={() => handleDeleteLead(dossierLead.id, dossierLead.customerName)}
+                    className="px-3 py-1.5 text-rose-600 hover:bg-rose-50 rounded-xl font-medium border border-rose-200 transition-colors"
+                  >
+                    Delete Record
+                  </button>
+                ) : (
+                  <div />
+                )}
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => {

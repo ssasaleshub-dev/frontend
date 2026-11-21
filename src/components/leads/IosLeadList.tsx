@@ -6,7 +6,6 @@ import {
   MessageCircle,
   RefreshCw,
   Eye,
-  Trash2,
   Users,
   Briefcase,
   GraduationCap,
@@ -27,7 +26,7 @@ interface IosLeadListProps {
   onPageSizeChange: (size: number) => void;
   onToggleContacted?: (lead: Lead, e: React.MouseEvent) => void;
   onOpenStatusModal: (lead: Lead, e: React.MouseEvent) => void;
-  onDeleteLead: (id: number, name?: string) => void;
+  onDeleteLead?: (id: number, name?: string) => void;
   getLeadQuality: (lead: Lead) => string;
   getBudgetReady: (lead: Lead) => any;
   formatDate: (dateStr?: string) => string;

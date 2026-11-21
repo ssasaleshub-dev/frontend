@@ -787,6 +787,10 @@ export default function CandidateDetail() {
   };
 
   const handleDelete = async () => {
+    if (!isAdmin) {
+      showAlert({ title: 'Access Denied', message: 'Only administrators can delete candidate leads.' });
+      return;
+    }
     if (!lead) return;
     const confirmed = await showConfirm({
       title: 'Delete Candidate',
@@ -1044,13 +1048,15 @@ export default function CandidateDetail() {
             <span>Edit Details</span>
           </button>
 
-          <button
-            onClick={handleDelete}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white hover:bg-black/[0.04] text-[#8e8e93] hover:text-[#ff3b30] rounded-xl border border-black/[0.08] hover:border-black/[0.15] text-xs font-medium transition-all active:scale-95 shadow-2xs cursor-pointer"
-          >
-            <Trash2 size={13} />
-            <span>Delete</span>
-          </button>
+          {isAdmin && (
+            <button
+              onClick={handleDelete}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white hover:bg-black/[0.04] text-[#8e8e93] hover:text-[#ff3b30] rounded-xl border border-black/[0.08] hover:border-black/[0.15] text-xs font-medium transition-all active:scale-95 shadow-2xs cursor-pointer"
+            >
+              <Trash2 size={13} />
+              <span>Delete</span>
+            </button>
+          )}
         </div>
       </div>
 

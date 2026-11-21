@@ -185,9 +185,7 @@
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background-color: rgba(0, 0, 0, 0.40);
-  backdrop-filter: blur(25px) saturate(180%);
-  -webkit-backdrop-filter: blur(25px) saturate(180%);
+  background-color: rgba(0, 0, 0, 0.45);
 }
 
 /* Top drag handle / grabber pill on Apple Form Sheets */

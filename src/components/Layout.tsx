@@ -590,7 +590,7 @@ export default function Layout() {
       {mobileMenuOpen && (
         <div
           onClick={() => setMobileMenuOpen(false)}
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-20 md:hidden"
+          className="fixed inset-0 bg-slate-900/40 z-20 md:hidden"
         />
       )}
     </div>

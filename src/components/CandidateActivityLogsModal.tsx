@@ -56,7 +56,7 @@ export default function CandidateActivityLogsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/45 animate-in fade-in duration-200">
       <div
         className="w-full max-w-2xl max-h-[90vh] bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.18)] border border-black/[0.08] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
         role="dialog"

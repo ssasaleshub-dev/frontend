@@ -166,7 +166,7 @@ export const TimePicker12Hour: React.FC<TimePicker12HourProps> = ({
       {/* ── Interactive Visual Clock Modal Dialog ── */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/30 backdrop-blur-xs animate-in fade-in duration-150"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 animate-in fade-in duration-150"
           onClick={() => setIsOpen(false)}
         >
           <div

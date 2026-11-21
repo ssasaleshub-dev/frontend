@@ -686,73 +686,70 @@ export default function Chat() {
             </h1>
           </div>
 
-          {/* Segmented Switch */}
-          <div className="p-3 border-b border-[rgba(60,60,67,0.08)]">
-            {/* Apple Segmented Control */}
-            <div className="ios-segmented w-full flex">
-              <button
-                type="button"
-                onClick={() => {
-                  setChatType('group');
-                  setSelectedUser(null);
-                  setMobileView('chat');
-                }}
-                className={`ios-segmented-btn flex-1 flex items-center justify-center gap-1.5 ${
-                  chatType === 'group' ? 'active' : ''
-                }`}
-              >
-                <UsersIcon size={13} />
-                <span>All Team</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setChatType('p2p');
-                  if (!selectedUser && directUsers.length > 0) {
-                    setSelectedUser(directUsers[0]);
-                  }
-                }}
-                className={`ios-segmented-btn flex-1 flex items-center justify-center gap-1.5 ${
-                  chatType === 'p2p' ? 'active' : ''
-                }`}
-              >
-                <UserIcon size={13} />
-                <span>Direct ({directUsers.length})</span>
-              </button>
-            </div>
-          </div>
-
           {/* Conversation List */}
           <div className="flex-1 overflow-y-auto divide-y divide-[rgba(60,60,67,0.06)]">
-            {chatType === 'group' ? (
-              <button
-                onClick={() => {
-                  setChatType('group');
-                  setSelectedUser(null);
-                  setMobileView('chat');
-                }}
-                className="w-full flex items-center gap-3 px-3.5 py-3 text-left transition-colors bg-white/70 hover:bg-white active:bg-[#007aff]/10 cursor-pointer"
+            {/* All Team Chat Item */}
+            <button
+              onClick={() => {
+                setChatType('group');
+                setSelectedUser(null);
+                setMobileView('chat');
+              }}
+              className={`w-full flex items-center gap-3 px-3.5 py-3 text-left transition-all cursor-pointer ${
+                chatType === 'group'
+                  ? 'bg-[#007aff] text-white'
+                  : 'hover:bg-black/[0.03] text-[#1c1c1e]'
+              }`}
+            >
+              <div
+                className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 shadow-xs ${
+                  chatType === 'group'
+                    ? 'bg-white/25 text-white'
+                    : 'bg-gradient-to-tr from-[#007aff] to-[#5ac8fa] text-white'
+                }`}
               >
-                <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#007aff] to-[#5ac8fa] text-white flex items-center justify-center shrink-0 shadow-xs">
-                  <UsersIcon size={18} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between">
-                    <p className="font-semibold text-[14px] text-[#000000] truncate">
-                      All Team Chat
-                    </p>
-                    <span className="text-[11px] text-[#8e8e93]">Group</span>
-                  </div>
-                  <p className="text-[12px] text-[#8e8e93] truncate mt-0.5">
-                    Common group chat for all team members
-                  </p>
-                </div>
-              </button>
-            ) : directUsers.length === 0 ? (
-              <div className="p-8 text-center text-[#8e8e93] text-xs">
-                {loadingUsers ? 'Loading team members...' : 'No other users found'}
+                <UsersIcon size={18} />
               </div>
-            ) : (
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between">
+                  <p
+                    className={`font-semibold text-[14px] truncate ${
+                      chatType === 'group' ? 'text-white' : 'text-[#000000]'
+                    }`}
+                  >
+                    All Team Chat
+                  </p>
+                  <span
+                    className={`text-[11px] ${
+                      chatType === 'group' ? 'text-white/80' : 'text-[#8e8e93]'
+                    }`}
+                  >
+                    Group
+                  </span>
+                </div>
+                <p
+                  className={`text-[12px] truncate mt-0.5 ${
+                    chatType === 'group' ? 'text-white/90' : 'text-[#8e8e93]'
+                  }`}
+                >
+                  Common group chat for all team members
+                </p>
+              </div>
+            </button>
+
+            {/* Direct Messages Section */}
+            {directUsers.length > 0 && (
+              <div className="px-3.5 py-1.5 bg-black/[0.02] text-[10px] font-bold text-[#8e8e93] uppercase tracking-wider flex items-center justify-between border-y border-[rgba(60,60,67,0.04)] select-none">
+                <span>Direct Messages</span>
+                <span className="font-mono text-[10px] text-[#8e8e93]">{directUsers.length}</span>
+              </div>
+            )}
+
+            {loadingUsers ? (
+              <div className="p-4 text-center text-[#8e8e93] text-xs">
+                Loading team members...
+              </div>
+            ) : directUsers.length === 0 ? null : (
               directUsers.map((target) => {
                 const isSelected =
                   chatType === 'p2p' && selectedUser?.login === target.login;

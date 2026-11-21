@@ -182,7 +182,7 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
           role="dialog"
           aria-modal="true"
           onClick={alertState.type === 'confirm' ? handleCancel : handleConfirm}
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-md transition-opacity duration-150 animate-in fade-in"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 transition-opacity duration-150 animate-in fade-in"
         >
           <div
             className="w-[280px] max-w-[85vw] bg-white rounded-[18px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.4)] overflow-hidden text-center select-none border border-black/[0.08] transform transition-transform duration-150 animate-in zoom-in-95"
