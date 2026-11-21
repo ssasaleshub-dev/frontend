@@ -13,11 +13,16 @@ import {
   User,
   ShieldCheck,
   FileSpreadsheet,
+  Fingerprint,
+  Lock,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useAlert } from '../context/AlertContext';
 import { getDisplayName, getRoleBadgeInfo, isAdmin as checkIsAdmin } from '../utils/rbac';
 import attendanceService, { StaffAttendanceRecord } from '../services/api/attendanceService';
+import { useBiometricAttendance } from '../hooks/useBiometricAttendance';
+import { BiometricRegisterButton } from '../components/biometrics/BiometricRegisterButton';
+import { BiometricSuccessModal } from '../components/biometrics/BiometricSuccessModal';
 import fileService from '../services/api/fileService';
 import { formatIndianTime } from '../utils/dateTimeUtils';
 
@@ -92,25 +97,29 @@ export default function StaffProfile() {
     setTimeout(() => setToastMessage(''), 3500);
   };
 
-  // Simple One-Click Check-In (No forms, no notes)
-  const handleCheckIn = async () => {
-    if (!userId) return;
-    setPunching(true);
-    try {
-      const res = await attendanceService.checkIn({
-        userId,
-        userName: displayName,
-        userRole: badgeInfo.displayText,
-        workMode: 'OFFICE',
-      });
+  // Enterprise Custom Hook for Biometric Flow
+  const {
+    biometricCred,
+    enrollingBiometric,
+    punching: punchingBiometric,
+    successModal: checkInSuccessModal,
+    closeSuccessModal,
+    handleRegisterBiometric,
+    handleBiometricCheckIn,
+  } = useBiometricAttendance({
+    userId,
+    userName: displayName,
+    userRole: badgeInfo.displayText,
+    workMode: 'OFFICE',
+    showToast,
+    onSuccess: (res) => {
       setTodayRecord(res);
-      showToast('Checked in successfully!');
       loadAttendance();
-    } catch (err: any) {
-      showAlert({ title: 'Profile', message: `Check-in failed: ${err?.message || 'Server error'}` });
-    } finally {
-      setPunching(false);
-    }
+    },
+  });
+
+  const handleCheckIn = async () => {
+    await handleBiometricCheckIn();
   };
 
   // Simple One-Click Check-Out (No forms, no notes)
@@ -322,7 +331,15 @@ export default function StaffProfile() {
           </div>
 
           {/* Simple Today Action Strip */}
-          <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-100">
+          <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-100">
+            {/* Enterprise Reusable Biometric Hardware Registration Button */}
+            <BiometricRegisterButton
+              credential={biometricCred}
+              isLoading={enrollingBiometric}
+              onRegister={handleRegisterBiometric}
+              disabled={punching || punchingBiometric}
+            />
+
             {isWorkingNow ? (
               <div className="flex items-center gap-3">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-600/20 bg-emerald-500/[0.08] text-emerald-950 text-xs font-medium shadow-xs">
@@ -487,6 +504,16 @@ export default function StaffProfile() {
           </div>
         </div>
       </div>
+
+      {/* Enterprise Reusable Biometric Confirmation Modal */}
+      <BiometricSuccessModal
+        isOpen={Boolean(checkInSuccessModal?.isOpen)}
+        onClose={closeSuccessModal}
+        userName={displayName}
+        userId={userId}
+        timestamp={checkInSuccessModal?.timestamp || ''}
+        deviceId={checkInSuccessModal?.deviceName}
+      />
     </div>
   );
 }

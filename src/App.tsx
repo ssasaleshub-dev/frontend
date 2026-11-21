@@ -16,6 +16,7 @@ import CandidateDetail from './pages/CandidateDetail';
 import CalendarPage from './pages/CalendarPage';
 import AttendancePage from './pages/AttendancePage';
 import StaffProfile from './pages/StaffProfile';
+import BiometricApprovalsPage from './pages/BiometricApprovalsPage';
 import NotificationsPage from './pages/NotificationsPage';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import DataDeletion from './pages/DataDeletion';
@@ -90,6 +91,14 @@ export default function App() {
                 element={
                   <AdminRoute>
                     <Users />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="biometrics"
+                element={
+                  <AdminRoute>
+                    <BiometricApprovalsPage />
                   </AdminRoute>
                 }
               />

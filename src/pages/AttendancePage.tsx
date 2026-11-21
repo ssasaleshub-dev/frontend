@@ -19,6 +19,9 @@ import {
   Loader2,
   UserCheck,
   Briefcase,
+  Fingerprint,
+  Lock,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useAlert } from '../context/AlertContext';
@@ -28,6 +31,9 @@ import attendanceService, {
   AttendanceAdminSummary,
 } from '../services/api/attendanceService';
 import adminService from '../services/api/adminService';
+import { useBiometricAttendance } from '../hooks/useBiometricAttendance';
+import { BiometricRegisterButton } from '../components/biometrics/BiometricRegisterButton';
+import { BiometricSuccessModal } from '../components/biometrics/BiometricSuccessModal';
 import { formatIndianTime } from '../utils/dateTimeUtils';
 import type { User } from '../types';
 
@@ -47,7 +53,6 @@ export default function AttendancePage() {
   const [myTodayRecord, setMyTodayRecord] = useState<StaffAttendanceRecord | null>(null);
   const [selectedMode, setSelectedMode] = useState<'OFFICE' | 'REMOTE' | 'FIELD'>('OFFICE');
   const [punchNote, setPunchNote] = useState<string>('');
-  const [punching, setPunching] = useState<boolean>(false);
   const [liveDuration, setLiveDuration] = useState<string>('');
 
   // Admin Roster state
@@ -125,6 +130,18 @@ export default function AttendancePage() {
       if (res?.workMode && ['OFFICE', 'REMOTE', 'FIELD'].includes(res.workMode)) {
         setSelectedMode(res.workMode as 'OFFICE' | 'REMOTE' | 'FIELD');
       }
+
+      // Check stored biometric & sync from backend
+      const stored = biometricService.getStoredBiometric(currentUserId);
+      if (stored) setBiometricCred(stored);
+      biometricService
+        .getUserCredentials(currentUserId)
+        .then((creds) => {
+          if (creds && creds.length > 0) {
+            setBiometricCred(creds[creds.length - 1]);
+          }
+        })
+        .catch(() => {});
     } catch (err) {
       console.warn('Failed loading my attendance:', err);
     }
@@ -197,27 +214,32 @@ export default function AttendancePage() {
     setTimeout(() => setToastMessage(''), 4000);
   };
 
-  // Check In
-  const handleCheckIn = async () => {
-    if (!currentUserId) return;
-    setPunching(true);
-    try {
-      const result = await attendanceService.checkIn({
-        userId: currentUserId,
-        userName: displayName,
-        userRole: badgeInfo.displayText,
-        workMode: selectedMode,
-        note: punchNote.trim(),
-      });
+  // Enterprise Custom Hook for Biometric Flow
+  const {
+    biometricCred,
+    enrollingBiometric,
+    punching,
+    successModal: checkInSuccessModal,
+    closeSuccessModal,
+    handleRegisterBiometric,
+    handleBiometricCheckIn,
+  } = useBiometricAttendance({
+    userId: currentUserId,
+    userName: displayName,
+    userRole: badgeInfo.displayText,
+    workMode: selectedMode,
+    note: punchNote,
+    showToast,
+    onSuccess: (result) => {
       setMyTodayRecord(result);
       setPunchNote('');
-      showToast('Checked in successfully!');
       loadAdminData();
-    } catch (err: any) {
-      showAlert({ title: 'Attendance', message: `Check-in failed: ${err?.message || 'Server error'}` });
-    } finally {
-      setPunching(false);
-    }
+    },
+  });
+
+  // Check In
+  const handleCheckIn = async () => {
+    await handleBiometricCheckIn();
   };
 
   // Check Out
@@ -407,8 +429,16 @@ export default function AttendancePage() {
               </div>
             </div>
 
-            {/* Simple One-Click Punch Action (No forms, no notes) */}
-            <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+            {/* Actions: Register Office Fingerprint & Check In */}
+            <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end">
+              {/* Enterprise Reusable Biometric Hardware Registration Button */}
+              <BiometricRegisterButton
+                credential={biometricCred}
+                isLoading={enrollingBiometric}
+                onRegister={handleRegisterBiometric}
+                disabled={punching}
+              />
+
               {!isCheckedIn ? (
                 <button
                   type="button"
@@ -750,6 +780,16 @@ export default function AttendancePage() {
           </table>
         </div>
       </div>
+
+      {/* Enterprise Reusable Biometric Confirmation Modal */}
+      <BiometricSuccessModal
+        isOpen={Boolean(checkInSuccessModal?.isOpen)}
+        onClose={closeSuccessModal}
+        userName={displayName}
+        userId={currentUserId}
+        timestamp={checkInSuccessModal?.timestamp || ''}
+        deviceId={checkInSuccessModal?.deviceName}
+      />
     </div>
   );
 }

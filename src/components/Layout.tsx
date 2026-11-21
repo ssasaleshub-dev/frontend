@@ -19,6 +19,7 @@ import {
   User,
   CheckCircle2,
   Bell,
+  Fingerprint,
 } from 'lucide-react';
 import NotificationBell from './NotificationBell';
 import AppleNotificationBanner from './AppleNotificationBanner';
@@ -263,6 +264,13 @@ export default function Layout() {
           to: '/users',
           exact: false,
         },
+        {
+          id: 'biometrics',
+          label: 'Biometric Approvals',
+          icon: Fingerprint,
+          to: '/biometrics',
+          exact: false,
+        },
       ]
       : []),
   ];
@@ -278,6 +286,7 @@ export default function Layout() {
     if (currentPath.startsWith('/chat')) return { title: 'Team Chat', subtitle: 'Internal messaging and staff communication' };
     if (currentPath.startsWith('/notifications')) return { title: 'Notifications' };
     if (currentPath.startsWith('/users')) return { title: 'Team & Permissions', subtitle: 'Manage counselor assignments, roles, and access desks' };
+    if (currentPath.startsWith('/biometrics')) return { title: 'Biometric Approvals', subtitle: 'Admin device lock and staff fingerprint hardware verification' };
     return { title: 'SSA CRM', subtitle: 'Work & Study Visa Consultancy' };
   };
 

@@ -54,22 +54,34 @@ export const attendanceService = {
     userRole?: string;
     workMode?: 'OFFICE' | 'REMOTE' | 'FIELD';
     note?: string;
+    deviceId?: string;
+    biometricKeyId?: string;
+    deviceInfo?: string;
   }): Promise<StaffAttendanceRecord> {
     const todayStr = new Date().toISOString().substring(0, 10);
     const nowIso = new Date().toISOString();
 
-    const deviceInfo = typeof navigator !== 'undefined'
+    const defaultDeviceInfo = typeof navigator !== 'undefined'
       ? `${navigator.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop'} - ${navigator.platform}`
       : 'Web Client';
 
-    const payload = {
+    const resolvedDeviceInfo = params.deviceInfo || defaultDeviceInfo;
+
+    const payload: Record<string, any> = {
       userId: params.userId,
       userName: params.userName || params.userId,
       userRole: params.userRole || 'STAFF',
       workMode: params.workMode || 'OFFICE',
       note: params.note || '',
-      deviceInfo,
+      deviceInfo: resolvedDeviceInfo,
     };
+
+    if (params.deviceId) {
+      payload.deviceId = params.deviceId;
+    }
+    if (params.biometricKeyId) {
+      payload.biometricKeyId = params.biometricKeyId;
+    }
 
     // Optimistic record
     const optimisticRecord: StaffAttendanceRecord = {
@@ -84,7 +96,7 @@ export const attendanceService = {
       totalMinutes: 0,
       totalHoursFormatted: 'In Progress',
       checkInNote: params.note,
-      deviceInfo,
+      deviceInfo: resolvedDeviceInfo,
     };
 
     // Save locally
@@ -103,6 +115,9 @@ export const attendanceService = {
     } catch (err: any) {
       const errorMsg = err?.response?.data?.detail || err?.response?.data?.message || err?.message || 'Check-in failed';
       console.warn('Backend attendance check-in rejected:', errorMsg);
+      // Revert optimistic cache on failure
+      todayCacheMap.delete(params.userId);
+      this.broadcastUpdate();
       throw new Error(errorMsg);
     }
   },
@@ -123,6 +138,15 @@ export const attendanceService = {
       const hours = Math.floor(totalMinutes / 60);
       const rem = totalMinutes % 60;
       totalFormatted = `${hours}h ${rem}m`;
+    }
+
+    // Update optimistic local state for checkout
+    if (existing) {
+      existing.checkOutTime = nowIso;
+      existing.totalMinutes = totalMinutes;
+      existing.totalHoursFormatted = totalFormatted;
+      existing.status = 'PRESENT';
+      this.saveLocalRecord(params.userId, existing);
     }
 
     try {
