@@ -340,6 +340,10 @@ class ReminderNotificationService {
       return `${type}_${n.referenceType}_${n.referenceId}`.toLowerCase();
     }
 
+    if (n.id) {
+      return `${type}_${n.id}`.toLowerCase();
+    }
+
     const dateKey = n.scheduledFor
       ? n.scheduledFor.substring(0, 10)
       : n.createdAt
@@ -366,15 +370,33 @@ class ReminderNotificationService {
 
   public isSameNotification(a: Partial<NotificationDTO>, b: Partial<NotificationDTO>): boolean {
     if (!a || !b) return false;
-    if (a.id && b.id && String(a.id) === String(b.id)) return true;
 
-    // Direct reference match (e.g. EVENT with same event id)
+    // 1. Exact ID match (identical notification record)
+    if (a.id && b.id && String(a.id) === String(b.id)) {
+      return true;
+    }
+
+    // 2. If both have different persistent server UUIDs, they are definitely distinct notifications!
+    if (a.id && b.id && String(a.id) !== String(b.id)) {
+      const isAClientTemp = String(a.id).startsWith('ws-') || String(a.id).startsWith('loc-') || String(a.id).startsWith('notif_');
+      const isBClientTemp = String(b.id).startsWith('ws-') || String(b.id).startsWith('loc-') || String(b.id).startsWith('notif_');
+      if (!isAClientTemp && !isBClientTemp) {
+        return false;
+      }
+    }
+
+    // 3. Different referenceIds (e.g. message 1 vs message 2, lead A vs lead B) -> NEVER the same!
+    if (a.referenceId && b.referenceId && String(a.referenceId) !== String(b.referenceId)) {
+      return false;
+    }
+
+    // 4. Same reference match (e.g. matching local placeholder with server-backed notification for same chat message or lead)
     if (
       a.referenceType &&
       b.referenceType &&
       a.referenceId &&
       b.referenceId &&
-      a.referenceType === b.referenceType &&
+      a.referenceType.toUpperCase() === b.referenceType.toUpperCase() &&
       String(a.referenceId) === String(b.referenceId)
     ) {
       return true;
@@ -385,32 +407,14 @@ class ReminderNotificationService {
       return true;
     }
 
-    // Title matching: if both notifications share the exact same clean title
-    const cleanTitleA = (a.title || '')
-      .replace(/^🔔\s*/, '')
-      .replace(/^Reminder:\s*/i, '')
-      .trim()
-      .toLowerCase();
-    const cleanTitleB = (b.title || '')
-      .replace(/^🔔\s*/, '')
-      .replace(/^Reminder:\s*/i, '')
-      .trim()
-      .toLowerCase();
-
-    if (cleanTitleA && cleanTitleB && cleanTitleA === cleanTitleB) {
-      // Proximity check: within 48 hours or same calendar day
-      const timeA = new Date(a.createdAt || a.scheduledFor || Date.now()).getTime();
-      const timeB = new Date(b.createdAt || b.scheduledFor || Date.now()).getTime();
-      if (!isNaN(timeA) && !isNaN(timeB)) {
-        if (Math.abs(timeA - timeB) < 48 * 3600 * 1000) {
-          return true;
-        }
-      } else {
-        return true;
-      }
+    // 5. CHAT messages must NEVER be collapsed by sender title! Every message is distinct.
+    const isAChat = (a.type || '').toUpperCase() === 'CHAT';
+    const isBChat = (b.type || '').toUpperCase() === 'CHAT';
+    if (isAChat || isBChat) {
+      return false;
     }
 
-    // Reminder title & date match (collapses duplicate cards with same title on the same day)
+    // 6. Reminder title & date match (collapses duplicate cards with same title on the exact same reminder date)
     const isAReminder = (a.type || '').toUpperCase() === 'REMINDER';
     const isBReminder = (b.type || '').toUpperCase() === 'REMINDER';
     if (isAReminder && isBReminder) {
