@@ -244,7 +244,7 @@ const TableTextFilterCell: React.FC<{
 }> = ({ value, onChange, placeholder, ariaLabel }) => {
   const active = value.trim().length > 0;
   return (
-    <th className="py-2 px-2 align-middle font-normal overflow-hidden border-r border-black/[0.04] last:border-r-0">
+    <th className="py-2 px-1.5 align-middle font-normal overflow-hidden border-r border-black/[0.04] last:border-r-0">
       <div className="relative w-full min-w-0">
         <input
           type="text"
@@ -252,17 +252,18 @@ const TableTextFilterCell: React.FC<{
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           aria-label={ariaLabel}
-          className={`font-sf h-[30px] w-full min-w-0 pl-2.5 pr-6 rounded-[8px] text-[12px] font-normal border transition-colors focus:outline-none focus:bg-white focus:border-[#007aff]/50 ${active
-              ? 'bg-white border-black/[0.16] text-[#1c1c1e] shadow-[0_1px_2px_rgba(0,0,0,0.04)]'
-              : 'bg-[#767680]/[0.08] hover:bg-[#767680]/[0.12] border-transparent text-[#1c1c1e] placeholder:text-[#8e8e93]'
-            }`}
+          className={`h-[30px] w-full min-w-0 pl-2.5 pr-6 rounded-md text-[12px] font-normal border transition-colors bg-white ${
+            active
+              ? 'border-blue-600 text-slate-900 font-semibold shadow-2xs'
+              : 'border-slate-300 hover:border-slate-400 text-slate-800 placeholder:text-slate-400 shadow-2xs'
+          }`}
         />
         {active && (
           <button
             type="button"
             onClick={() => onChange('')}
             title={`Clear ${ariaLabel}`}
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[#8e8e93] hover:text-[#1c1c1e] p-0.5 cursor-pointer"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-0.5 cursor-pointer"
           >
             <X size={12} />
           </button>
@@ -281,18 +282,19 @@ const TableSelectFilterCell: React.FC<{
 }> = ({ value, onChange, options, defaultValue = 'ALL', ariaLabel }) => {
   const active = value !== defaultValue;
   return (
-    <th className="py-2 px-2 align-middle font-normal overflow-hidden border-r border-black/[0.04] last:border-r-0">
+    <th className="py-2 px-1.5 align-middle font-normal overflow-hidden border-r border-black/[0.04] last:border-r-0">
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
         aria-label={ariaLabel}
-        className={`font-sf h-[30px] w-full min-w-0 px-2 rounded-[8px] text-[12px] border transition-colors cursor-pointer focus:outline-none focus:bg-white focus:border-[#007aff]/50 ${active
-            ? 'bg-white border-black/[0.16] text-[#1c1c1e] font-medium shadow-[0_1px_2px_rgba(0,0,0,0.04)]'
-            : 'bg-[#767680]/[0.08] hover:bg-[#767680]/[0.12] border-transparent text-[#3c3c43] font-normal'
-          }`}
+        className={`h-[30px] w-full min-w-0 pl-2 pr-6 rounded-md text-[12px] border transition-colors cursor-pointer bg-white ${
+          active
+            ? 'border-blue-600 text-slate-900 font-semibold shadow-2xs'
+            : 'border-slate-300 hover:border-slate-400 text-slate-700 font-normal shadow-2xs'
+        }`}
       >
         {options.map((opt) => (
-          <option key={opt.value} value={opt.value} className="bg-white text-[#1c1c1e] font-normal">
+          <option key={opt.value} value={opt.value} className="bg-white text-slate-800 font-normal">
             {opt.label}
           </option>
         ))}
@@ -1977,18 +1979,19 @@ export default function Leads() {
           <div className="relative flex-1 min-w-[180px] max-w-md">
             <Search
               size={14}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8e8e93] pointer-events-none"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
             />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-8.5 pr-8 py-2 bg-[#767680]/[0.08] hover:bg-[#767680]/[0.12] focus:bg-white border border-transparent focus:border-[#007aff]/30 rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/15 transition-all"
+              placeholder="Search candidate name, mobile, email, ref..."
+              className="w-full pl-8.5 pr-8 py-1.5 h-[34px] bg-white hover:border-slate-400 focus:bg-white border border-slate-300 focus:border-blue-500 rounded-md text-xs text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-slate-400"
             />
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm('')}
-                className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-[#8e8e93] hover:text-[#1c1c1e]"
+                className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-700"
               >
                 <X size={13} />
               </button>
@@ -1997,30 +2000,46 @@ export default function Leads() {
 
           {/* Filters & Actions */}
           <div className="flex flex-wrap items-center gap-2">
-            {/* Visa Segmented Control: Tab filters for Admin */}
+            {/* Visa Desk Filter Buttons */}
             {isAdmin && (
-              <div className="ios-segmented flex items-center overflow-x-auto no-scrollbar max-w-full">
+              <div className="flex items-center bg-slate-100 p-0.5 rounded-md border border-slate-200">
                 <button
                   onClick={() => handleVisaTabChange('ALL')}
-                  className={`ios-segmented-btn ${visaTypeFilter === 'ALL' ? 'active' : ''}`}
+                  className={`px-2.5 py-1 rounded text-xs transition-all ${
+                    visaTypeFilter === 'ALL'
+                      ? 'bg-white text-slate-900 font-semibold shadow-2xs border border-slate-200/80'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
                 >
                   All Desks
                 </button>
                 <button
                   onClick={() => handleVisaTabChange('WORK_VISA')}
-                  className={`ios-segmented-btn ${visaTypeFilter === 'WORK_VISA' ? 'active' : ''}`}
+                  className={`px-2.5 py-1 rounded text-xs transition-all ${
+                    visaTypeFilter === 'WORK_VISA'
+                      ? 'bg-white text-slate-900 font-semibold shadow-2xs border border-slate-200/80'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
                 >
                   Work Visa
                 </button>
                 <button
                   onClick={() => handleVisaTabChange('STUDY_VISA')}
-                  className={`ios-segmented-btn ${visaTypeFilter === 'STUDY_VISA' ? 'active' : ''}`}
+                  className={`px-2.5 py-1 rounded text-xs transition-all ${
+                    visaTypeFilter === 'STUDY_VISA'
+                      ? 'bg-white text-slate-900 font-semibold shadow-2xs border border-slate-200/80'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
                 >
                   Study Visa
                 </button>
                 <button
                   onClick={() => handleVisaTabChange('OTHER_VISA')}
-                  className={`ios-segmented-btn ${visaTypeFilter === 'OTHER_VISA' ? 'active' : ''}`}
+                  className={`px-2.5 py-1 rounded text-xs transition-all ${
+                    visaTypeFilter === 'OTHER_VISA'
+                      ? 'bg-white text-slate-900 font-semibold shadow-2xs border border-slate-200/80'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
                 >
                   Other Visa
                 </button>
@@ -2031,7 +2050,7 @@ export default function Leads() {
             <select
               value={platformFilter}
               onChange={(e) => setPlatformFilter(e.target.value)}
-              className="px-2.5 py-1.5 bg-[#767680]/[0.08] hover:bg-[#767680]/[0.12] border-0 rounded-xl text-xs text-[#1c1c1e] font-medium focus:outline-none focus:bg-white focus:ring-1 focus:ring-black/10 transition-colors cursor-pointer min-w-0 max-w-full truncate"
+              className="h-[34px] pl-2.5 pr-7 bg-white hover:bg-slate-50 hover:border-slate-400 border border-slate-300 rounded-md text-xs text-slate-700 font-medium focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs transition-colors cursor-pointer min-w-0 max-w-full truncate"
             >
               <option value="ALL">All Sources</option>
               <option value="IG">Instagram</option>
@@ -2044,7 +2063,7 @@ export default function Leads() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-2.5 py-1.5 bg-[#767680]/[0.08] hover:bg-[#767680]/[0.12] border-0 rounded-xl text-xs text-[#1c1c1e] font-medium focus:outline-none focus:bg-white focus:ring-1 focus:ring-black/10 transition-colors cursor-pointer min-w-0 max-w-full truncate"
+              className="h-[34px] pl-2.5 pr-7 bg-white hover:bg-slate-50 hover:border-slate-400 border border-slate-300 rounded-md text-xs text-slate-700 font-medium focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs transition-colors cursor-pointer min-w-0 max-w-full truncate"
             >
               <option value="NEWEST">Newest Inquiries</option>
               <option value="OLDEST">Oldest Inquiries</option>
@@ -2053,13 +2072,13 @@ export default function Leads() {
           </div>
         </div>
 
-        {/* Row 2: Status Filter Tabs (Apple HIG Segmented Filter Bar) */}
-        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pt-2 border-t border-black/[0.05]">
+        {/* Row 2: Status Filter Tabs */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-2 border-t border-slate-200">
           <button
             onClick={() => setStatusFilter('ALL')}
-            className={`px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${statusFilter === 'ALL'
-                ? 'bg-[#1c1c1e] text-white font-semibold shadow-xs'
-                : 'text-[#8e8e93] hover:text-[#1c1c1e] hover:bg-black/[0.04]'
+            className={`px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-all cursor-pointer border ${statusFilter === 'ALL'
+                ? 'bg-slate-900 text-white border-slate-900 font-semibold shadow-2xs'
+                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50 hover:border-slate-400 shadow-2xs'
               }`}
           >
             All Candidates ({deskAndPlatformScopedLeads.length})
@@ -2071,15 +2090,15 @@ export default function Leads() {
               <button
                 key={st.value}
                 onClick={() => setStatusFilter(st.value)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${active
-                    ? 'bg-[#1c1c1e] text-white font-semibold shadow-xs'
-                    : 'text-[#8e8e93] hover:text-[#1c1c1e] hover:bg-black/[0.04]'
+                className={`px-2.5 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer border ${active
+                    ? 'bg-slate-900 text-white border-slate-900 font-semibold shadow-2xs'
+                    : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50 hover:border-slate-400 shadow-2xs'
                   }`}
               >
                 <span>{st.label}</span>
                 {count > 0 && (
                   <span
-                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-semibold ${active ? 'bg-white/20 text-white' : 'bg-black/[0.06] text-[#1c1c1e]'
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-semibold ${active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600 border border-slate-200'
                       }`}
                   >
                     {count}
@@ -2089,8 +2108,8 @@ export default function Leads() {
             );
           })}
 
-          {/* Apple HIG Segmented View Toggle (List vs Table) */}
-          <div className="inline-flex items-center p-0.5 bg-black/[0.05] rounded-[9px] text-xs font-medium shrink-0 ml-auto border border-black/[0.03]">
+          {/* View Toggle (List vs Table) */}
+          <div className="inline-flex items-center p-0.5 bg-slate-100 rounded-md text-xs font-medium shrink-0 ml-auto border border-slate-200">
             <button
               type="button"
               onClick={() => {
@@ -2098,11 +2117,11 @@ export default function Leads() {
                 localStorage.setItem('ssa_leads_view_mode_v2', 'list');
                 localStorage.setItem('ssa_leads_view_mode', 'list');
               }}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[7px] text-[11px] font-medium transition-all cursor-pointer ${viewMode === 'list'
-                  ? 'bg-white text-[#1d1d1f] font-semibold shadow-2xs'
-                  : 'text-[#86868b] hover:text-[#1d1d1f]'
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition-all cursor-pointer ${viewMode === 'list'
+                  ? 'bg-white text-slate-900 font-semibold shadow-2xs border border-slate-200/80'
+                  : 'text-slate-600 hover:text-slate-900'
                 }`}
-              title="Apple HIG Grouped List View"
+              title="Grouped List View"
             >
               <LayoutList size={13} strokeWidth={2} />
               <span>List</span>
@@ -2114,9 +2133,9 @@ export default function Leads() {
                 localStorage.setItem('ssa_leads_view_mode_v2', 'table');
                 localStorage.setItem('ssa_leads_view_mode', 'table');
               }}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[7px] text-[11px] font-medium transition-all cursor-pointer ${viewMode === 'table'
-                  ? 'bg-white text-[#1d1d1f] font-semibold shadow-2xs'
-                  : 'text-[#86868b] hover:text-[#1d1d1f]'
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition-all cursor-pointer ${viewMode === 'table'
+                  ? 'bg-white text-slate-900 font-semibold shadow-2xs border border-slate-200/80'
+                  : 'text-slate-600 hover:text-slate-900'
                 }`}
               title="Multi-column Table View"
             >
@@ -2359,24 +2378,25 @@ export default function Leads() {
                           { value: 'NONE', label: 'Not Set (—)' },
                         ]}
                       />
-                      <th className="py-2 px-2 align-middle font-normal overflow-hidden border-r border-black/[0.04] last:border-r-0">
+                      <th className="py-2 px-1.5 align-middle font-normal overflow-hidden border-r border-black/[0.04] last:border-r-0">
                         <div className="flex items-center gap-1 w-full min-w-0">
                           <input
                             type="date"
                             value={columnFilters.followUpDate}
                             onChange={(e) => updateColumnFilter('followUpDate', e.target.value)}
                             aria-label="Filter by Follow-up Date"
-                            className={`font-sf h-[30px] flex-1 min-w-0 px-2 rounded-[8px] text-[12px] border transition-colors focus:outline-none focus:bg-white focus:border-[#007aff]/50 ${columnFilters.followUpDate
-                                ? 'bg-white border-black/[0.16] text-[#1c1c1e] font-medium shadow-[0_1px_2px_rgba(0,0,0,0.04)]'
-                                : 'bg-[#767680]/[0.08] hover:bg-[#767680]/[0.12] border-transparent text-[#3c3c43] font-normal'
-                              }`}
+                            className={`h-[30px] flex-1 min-w-0 px-2 rounded-md text-[12px] border transition-colors bg-white ${
+                              columnFilters.followUpDate
+                                ? 'border-blue-600 text-slate-900 font-semibold shadow-2xs'
+                                : 'border-slate-300 hover:border-slate-400 text-slate-700 font-normal shadow-2xs'
+                            }`}
                           />
                           {columnFilters.followUpDate && (
                             <button
                               type="button"
                               onClick={() => updateColumnFilter('followUpDate', '')}
                               title="Clear Follow-up Date"
-                              className="text-[#8e8e93] hover:text-[#1c1c1e] p-1 cursor-pointer shrink-0"
+                              className="text-slate-400 hover:text-slate-700 p-1 cursor-pointer shrink-0"
                             >
                               <X size={12} />
                             </button>
@@ -2641,7 +2661,7 @@ export default function Leads() {
                   <select
                     value={pageSize}
                     onChange={(e) => setPageSize(Number(e.target.value))}
-                    className="px-2 py-0.5 bg-black/[0.04] hover:bg-black/[0.08] border-0 rounded-md text-xs font-semibold text-[#1c1c1e] focus:outline-none transition-colors cursor-pointer"
+                    className="h-7 px-2 bg-white hover:bg-slate-50 border border-slate-300 rounded-md text-xs font-medium text-slate-700 shadow-2xs focus:outline-none focus:border-blue-500 transition-colors cursor-pointer"
                   >
                     <option value={10}>10</option>
                     <option value={25}>25</option>

@@ -338,7 +338,7 @@ export default function StaffProfile() {
                   className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs transition-all active:scale-95 flex items-center gap-1.5"
                 >
                   {punching ? <Loader2 size={13} className="animate-spin" /> : <LogOut size={13} />}
-                  <span>Punch Out</span>
+                  <span>Check Out</span>
                 </button>
               </div>
             ) : isCheckedOut ? (

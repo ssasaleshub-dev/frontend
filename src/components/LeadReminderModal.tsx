@@ -356,7 +356,7 @@ export default function LeadReminderModal({
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   required
-                  className="w-full px-3.5 py-2.5 bg-white border border-black/[0.1] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] transition-all"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-xs text-slate-800 shadow-2xs transition-all"
                 />
               </div>
 
@@ -399,7 +399,7 @@ export default function LeadReminderModal({
                     value={eventDate}
                     onChange={(e) => setEventDate(e.target.value)}
                     required
-                    className="w-full px-3.5 py-2.5 bg-white border border-black/[0.1] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] transition-all"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-xs text-slate-800 shadow-2xs transition-all"
                   />
                 </div>
 
@@ -471,7 +471,7 @@ export default function LeadReminderModal({
                   <select
                     value={remindBeforeMinutes}
                     onChange={(e) => setRemindBeforeMinutes(Number(e.target.value))}
-                    className="w-full px-3.5 py-2.5 bg-white border border-black/[0.1] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] transition-all"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-xs text-slate-700 shadow-2xs transition-all cursor-pointer"
                   >
                     <option value={0}>At scheduled time</option>
                     <option value={15}>15 minutes before (Default)</option>

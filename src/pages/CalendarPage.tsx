@@ -806,7 +806,7 @@ export default function CalendarPage() {
                   required
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-[#f5f5f7] border border-black/[0.04] rounded-[12px] text-[13px] text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
+                  className="w-full px-3 py-1.5 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-[13px] text-slate-800 shadow-2xs transition-all"
                 />
               </div>
 
@@ -820,7 +820,7 @@ export default function CalendarPage() {
                     required
                     value={formData.eventDate}
                     onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
-                    className="w-full px-3 py-1.5 bg-[#f5f5f7] border border-black/[0.04] rounded-[12px] text-[12px] text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
+                    className="w-full px-3 py-1.5 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-[12px] text-slate-800 shadow-2xs transition-all"
                   />
                 </div>
 
@@ -905,7 +905,7 @@ export default function CalendarPage() {
                         <select
                           value={formData.eventType}
                           onChange={(e) => setFormData({ ...formData, eventType: e.target.value as EventType })}
-                          className="w-full px-3 py-1.5 bg-[#f5f5f7] border border-black/[0.04] rounded-[12px] text-[12px] text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
+                          className="w-full px-3 py-1.5 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-[12px] text-slate-700 shadow-2xs transition-all cursor-pointer"
                         >
                           <option value="REMINDER">General Reminder</option>
                           <option value="CALL">Candidate Callback</option>
@@ -922,7 +922,7 @@ export default function CalendarPage() {
                         <select
                           value={formData.priority}
                           onChange={(e) => setFormData({ ...formData, priority: e.target.value as EventPriority })}
-                          className="w-full px-3 py-1.5 bg-[#f5f5f7] border border-black/[0.04] rounded-[12px] text-[12px] text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
+                          className="w-full px-3 py-1.5 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-[12px] text-slate-700 shadow-2xs transition-all cursor-pointer"
                         >
                           <option value="LOW">Low</option>
                           <option value="MEDIUM">Medium</option>
@@ -940,7 +940,7 @@ export default function CalendarPage() {
                         type="text"
                         value={formData.candidateName}
                         onChange={(e) => setFormData({ ...formData, candidateName: e.target.value })}
-                        className="w-full px-3 py-1.5 bg-[#f5f5f7] border border-black/[0.04] rounded-[12px] text-[12px] text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
+                        className="w-full px-3 py-1.5 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-[12px] text-slate-800 shadow-2xs transition-all"
                       />
                     </div>
 
@@ -951,7 +951,7 @@ export default function CalendarPage() {
                       <select
                         value={formData.remindBeforeMinutes}
                         onChange={(e) => setFormData({ ...formData, remindBeforeMinutes: Number(e.target.value) })}
-                        className="w-full px-3 py-1.5 bg-[#f5f5f7] border border-black/[0.04] rounded-[12px] text-[12px] text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
+                        className="w-full px-3 py-1.5 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-[12px] text-slate-700 shadow-2xs transition-all cursor-pointer"
                       >
                         <option value={0}>At time of event</option>
                         <option value={15}>15 minutes before</option>

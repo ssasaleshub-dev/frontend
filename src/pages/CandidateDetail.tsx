@@ -1311,7 +1311,7 @@ export default function CandidateDetail() {
                       value={lead.assignedTo || ''}
                       onChange={(e) => handleAssignStaff(e.target.value)}
                       disabled={assigningStaff}
-                      className="w-full min-w-0 max-w-full text-xs font-semibold text-slate-800 bg-white border border-black/[0.08] rounded-xl px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 disabled:opacity-50 truncate cursor-pointer"
+                      className="w-full min-w-0 max-w-full text-xs font-semibold text-slate-800 bg-white border border-slate-300 rounded-md px-2.5 py-1.5 focus:outline-none focus:border-blue-500 shadow-2xs disabled:opacity-50 truncate cursor-pointer"
                     >
                       <option value="">Unassigned (General Pool)</option>
                       {availableStaff.map((staff) => (
@@ -1890,14 +1890,14 @@ export default function CandidateDetail() {
                   value={editFormData.customerName || ''}
                   onChange={(e) => setEditFormData({ ...editFormData, customerName: e.target.value })}
                   placeholder="e.g. Mahendran"
-                  className="w-full px-3.5 py-2.5 bg-[#f2f2f7] hover:bg-[#e5e5ea]/50 focus:bg-white border border-black/[0.06] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff] transition-all font-medium"
+                  className="w-full px-3 py-2 bg-white hover:border-slate-400 focus:bg-white border border-slate-300 rounded-md text-xs text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium"
                 />
               </div>
 
               {/* Phone Number */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#1c1c1e]">
-                  Phone Number <span className="text-[#ff3b30]">*</span>
+                <label className="text-xs font-semibold text-slate-800">
+                  Phone Number <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="tel"
@@ -1905,7 +1905,7 @@ export default function CandidateDetail() {
                   value={editFormData.phoneNumber || ''}
                   onChange={(e) => setEditFormData({ ...editFormData, phoneNumber: e.target.value })}
                   placeholder="e.g. +919360185226"
-                  className="w-full px-3.5 py-2.5 bg-[#f2f2f7] hover:bg-[#e5e5ea]/50 focus:bg-white border border-black/[0.06] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff] transition-all font-medium"
+                  className="w-full px-3 py-2 bg-white hover:border-slate-400 focus:bg-white border border-slate-300 rounded-md text-xs text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium"
                 />
               </div>
 
@@ -1919,13 +1919,13 @@ export default function CandidateDetail() {
                   value={editFormData.email || ''}
                   onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
                   placeholder="candidate@example.com"
-                  className="w-full px-3.5 py-2.5 bg-[#f2f2f7] hover:bg-[#e5e5ea]/50 focus:bg-white border border-black/[0.06] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff] transition-all"
+                  className="w-full px-3 py-2 bg-white hover:border-slate-400 focus:bg-white border border-slate-300 rounded-md text-xs text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 />
               </div>
 
               {/* City / Location */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#1c1c1e]">
+                <label className="text-xs font-semibold text-slate-800">
                   City / Location
                 </label>
                 <input
@@ -1933,19 +1933,19 @@ export default function CandidateDetail() {
                   value={editFormData.city || ''}
                   onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
                   placeholder="e.g. Namakkal, Salem, Chennai"
-                  className="w-full px-3.5 py-2.5 bg-[#f2f2f7] hover:bg-[#e5e5ea]/50 focus:bg-white border border-black/[0.06] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff] transition-all"
+                  className="w-full px-3 py-2 bg-white hover:border-slate-400 focus:bg-white border border-slate-300 rounded-md text-xs text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 />
               </div>
 
               {/* Visa Type */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#1c1c1e]">
+                <label className="text-xs font-semibold text-slate-800">
                   Visa Type
                 </label>
                 <select
                   value={editFormData.visaType || 'WORK_VISA'}
                   onChange={(e) => setEditFormData({ ...editFormData, visaType: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-[#f2f2f7] hover:bg-[#e5e5ea]/50 focus:bg-white border border-black/[0.06] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff] transition-all font-medium cursor-pointer"
+                  className="w-full px-3 py-2 bg-white hover:bg-slate-50 hover:border-slate-400 border border-slate-300 rounded-md text-xs text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium cursor-pointer"
                 >
                   <option value="WORK_VISA">Work Visa</option>
                   <option value="STUDY_VISA">Study Visa</option>
@@ -1956,10 +1956,10 @@ export default function CandidateDetail() {
               {/* Student Percentage / CGPA */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-[#1c1c1e]">
+                  <label className="text-xs font-semibold text-slate-800">
                     Student Percentage / CGPA
                   </label>
-                  <span className="text-[11px] text-[#8e8e93]">Academic Marks / Score</span>
+                  <span className="text-[11px] text-slate-400">Academic Marks / Score</span>
                 </div>
                 <input
                   type="text"
@@ -1972,52 +1972,52 @@ export default function CandidateDetail() {
                     })
                   }
                   placeholder="e.g. 75% or 8.2 CGPA or RNR"
-                  className="w-full px-3.5 py-2.5 bg-[#f2f2f7] hover:bg-[#e5e5ea]/50 focus:bg-white border border-black/[0.06] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff] transition-all"
+                  className="w-full px-3 py-2 bg-white hover:border-slate-400 focus:bg-white border border-slate-300 rounded-md text-xs text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 />
               </div>
 
               {/* Target Closing Date */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-[#1c1c1e]">
+                  <label className="text-xs font-semibold text-slate-800">
                     Target Closing Date
                   </label>
-                  <span className="text-[11px] text-[#8e8e93]">Visa Conversion Deadline</span>
+                  <span className="text-[11px] text-slate-400">Visa Conversion Deadline</span>
                 </div>
                 <input
                   type="date"
                   value={editFormData.closingDate || ''}
                   onChange={(e) => setEditFormData({ ...editFormData, closingDate: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-[#f2f2f7] hover:bg-[#e5e5ea]/50 focus:bg-white border border-black/[0.06] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff] transition-all font-medium cursor-pointer"
+                  className="w-full px-3 py-2 bg-white hover:border-slate-400 focus:bg-white border border-slate-300 rounded-md text-xs text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium cursor-pointer"
                 />
               </div>
 
               {/* Client Budget */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-[#1c1c1e]">
+                  <label className="text-xs font-semibold text-slate-800">
                     Client Budget
                   </label>
-                  <span className="text-[11px] text-[#8e8e93]">Candidate Financial Capacity</span>
+                  <span className="text-[11px] text-slate-400">Candidate Financial Capacity</span>
                 </div>
                 <input
                   type="text"
                   value={editFormData.budgetRange || ''}
                   onChange={(e) => setEditFormData({ ...editFormData, budgetRange: e.target.value })}
                   placeholder="e.g. ₹1,50,000 or ₹2 Lakhs"
-                  className="w-full px-3.5 py-2.5 bg-[#f2f2f7] hover:bg-[#e5e5ea]/50 focus:bg-white border border-black/[0.06] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff] transition-all"
+                  className="w-full px-3 py-2 bg-white hover:border-slate-400 focus:bg-white border border-slate-300 rounded-md text-xs text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 />
               </div>
 
               {/* Payment Settlement Status */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#1c1c1e]">
+                <label className="text-xs font-semibold text-slate-800">
                   Payment Settlement Status
                 </label>
                 <select
                   value={editFormData.paymentStatus || 'UNPAID'}
                   onChange={(e) => setEditFormData({ ...editFormData, paymentStatus: e.target.value as any })}
-                  className="w-full px-3.5 py-2.5 bg-[#f2f2f7] hover:bg-[#e5e5ea]/50 focus:bg-white border border-black/[0.06] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff] transition-all font-medium cursor-pointer"
+                  className="w-full px-3 py-2 bg-white hover:bg-slate-50 hover:border-slate-400 border border-slate-300 rounded-md text-xs text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium cursor-pointer"
                 >
                   <option value="UNPAID">Not Paid / Unpaid</option>
                   <option value="PARTIAL">Partially Paid</option>
@@ -2027,7 +2027,7 @@ export default function CandidateDetail() {
 
               {/* Payment Details & Remarks */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#1c1c1e]">
+                <label className="text-xs font-semibold text-slate-800">
                   Payment Details & Receipt Notes
                 </label>
                 <input
@@ -2035,13 +2035,13 @@ export default function CandidateDetail() {
                   value={editFormData.paymentDetails || ''}
                   onChange={(e) => setEditFormData({ ...editFormData, paymentDetails: e.target.value })}
                   placeholder="e.g. Advance ₹20,000 received via UPI on 24 Oct"
-                  className="w-full px-3.5 py-2.5 bg-[#f2f2f7] hover:bg-[#e5e5ea]/50 focus:bg-white border border-black/[0.06] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff] transition-all"
+                  className="w-full px-3 py-2 bg-white hover:border-slate-400 focus:bg-white border border-slate-300 rounded-md text-xs text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 />
               </div>
 
               {/* Notes */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#1c1c1e]">
+                <label className="text-xs font-semibold text-slate-800">
                   Notes
                 </label>
                 <textarea
@@ -2049,7 +2049,7 @@ export default function CandidateDetail() {
                   onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
                   rows={3}
                   placeholder="Add notes about this candidate..."
-                  className="w-full px-3.5 py-2.5 bg-[#f2f2f7] hover:bg-[#e5e5ea]/50 focus:bg-white border border-black/[0.06] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff] transition-all leading-relaxed"
+                  className="w-full px-3 py-2 bg-white hover:border-slate-400 focus:bg-white border border-slate-300 rounded-md text-xs text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all leading-relaxed"
                 />
               </div>
 
