@@ -130,7 +130,14 @@ export const getRoleBadgeInfo = (user: User | null | undefined): RoleBadgeInfo =
 export const getDisplayName = (user: User | null | undefined): string => {
   if (!user) return 'Staff';
   if (user.firstName || user.lastName) {
-    return `${user.firstName || ''} ${user.lastName || ''}`.trim();
+    const fn = (user.firstName || '').trim();
+    const ln = (user.lastName || '').trim();
+    if (fn && ln && fn.toLowerCase() === ln.toLowerCase()) {
+      return fn;
+    }
+    if (fn && !ln) return fn;
+    if (!fn && ln) return ln;
+    return `${fn} ${ln}`.trim();
   }
   return user.login || 'Staff';
 };

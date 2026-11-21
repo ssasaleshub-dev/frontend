@@ -270,7 +270,11 @@ class TeamChatWebSocket {
       payload: {
         userId: user.id || 1,
         userLogin: user.login || 'user',
-        userName: user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user.login || 'Staff',
+        userName: user.firstName
+          ? (user.lastName && user.firstName.toLowerCase() !== user.lastName.toLowerCase()
+              ? `${user.firstName} ${user.lastName}`.trim()
+              : user.firstName.trim())
+          : user.login || 'Staff',
       },
     });
   }

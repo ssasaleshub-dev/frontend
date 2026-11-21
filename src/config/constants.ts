@@ -4,7 +4,7 @@ import { Capacitor } from '@capacitor/core';
  * Application Constants for Overseas Work & Study Visa Consultancy CRM
  */
 
-export const APP_ENV = (import.meta.env.VITE_ENV || 'development').toLowerCase();
+export const APP_ENV = (import.meta.env.VITE_ENV || 'production').toLowerCase();
 
 export const API_ENV_CONFIG = {
   local: import.meta.env.VITE_API_LOCAL || 'https://srv2054834.hstgr.cloud/dev/',
@@ -18,7 +18,16 @@ export const API_BASE_URL: string = (() => {
   if (browserBase && browserBase !== '') return browserBase;
 
   if (Capacitor.isNativePlatform()) {
-    return APP_ENV === 'production' ? API_ENV_CONFIG.prod : API_ENV_CONFIG.local;
+    // On physical mobile devices, always connect to the verified cloud backend
+    // Safeguard against localhost on physical mobile hardware
+    const target =
+      APP_ENV === 'local' || APP_ENV === 'development'
+        ? API_ENV_CONFIG.local
+        : API_ENV_CONFIG.prod;
+    if (target && !target.includes('localhost') && !target.includes('127.0.0.1')) {
+      return target;
+    }
+    return API_ENV_CONFIG.prod || 'https://srv2054834.hstgr.cloud/prod/';
   }
 
   return '';

@@ -147,6 +147,20 @@ export function toISTDateKey(dateOrIso?: Date | string | number | null): string 
 }
 
 /**
+ * Cleans notification title: removes bell emojis, "Reminder:" prefixes,
+ * and deduplicates consecutive repeating words (e.g. "Administrator Administrator" -> "Administrator").
+ */
+export function cleanNotificationTitle(rawTitle?: string): string {
+  if (!rawTitle) return '';
+  let cleaned = rawTitle.replace(/^🔔\s*/, '').replace(/^Reminder:\s*/i, '').trim();
+  const words = cleaned.split(/\s+/);
+  if (words.length === 2 && words[0].toLowerCase() === words[1].toLowerCase()) {
+    return words[0];
+  }
+  return cleaned;
+}
+
+/**
  * Strips unwanted static boilerplate prefixes/suffixes from reminder messages
  * so that only user-entered data is displayed.
  */

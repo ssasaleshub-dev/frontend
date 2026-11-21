@@ -6,6 +6,7 @@
  * callback deadlines, and triggers the Apple HIG Notification Banner popup.
  */
 
+import { Capacitor } from '@capacitor/core';
 import notificationBannerService from '../banner/notificationBannerService';
 import reminderNotificationService from '../reminderNotificationService';
 
@@ -41,6 +42,8 @@ class NotificationWebSocket {
     const envUrl = (import.meta as any).env?.VITE_NOTIF_WS_URL;
     if (envUrl) {
       this.url = envUrl;
+    } else if (Capacitor.isNativePlatform()) {
+      this.url = 'wss://srv2054834.hstgr.cloud/prod/ws/notifications';
     } else if (typeof window !== 'undefined') {
       const isHttps = window.location.protocol === 'https:';
       const wsProtocol = isHttps ? 'wss:' : 'ws:';
@@ -48,10 +51,10 @@ class NotificationWebSocket {
       const hostname = window.location.hostname;
       const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
       this.url = isLocalhost
-        ? `ws://localhost:8080/ws/notifications`
+        ? 'wss://srv2054834.hstgr.cloud/prod/ws/notifications'
         : `${wsProtocol}//${host}/ws/notifications`;
     } else {
-      this.url = 'ws://localhost:8080/ws/notifications';
+      this.url = 'wss://srv2054834.hstgr.cloud/prod/ws/notifications';
     }
   }
 

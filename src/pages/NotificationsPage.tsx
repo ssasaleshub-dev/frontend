@@ -11,7 +11,7 @@ import reminderNotificationService, {
 import pushNotificationService from '../services/pushNotificationService';
 import { useAlert } from '../context/AlertContext';
 import { encryptLeadId } from '../utils/leadIdCrypto';
-import { formatIndianTime, formatIndianDate } from '../utils/dateTimeUtils';
+import { formatIndianTime, formatIndianDate, cleanNotificationTitle } from '../utils/dateTimeUtils';
 
 export default function NotificationsPage() {
   const navigate = useNavigate();
@@ -277,10 +277,7 @@ export default function NotificationsPage() {
               {/* Flat List Rows (Divide Hairline) */}
               <div className="divide-y divide-black/[0.04]">
                 {group.items.map((item) => {
-                  const cleanTitle = item.title
-                    .replace(/^🔔\s*/, '')
-                    .replace(/^Reminder:\s*/i, '')
-                    .trim();
+                  const cleanTitle = cleanNotificationTitle(item.title);
 
                   return (
                     <SwipeableNotificationCard

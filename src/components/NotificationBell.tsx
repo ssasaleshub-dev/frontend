@@ -13,7 +13,7 @@ import reminderNotificationService, {
   NotificationItem,
 } from '../services/reminderNotificationService';
 import { encryptLeadId } from '../utils/leadIdCrypto';
-import { formatIndianTime, formatIndianDate, cleanNotificationMessage } from '../utils/dateTimeUtils';
+import { formatIndianTime, formatIndianDate, cleanNotificationMessage, cleanNotificationTitle } from '../utils/dateTimeUtils';
 
 export default function NotificationBell() {
   const { showAlert } = useAlert();
@@ -277,28 +277,28 @@ export default function NotificationBell() {
 
       {/* Apple Notification Popover (Solid White Surface, Zero Bleed-through; DESKTOP ONLY) */}
       {isOpen && !isMobileScreen && !isNative && (
-        <div className="absolute right-0 top-full mt-2 sm:mt-2.5 w-[390px] bg-white !p-0 rounded-[24px] shadow-[0_20px_50px_rgba(0,0,0,0.18)] border border-black/[0.08] z-50 overflow-hidden flex flex-col max-h-[540px] animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute -right-4 sm:right-0 top-full mt-2 sm:mt-2.5 w-[380px] max-w-[calc(100vw-24px)] bg-white !p-0 rounded-[24px] shadow-[0_20px_50px_rgba(0,0,0,0.18)] border border-black/[0.08] z-[60] overflow-hidden flex flex-col max-h-[540px] animate-in fade-in zoom-in-95 duration-150">
           
           {/* Apple HIG Header & Segmented Filter Control */}
           <div className="px-4 pt-3.5 pb-2.5 border-b border-black/[0.04] space-y-2.5 bg-[#fbfbfd]">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-[15px] text-[#1d1d1f] tracking-tight">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="font-semibold text-[15px] text-[#1d1d1f] tracking-tight shrink-0">
                   Notifications
                 </span>
                 {unreadCount > 0 && (
-                  <span className="px-2 py-0.5 bg-[#0071e3]/10 text-[#0071e3] text-[11px] font-semibold rounded-full">
+                  <span className="px-2 py-0.5 bg-[#0071e3]/10 text-[#0071e3] text-[11px] font-semibold rounded-full shrink-0">
                     {unreadCount} new
                   </span>
                 )}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 {unreadCount > 0 && (
                   <button
                     type="button"
                     onClick={handleMarkAllRead}
-                    className="text-[12px] font-medium text-[#0071e3] hover:text-[#0077ED] transition-opacity active:opacity-60 cursor-pointer"
+                    className="text-[12px] font-medium text-[#0071e3] hover:text-[#0077ED] transition-opacity active:opacity-60 cursor-pointer shrink-0"
                   >
                     Mark All Read
                   </button>
@@ -311,7 +311,7 @@ export default function NotificationBell() {
                     navigate('/notifications');
                   }}
                   title="Open Notifications Page"
-                  className="p-1 rounded-md text-[#86868b] hover:text-[#0071e3] hover:bg-black/[0.05] transition-colors cursor-pointer"
+                  className="p-1 rounded-md text-[#86868b] hover:text-[#0071e3] hover:bg-black/[0.05] transition-colors cursor-pointer shrink-0"
                 >
                   <ExternalLink size={13} />
                 </button>
@@ -451,7 +451,7 @@ export default function NotificationBell() {
 
                         {/* Body Content - Only user entered data */}
                         {(() => {
-                          const cleanTitle = item.title.replace(/^🔔\s*/, '').replace(/^Reminder:\s*/i, '').trim();
+                          const cleanTitle = cleanNotificationTitle(item.title);
                           const displayMessage = cleanNotificationMessage(item.message, cleanTitle);
                           return (
                             <div className="pr-1 mt-1">

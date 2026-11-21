@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { X } from 'lucide-react';
 import notificationBannerService, { AppleBannerPayload } from '../services/banner/notificationBannerService';
 import brandLogo from '../assets/brand-logo.jpg';
-import { cleanNotificationMessage } from '../utils/dateTimeUtils';
+import { cleanNotificationMessage, cleanNotificationTitle } from '../utils/dateTimeUtils';
 
 /**
  * Apple iOS In-App Notification Banner Popup
@@ -76,7 +76,7 @@ export default function AppleNotificationBanner() {
     }
   };
 
-  const cleanTitle = banner.title.replace(/^🔔\s*/, '').replace(/^Reminder:\s*/i, '').trim();
+  const cleanTitle = cleanNotificationTitle(banner.title);
   const cleanDesc = cleanNotificationMessage(banner.description, cleanTitle);
 
   const bannerContent = (
