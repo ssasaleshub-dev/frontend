@@ -10,6 +10,7 @@ import { Capacitor } from '@capacitor/core';
 import { API_BASE_URL } from '../../config/constants';
 import type { ChatMessage } from '../../types';
 import notificationWebSocket from './notificationWebSocket';
+import { withAccessToken } from './socketAuth';
 
 export interface ChatWsMessagePayload {
   content: string;
@@ -103,8 +104,12 @@ class TeamChatWebSocket {
       return;
     }
 
+    // The server only accepts authenticated sockets; wait until the user is logged in
+    const authedUrl = withAccessToken(this.wsUrl);
+    if (!authedUrl) return;
+
     try {
-      this.ws = new WebSocket(this.wsUrl);
+      this.ws = new WebSocket(authedUrl);
 
       this.ws.onopen = () => {
         this.isConnected = true;
@@ -154,8 +159,11 @@ class TeamChatWebSocket {
     if (typeof window === 'undefined' || !window.EventSource) return;
     if (this.eventSource && this.eventSource.readyState !== EventSource.CLOSED) return;
 
+    const authedSseUrl = withAccessToken(this.sseUrl);
+    if (!authedSseUrl) return;
+
     try {
-      this.eventSource = new EventSource(this.sseUrl);
+      this.eventSource = new EventSource(authedSseUrl);
 
       this.eventSource.addEventListener('message', (event) => {
         try {

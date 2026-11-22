@@ -3,33 +3,38 @@ import { API_ENDPOINTS } from '../../config/constants';
 import type { Lead, Customer } from '../../types';
 
 /**
- * The backend LeadPreference entity still uses column names inherited from the original
- * project template. Until the backend renames them, CRM concepts map to those columns here and
- * ONLY here. Keys are CRM field names; values are the backend column names.
+ * CRM field names that the backend LeadPreference stores under a different name.
+ * Payment status/details now use their own names end to end (the backend renamed its columns
+ * and still accepts the old "mattressType"/"mattressSize" keys from older app versions).
  */
-export const LEAD_PREFERENCE_LEGACY_FIELDS = {
-  paymentStatus: 'mattressType',
-  paymentDetails: 'mattressSize',
+export const LEAD_PREFERENCE_FIELD_ALIASES = {
   closingDate: 'purchaseTimeline',
 } as const;
 
-type LegacyMappedField = keyof typeof LEAD_PREFERENCE_LEGACY_FIELDS;
+/** Old response keys still read as a fallback, e.g. from a backend that hasn't been redeployed yet. */
+const LEGACY_RESPONSE_KEYS: Record<string, string> = {
+  paymentStatus: 'mattressType',
+  paymentDetails: 'mattressSize',
+  closingDate: 'purchaseTimeline',
+};
 
-/** Converts CRM-named preference fields into the backend's column names. */
+type PreferenceField = 'paymentStatus' | 'paymentDetails' | 'closingDate';
+
+/** Converts CRM-named preference fields into the backend's field names. */
 export function toLeadPreferencePayload(fields: Record<string, any>): Record<string, any> {
   const payload: Record<string, any> = {};
   Object.entries(fields).forEach(([key, value]) => {
     if (value === undefined) return;
-    const legacyKey = LEAD_PREFERENCE_LEGACY_FIELDS[key as LegacyMappedField];
-    payload[legacyKey || key] = value;
+    const alias = LEAD_PREFERENCE_FIELD_ALIASES[key as keyof typeof LEAD_PREFERENCE_FIELD_ALIASES];
+    payload[alias || key] = value;
   });
   return payload;
 }
 
-/** Reads a CRM field from a lead, falling back to the backend's legacy column name. */
-export function readLeadPreferenceField(lead: Record<string, any> | null | undefined, field: LegacyMappedField): any {
+/** Reads a CRM field from a lead, falling back to the older key name. */
+export function readLeadPreferenceField(lead: Record<string, any> | null | undefined, field: PreferenceField): any {
   if (!lead) return undefined;
-  return lead[field] ?? lead[LEAD_PREFERENCE_LEGACY_FIELDS[field]];
+  return lead[field] ?? lead[LEGACY_RESPONSE_KEYS[field]];
 }
 
 export const crmService = {

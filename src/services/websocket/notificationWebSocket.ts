@@ -9,6 +9,7 @@
 import { Capacitor } from '@capacitor/core';
 import notificationBannerService from '../banner/notificationBannerService';
 import reminderNotificationService from '../reminderNotificationService';
+import { withAccessToken } from './socketAuth';
 
 export interface WsNotificationPayload {
   id: string;
@@ -64,8 +65,12 @@ class NotificationWebSocket {
       return;
     }
 
+    // The server only accepts authenticated sockets; wait until the user is logged in
+    const authedUrl = withAccessToken(this.url);
+    if (!authedUrl) return;
+
     try {
-      this.ws = new WebSocket(this.url);
+      this.ws = new WebSocket(authedUrl);
 
       this.ws.onopen = () => {
         this.isConnected = true;
