@@ -1,6 +1,10 @@
 package com.ssasaleshub.crm;
 
 import android.os.Build;
+import android.security.keystore.KeyGenParameterSpec;
+import android.security.keystore.KeyPermanentlyInvalidatedException;
+import android.security.keystore.KeyProperties;
+import android.util.Base64;
 import android.provider.Settings;
 import androidx.annotation.NonNull;
 import androidx.biometric.BiometricManager;
@@ -13,7 +17,13 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.KeyStore;
 import java.security.MessageDigest;
+import java.security.PrivateKey;
+import java.security.Signature;
+import java.security.spec.ECGenParameterSpec;
 import java.util.concurrent.Executor;
 
 @CapacitorPlugin(name = "BiometricPlugin")
@@ -142,5 +152,170 @@ public class BiometricPlugin extends Plugin {
                 call.resolve(res);
             }
         });
+    }
+
+    // ───────────────────────── Fingerprint-locked attendance key ─────────────────────────
+    //
+    // The private key is generated inside Android Keystore (secure hardware where available), can
+    // never be exported, and can only sign right after a successful strong-biometric scan. It is
+    // destroyed automatically if fingerprints on the phone are added or removed. The server keeps
+    // only the public key, so a valid signature proves that this registered phone and an enrolled
+    // fingerprint approved this exact check-in.
+
+    private static final String KEYSTORE = "AndroidKeyStore";
+
+    private static String keyAlias(String userId) {
+        return "ssa_attendance_" + userId.trim().toLowerCase();
+    }
+
+    private String androidId() {
+        String id = Settings.Secure.getString(getContext().getContentResolver(), Settings.Secure.ANDROID_ID);
+        return (id != null && !id.isBlank()) ? id : "OFFICE-ANDROID-DEVICE";
+    }
+
+    /** Creates (or replaces) the user's key and returns its Base64 X.509 public key. */
+    @PluginMethod
+    public void createAttendanceKey(PluginCall call) {
+        String userId = call.getString("userId");
+        if (userId == null || userId.isBlank()) {
+            call.reject("userId is required");
+            return;
+        }
+        try {
+            KeyGenParameterSpec.Builder spec = new KeyGenParameterSpec.Builder(keyAlias(userId), KeyProperties.PURPOSE_SIGN)
+                .setAlgorithmParameterSpec(new ECGenParameterSpec("secp256r1"))
+                .setDigests(KeyProperties.DIGEST_SHA256)
+                .setUserAuthenticationRequired(true)
+                .setInvalidatedByBiometricEnrollment(true);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                // Every signature needs its own fingerprint scan (no device-PIN fallback)
+                spec.setUserAuthenticationParameters(0, KeyProperties.AUTH_BIOMETRIC_STRONG);
+            } else {
+                spec.setUserAuthenticationValidityDurationSeconds(-1);
+            }
+
+            KeyPairGenerator generator = KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_EC, KEYSTORE);
+            generator.initialize(spec.build());
+            KeyPair pair = generator.generateKeyPair();
+
+            JSObject ret = new JSObject();
+            ret.put("publicKey", Base64.encodeToString(pair.getPublic().getEncoded(), Base64.NO_WRAP));
+            ret.put("deviceId", androidId());
+            ret.put("deviceName", Build.MANUFACTURER + " " + Build.MODEL);
+            call.resolve(ret);
+        } catch (Exception e) {
+            call.reject("Could not create the fingerprint key: " + e.getMessage(), "KEY_CREATE_FAILED");
+        }
+    }
+
+    /** Whether this phone holds an attendance key for the user. */
+    @PluginMethod
+    public void hasAttendanceKey(PluginCall call) {
+        String userId = call.getString("userId");
+        JSObject ret = new JSObject();
+        try {
+            KeyStore ks = KeyStore.getInstance(KEYSTORE);
+            ks.load(null);
+            ret.put("exists", userId != null && ks.containsAlias(keyAlias(userId)));
+        } catch (Exception e) {
+            ret.put("exists", false);
+        }
+        call.resolve(ret);
+    }
+
+    /**
+     * Shows the fingerprint prompt and, on success, signs the message with the user's key.
+     * Resolves { success, signature, deviceId } or { success: false, code, error }.
+     */
+    @PluginMethod
+    public void signChallenge(PluginCall call) {
+        String userId = call.getString("userId");
+        String message = call.getString("message");
+        String title = call.getString("title", "Confirm check-in");
+        String subtitle = call.getString("subtitle", "Scan your fingerprint to record your attendance");
+
+        if (userId == null || userId.isBlank() || message == null || message.isEmpty()) {
+            call.reject("userId and message are required");
+            return;
+        }
+
+        final Signature signature;
+        try {
+            KeyStore ks = KeyStore.getInstance(KEYSTORE);
+            ks.load(null);
+            PrivateKey key = (PrivateKey) ks.getKey(keyAlias(userId), null);
+            if (key == null) {
+                resolveFailure(call, "NO_KEY", "This phone has no fingerprint registration for your account. Register your fingerprint first.");
+                return;
+            }
+            signature = Signature.getInstance("SHA256withECDSA");
+            signature.initSign(key);
+        } catch (KeyPermanentlyInvalidatedException e) {
+            resolveFailure(call, "KEY_INVALIDATED", "Fingerprints on this phone changed. Register your fingerprint again.");
+            return;
+        } catch (Exception e) {
+            resolveFailure(call, "KEY_ERROR", "Could not use the fingerprint key: " + e.getMessage());
+            return;
+        }
+
+        FragmentActivity activity = (FragmentActivity) getActivity();
+        if (activity == null) {
+            resolveFailure(call, "NO_ACTIVITY", "App is not in the foreground");
+            return;
+        }
+
+        activity.runOnUiThread(() -> {
+            try {
+                Executor executor = ContextCompat.getMainExecutor(getContext());
+                BiometricPrompt prompt = new BiometricPrompt(activity, executor, new BiometricPrompt.AuthenticationCallback() {
+                    @Override
+                    public void onAuthenticationError(int errorCode, @NonNull CharSequence errString) {
+                        resolveFailure(call, "AUTH_ERROR_" + errorCode, errString.toString());
+                    }
+
+                    @Override
+                    public void onAuthenticationSucceeded(@NonNull BiometricPrompt.AuthenticationResult result) {
+                        try {
+                            BiometricPrompt.CryptoObject crypto = result.getCryptoObject();
+                            Signature unlocked = crypto != null ? crypto.getSignature() : null;
+                            if (unlocked == null) {
+                                resolveFailure(call, "NO_CRYPTO", "Fingerprint did not unlock the key");
+                                return;
+                            }
+                            unlocked.update(message.getBytes(StandardCharsets.UTF_8));
+                            byte[] signed = unlocked.sign();
+
+                            JSObject res = new JSObject();
+                            res.put("success", true);
+                            res.put("signature", Base64.encodeToString(signed, Base64.NO_WRAP));
+                            res.put("deviceId", androidId());
+                            res.put("deviceName", Build.MANUFACTURER + " " + Build.MODEL);
+                            call.resolve(res);
+                        } catch (Exception ex) {
+                            resolveFailure(call, "SIGN_FAILED", "Could not sign the check-in: " + ex.getMessage());
+                        }
+                    }
+                });
+
+                BiometricPrompt.PromptInfo info = new BiometricPrompt.PromptInfo.Builder()
+                    .setTitle(title)
+                    .setSubtitle(subtitle)
+                    .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+                    .setNegativeButtonText("Cancel")
+                    .build();
+
+                prompt.authenticate(info, new BiometricPrompt.CryptoObject(signature));
+            } catch (Exception e) {
+                resolveFailure(call, "PROMPT_FAILED", e.getMessage());
+            }
+        });
+    }
+
+    private static void resolveFailure(PluginCall call, String code, String error) {
+        JSObject res = new JSObject();
+        res.put("success", false);
+        res.put("code", code);
+        res.put("error", error);
+        call.resolve(res);
     }
 }

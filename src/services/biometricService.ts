@@ -1,8 +1,11 @@
 /**
- * Biometric Fingerprint & Office Attendance Hardware Lock Service
- * Provides Android Native androidx.biometric integration via Capacitor Plugin,
- * WebAuthn platform authenticator support for web terminals, secure credential storage,
- * and Admin device approval & locking REST client.
+ * Fingerprint attendance.
+ *
+ * Fingerprints can only be verified by the SSA Android app. At registration the app creates a key
+ * pair in the phone's secure hardware that can only sign after a successful fingerprint scan, and
+ * sends the public key to the server (an admin then approves/locks it). Each check-in is a one-time
+ * server challenge that the phone signs; the server verifies the signature. A browser cannot
+ * produce that signature, so web check-ins are approved on the registered phone.
  */
 
 import { Capacitor, registerPlugin } from '@capacitor/core';
@@ -15,6 +18,8 @@ export interface StaffBiometricCredential {
   deviceId: string;
   deviceName?: string;
   biometricKeyId: string;
+  /** Present for registrations made with the fingerprint-locked key (required for check-in). */
+  publicKey?: string;
   status: 'PENDING_APPROVAL' | 'LOCKED' | 'REVOKED' | string;
   isLocked?: boolean;
   lockedAt?: string;
@@ -38,6 +43,15 @@ export interface BiometricPromptResult {
   errorCode?: number;
 }
 
+export interface SignChallengeResult {
+  success: boolean;
+  signature?: string;
+  deviceId?: string;
+  deviceName?: string;
+  code?: string;
+  error?: string;
+}
+
 interface BiometricPluginInterface {
   isAvailable(): Promise<{ available: boolean; status?: number; error?: string }>;
   getDeviceInfo(): Promise<BiometricDeviceInfo>;
@@ -46,7 +60,13 @@ interface BiometricPluginInterface {
     subtitle: string;
     description?: string;
   }): Promise<BiometricPromptResult>;
+  createAttendanceKey(options: { userId: string }): Promise<{ publicKey: string; deviceId: string; deviceName: string }>;
+  hasAttendanceKey(options: { userId: string }): Promise<{ exists: boolean }>;
+  signChallenge(options: { userId: string; message: string; title?: string; subtitle?: string }): Promise<SignChallengeResult>;
 }
+
+export const FINGERPRINT_APP_ONLY_MESSAGE =
+  'Fingerprint verification is only available in the SSA Android app.';
 
 const NativeBiometric = registerPlugin<BiometricPluginInterface>('BiometricPlugin');
 
@@ -145,41 +165,8 @@ export const biometricService = {
       }
     }
 
-    // Web Platform Authenticator (Windows Hello / Mac Touch ID / Chrome platform)
-    if (typeof window !== 'undefined' && window.PublicKeyCredential && typeof window.crypto?.getRandomValues === 'function') {
-      try {
-        const challenge = new Uint8Array(32);
-        window.crypto.getRandomValues(challenge);
-
-        // Try platform authenticator check
-        const deviceInfo = await this.getDeviceInfo();
-        const biometricKeyId = `BIO-KEY-${Array.from(challenge.slice(0, 8))
-          .map((b) => b.toString(16).padStart(2, '0'))
-          .join('')
-          .toUpperCase()}`;
-
-        return {
-          success: true,
-          deviceId: deviceInfo.deviceId,
-          deviceName: deviceInfo.deviceName,
-          biometricKeyId,
-        };
-      } catch (err: any) {
-        return {
-          success: false,
-          error: err?.message || 'Web biometric verification cancelled',
-        };
-      }
-    }
-
-    // Fallback if browser doesn't have WebAuthn
-    const deviceInfo = await this.getDeviceInfo();
-    return {
-      success: true,
-      deviceId: deviceInfo.deviceId,
-      deviceName: deviceInfo.deviceName,
-      biometricKeyId: `BIO-KEY-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
-    };
+    // A browser cannot verify a fingerprint; never report success here
+    return { success: false, error: FINGERPRINT_APP_ONLY_MESSAGE };
   },
 
   /**
@@ -193,28 +180,36 @@ export const biometricService = {
   }): Promise<StaffBiometricCredential> {
     const cleanUserId = params.userId.trim().toLowerCase();
 
-    // 1. Launch native biometric prompt
+    if (!Capacitor.isNativePlatform()) {
+      throw new Error(`${FINGERPRINT_APP_ONLY_MESSAGE} Open the app on your phone to register.`);
+    }
+
+    // 1. Confirm a fingerprint is enrolled and the person holding the phone can use it
     const promptRes = await this.promptBiometric({
       title: 'Register Office Fingerprint',
-      subtitle: 'Scan your fingerprint to bind this office device to your account',
-      description: 'First-time registration: locks attendance verification to this physical office device',
+      subtitle: 'Scan your fingerprint to link this phone to your account',
+      description: 'Check-ins will need this phone and your fingerprint',
     });
 
     if (!promptRes.success) {
       throw new Error(promptRes.error || 'Fingerprint verification failed or was cancelled');
     }
 
-    const deviceId = promptRes.deviceId || 'OFFICE-DEVICE-01';
-    const deviceName = promptRes.deviceName || 'Office Device (Samsung Tab)';
+    // 2. Create the fingerprint-locked key in the phone's secure hardware
+    const key = await NativeBiometric.createAttendanceKey({ userId: cleanUserId });
+
+    const deviceId = key.deviceId || promptRes.deviceId || '';
+    const deviceName = key.deviceName || promptRes.deviceName || 'Android phone';
     const biometricKeyId = promptRes.biometricKeyId || `BIO-KEY-${Date.now()}`;
 
-    // 2. Call backend enroll endpoint: POST /api/attendance/biometric/enroll
+    // 3. Register the public key with the server (an admin must then approve it)
     const payload = {
       userId: cleanUserId,
       userName: params.userName || cleanUserId,
       deviceId,
       deviceName,
       biometricKeyId,
+      publicKey: key.publicKey,
     };
 
     const enrolled = await axiosClient.post<StaffBiometricCredential>(
@@ -238,36 +233,41 @@ export const biometricService = {
   },
 
   /**
-   * Flow 2: Daily Work Check-In Biometric Verification
-   * Launches native fingerprint scanner: "Verify Attendance"
-   * On success, returns stored deviceId and biometricKeyId for /api/attendance/check-in
+   * Shows the fingerprint prompt and signs a server check-in challenge with this phone's
+   * fingerprint-locked key. Android app only.
    */
-  async verifyFingerprintForCheckIn(params: {
+  async signAttendanceChallenge(params: {
     userId: string;
-  }): Promise<{ deviceId: string; biometricKeyId: string; deviceInfo: string }> {
-    const cleanUserId = params.userId.trim().toLowerCase();
-    const stored = this.getStoredBiometric(cleanUserId);
-
-    // 1. Launch native biometric verification prompt
-    const promptRes = await this.promptBiometric({
-      title: 'Verify Attendance',
-      subtitle: 'Touch fingerprint sensor to verify check-in',
-      description: 'Physical office device biometric attendance verification',
-    });
-
-    if (!promptRes.success) {
-      throw new Error(promptRes.error || 'Fingerprint verification cancelled or failed');
+    message: string;
+    title?: string;
+    subtitle?: string;
+  }): Promise<{ signature: string; deviceId: string }> {
+    if (!Capacitor.isNativePlatform()) {
+      throw new Error(FINGERPRINT_APP_ONLY_MESSAGE);
     }
+    const res = await NativeBiometric.signChallenge({
+      userId: params.userId.trim().toLowerCase(),
+      message: params.message,
+      title: params.title,
+      subtitle: params.subtitle,
+    });
+    if (!res?.success || !res.signature || !res.deviceId) {
+      const error: any = new Error(res?.error || 'Fingerprint verification was cancelled');
+      error.code = res?.code;
+      throw error;
+    }
+    return { signature: res.signature, deviceId: res.deviceId };
+  },
 
-    const deviceId = stored?.deviceId || promptRes.deviceId || 'OFFICE-DEVICE-01';
-    const biometricKeyId = stored?.biometricKeyId || promptRes.biometricKeyId || '';
-    const deviceName = stored?.deviceName || promptRes.deviceName || 'Office Device (Fingerprint Verified)';
-
-    return {
-      deviceId,
-      biometricKeyId,
-      deviceInfo: `${deviceName} (Fingerprint Verified)`,
-    };
+  /** Whether this phone holds the fingerprint key for the user (Android app only). */
+  async hasAttendanceKey(userId: string): Promise<boolean> {
+    if (!Capacitor.isNativePlatform()) return false;
+    try {
+      const res = await NativeBiometric.hasAttendanceKey({ userId: userId.trim().toLowerCase() });
+      return Boolean(res?.exists);
+    } catch {
+      return false;
+    }
   },
 
   /**

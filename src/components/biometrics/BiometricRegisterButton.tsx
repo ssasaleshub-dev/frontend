@@ -22,8 +22,10 @@ export const BiometricRegisterButton: React.FC<BiometricRegisterButtonProps> = (
 }) => {
   const isLocked = Boolean(credential?.isLocked || credential?.status === 'LOCKED');
   const isPending = credential?.status === 'PENDING_APPROVAL';
+  // Registrations made before fingerprint signing have no public key and can no longer check in
+  const isOutdated = isLocked && !credential?.publicKey;
 
-  if (isLocked) {
+  if (isLocked && !isOutdated) {
     return null;
   }
 
@@ -39,7 +41,7 @@ export const BiometricRegisterButton: React.FC<BiometricRegisterButtonProps> = (
       ) : (
         <Fingerprint size={14} className="text-emerald-600" />
       )}
-      <span>{isPending ? 'Re-bind Fingerprint' : 'Register Office Fingerprint'}</span>
+      <span>{isOutdated ? 'Re-register Fingerprint' : isPending ? 'Re-bind Fingerprint' : 'Register Office Fingerprint'}</span>
     </button>
   );
 };

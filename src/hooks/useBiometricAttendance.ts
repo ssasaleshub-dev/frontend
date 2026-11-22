@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Capacitor } from '@capacitor/core';
 import biometricService, { StaffBiometricCredential } from '../services/biometricService';
 import attendanceService, { StaffAttendanceRecord } from '../services/api/attendanceService';
+import attendanceVerificationService from '../services/api/attendanceVerificationService';
 import { useAlert } from '../context/AlertContext';
 import { formatIndianTime } from '../utils/dateTimeUtils';
 
@@ -14,8 +16,17 @@ export interface UseBiometricAttendanceParams {
   showToast?: (message: string) => void;
 }
 
+/** A web check-in waiting for approval on the registered phone. */
+export interface PhoneApprovalState {
+  challengeId: number;
+  expiresAt: string;
+}
+
 export interface UseBiometricAttendanceReturn {
   biometricCred: Partial<StaffBiometricCredential> | null;
+  /** Set while a web check-in waits for fingerprint approval on the phone. */
+  phoneApproval: PhoneApprovalState | null;
+  cancelPhoneApproval: () => Promise<void>;
   enrollingBiometric: boolean;
   punching: boolean;
   successModal: { isOpen: boolean; timestamp: string; deviceName?: string } | null;
@@ -32,7 +43,6 @@ export interface UseBiometricAttendanceReturn {
 export function useBiometricAttendance({
   userId,
   userName,
-  userRole,
   workMode = 'OFFICE',
   note = '',
   onSuccess,
@@ -46,6 +56,8 @@ export function useBiometricAttendance({
   });
   const [enrollingBiometric, setEnrollingBiometric] = useState<boolean>(false);
   const [punching, setPunching] = useState<boolean>(false);
+  const [phoneApproval, setPhoneApproval] = useState<PhoneApprovalState | null>(null);
+  const cancelledRef = useRef<boolean>(false);
   const [successModal, setSuccessModal] = useState<{
     isOpen: boolean;
     timestamp: string;
@@ -98,50 +110,74 @@ export function useBiometricAttendance({
     }
   }, [userId, userName, showAlert]);
 
-  // Flow 2: Daily Work Check-In with Biometric Verification
-  const handleBiometricCheckIn = useCallback(async (): Promise<StaffAttendanceRecord | null> => {
-    if (!userId) return null;
-    setPunching(true);
-    try {
-      // 1. Open native biometric scanner prompt
-      const bio = await biometricService.verifyFingerprintForCheckIn({
-        userId,
-      });
-
-      // 2. Call backend check-in endpoint with stored deviceId and biometricKeyId
-      const result = await attendanceService.checkIn({
-        userId,
-        userName,
-        userRole,
-        workMode,
-        note: note.trim(),
-        deviceId: bio.deviceId,
-        biometricKeyId: bio.biometricKeyId,
-        deviceInfo: bio.deviceInfo,
-      });
-
-      // 3. HTTP 201 Response Handling: Show green confirmation screen with check-in timestamp
+  const announceSuccess = useCallback(
+    (result: StaffAttendanceRecord, deviceName?: string) => {
       const timeFormatted = result.checkInTime
         ? formatIndianTime(result.checkInTime, { includeSeconds: true })
         : new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
+      setSuccessModal({ isOpen: true, timestamp: timeFormatted, deviceName });
+      if (showToast) showToast('Checked in with fingerprint verification.');
+      if (onSuccess) onSuccess(result);
+    },
+    [showToast, onSuccess]
+  );
 
-      setSuccessModal({
-        isOpen: true,
-        timestamp: timeFormatted,
-        deviceName: bio.deviceId,
-      });
-
-      if (showToast) {
-        showToast('Checked in successfully via office biometric sensor!');
+  // Flow 2: Daily check-in with fingerprint verification.
+  // - In the Android app: the phone signs a one-time server challenge right here.
+  // - On the web: the server pushes an approval request to the registered phone and this page
+  //   waits until it is approved, declined, or expires.
+  const handleBiometricCheckIn = useCallback(async (): Promise<StaffAttendanceRecord | null> => {
+    if (!userId) return null;
+    setPunching(true);
+    cancelledRef.current = false;
+    try {
+      if (Capacitor.isNativePlatform()) {
+        const challenge = await attendanceVerificationService.start({ source: 'APP', workMode, note: note.trim() });
+        if (!challenge.signedMessage) throw new Error('Check-in request could not be started.');
+        const signed = await biometricService.signAttendanceChallenge({
+          userId,
+          message: challenge.signedMessage,
+          title: 'Confirm check-in',
+          subtitle: 'Scan your fingerprint to record your attendance',
+        });
+        const result = await attendanceVerificationService.approve(challenge.id, signed.signature, signed.deviceId);
+        announceSuccess(result, biometricCred?.deviceName || signed.deviceId);
+        return result;
       }
 
-      if (onSuccess) {
-        onSuccess(result);
-      }
+      // Web: approval happens on the phone
+      const challenge = await attendanceVerificationService.start({ source: 'WEB', workMode, note: note.trim() });
+      setPhoneApproval({ challengeId: challenge.id, expiresAt: challenge.expiresAt });
 
-      return result;
+      const deadline = new Date(challenge.expiresAt).getTime() + 5000;
+      while (!cancelledRef.current && Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 2000));
+        if (cancelledRef.current) break;
+        let status: string;
+        try {
+          status = (await attendanceVerificationService.get(challenge.id)).status;
+        } catch {
+          continue; // transient network error: keep waiting until the deadline
+        }
+        if (status === 'APPROVED') {
+          const record = await attendanceService.getTodayAttendance(userId);
+          if (record) announceSuccess(record, 'Approved on your phone');
+          return record;
+        }
+        if (status === 'REJECTED') {
+          showAlert({ title: 'Check-in Declined', message: 'The check-in was declined on your phone.' });
+          return null;
+        }
+        if (status === 'EXPIRED') break;
+      }
+      if (!cancelledRef.current) {
+        showAlert({
+          title: 'Check-in Not Approved',
+          message: 'The request expired before it was approved on your phone. Please try again.',
+        });
+      }
+      return null;
     } catch (err: any) {
-      // 4. HTTP 403 Response Handling: Display the exact server error message to the user
       const errorMsg = err?.response?.data?.detail || err?.response?.data?.message || err?.message || 'Check-in failed';
       showAlert({
         title: 'Attendance Blocked',
@@ -149,9 +185,20 @@ export function useBiometricAttendance({
       });
       return null;
     } finally {
+      setPhoneApproval(null);
       setPunching(false);
     }
-  }, [userId, userName, userRole, workMode, note, showAlert, showToast, onSuccess]);
+  }, [userId, workMode, note, showAlert, announceSuccess, biometricCred?.deviceName]);
+
+  /** Stops waiting and declines the pending web request. */
+  const cancelPhoneApproval = useCallback(async () => {
+    cancelledRef.current = true;
+    const pending = phoneApproval;
+    setPhoneApproval(null);
+    if (pending) {
+      await attendanceVerificationService.reject(pending.challengeId).catch(() => {});
+    }
+  }, [phoneApproval]);
 
   const closeSuccessModal = useCallback(() => {
     setSuccessModal(null);
@@ -159,6 +206,8 @@ export function useBiometricAttendance({
 
   return {
     biometricCred,
+    phoneApproval,
+    cancelPhoneApproval,
     enrollingBiometric,
     punching,
     successModal,

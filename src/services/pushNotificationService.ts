@@ -88,6 +88,12 @@ class PushNotificationService {
           window.dispatchEvent(
             new CustomEvent('ssa_push_notification_received', { detail: notification })
           );
+
+          // A web check-in is waiting for fingerprint approval: open the approval screen right away
+          const pushData = notification.data || {};
+          if (pushData.type === 'ATTENDANCE_VERIFY' && pushData.route) {
+            window.dispatchEvent(new CustomEvent('ssa_navigate_to', { detail: { path: pushData.route } }));
+          }
         }
       );
 

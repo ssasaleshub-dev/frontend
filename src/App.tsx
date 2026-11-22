@@ -15,6 +15,7 @@ import Users from './pages/Users';
 import CandidateDetail from './pages/CandidateDetail';
 import CalendarPage from './pages/CalendarPage';
 import AttendancePage from './pages/AttendancePage';
+import AttendanceApprovePage from './pages/AttendanceApprovePage';
 import StaffProfile from './pages/StaffProfile';
 import BiometricApprovalsPage from './pages/BiometricApprovalsPage';
 import NotificationsPage from './pages/NotificationsPage';
@@ -83,6 +84,7 @@ export default function App() {
               <Route path="customers" element={<Customers />} />
               <Route path="calendar" element={<CalendarPage />} />
               <Route path="attendance" element={<AttendancePage />} />
+              <Route path="attendance/verify/:id" element={<AttendanceApprovePage />} />
               <Route path="profile" element={<StaffProfile />} />
               <Route path="chat" element={<Chat />} />
               <Route path="notifications" element={<NotificationsPage />} />

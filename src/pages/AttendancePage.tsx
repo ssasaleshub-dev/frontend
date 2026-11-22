@@ -35,6 +35,13 @@ import adminService from '../services/api/adminService';
 import { useBiometricAttendance } from '../hooks/useBiometricAttendance';
 import { BiometricRegisterButton } from '../components/biometrics/BiometricRegisterButton';
 import { BiometricSuccessModal } from '../components/biometrics/BiometricSuccessModal';
+import { PhoneApprovalSheet } from '../components/biometrics/PhoneApprovalSheet';
+import attendanceVerificationService, {
+  AttendanceVerification,
+  describeRequestSource,
+} from '../services/api/attendanceVerificationService';
+import { Capacitor } from '@capacitor/core';
+import { useNavigate } from 'react-router-dom';
 import { formatIndianTime } from '../utils/dateTimeUtils';
 import type { User } from '../types';
 
@@ -219,6 +226,8 @@ export default function AttendancePage() {
     handleRegisterBiometric,
     handleBiometricCheckIn,
     refreshBiometric,
+    phoneApproval,
+    cancelPhoneApproval,
   } = useBiometricAttendance({
     userId: currentUserId,
     userName: displayName,
@@ -232,6 +241,31 @@ export default function AttendancePage() {
       loadAdminData();
     },
   });
+
+  const navigate = useNavigate();
+  const isNativeApp = Capacitor.isNativePlatform();
+  const hasUsableFingerprint = Boolean(
+    (biometricCred?.isLocked || biometricCred?.status === 'LOCKED') && biometricCred?.publicKey
+  );
+
+  // In the app: surface a web check-in that is waiting for this phone's approval (in case the
+  // push notification was missed)
+  const [pendingWebRequest, setPendingWebRequest] = useState<AttendanceVerification | null>(null);
+  useEffect(() => {
+    if (!isNativeApp || isAdmin || !currentUserId) return;
+    let active = true;
+    const check = () =>
+      attendanceVerificationService
+        .getPending()
+        .then((p) => active && setPendingWebRequest(p && p.source === 'WEB' ? p : null))
+        .catch(() => {});
+    check();
+    const timer = setInterval(check, 15000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [isNativeApp, isAdmin, currentUserId]);
 
   // Check-out progress (check-in progress is tracked by the biometric hook)
   const [checkingOut, setCheckingOut] = useState<boolean>(false);
@@ -381,6 +415,26 @@ export default function AttendancePage() {
         </div>
       )}
 
+      {/* App: a web check-in is waiting for this phone's fingerprint approval */}
+      {pendingWebRequest && !isAdmin && (
+        <button
+          type="button"
+          onClick={() => navigate(`/attendance/verify/${pendingWebRequest.id}`)}
+          className="w-full text-left bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-center gap-3 cursor-pointer active:bg-blue-100"
+        >
+          <div className="w-10 h-10 rounded-xl bg-white text-[#007aff] flex items-center justify-center shrink-0">
+            <Fingerprint size={20} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-slate-900">Check-in waiting for your approval</p>
+            <p className="text-xs text-slate-600 truncate">
+              Requested from {describeRequestSource(pendingWebRequest.requestedFrom)} · tap to review
+            </p>
+          </div>
+          <ChevronRight size={18} className="text-slate-400 shrink-0" />
+        </button>
+      )}
+
       {/* Top Banner: Personal Shift Punch Bar (Counselors & Staff Only - Hidden for Admin) */}
       {!isAdmin && (
         <div className="bg-white rounded-3xl border border-black/[0.06] p-5 shadow-xs">
@@ -429,12 +483,21 @@ export default function AttendancePage() {
             {/* Actions: Register Office Fingerprint & Check In */}
             <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end">
               {/* Enterprise Reusable Biometric Hardware Registration Button */}
-              <BiometricRegisterButton
-                credential={biometricCred}
-                isLoading={enrollingBiometric}
-                onRegister={handleRegisterBiometric}
-                disabled={isPunchBusy}
-              />
+              {isNativeApp ? (
+                <BiometricRegisterButton
+                  credential={biometricCred}
+                  isLoading={enrollingBiometric}
+                  onRegister={handleRegisterBiometric}
+                  disabled={isPunchBusy}
+                />
+              ) : (
+                !hasUsableFingerprint && (
+                  <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                    <Fingerprint size={13} className="text-emerald-600" />
+                    Register your fingerprint in the SSA Android app to check in
+                  </span>
+                )
+              )}
 
               {!isCheckedIn ? (
                 <button
@@ -767,6 +830,9 @@ export default function AttendancePage() {
           </table>
         </div>
       </div>
+
+      {/* Web: waiting for fingerprint approval on the registered phone */}
+      <PhoneApprovalSheet expiresAt={phoneApproval?.expiresAt ?? null} onCancel={cancelPhoneApproval} />
 
       {/* Enterprise Reusable Biometric Confirmation Modal */}
       <BiometricSuccessModal
