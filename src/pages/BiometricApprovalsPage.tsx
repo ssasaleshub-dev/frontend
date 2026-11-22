@@ -17,6 +17,7 @@ import {
   ChevronRight,
   Filter,
   Loader2,
+  X,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useAlert } from '../context/AlertContext';
@@ -175,7 +176,7 @@ export default function BiometricApprovalsPage() {
     <div className="space-y-5 max-w-7xl mx-auto pb-12">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#1d1d1f] text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-white/10 animate-fade-in">
+        <div className="fixed bottom-22 sm:bottom-6 right-6 z-50 bg-[#1d1d1f] text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-white/10 animate-fade-in">
           <CheckCircle2 size={18} className="text-[#34c759]" />
           <span className="text-xs font-medium">{toastMessage}</span>
         </div>
@@ -249,14 +250,24 @@ export default function BiometricApprovalsPage() {
 
           {/* Search Box */}
           <div className="relative w-full md:w-72">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search staff, device ID, key..."
-              className="w-full pl-9 pr-3 py-1.5 rounded-md border border-slate-300 bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full !pl-9.5 pr-8 py-1.5 h-[34px] rounded-md border border-slate-300 bg-white text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 shadow-2xs"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-700 cursor-pointer"
+                title="Clear Search"
+              >
+                <X size={13} />
+              </button>
+            )}
           </div>
         </div>
       </div>

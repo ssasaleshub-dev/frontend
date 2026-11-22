@@ -98,14 +98,14 @@ export default function CandidateActivityLogsModal({
           <div className="relative">
             <Search
               size={15}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8e8e93]"
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8e8e93] pointer-events-none"
             />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Filter by counselor name, stage, field, or remarks..."
-              className="w-full pl-9 pr-8 py-2 bg-white border border-black/[0.08] rounded-xl text-xs text-[#1c1c1e] placeholder:text-[#8e8e93] focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] transition-all"
+              className="w-full !pl-9.5 pr-8 py-2 bg-white border border-black/[0.08] rounded-xl text-xs text-[#1c1c1e] placeholder:text-[#8e8e93] focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] transition-all"
             />
             {searchQuery && (
               <button

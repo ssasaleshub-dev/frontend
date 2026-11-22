@@ -82,18 +82,9 @@ class TeamChatWebSocket {
       const isHttps = window.location.protocol === 'https:';
       const wsProtocol = isHttps ? 'wss:' : 'ws:';
       const host = window.location.host;
-      const hostname = window.location.hostname;
-      const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
-
-      if (isLocalhost) {
-        // Local dev: connect to Spring backend on 8080
-        this.wsUrl = 'ws://localhost:8080/api/ws/chat';
-      } else {
-        // Production web browser: route through Cloudflare /api/ws/chat
-        this.wsUrl = `${wsProtocol}//${host}/api/ws/chat`;
-      }
+      this.wsUrl = `${wsProtocol}//${host}/api/ws/chat`;
     } else {
-      this.wsUrl = 'wss://ssasaleshub.cloud/api/ws/chat';
+      this.wsUrl = 'wss://srv2054834.hstgr.cloud/prod/api/ws/chat';
     }
   }
 
@@ -319,6 +310,10 @@ class TeamChatWebSocket {
     this.statusListeners.add(callback);
     callback(this.isConnected);
     return () => this.statusListeners.delete(callback);
+  }
+
+  public getIsConnected(): boolean {
+    return this.isConnected;
   }
 
   private sendRaw(data: any): void {

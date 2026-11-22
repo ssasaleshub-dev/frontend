@@ -24,15 +24,7 @@ export const BiometricRegisterButton: React.FC<BiometricRegisterButtonProps> = (
   const isPending = credential?.status === 'PENDING_APPROVAL';
 
   if (isLocked) {
-    return (
-      <div
-        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-[11px] font-semibold text-emerald-800 ${className}`}
-        title={`Hardware ID: ${credential?.deviceId || 'Office Device'}`}
-      >
-        <ShieldCheck size={13} className="text-emerald-600 shrink-0" />
-        <span>Device Locked & Approved</span>
-      </div>
-    );
+    return null;
   }
 
   return (

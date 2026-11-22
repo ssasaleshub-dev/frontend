@@ -16,6 +16,7 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   FileSpreadsheet,
   Globe,
   Shield,
@@ -28,7 +29,7 @@ import {
   Table,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import IosLeadList from '../components/leads/IosLeadList';
+import IosLeadList, { IosPlatformSquircle } from '../components/leads/IosLeadList';
 import crmService from '../services/api/crmService';
 import adminService from '../services/api/adminService';
 import {
@@ -166,7 +167,7 @@ const MIN_COLUMN_WIDTH = 70;
 const MAX_COLUMN_WIDTH = 640;
 
 let textMeasureCtx: CanvasRenderingContext2D | null = null;
-function measureTextPx(text: string, font = '500 13px "SF Pro Display", -apple-system, sans-serif'): number {
+function measureTextPx(text: string, font = '500 13px "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif'): number {
   if (!text) return 0;
   if (typeof document === 'undefined') return text.length * 7;
   if (!textMeasureCtx) {
@@ -387,6 +388,21 @@ export default function Leads() {
     setShowColumnFilters((prev) => {
       const next = !prev;
       localStorage.setItem('ssa_leads_show_col_filters', String(next));
+      return next;
+    });
+  }, []);
+
+  // Mobile accordion card expansion tracking (Zero horizontal scroll on mobile)
+  const [expandedLeadIds, setExpandedLeadIds] = useState<Set<number>>(new Set());
+
+  const toggleLeadExpand = useCallback((leadId: number) => {
+    setExpandedLeadIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(leadId)) {
+        next.delete(leadId);
+      } else {
+        next.add(leadId);
+      }
       return next;
     });
   }, []);
@@ -1986,7 +2002,7 @@ export default function Leads() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search candidate name, mobile, email, ref..."
-              className="w-full pl-9 pr-8 py-1.5 h-[34px] bg-white hover:border-slate-400 focus:bg-white border border-slate-300 focus:border-blue-500 rounded-md text-xs text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-slate-400"
+              className="w-full !pl-9.5 pr-8 py-1.5 h-[34px] bg-white hover:border-slate-400 focus:bg-white border border-slate-300 focus:border-blue-500 rounded-md text-xs text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-slate-400"
             />
             {searchTerm && (
               <button
@@ -2073,7 +2089,7 @@ export default function Leads() {
         </div>
 
         {/* Row 2: Status Filter Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-2 border-t border-slate-200">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-2 pb-1 border-t border-slate-200">
           <button
             onClick={() => setStatusFilter('ALL')}
             className={`px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-all cursor-pointer border ${statusFilter === 'ALL'
@@ -2251,7 +2267,7 @@ export default function Leads() {
 
           {/* Apple HIG Inset Grouped Table Container */}
           <div className="bg-white rounded-[18px] sm:rounded-[22px] border border-black/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden font-sf">
-            <div className="overflow-x-auto">
+            <div className="hidden sm:block overflow-x-auto">
               <table
                 ref={tableRef}
                 style={{ width: `${totalTableWidth}px` }}
@@ -2644,6 +2660,195 @@ export default function Leads() {
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Expandable Lead Cards (Zero side scroll, details expand on click) */}
+            <div className="sm:hidden divide-y divide-black/[0.06]">
+              {paginatedLeads.length === 0 ? (
+                <div className="py-12 px-4 text-center text-[#8e8e93] text-xs">
+                  No candidates match the filter criteria.
+                </div>
+              ) : (
+                paginatedLeads.map((lead) => {
+                  const isExpanded = expandedLeadIds.has(lead.id);
+                  const cleanPhone = (lead.phoneNumber || '').replace(/[^0-9]/g, '');
+                  const cleanName = (lead.customerName || `Candidate #${lead.id}`)
+                    .replace(/[\uFFFD\uFFFE\uFFFF]/g, '')
+                    .trim();
+                  const quality = getLeadQualityText(lead);
+                  const stage = (lead.status || 'CREATED').toUpperCase();
+                  const stageInfo = LEAD_STATUSES[stage as keyof typeof LEAD_STATUSES] || {
+                    label: stage,
+                    color: 'bg-slate-100 text-slate-700',
+                  };
+
+                  return (
+                    <div key={lead.id} className="bg-white transition-colors">
+                      {/* Card Summary Header: ALWAYS fits mobile screen, NO side scroll */}
+                      <button
+                        type="button"
+                        onClick={() => toggleLeadExpand(lead.id)}
+                        className="w-full p-3.5 flex items-center justify-between gap-3 text-left hover:bg-slate-50/70 active:bg-slate-100/70 transition-colors cursor-pointer select-none"
+                      >
+                        <IosPlatformSquircle
+                          platform={lead.platform}
+                          visaType={lead.visaType}
+                          customerName={lead.customerName}
+                          size={40}
+                        />
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-semibold text-[14px] text-slate-900 truncate">
+                              {cleanName}
+                            </span>
+                            <span className="text-[10px] font-medium text-slate-500 shrink-0">
+                              · {lead.visaType === 'WORK_VISA' ? 'Work Visa' : lead.visaType === 'STUDY_VISA' ? 'Study Visa' : 'Other Visa'}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5 truncate">
+                            <span className="font-mono text-slate-700 font-medium">{lead.phoneNumber || 'No phone'}</span>
+                            {(lead.city || lead.location) && <span>· {lead.city || lead.location}</span>}
+                            {lead.createdTime && (
+                              <span className="text-slate-400">· {formatIndianTime(lead.createdTime)}</span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${stageInfo.color || 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                              {stageInfo.label || stage}
+                            </span>
+                            {quality !== '—' && (
+                              <span className={`text-[10px] font-bold ${quality === 'Hot' ? 'text-red-600' : quality === 'Warm' ? 'text-amber-600' : 'text-slate-500'}`}>
+                                {quality}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Expand / Collapse Indicator */}
+                        <div className="flex items-center gap-1 shrink-0 text-slate-400">
+                          <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+                            <ChevronDown
+                              size={14}
+                              className={`transition-transform duration-200 ${isExpanded ? 'rotate-180 text-[#007aff]' : 'rotate-0'}`}
+                            />
+                          </div>
+                        </div>
+                      </button>
+
+                      {/* Card Expanded Details (Hidden by default, shown when card is clicked) */}
+                      {isExpanded && (
+                        <div className="px-3.5 pb-3.5 pt-1 border-t border-slate-100 bg-slate-50/50 space-y-3 animate-in fade-in duration-150 text-xs">
+                          {/* 2-Column Details Grid */}
+                          <div className="grid grid-cols-2 gap-2 pt-2">
+                            <div className="p-2 rounded-lg bg-white border border-slate-200/80">
+                              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Lead Source</span>
+                              <span className="font-medium text-slate-800 text-[11px] truncate block mt-0.5">
+                                {lead.platform || 'Direct / Walk-in'}
+                              </span>
+                            </div>
+
+                            <div className="p-2 rounded-lg bg-white border border-slate-200/80">
+                              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Campaign Name</span>
+                              <span className="font-medium text-slate-800 text-[11px] truncate block mt-0.5" title={lead.campaignName || '—'}>
+                                {lead.campaignName || '—'}
+                              </span>
+                            </div>
+
+                            <div className="p-2 rounded-lg bg-white border border-slate-200/80">
+                              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">City / Location</span>
+                              <span className="font-medium text-slate-800 text-[11px] truncate block mt-0.5">
+                                {lead.city || lead.location || '—'}
+                              </span>
+                            </div>
+
+                            <div className="p-2 rounded-lg bg-white border border-slate-200/80">
+                              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Education</span>
+                              <span className="font-medium text-slate-800 text-[11px] truncate block mt-0.5">
+                                {lead.educationalQualification || '—'}
+                              </span>
+                            </div>
+
+                            <div className="p-2 rounded-lg bg-white border border-slate-200/80">
+                              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Budget Ready</span>
+                              <div className="mt-0.5">
+                                {getBudgetReady(lead)}
+                              </div>
+                            </div>
+
+                            <div className="p-2 rounded-lg bg-white border border-slate-200/80">
+                              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Follow-up Date</span>
+                              <span className="font-medium text-slate-800 text-[11px] truncate block mt-0.5">
+                                {lead.followUpDate ? formatDate(lead.followUpDate) : '—'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Remarks / Notes */}
+                          {(lead.remarks || lead.notes) && (
+                            <div className="p-2.5 rounded-lg bg-white border border-slate-200/80">
+                              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Remarks / Notes</span>
+                              <p className="text-[11px] text-slate-700 mt-1 whitespace-pre-wrap leading-relaxed">
+                                {lead.remarks || lead.notes}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Action Strip: WhatsApp, Call, Update Stage, View Full Profile */}
+                          <div className="flex flex-wrap items-center gap-2 pt-1">
+                            {lead.phoneNumber && (
+                              <>
+                                <a
+                                  href={`https://wa.me/${cleanPhone}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  title="WhatsApp"
+                                  className="flex-1 py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-xs flex items-center justify-center gap-1.5 border border-emerald-200 transition-colors"
+                                >
+                                  <MessageCircle size={15} className="text-emerald-600" />
+                                  <span>WhatsApp</span>
+                                </a>
+                                <a
+                                  href={`tel:${cleanPhone}`}
+                                  title="Call"
+                                  className="flex-1 py-2 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#007aff] font-semibold text-xs flex items-center justify-center gap-1.5 border border-blue-200 transition-colors"
+                                >
+                                  <Phone size={15} />
+                                  <span>Call</span>
+                                </a>
+                              </>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setStatusModalLead(lead);
+                                setStatusForm({
+                                  status: lead.status || 'CONTACTED',
+                                  notes: lead.notes || '',
+                                });
+                              }}
+                              className="py-2 px-3 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs border border-slate-200 transition-colors cursor-pointer"
+                            >
+                              Stage
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/leads/${encryptLeadId(lead.id)}`)}
+                              className="py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-colors flex items-center gap-1 cursor-pointer"
+                            >
+                              <span>Profile</span>
+                              <ChevronRight size={13} />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
             </div>
 
             {/* High-Capacity Pagination Toolbar (iOS / macOS HIG Status Bar) */}
@@ -3569,6 +3774,19 @@ export default function Leads() {
           </div>
         </div>
       )}
+      {/* Floating Action Button: Create New Candidate */}
+      <button
+        type="button"
+        onClick={() => {
+          setModalTab('manual');
+          setShowAddModal(true);
+        }}
+        title="Create New Candidate"
+        aria-label="Create New Candidate"
+        className="fixed bottom-22 right-5 sm:bottom-8 sm:right-8 z-40 w-14 h-14 rounded-full bg-[#007aff] hover:bg-[#0062cc] active:scale-90 text-white shadow-[0_10px_25px_rgba(0,122,255,0.45)] hover:shadow-[0_14px_30px_rgba(0,122,255,0.55)] flex items-center justify-center transition-all duration-200 group focus:outline-none cursor-pointer"
+      >
+        <Plus size={28} strokeWidth={2.5} className="group-hover:rotate-90 transition-transform duration-200" />
+      </button>
     </div>
   );
 }

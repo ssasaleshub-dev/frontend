@@ -129,12 +129,12 @@ export default function CandidateDetail() {
     setIsServerDown(false);
 
     // Fetch activities & candidate reminders in parallel
-    leadActivityService.getActivities(targetId).then(setActivities).catch(() => {});
+    leadActivityService.getActivities(targetId).then(setActivities).catch(() => { });
     notificationApiService.getEvents({ candidateId: targetId as any })
       .then((evts) => {
         if (Array.isArray(evts)) setLeadReminders(evts);
       })
-      .catch(() => {});
+      .catch(() => { });
     try {
       let candidateData: Lead | null = null;
       try {
@@ -580,14 +580,14 @@ export default function CandidateDetail() {
 
     try {
       const promises: Promise<any>[] = [];
-      promises.push(crmService.patchLead(lead.id, { notes: updatedNotes }).catch(() => {}));
+      promises.push(crmService.patchLead(lead.id, { notes: updatedNotes }).catch(() => { }));
 
       const prefId = lead.preferenceId || (lead as any).leadPreferenceId;
       if (prefId) {
         promises.push(
           axiosClient
             .patch(`/api/lead-preferences/${prefId}`, { id: Number(prefId), notes: updatedNotes })
-            .catch(() => {})
+            .catch(() => { })
         );
       }
 
@@ -851,9 +851,8 @@ export default function CandidateDetail() {
       userRole: currentUser?.authorities?.[0],
       actionType: 'OUTREACH',
       title: 'WhatsApp Outreach Initiated',
-      description: `Sent personalized message to ${lead.phoneNumber}: "${text.substring(0, 90)}${
-        text.length > 90 ? '...' : ''
-      }"`,
+      description: `Sent personalized message to ${lead.phoneNumber}: "${text.substring(0, 90)}${text.length > 90 ? '...' : ''
+        }"`,
       metadata: { text, phoneNumber: lead.phoneNumber },
     });
   };
@@ -1103,8 +1102,7 @@ export default function CandidateDetail() {
               <button
                 onClick={() => {
                   setCustomWhatsAppMsg(
-                    `Hello ${lead.customerName || 'Candidate'}, greetings from our Overseas Visa Consultancy! We received your ${
-                      lead.visaType === 'WORK_VISA' ? 'Work Visa' : 'Study Visa'
+                    `Hello ${lead.customerName || 'Candidate'}, greetings from our Overseas Visa Consultancy! We received your ${lead.visaType === 'WORK_VISA' ? 'Work Visa' : 'Study Visa'
                     } inquiry.`
                   );
                   setShowWhatsAppTemplateModal(true);
@@ -1199,13 +1197,12 @@ export default function CandidateDetail() {
                 </span>
                 {closingInfo.milestoneBadge && lead.status !== 'WON' && lead.status !== 'LOST' && (
                   <span
-                    className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${
-                      closingInfo.progressPercent && closingInfo.progressPercent >= 100
-                        ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                        : closingInfo.progressPercent && closingInfo.progressPercent >= 75
+                    className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${closingInfo.progressPercent && closingInfo.progressPercent >= 100
+                      ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                      : closingInfo.progressPercent && closingInfo.progressPercent >= 75
                         ? 'bg-amber-50 text-amber-700 border border-amber-200'
                         : 'bg-blue-50 text-blue-700 border border-blue-200'
-                    }`}
+                      }`}
                   >
                     {closingInfo.milestoneBadge}
                   </span>
@@ -1235,11 +1232,10 @@ export default function CandidateDetail() {
                   type="button"
                   onClick={() => handleStatusChange(st.value)}
                   title={`${st.label} (${st.value})`}
-                  className={`flex-1 min-w-[90px] py-1.5 px-2.5 rounded-lg text-xs transition-all duration-150 flex items-center justify-center gap-1.5 cursor-pointer select-none ${
-                    isCurrent
-                      ? activeClasses
-                      : 'text-[#636366] hover:text-[#1c1c1e] hover:bg-black/[0.03] font-medium'
-                  }`}
+                  className={`flex-1 min-w-[90px] py-1.5 px-2.5 rounded-lg text-xs transition-all duration-150 flex items-center justify-center gap-1.5 cursor-pointer select-none ${isCurrent
+                    ? activeClasses
+                    : 'text-[#636366] hover:text-[#1c1c1e] hover:bg-black/[0.03] font-medium'
+                    }`}
                 >
                   {isWon && (
                     <BrandWonIcon
@@ -1412,11 +1408,10 @@ export default function CandidateDetail() {
                       type="button"
                       onClick={() => handleUpdatePaymentStatus(st.value as any)}
                       disabled={updatingPayment}
-                      className={`py-2 px-1.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-semibold transition-all duration-150 flex items-center justify-center cursor-pointer active:scale-95 text-center truncate ${
-                        isSelected
-                          ? st.color
-                          : `${st.inactive} font-medium`
-                      }`}
+                      className={`py-2 px-1.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-semibold transition-all duration-150 flex items-center justify-center cursor-pointer active:scale-95 text-center truncate ${isSelected
+                        ? st.color
+                        : `${st.inactive} font-medium`
+                        }`}
                     >
                       <span className="truncate">{st.label}</span>
                     </button>
@@ -2152,8 +2147,8 @@ export default function CandidateDetail() {
               .then((evts) => {
                 if (Array.isArray(evts)) setLeadReminders(evts);
               })
-              .catch(() => {});
-            leadActivityService.getActivities(targetId).then(setActivities).catch(() => {});
+              .catch(() => { });
+            leadActivityService.getActivities(targetId).then(setActivities).catch(() => { });
           }}
         />
       )}

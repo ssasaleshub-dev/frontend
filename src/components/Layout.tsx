@@ -237,17 +237,13 @@ export default function Layout() {
       to: '/notifications',
       exact: false,
     },
-    ...(!isAdmin
-      ? [
-        {
-          id: 'profile',
-          label: 'My Profile Desk',
-          icon: User,
-          to: '/profile',
-          exact: false,
-        },
-      ]
-      : []),
+    {
+      id: 'profile',
+      label: 'My Profile',
+      icon: User,
+      to: '/profile',
+      exact: false,
+    },
     ...(isAdmin
       ? [
         {
@@ -273,6 +269,15 @@ export default function Layout() {
         },
       ]
       : []),
+  ];
+
+  // Bottom nav items — 5 core tabs for mobile thumb-zone (Notification bell is in top header)
+  const bottomNavItems = [
+    { id: 'dashboards', label: 'Home', icon: LayoutDashboard, to: '/', exact: true },
+    { id: 'leads', label: 'Leads', icon: Users, to: '/leads', exact: false },
+    { id: 'chat', label: 'Chat', icon: MessageSquare, to: '/chat', exact: false },
+    { id: 'calendar', label: 'Calendar', icon: Calendar, to: '/calendar', exact: false },
+    { id: 'profile', label: 'Profile', icon: User, to: '/profile', exact: false },
   ];
 
   const getPageInfo = () => {
@@ -308,13 +313,6 @@ export default function Layout() {
         </div>
         <div className="flex items-center gap-2">
           <NotificationBell />
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 text-slate-700 hover:text-slate-900 rounded-xl hover:bg-black/[0.05] transition-colors"
-            aria-label="Toggle menu"
-          >
-            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
         </div>
       </div>
 
@@ -413,16 +411,18 @@ export default function Layout() {
             {!sidebarCollapsed && (
               <button
                 type="button"
-                onClick={() => navigate(isAdmin ? '/users' : '/profile')}
+                onClick={() => navigate('/profile')}
                 className="min-w-0 flex-1 text-left focus:outline-none group"
-                title={isAdmin ? "View User Management" : "View Staff Profile & Shift Desk"}
+                title="View My Profile"
               >
                 <p className="text-xs font-semibold text-white truncate leading-tight group-hover:text-blue-300 transition-colors">
                   {displayName}
                 </p>
-                <p className="text-[11px] text-slate-400 truncate">
-                  {badgeInfo.displayText}
-                </p>
+                {isAdmin && (
+                  <p className="text-[11px] text-slate-400 truncate">
+                    {badgeInfo.displayText}
+                  </p>
+                )}
               </button>
             )}
 
@@ -461,12 +461,13 @@ export default function Layout() {
               <button
                 type="button"
                 onClick={() => navigate('/attendance')}
-                className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-600/20 bg-emerald-500/[0.08] hover:bg-emerald-500/[0.14] text-emerald-950 text-xs font-medium shadow-xs transition-all active:scale-95 group"
+                className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium shadow-xs transition-all cursor-pointer"
                 title="Shift active - Click to view attendance"
               >
-                <span className="font-semibold text-emerald-900 tracking-tight">On Duty</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span className="font-semibold text-slate-800">On Duty</span>
                 {todayAttendance?.checkInTime && (
-                  <span className="text-[11px] text-emerald-700/80 font-mono pl-1 border-l border-emerald-600/20">
+                  <span className="text-[11px] text-slate-500 pl-1 border-l border-slate-200">
                     {formatIndianTime(todayAttendance.checkInTime)}
                   </span>
                 )}
@@ -490,8 +491,8 @@ export default function Layout() {
                 type="button"
                 onClick={() => navigate('/calendar')}
                 className={`w-8 h-8 rounded-full flex items-center justify-center transition-all focus:outline-none ${currentPath.startsWith('/calendar')
-                    ? 'bg-[#0071e3]/10 text-[#0071e3]'
-                    : 'text-[#48484a] hover:text-[#1d1d1f] hover:bg-black/[0.05] active:bg-black/[0.08]'
+                  ? 'bg-[#0071e3]/10 text-[#0071e3]'
+                  : 'text-[#48484a] hover:text-[#1d1d1f] hover:bg-black/[0.05] active:bg-black/[0.08]'
                   }`}
                 title="Calendar & Indian Holidays"
                 aria-label="Calendar"
@@ -528,9 +529,11 @@ export default function Layout() {
                     <span className="text-xs font-semibold text-[#1e293b] leading-tight group-hover:text-[#007aff] transition-colors">
                       {displayName}
                     </span>
-                    <span className="text-[11px] text-[#64748b] font-normal leading-tight mt-0.5">
-                      {badgeInfo.displayText}
-                    </span>
+                    {isAdmin && (
+                      <span className="text-[11px] text-[#64748b] font-normal leading-tight mt-0.5">
+                        {badgeInfo.displayText}
+                      </span>
+                    )}
                   </div>
                 </button>
 
@@ -540,12 +543,22 @@ export default function Layout() {
                     {/* Profile info top */}
                     <div className="px-4 py-3 border-b border-black/[0.05]">
                       <p className="text-xs font-semibold text-[#1c1c1e] truncate">{displayName}</p>
-                      <p className="text-[11px] text-[#8e8e93] mt-0.5">{badgeInfo.displayText}</p>
+                      {isAdmin && (
+                        <p className="text-[11px] text-[#8e8e93] mt-0.5">{badgeInfo.displayText}</p>
+                      )}
                     </div>
 
                     {/* Menu items */}
                     <div className="py-1.5">
-                      {isAdmin ? (
+                      <button
+                        type="button"
+                        onClick={() => { navigate('/profile'); setUserMenuOpen(false); }}
+                        className="w-full px-4 py-2.5 text-left text-xs font-medium text-[#1c1c1e] hover:bg-[#f2f2f7] flex items-center gap-2.5 transition-colors"
+                      >
+                        <User size={14} className="text-[#8e8e93]" />
+                        My Profile
+                      </button>
+                      {isAdmin && (
                         <button
                           type="button"
                           onClick={() => { navigate('/users'); setUserMenuOpen(false); }}
@@ -553,15 +566,6 @@ export default function Layout() {
                         >
                           <UserCog size={14} className="text-[#8e8e93]" />
                           User Management
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => { navigate('/profile'); setUserMenuOpen(false); }}
-                          className="w-full px-4 py-2.5 text-left text-xs font-medium text-[#1c1c1e] hover:bg-[#f2f2f7] flex items-center gap-2.5 transition-colors"
-                        >
-                          <User size={14} className="text-[#8e8e93]" />
-                          View Profile
                         </button>
                       )}
                     </div>
@@ -586,10 +590,13 @@ export default function Layout() {
 
         {/* Dynamic Route Content */}
         <main
-          className={`flex-1 ${currentPath.startsWith('/notifications')
-              ? 'p-0 bg-white max-w-2xl'
-              : 'p-3.5 sm:p-5 lg:p-6 max-w-[1440px]'
-            } w-full mx-auto`}
+          className={`flex-1 ${
+            currentPath.startsWith('/notifications')
+              ? 'p-0 bg-white max-w-2xl pb-20 md:pb-0'
+              : currentPath.startsWith('/chat')
+              ? 'p-0 max-w-full md:max-w-[1440px] md:p-4 lg:p-6 pb-0 md:pb-0'
+              : 'p-3.5 sm:p-5 lg:p-6 max-w-[1440px] pb-20 md:pb-0'
+          } w-full mx-auto`}
         >
           <Outlet />
         </main>
@@ -602,6 +609,36 @@ export default function Layout() {
           className="fixed inset-0 bg-slate-900/40 z-20 md:hidden"
         />
       )}
+
+      {/* ── Mobile Bottom Navigation Bar (Docked Edge-to-Edge) ── */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-black/[0.08] shadow-[0_-2px_10px_rgba(0,0,0,0.03)]">
+        <div
+          className="flex items-center justify-around px-1 pt-1.5"
+          style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}
+        >
+          {bottomNavItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = item.exact
+              ? currentPath === item.to
+              : currentPath.startsWith(item.to);
+            return (
+              <NavLink
+                key={item.id}
+                to={item.to}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 flex-1 transition-colors duration-150 ${
+                  isActive ? 'text-[#007aff]' : 'text-[#8e8e93] hover:text-slate-700'
+                }`}
+              >
+                <Icon size={22} strokeWidth={isActive ? 2.2 : 1.7} className="shrink-0" />
+                <span className={`text-[10px] font-semibold leading-tight tracking-tight ${isActive ? 'text-[#007aff]' : 'text-[#8e8e93]'}`}>
+                  {item.label}
+                </span>
+              </NavLink>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }

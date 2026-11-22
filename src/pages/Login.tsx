@@ -94,11 +94,8 @@ export default function Login() {
           <div className="ios-card p-6 sm:p-8 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-black/[0.07]">
             <div className="pb-4 mb-5 border-b border-black/[0.06]">
               <h2 className="text-base sm:text-lg font-bold text-[#1c1c1e] tracking-tight">
-                Sign in to your account
+                Sign in
               </h2>
-              <p className="text-xs text-[#8e8e93] mt-0.5">
-                Enter your counselor or administrator credentials to access your desk.
-              </p>
             </div>
 
             {error && (

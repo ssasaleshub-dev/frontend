@@ -30,6 +30,7 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: targetHost,
           changeOrigin: true,
+          ws: true,
           rewrite: (path) => (subPath ? `${subPath}${path}` : path),
           configure: (proxy) => {
             proxy.on('proxyReq', (req) => {

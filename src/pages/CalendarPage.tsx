@@ -1075,7 +1075,7 @@ export default function CalendarPage() {
         onClick={() => handleOpenModal()}
         title="Create New Reminder"
         aria-label="Create New Reminder"
-        className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-40 w-14 h-14 rounded-full bg-[#007aff] hover:bg-[#0062cc] active:scale-90 text-white shadow-[0_10px_25px_rgba(0,122,255,0.45)] hover:shadow-[0_14px_30px_rgba(0,122,255,0.55)] flex items-center justify-center transition-all duration-200 group focus:outline-none cursor-pointer"
+        className="fixed bottom-22 right-5 sm:bottom-8 sm:right-8 z-40 w-14 h-14 rounded-full bg-[#007aff] hover:bg-[#0062cc] active:scale-90 text-white shadow-[0_10px_25px_rgba(0,122,255,0.45)] hover:shadow-[0_14px_30px_rgba(0,122,255,0.55)] flex items-center justify-center transition-all duration-200 group focus:outline-none cursor-pointer"
       >
         <Plus size={28} strokeWidth={2.5} className="group-hover:rotate-90 transition-transform duration-200" />
       </button>

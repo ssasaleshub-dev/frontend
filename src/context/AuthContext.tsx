@@ -74,6 +74,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.setItem('ssa_user', JSON.stringify(updatedUser));
   };
 
+  const updateUserProfile = async (updatedData: Partial<User>) => {
+    if (!user) return;
+    const updatedUser: User = { ...user, ...updatedData };
+    await authService.updateAccount(updatedUser);
+    setUser(updatedUser);
+    localStorage.setItem('ssa_user', JSON.stringify(updatedUser));
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -84,6 +92,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         login,
         logout,
         updateUserAvatar,
+        updateUserProfile,
       }}
     >
       {children}

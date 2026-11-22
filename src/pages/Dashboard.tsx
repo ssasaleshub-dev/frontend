@@ -4,6 +4,7 @@ import {
   Phone,
   MessageCircle,
   ChevronRight,
+  ChevronDown,
   AlertCircle,
   Clock,
   Layers,
@@ -13,13 +14,7 @@ import {
   PieChart,
   X,
 } from 'lucide-react';
-import {
-  BrandAttributionIcon,
-  KpiCandidatesIcon,
-  KpiWorkVisaIcon,
-  KpiStudyVisaIcon,
-  KpiApprovedIcon,
-} from '../components/icons/BrandIcons';
+import { BrandAttributionIcon } from '../components/icons/BrandIcons';
 import crmService from '../services/api/crmService';
 import { formatIndianDate, formatIndianTime } from '../utils/dateTimeUtils';
 import {
@@ -37,7 +32,6 @@ import {
   isWorkVisaStaff,
   isStudyVisaStaff,
   isOtherVisaStaff,
-  getRoleBadgeInfo,
 } from '../utils/rbac';
 import { useAuth } from '../context/AuthContext';
 import { useAlert } from '../context/AlertContext';
@@ -53,7 +47,6 @@ export default function Dashboard() {
   const isWorkVisa = isWorkVisaStaff(currentUser);
   const isStudyVisa = isStudyVisaStaff(currentUser);
   const isOtherVisa = isOtherVisaStaff(currentUser);
-  const roleBadge = getRoleBadgeInfo(currentUser);
 
   // Initial desk based strictly on counselor role
   const userInitialDesk: 'ALL' | 'WORK_VISA' | 'STUDY_VISA' | 'OTHER_VISA' = useMemo(() => {
@@ -74,6 +67,16 @@ export default function Dashboard() {
     status: 'CONTACTED',
     notes: '',
   });
+  const [showTodayLeads, setShowTodayLeads] = useState<boolean>(false);
+  const [activeKpiIndex, setActiveKpiIndex] = useState<number>(0);
+
+  // Auto-slide mobile KPI cards carousel in continuous loop to the right
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveKpiIndex((prev) => (prev + 1) % 4);
+    }, 3500);
+    return () => clearInterval(timer);
+  }, []);
   const [searchParams] = useSearchParams();
   const urlDesk = searchParams.get('desk') as 'ALL' | 'WORK_VISA' | 'STUDY_VISA' | 'OTHER_VISA' | null;
   const hasLoadedRef = useRef<boolean>(false);
@@ -234,6 +237,21 @@ export default function Dashboard() {
     return displayLeads.slice(0, 8);
   }, [displayLeads]);
 
+  // Current day new leads for counselors (IST timezone)
+  const todayLeads = useMemo(() => {
+    const todayIST = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    return displayLeads.filter((l) => {
+      const rawDate = l.createdTime || l.createdDate || l.createdAt;
+      if (!rawDate) return false;
+      try {
+        const leadDateIST = new Date(rawDate).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+        return leadDateIST === todayIST;
+      } catch {
+        return false;
+      }
+    });
+  }, [displayLeads]);
+
   const handleQuickStatusUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!statusModalLead) return;
@@ -275,80 +293,57 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Executive Command Header Bar */}
-      <div className="ios-card p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="w-full sm:w-auto flex items-center">
-          {/* Desk Switcher Segmented Control */}
-          {isAdmin ? (
-            <div className="ios-segmented w-full sm:w-auto !grid grid-cols-4 sm:!inline-flex items-center p-1">
-              <button
-                type="button"
-                onClick={() => handleDeskChange('ALL')}
-                className={`ios-segmented-btn !px-1 sm:!px-3.5 !py-2 sm:!py-1.5 flex items-center justify-center text-center text-[11px] sm:text-xs whitespace-nowrap transition-all ${
-                  deskFilter === 'ALL' ? 'active font-semibold shadow-xs' : ''
-                }`}
-              >
-                <span>All</span>
-                <span className="hidden sm:inline">&nbsp;Visas</span>
-                <span className="ml-1 text-[10px] sm:text-[11px] opacity-75 font-semibold">({roleScopedLeads.length})</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDeskChange('WORK_VISA')}
-                className={`ios-segmented-btn !px-1 sm:!px-3.5 !py-2 sm:!py-1.5 flex items-center justify-center text-center text-[11px] sm:text-xs whitespace-nowrap transition-all ${
-                  deskFilter === 'WORK_VISA' ? 'active font-semibold shadow-xs' : ''
-                }`}
-              >
-                <span>Work</span>
-                <span className="hidden sm:inline">&nbsp;Visa</span>
-                <span className="ml-1 text-[10px] sm:text-[11px] opacity-75 font-semibold">({metrics.workVisaCount})</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDeskChange('STUDY_VISA')}
-                className={`ios-segmented-btn !px-1 sm:!px-3.5 !py-2 sm:!py-1.5 flex items-center justify-center text-center text-[11px] sm:text-xs whitespace-nowrap transition-all ${
-                  deskFilter === 'STUDY_VISA' ? 'active font-semibold shadow-xs' : ''
-                }`}
-              >
-                <span>Study</span>
-                <span className="hidden sm:inline">&nbsp;Visa</span>
-                <span className="ml-1 text-[10px] sm:text-[11px] opacity-75 font-semibold">({metrics.studyVisaCount})</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDeskChange('OTHER_VISA')}
-                className={`ios-segmented-btn !px-1 sm:!px-3.5 !py-2 sm:!py-1.5 flex items-center justify-center text-center text-[11px] sm:text-xs whitespace-nowrap transition-all ${
-                  deskFilter === 'OTHER_VISA' ? 'active font-semibold shadow-xs' : ''
-                }`}
-              >
-                <span>Other</span>
-                <span className="hidden sm:inline">&nbsp;Visa</span>
-                <span className="ml-1 text-[10px] sm:text-[11px] opacity-75 font-semibold">({metrics.otherVisaCount})</span>
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${roleBadge.badgeClass}`}>
-                {roleBadge.displayText}
-              </span>
-              <span className="text-[11px] text-[#8e8e93] font-medium">
-                ({displayLeads.length} desk scoped inquiries)
-              </span>
-            </div>
-          )}
+      {/* Desk Switcher Segmented Control (Admin Only) */}
+      {isAdmin && (
+        <div className="bg-white rounded-xl border border-slate-200/90 p-2 sm:p-2.5 flex items-center justify-between gap-3 shadow-2xs">
+          <div className="ios-segmented w-full sm:w-auto !grid grid-cols-4 sm:!inline-flex items-center p-1">
+            <button
+              type="button"
+              onClick={() => handleDeskChange('ALL')}
+              className={`ios-segmented-btn !px-1 sm:!px-3.5 !py-2 sm:!py-1.5 flex items-center justify-center text-center text-[11px] sm:text-xs whitespace-nowrap transition-all ${
+                deskFilter === 'ALL' ? 'active font-semibold shadow-xs' : ''
+              }`}
+            >
+              <span>All</span>
+              <span className="hidden sm:inline">&nbsp;Visas</span>
+              <span className="ml-1 text-[10px] sm:text-[11px] opacity-75 font-semibold">({roleScopedLeads.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDeskChange('WORK_VISA')}
+              className={`ios-segmented-btn !px-1 sm:!px-3.5 !py-2 sm:!py-1.5 flex items-center justify-center text-center text-[11px] sm:text-xs whitespace-nowrap transition-all ${
+                deskFilter === 'WORK_VISA' ? 'active font-semibold shadow-xs' : ''
+              }`}
+            >
+              <span>Work</span>
+              <span className="hidden sm:inline">&nbsp;Visa</span>
+              <span className="ml-1 text-[10px] sm:text-[11px] opacity-75 font-semibold">({metrics.workVisaCount})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDeskChange('STUDY_VISA')}
+              className={`ios-segmented-btn !px-1 sm:!px-3.5 !py-2 sm:!py-1.5 flex items-center justify-center text-center text-[11px] sm:text-xs whitespace-nowrap transition-all ${
+                deskFilter === 'STUDY_VISA' ? 'active font-semibold shadow-xs' : ''
+              }`}
+            >
+              <span>Study</span>
+              <span className="hidden sm:inline">&nbsp;Visa</span>
+              <span className="ml-1 text-[10px] sm:text-[11px] opacity-75 font-semibold">({metrics.studyVisaCount})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDeskChange('OTHER_VISA')}
+              className={`ios-segmented-btn !px-1 sm:!px-3.5 !py-2 sm:!py-1.5 flex items-center justify-center text-center text-[11px] sm:text-xs whitespace-nowrap transition-all ${
+                deskFilter === 'OTHER_VISA' ? 'active font-semibold shadow-xs' : ''
+              }`}
+            >
+              <span>Other</span>
+              <span className="hidden sm:inline">&nbsp;Visa</span>
+              <span className="ml-1 text-[10px] sm:text-[11px] opacity-75 font-semibold">({metrics.otherVisaCount})</span>
+            </button>
+          </div>
         </div>
-
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <button
-            type="button"
-            onClick={() => navigate('/leads')}
-            className="ios-btn-primary text-xs py-2 px-4 flex-1 sm:flex-initial justify-center"
-          >
-            <span>Open Leads Table</span>
-            <ChevronRight size={13} />
-          </button>
-        </div>
-      </div>
+      )}
 
       {error && (
         <div className="p-3.5 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 flex items-center justify-between font-medium">
@@ -365,136 +360,359 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Apple HIG Executive Metric Cards (Grouped Inset with SF Symbols & Materials) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* KPI 1: Desk Total Inquiries */}
-        <div className="ios-card p-4 sm:p-5 flex flex-col justify-between hover:shadow-md transition-all duration-200 group relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#007aff] to-[#5856d6]" />
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#8e8e93]">
-              {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
-                ? 'Study Visa Students'
-                : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
-                ? 'Work Visa Candidates'
-                : 'Total Candidates'}
-            </span>
-            <div className="w-9 h-9 rounded-2xl bg-[#007aff]/10 text-[#007aff] flex items-center justify-center transition-transform group-hover:scale-105 border border-[#007aff]/15">
-              {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa) ? (
-                <KpiStudyVisaIcon size={18} />
-              ) : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa) ? (
-                <KpiWorkVisaIcon size={18} />
-              ) : (
-                <KpiCandidatesIcon size={18} />
-              )}
+      {/* ── Metric Cards: Mobile Carousel (Slides one-by-one in a loop to the right) ── */}
+      <div className="sm:hidden relative overflow-hidden">
+        <div
+          className="flex transition-transform duration-500 ease-out"
+          style={{ transform: `translateX(-${activeKpiIndex * 100}%)` }}
+        >
+          {/* KPI 1 */}
+          <div className="w-full shrink-0 px-0.5">
+            <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-2xs min-h-[110px] flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs font-medium text-slate-500">
+                <span className="truncate">
+                  {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
+                    ? 'Study Visa Students'
+                    : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
+                    ? 'Work Visa Candidates'
+                    : 'Total Candidates'}
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">1/4</span>
+              </div>
+              <div className="my-1.5 text-3xl font-semibold text-slate-900 tracking-tight">
+                {metrics.total}
+              </div>
+              <div className="text-xs text-slate-400 truncate">
+                {metrics.statusCounts.CREATED || 0} awaiting contact
+              </div>
             </div>
           </div>
-          <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-bold text-[#1c1c1e] tracking-tight">
-              {metrics.total}
-            </div>
-            <div className="mt-1 text-xs text-[#8e8e93] font-medium">
-              <span>{metrics.statusCounts.CREATED || 0} awaiting contact</span>
-            </div>
-          </div>
-        </div>
 
-        {/* KPI 2: Contacted / Screened / Cross-Desk Work */}
-        <div className="ios-card p-4 sm:p-5 flex flex-col justify-between hover:shadow-md transition-all duration-200 group relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#5856d6] to-[#af52de]" />
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#8e8e93]">
-              {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
-                ? 'In Student Counseling'
-                : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
-                ? 'Screened & Qualified'
-                : 'Work Visa Inquiries'}
-            </span>
-            <div className="w-9 h-9 rounded-2xl bg-[#5856d6]/10 text-[#5856d6] flex items-center justify-center transition-transform group-hover:scale-105 border border-[#5856d6]/15">
-              {deskFilter === 'ALL' && isAdmin ? <KpiWorkVisaIcon size={18} /> : <KpiCandidatesIcon size={18} />}
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-bold text-[#1c1c1e] tracking-tight">
-              {deskFilter === 'ALL' && isAdmin ? metrics.workVisaCount : metrics.contactedOrQualified}
-            </div>
-            <div className="mt-1 text-xs text-[#8e8e93] font-medium truncate">
-              <span>
+          {/* KPI 2 */}
+          <div className="w-full shrink-0 px-0.5">
+            <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-2xs min-h-[110px] flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs font-medium text-slate-500">
+                <span className="truncate">
+                  {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
+                    ? 'In Student Counseling'
+                    : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
+                    ? 'Screened & Qualified'
+                    : 'Work Visa Inquiries'}
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">2/4</span>
+              </div>
+              <div className="my-1.5 text-3xl font-semibold text-slate-900 tracking-tight">
+                {deskFilter === 'ALL' && isAdmin ? metrics.workVisaCount : metrics.contactedOrQualified}
+              </div>
+              <div className="text-xs text-slate-400 truncate">
                 {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
                   ? 'Course & eligibility prep'
                   : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
                   ? 'Employer screening process'
                   : 'International job & permits'}
-              </span>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* KPI 3: In Process / Cross-Desk Study */}
-        <div className="ios-card p-4 sm:p-5 flex flex-col justify-between hover:shadow-md transition-all duration-200 group relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#34c759] to-[#30b0c7]" />
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#8e8e93]">
-              {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
-                ? 'Applications In Process'
-                : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
-                ? 'Permits In Process'
-                : 'Study Visa Inquiries'}
-            </span>
-            <div className="w-9 h-9 rounded-2xl bg-[#34c759]/10 text-[#34c759] flex items-center justify-center transition-transform group-hover:scale-105 border border-[#34c759]/15">
-              {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa) ? (
-                <KpiStudyVisaIcon size={18} />
-              ) : deskFilter === 'ALL' && isAdmin ? (
-                <KpiStudyVisaIcon size={18} />
-              ) : (
-                <KpiStudyVisaIcon size={18} />
-              )}
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-bold text-[#1c1c1e] tracking-tight">
-              {deskFilter === 'ALL' && isAdmin ? metrics.studyVisaCount : metrics.inProcessCount}
-            </div>
-            <div className="mt-1 text-xs text-[#8e8e93] font-medium truncate">
-              <span>
+          {/* KPI 3 */}
+          <div className="w-full shrink-0 px-0.5">
+            <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-2xs min-h-[110px] flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs font-medium text-slate-500">
+                <span className="truncate">
+                  {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
+                    ? 'Applications In Process'
+                    : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
+                    ? 'Permits In Process'
+                    : 'Study Visa Inquiries'}
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">3/4</span>
+              </div>
+              <div className="my-1.5 text-3xl font-semibold text-slate-900 tracking-tight">
+                {deskFilter === 'ALL' && isAdmin ? metrics.studyVisaCount : metrics.inProcessCount}
+              </div>
+              <div className="text-xs text-slate-400 truncate">
                 {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
                   ? 'University offers & dossiers'
                   : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
                   ? 'Work contracts & permit filings'
                   : 'University & admissions desk'}
-              </span>
+              </div>
+            </div>
+          </div>
+
+          {/* KPI 4 */}
+          <div className="w-full shrink-0 px-0.5">
+            <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-2xs min-h-[110px] flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs font-medium text-slate-500">
+                <span className="truncate">
+                  {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
+                    ? 'Admissions & Visas Approved'
+                    : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
+                    ? 'Work Visas Approved'
+                    : 'Enrolled / Visa Approved'}
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">4/4</span>
+              </div>
+              <div className="my-1.5 flex items-baseline gap-2">
+                <span className="text-3xl font-semibold text-slate-900 tracking-tight">
+                  {metrics.wonCount}
+                </span>
+                <span className="text-xs text-slate-400 font-normal">
+                  ({metrics.conversionRate}% conversion)
+                </span>
+              </div>
+              <div className="text-xs text-slate-400 truncate">
+                {metrics.inProcessCount} dossiers in process
+              </div>
             </div>
           </div>
         </div>
 
-        {/* KPI 4: Successful Enrollment / Approval */}
-        <div className="ios-card p-4 sm:p-5 flex flex-col justify-between hover:shadow-md transition-all duration-200 group relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#ff9500] to-[#ff2d55]" />
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#8e8e93]">
-              {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
-                ? 'Admissions & Visas Approved'
-                : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
-                ? 'Work Visas Approved'
-                : 'Enrolled / Visa Approved'}
-            </span>
-            <div className="w-9 h-9 rounded-2xl bg-[#ff9500]/10 text-[#ff9500] flex items-center justify-center transition-transform group-hover:scale-105 border border-[#ff9500]/15">
-              <KpiApprovedIcon size={18} />
-            </div>
+        {/* Carousel Loop Indicators */}
+        <div className="flex items-center justify-center gap-1.5 mt-2.5">
+          {[0, 1, 2, 3].map((dotIdx) => (
+            <button
+              key={dotIdx}
+              type="button"
+              onClick={() => setActiveKpiIndex(dotIdx)}
+              className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                activeKpiIndex === dotIdx ? 'w-5 bg-[#007aff]' : 'w-1.5 bg-slate-300'
+              }`}
+              aria-label={`Slide ${dotIdx + 1}`}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* ── Metric Cards: Desktop Grid (Simple Human Design) ── */}
+      <div className="hidden sm:grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* KPI 1: Desk Total Inquiries */}
+        <div className="bg-white rounded-xl border border-slate-200/90 p-4 sm:p-5 shadow-2xs">
+          <div className="text-xs font-medium text-slate-500 truncate">
+            {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
+              ? 'Study Visa Students'
+              : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
+              ? 'Work Visa Candidates'
+              : 'Total Candidates'}
           </div>
-          <div className="mt-3">
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-bold text-[#1c1c1e] tracking-tight">
-                {metrics.wonCount}
-              </span>
-              <span className="text-xs font-semibold text-[#ff9500]">
-                ({metrics.conversionRate}% conversion)
-              </span>
-            </div>
-            <div className="mt-1 text-xs text-[#8e8e93] font-medium">
-              <span>{metrics.inProcessCount} dossiers in process</span>
-            </div>
+          <div className="mt-2 text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight">
+            {metrics.total}
+          </div>
+          <div className="mt-1 text-xs text-slate-400 truncate">
+            {metrics.statusCounts.CREATED || 0} awaiting contact
           </div>
         </div>
+
+        {/* KPI 2: Contacted / Screened */}
+        <div className="bg-white rounded-xl border border-slate-200/90 p-4 sm:p-5 shadow-2xs">
+          <div className="text-xs font-medium text-slate-500 truncate">
+            {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
+              ? 'In Student Counseling'
+              : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
+              ? 'Screened & Qualified'
+              : 'Work Visa Inquiries'}
+          </div>
+          <div className="mt-2 text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight">
+            {deskFilter === 'ALL' && isAdmin ? metrics.workVisaCount : metrics.contactedOrQualified}
+          </div>
+          <div className="mt-1 text-xs text-slate-400 truncate">
+            {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
+              ? 'Course & eligibility prep'
+              : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
+              ? 'Employer screening process'
+              : 'International job & permits'}
+          </div>
+        </div>
+
+        {/* KPI 3: In Process */}
+        <div className="bg-white rounded-xl border border-slate-200/90 p-4 sm:p-5 shadow-2xs">
+          <div className="text-xs font-medium text-slate-500 truncate">
+            {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
+              ? 'Applications In Process'
+              : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
+              ? 'Permits In Process'
+              : 'Study Visa Inquiries'}
+          </div>
+          <div className="mt-2 text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight">
+            {deskFilter === 'ALL' && isAdmin ? metrics.studyVisaCount : metrics.inProcessCount}
+          </div>
+          <div className="mt-1 text-xs text-slate-400 truncate">
+            {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
+              ? 'University offers & dossiers'
+              : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
+              ? 'Work contracts & permit filings'
+              : 'University & admissions desk'}
+          </div>
+        </div>
+
+        {/* KPI 4: Approved / Converted */}
+        <div className="bg-white rounded-xl border border-slate-200/90 p-4 sm:p-5 shadow-2xs">
+          <div className="text-xs font-medium text-slate-500 truncate">
+            {deskFilter === 'STUDY_VISA' || (!isAdmin && isStudyVisa)
+              ? 'Admissions & Visas Approved'
+              : deskFilter === 'WORK_VISA' || (!isAdmin && isWorkVisa)
+              ? 'Work Visas Approved'
+              : 'Enrolled / Visa Approved'}
+          </div>
+          <div className="mt-2 flex items-baseline gap-1.5">
+            <span className="text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight">
+              {metrics.wonCount}
+            </span>
+            <span className="text-xs text-slate-400 font-normal">
+              ({metrics.conversionRate}% conversion)
+            </span>
+          </div>
+          <div className="mt-1 text-xs text-slate-400 truncate">
+            {metrics.inProcessCount} dossiers in process
+          </div>
+        </div>
+      </div>
+
+      {/* ── Today's Leads Section (Clean Human Design) ── */}
+      <div className="ios-card overflow-hidden transition-all duration-200">
+        <button
+          type="button"
+          onClick={() => setShowTodayLeads((v) => !v)}
+          className="w-full px-4 py-3.5 sm:px-5 sm:py-4 flex items-center justify-between text-left hover:bg-black/[0.02] transition-colors cursor-pointer"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-black/[0.04] text-[#1c1c1e] flex items-center justify-center shrink-0">
+              <Clock size={16} className="text-[#8e8e93]" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-[#1c1c1e]">
+                  Today's Leads
+                </h3>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-black/[0.05] text-[#3a3a3c]">
+                  {todayLeads.length}
+                </span>
+              </div>
+              <p className="text-xs text-[#8e8e93] mt-0.5">
+                {formatIndianDate(new Date(), { weekday: true })}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 text-xs font-medium text-[#007aff]">
+            <span>{showTodayLeads ? 'Hide' : 'View'}</span>
+            <ChevronDown
+              size={15}
+              className={`transition-transform duration-200 ${
+                showTodayLeads ? 'rotate-180' : 'rotate-0'
+              }`}
+            />
+          </div>
+        </button>
+
+        {/* When user clicks, reveal records */}
+        {showTodayLeads && (
+          <div className="border-t border-black/[0.06]">
+            {todayLeads.length === 0 ? (
+              <div className="py-6 px-4 text-center">
+                <p className="text-xs font-medium text-[#8e8e93]">No new leads received today</p>
+              </div>
+            ) : (
+              <>
+                <div className="divide-y divide-black/[0.06]">
+                  {todayLeads.map((lead) => {
+                    const cleanPhone = (lead.phoneNumber || '').replace(/[^0-9]/g, '');
+                    const cleanName = (lead.customerName || `Candidate #${formatMaskedLeadRef(lead.id)}`)
+                      .replace(/[\uFFFD\uFFFE\uFFFF]/g, '')
+                      .trim();
+
+                    return (
+                      <div
+                        key={lead.id}
+                        onClick={() => navigate(`/leads/${encryptLeadId(lead.id)}`)}
+                        className="px-4 py-3 sm:px-5 hover:bg-black/[0.02] transition-colors flex items-center justify-between gap-3 cursor-pointer group"
+                      >
+                        {/* Left: Candidate Details */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-xs text-[#1c1c1e] group-hover:text-[#007aff] transition-colors truncate">
+                              {cleanName}
+                            </span>
+                            <span className="text-[11px] text-[#8e8e93]">
+                              {lead.visaType === 'WORK_VISA'
+                                ? 'Work Visa'
+                                : lead.visaType === 'STUDY_VISA'
+                                ? 'Study Visa'
+                                : 'Other'}
+                            </span>
+                            {lead.createdTime && (
+                              <span className="text-[11px] text-[#8e8e93]">
+                                · {formatIndianTime(lead.createdTime)}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="text-[11px] text-[#8e8e93] flex items-center gap-2 mt-0.5 truncate">
+                            {lead.city && <span>{lead.city}</span>}
+                            {lead.phoneNumber && (
+                              <>
+                                {lead.city && <span>·</span>}
+                                <span className="font-mono text-[#3a3a3c]">{lead.phoneNumber}</span>
+                              </>
+                            )}
+                            {lead.educationalQualification && (
+                              <>
+                                <span>·</span>
+                                <span className="hidden sm:inline truncate">{lead.educationalQualification}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Right: Clean Action Buttons */}
+                        <div
+                          className="flex items-center gap-1.5 shrink-0"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {lead.phoneNumber && (
+                            <>
+                              <a
+                                href={`https://wa.me/${cleanPhone}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                title="WhatsApp"
+                                className="p-1.5 text-[#8e8e93] hover:text-[#34c759] hover:bg-black/[0.04] rounded-lg transition-colors"
+                              >
+                                <MessageCircle size={16} />
+                              </a>
+                              <a
+                                href={`tel:${cleanPhone}`}
+                                title="Call"
+                                className="p-1.5 text-[#8e8e93] hover:text-[#007aff] hover:bg-black/[0.04] rounded-lg transition-colors"
+                              >
+                                <Phone size={16} />
+                              </a>
+                            </>
+                          )}
+                          <ChevronRight size={14} className="text-[#c7c7cc] group-hover:text-[#3a3a3c] transition-colors ml-0.5 hidden sm:inline" />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Footer Link to Leads Table */}
+                <div className="px-4 py-2.5 sm:px-5 bg-black/[0.015] border-t border-black/[0.06] flex items-center justify-between text-xs">
+                  <span className="text-[#8e8e93] text-[11px]">
+                    {todayLeads.length} {todayLeads.length === 1 ? 'lead' : 'leads'} received today
+                  </span>
+                  <button
+                    onClick={() => navigate('/leads')}
+                    className="font-medium text-[#007aff] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>View all leads</span>
+                    <ChevronRight size={13} />
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Zoho CRM Stepper Pipeline Funnel */}

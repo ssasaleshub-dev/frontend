@@ -8,13 +8,25 @@ import {
   CheckCircle2,
   Camera,
   Loader2,
-  RefreshCw,
   LogOut,
   User,
   ShieldCheck,
-  FileSpreadsheet,
   Fingerprint,
   Lock,
+  Mail,
+  KeyRound,
+  Edit3,
+  Save,
+  X,
+  Copy,
+  Check,
+  Users,
+  Briefcase,
+  GraduationCap,
+  Building2,
+  Sparkles,
+  Phone,
+  ShieldAlert,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useAlert } from '../context/AlertContext';
@@ -24,6 +36,7 @@ import { useBiometricAttendance } from '../hooks/useBiometricAttendance';
 import { BiometricRegisterButton } from '../components/biometrics/BiometricRegisterButton';
 import { BiometricSuccessModal } from '../components/biometrics/BiometricSuccessModal';
 import fileService from '../services/api/fileService';
+import authService from '../services/api/authService';
 import { formatIndianTime } from '../utils/dateTimeUtils';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -33,54 +46,84 @@ const MONTH_NAMES = [
 ];
 
 export default function StaffProfile() {
-  const { user, updateUserAvatar } = useAuth();
+  const { user, updateUserAvatar, updateUserProfile, logout } = useAuth();
   const { showAlert } = useAlert();
   const navigate = useNavigate();
   const isAdmin = checkIsAdmin(user);
 
-  useEffect(() => {
-    if (isAdmin) {
-      navigate('/users', { replace: true });
-    }
-  }, [isAdmin, navigate]);
-
   const displayName = getDisplayName(user);
   const badgeInfo = getRoleBadgeInfo(user);
-  const userInitial = (displayName?.[0] || 'S').toUpperCase();
+  const userInitial = (displayName?.[0] || user?.login?.[0] || 'S').toUpperCase();
   const userId = user?.login || (user?.id ? String(user.id) : '');
 
   const [avatarUploading, setAvatarUploading] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
+  const [copiedUsername, setCopiedUsername] = useState(false);
 
-  // Calendar State
+  // Edit Profile State
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editFirstName, setEditFirstName] = useState(user?.firstName || '');
+  const [editLastName, setEditLastName] = useState(user?.lastName || '');
+  const [editEmail, setEditEmail] = useState(user?.email || '');
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  // Change Password State
+  const [showPasswordSection, setShowPasswordSection] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+
+  // Attendance & Calendar State
   const [currentMonthDate, setCurrentMonthDate] = useState<Date>(() => new Date());
   const [selectedDateStr, setSelectedDateStr] = useState<string>(() => new Date().toISOString().substring(0, 10));
   const todayStr = useMemo(() => new Date().toISOString().substring(0, 10), []);
 
-  // Attendance Data
   const [todayRecord, setTodayRecord] = useState<StaffAttendanceRecord | null>(null);
   const [history, setHistory] = useState<StaffAttendanceRecord[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loadingAttendance, setLoadingAttendance] = useState<boolean>(true);
   const [punching, setPunching] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string>('');
 
   const year = currentMonthDate.getFullYear();
   const month = currentMonthDate.getMonth();
 
+  // Keep edit fields in sync if user changes
+  useEffect(() => {
+    if (user) {
+      setEditFirstName(user.firstName || '');
+      setEditLastName(user.lastName || '');
+      setEditEmail(user.email || '');
+    }
+  }, [user]);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 3500);
+  };
+
+  const handleCopyUsername = () => {
+    if (!userId) return;
+    navigator.clipboard?.writeText(userId);
+    setCopiedUsername(true);
+    showToast(`Copied @${userId} to clipboard`);
+    setTimeout(() => setCopiedUsername(false), 2000);
+  };
+
   const loadAttendance = async () => {
-    if (!userId || isAdmin) return;
-    setLoading(true);
+    if (!userId) return;
+    setLoadingAttendance(true);
     try {
       const [today, records] = await Promise.all([
-        attendanceService.getTodayAttendance(userId),
-        attendanceService.getMyHistory(userId),
+        attendanceService.getTodayAttendance(userId).catch(() => null),
+        attendanceService.getMyHistory(userId).catch(() => []),
       ]);
-      setTodayRecord(today);
-      setHistory(records);
+      if (today) setTodayRecord(today);
+      if (Array.isArray(records)) setHistory(records);
     } catch (err) {
       console.warn('Failed loading attendance:', err);
     } finally {
-      setLoading(false);
+      setLoadingAttendance(false);
     }
   };
 
@@ -92,12 +135,7 @@ export default function StaffProfile() {
     return () => window.removeEventListener('ssa_attendance_updated', handleUpdate);
   }, [userId]);
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(''), 3500);
-  };
-
-  // Enterprise Custom Hook for Biometric Flow
+  // Biometric Flow Hook
   const {
     biometricCred,
     enrollingBiometric,
@@ -122,7 +160,6 @@ export default function StaffProfile() {
     await handleBiometricCheckIn();
   };
 
-  // Simple One-Click Check-Out (No forms, no notes)
   const handleCheckOut = async () => {
     if (!userId) return;
     setPunching(true);
@@ -138,16 +175,22 @@ export default function StaffProfile() {
     }
   };
 
-  // Profile photo change
+  // Avatar Photo Upload
   const handleAvatarSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showAlert({ title: 'Invalid File', message: 'Please select a valid image file (PNG, JPG, WebP).' });
+      return;
+    }
+
     setAvatarUploading(true);
     try {
       const res = await fileService.uploadFile(file, 'avatars');
       if (res?.url) {
         await updateUserAvatar(res.url);
-        showToast('Profile photo updated.');
+        showToast('Profile photo updated successfully.');
       }
     } catch (err: any) {
       showAlert({ title: 'Profile', message: `Upload failed: ${err?.message || 'Server error'}` });
@@ -155,6 +198,73 @@ export default function StaffProfile() {
       setAvatarUploading(false);
       if (avatarInputRef.current) avatarInputRef.current.value = '';
     }
+  };
+
+  // Save Profile Details
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingProfile(true);
+    try {
+      if (updateUserProfile) {
+        await updateUserProfile({
+          firstName: editFirstName.trim(),
+          lastName: editLastName.trim(),
+          email: editEmail.trim(),
+        });
+      } else {
+        await authService.updateAccount({
+          ...user,
+          firstName: editFirstName.trim(),
+          lastName: editLastName.trim(),
+          email: editEmail.trim(),
+        });
+      }
+      setIsEditingProfile(false);
+      showToast('Profile details updated successfully.');
+    } catch (err: any) {
+      showAlert({ title: 'Profile Update', message: err?.message || 'Failed to update profile details.' });
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  // Change Password
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentPassword) {
+      showAlert({ title: 'Password', message: 'Please enter your current password.' });
+      return;
+    }
+    if (newPassword.length < 4) {
+      showAlert({ title: 'Password', message: 'New password must be at least 4 characters.' });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      showAlert({ title: 'Password', message: 'New passwords do not match.' });
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      await authService.changePassword(currentPassword, newPassword);
+      showToast('Password changed successfully.');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setShowPasswordSection(false);
+    } catch (err: any) {
+      showAlert({
+        title: 'Change Password Failed',
+        message: err?.response?.data?.message || err?.message || 'Incorrect current password or server rejected update.'
+      });
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
   // Date map of attendance records
@@ -165,7 +275,6 @@ export default function StaffProfile() {
         map.set(rec.attendanceDate, rec);
       }
     });
-    // Ensure today's optimistic record is also mapped
     if (todayRecord?.attendanceDate) {
       map.set(todayRecord.attendanceDate, todayRecord);
     }
@@ -186,8 +295,6 @@ export default function StaffProfile() {
       isWeekend: boolean;
       record?: StaffAttendanceRecord;
     }> = [];
-
-    const todayStr = new Date().toISOString().substring(0, 10);
 
     // Prev month padding
     for (let i = firstDayIndex - 1; i >= 0; i--) {
@@ -237,32 +344,7 @@ export default function StaffProfile() {
     }
 
     return days;
-  }, [year, month, attendanceByDate]);
-
-  // Monthly summary stats
-  const monthlyStats = useMemo(() => {
-    let presentDays = 0;
-    let lateDays = 0;
-    let totalMinutes = 0;
-
-    attendanceByDate.forEach((rec, dateStr) => {
-      if (dateStr.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`)) {
-        if (rec.checkInTime) {
-          presentDays++;
-          if (rec.status === 'LATE') lateDays++;
-          totalMinutes += rec.totalMinutes || 0;
-        }
-      }
-    });
-
-    const hours = Math.floor(totalMinutes / 60);
-    const mins = totalMinutes % 60;
-    return {
-      presentDays,
-      lateDays,
-      totalHours: `${hours}h ${mins}m`,
-    };
-  }, [attendanceByDate, year, month]);
+  }, [year, month, attendanceByDate, todayStr]);
 
   const isCheckedIn = Boolean(todayRecord?.checkInTime);
   const isCheckedOut = Boolean(todayRecord?.checkOutTime);
@@ -273,27 +355,31 @@ export default function StaffProfile() {
     return formatIndianTime(iso, { fallback: iso });
   };
 
-  const selectedRecord = attendanceByDate.get(selectedDateStr);
-
-  if (isAdmin) {
-    return null;
-  }
-
   return (
-    <div className="space-y-5 max-w-5xl mx-auto pb-12">
+    <div className="max-w-2xl mx-auto px-3.5 sm:px-6 py-4 pb-28 space-y-4">
       {/* Toast Alert */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#1d1d1f] text-white px-4 py-2.5 rounded-2xl shadow-xl flex items-center gap-2.5 text-xs font-medium border border-white/10">
-          <CheckCircle2 size={16} className="text-[#34c759]" />
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 backdrop-blur-md text-white px-4 py-2.5 rounded-2xl shadow-xl flex items-center gap-2.5 text-xs font-semibold animate-in fade-in duration-200">
+          <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* Staff Profile Header Card */}
-      <div className="bg-white rounded-2xl border border-black/[0.06] p-4 sm:p-5 shadow-xs">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="relative group shrink-0">
+      {/* ── 1. Hero Profile Card ── */}
+      <div className="bg-white rounded-3xl border border-black/[0.08] shadow-sm overflow-hidden">
+        {/* Banner Cover */}
+        <div className="h-28 sm:h-32 bg-gradient-to-r from-blue-600/15 via-indigo-100/50 to-slate-100 relative p-3 sm:p-4 flex items-start justify-end">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 backdrop-blur-xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            Active Account
+          </span>
+        </div>
+
+        {/* Profile Info Area */}
+        <div className="px-5 sm:px-6 pb-6 pt-0">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 -mt-14 sm:-mt-16 mb-4">
+            {/* Avatar with Camera Upload */}
+            <div className="relative inline-block self-start">
               <input
                 type="file"
                 ref={avatarInputRef}
@@ -301,202 +387,344 @@ export default function StaffProfile() {
                 className="hidden"
                 onChange={handleAvatarSelect}
               />
-              <div className="w-14 h-14 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center">
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl sm:rounded-3xl ring-4 ring-white shadow-md bg-white overflow-hidden flex items-center justify-center border border-black/[0.06]">
                 {avatarUploading ? (
-                  <Loader2 size={18} className="animate-spin text-[#007aff]" />
+                  <Loader2 size={24} className="animate-spin text-[#007aff]" />
                 ) : user?.imageUrl ? (
                   <img src={user.imageUrl} alt={displayName} className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-xl font-bold text-slate-500">{userInitial}</span>
+                  <div className="w-full h-full bg-gradient-to-tr from-slate-200 via-slate-100 to-white text-slate-700 text-3xl font-bold flex items-center justify-center">
+                    {userInitial}
+                  </div>
                 )}
               </div>
               <button
                 type="button"
                 onClick={() => avatarInputRef.current?.click()}
                 disabled={avatarUploading}
-                title="Change Photo"
-                className="absolute -bottom-1 -right-1 p-1 rounded-lg bg-[#007aff] text-white shadow hover:bg-[#0062cc]"
+                title="Update profile picture"
+                className="absolute -bottom-1 -right-1 w-8 h-8 rounded-xl bg-[#007aff] hover:bg-[#0062cc] text-white shadow-md flex items-center justify-center cursor-pointer transition active:scale-95 border-2 border-white"
               >
-                <Camera size={11} />
+                <Camera size={14} />
               </button>
             </div>
 
-            <div>
-              <h1 className="text-base font-bold text-slate-900">{displayName}</h1>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Login: <strong className="text-slate-800">@{userId}</strong>
-                {user?.email && <> • <span>{user.email}</span></>}
-              </p>
-            </div>
-          </div>
-
-          {/* Simple Today Action Strip */}
-          <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-100">
-            {/* Enterprise Reusable Biometric Hardware Registration Button */}
-            <BiometricRegisterButton
-              credential={biometricCred}
-              isLoading={enrollingBiometric}
-              onRegister={handleRegisterBiometric}
-              disabled={punching || punchingBiometric}
-            />
-
-            {isWorkingNow ? (
-              <div className="flex items-center gap-3">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-600/20 bg-emerald-500/[0.08] text-emerald-950 text-xs font-medium shadow-xs">
-                  <span className="font-semibold text-emerald-900 tracking-tight">On Duty</span>
-                  <span className="text-[11px] text-emerald-700/80 font-mono pl-1 border-l border-emerald-600/20">
-                    Since {formatTime(todayRecord?.checkInTime)}
-                  </span>
-                </span>
-                <button
-                  type="button"
-                  onClick={handleCheckOut}
-                  disabled={punching}
-                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs transition-all active:scale-95 flex items-center gap-1.5"
-                >
-                  {punching ? <Loader2 size={13} className="animate-spin" /> : <LogOut size={13} />}
-                  <span>Check Out</span>
-                </button>
-              </div>
-            ) : isCheckedOut ? (
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700">
-                <CheckCircle2 size={14} className="text-emerald-600" />
-                <span>Today's Shift Completed ({todayRecord?.totalHoursFormatted})</span>
-              </div>
-            ) : (
+            {/* Quick Action in Header */}
+            <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={handleCheckIn}
-                disabled={punching}
-                className="px-4 py-2 rounded-xl bg-[#007aff] hover:bg-[#0062cc] text-white text-xs font-bold shadow-xs transition-all active:scale-95 flex items-center gap-1.5"
+                onClick={() => setIsEditingProfile(!isEditingProfile)}
+                className="px-3.5 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
               >
-                {punching ? <Loader2 size={13} className="animate-spin" /> : <Clock size={13} />}
-                <span>Check In for Today</span>
+                {isEditingProfile ? (
+                  <>
+                    <X size={13} />
+                    <span>Cancel Edit</span>
+                  </>
+                ) : (
+                  <>
+                    <Edit3 size={13} />
+                    <span>Edit Profile</span>
+                  </>
+                )}
               </button>
-            )}
+            </div>
           </div>
+
+          {/* User Name & Badges */}
+          <div className="space-y-1">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight leading-snug">
+              {displayName}
+            </h1>
+            <div className="flex items-center gap-2.5 flex-wrap pt-0.5">
+              <button
+                type="button"
+                onClick={handleCopyUsername}
+                className="text-xs text-slate-500 hover:text-slate-800 font-medium inline-flex items-center gap-1 bg-slate-100 px-2.5 py-0.5 rounded-lg transition"
+                title="Click to copy username"
+              >
+                <span>@{userId}</span>
+                {copiedUsername ? <Check size={12} className="text-emerald-600" /> : <Copy size={11} />}
+              </button>
+
+              {isAdmin ? (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+                  <ShieldCheck size={13} />
+                  Administrator
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                  <Briefcase size={13} />
+                  {badgeInfo.displayText}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Admin Fast Shortcut to User Directory */}
+          {isAdmin && (
+            <div className="mt-4 p-3 rounded-2xl bg-gradient-to-r from-blue-50/70 to-indigo-50/50 border border-blue-200/60 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <Users size={16} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-slate-900 leading-tight">Staff Management Directory</p>
+                  <p className="text-[11px] text-slate-500 truncate">Manage staff accounts, access roles, and permissions</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/users')}
+                className="px-3 py-1.5 rounded-xl bg-white hover:bg-blue-600 hover:text-white text-blue-600 border border-blue-200 text-xs font-semibold transition active:scale-95 shrink-0 shadow-2xs"
+              >
+                View Staff →
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Monthly Attendance Calendar */}
-      <div className="bg-white rounded-2xl border border-black/[0.06] shadow-xs overflow-hidden">
-        {/* Month Navigation & Stats Header */}
-        <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1">
+      {/* ── 2. Personal Information Card ── */}
+      <div className="bg-white rounded-3xl border border-black/[0.08] p-5 shadow-xs space-y-4">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+          <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
+            <User size={16} className="text-[#007aff]" />
+            <h2>Personal Information</h2>
+          </div>
+          {!isEditingProfile && (
+            <button
+              type="button"
+              onClick={() => setIsEditingProfile(true)}
+              className="text-xs font-semibold text-[#007aff] hover:underline flex items-center gap-1"
+            >
+              <Edit3 size={12} />
+              <span>Edit</span>
+            </button>
+          )}
+        </div>
+
+        {isEditingProfile ? (
+          <form onSubmit={handleSaveProfile} className="space-y-3.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">First Name</label>
+                <input
+                  type="text"
+                  value={editFirstName}
+                  onChange={(e) => setEditFirstName(e.target.value)}
+                  placeholder="e.g. Kavin"
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Last Name</label>
+                <input
+                  type="text"
+                  value={editLastName}
+                  onChange={(e) => setEditLastName(e.target.value)}
+                  placeholder="e.g. M"
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff]"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Email Address</label>
+              <input
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                placeholder="name@ssaconsultancy.com"
+                className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff]"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsEditingProfile(false)}
+                className="px-3.5 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={savingProfile}
+                className="px-4 py-2 rounded-xl bg-[#007aff] hover:bg-[#0062cc] text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
+              >
+                {savingProfile ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                <span>Save Changes</span>
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div className="p-3 rounded-2xl bg-slate-50/70 border border-slate-100">
+              <p className="text-[11px] font-medium text-slate-400">Full Name</p>
+              <p className="font-semibold text-slate-900 mt-0.5">{displayName}</p>
+            </div>
+            <div className="p-3 rounded-2xl bg-slate-50/70 border border-slate-100">
+              <p className="text-[11px] font-medium text-slate-400">Email Address</p>
+              <p className="font-semibold text-slate-900 mt-0.5 truncate">{user?.email || 'Not configured'}</p>
+            </div>
+            <div className="p-3 rounded-2xl bg-slate-50/70 border border-slate-100">
+              <p className="text-[11px] font-medium text-slate-400">Login Username</p>
+              <p className="font-semibold text-slate-900 mt-0.5 font-mono">@{userId}</p>
+            </div>
+            <div className="p-3 rounded-2xl bg-slate-50/70 border border-slate-100">
+              <p className="text-[11px] font-medium text-slate-400">Assigned Department</p>
+              <p className="font-semibold text-slate-900 mt-0.5">{badgeInfo.deskTitle}</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── 3. Shift & Duty Attendance Hub ── */}
+      <div className="bg-white rounded-3xl border border-black/[0.08] p-5 shadow-xs space-y-4">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+          <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
+            <Clock size={16} className="text-[#007aff]" />
+            <h2>Duty & Shift Attendance</h2>
+          </div>
+          <BiometricRegisterButton
+            credential={biometricCred}
+            isLoading={enrollingBiometric}
+            onRegister={handleRegisterBiometric}
+            disabled={punching || punchingBiometric}
+          />
+        </div>
+
+        {/* Live Duty Card */}
+        {isWorkingNow ? (
+          <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-slate-900">Currently On Duty</p>
+                <p className="text-xs text-slate-500">
+                  Checked in since {formatTime(todayRecord?.checkInTime)}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleCheckOut}
+              disabled={punching}
+              className="px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 shrink-0 active:scale-95 shadow-2xs"
+            >
+              {punching ? <Loader2 size={13} className="animate-spin" /> : <LogOut size={13} />}
+              <span>Check Out</span>
+            </button>
+          </div>
+        ) : isCheckedOut ? (
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2 text-slate-700">
+              <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+              <span className="font-semibold text-slate-900">Shift Completed Today</span>
+            </div>
+            <span className="text-slate-600 font-mono font-semibold">{todayRecord?.totalHoursFormatted}</span>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={handleCheckIn}
+            disabled={punching}
+            className="w-full py-3 rounded-2xl bg-[#007aff] hover:bg-[#0062cc] text-white text-xs font-bold shadow-xs transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+          >
+            {punching ? <Loader2 size={15} className="animate-spin" /> : <Clock size={15} />}
+            <span>Check In for Today</span>
+          </button>
+        )}
+
+        {/* Attendance Calendar Grid */}
+        <div className="pt-2">
+          {/* Month Header */}
+          <div className="flex items-center justify-between pb-2.5 mb-1 border-b border-slate-100">
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setCurrentMonthDate(new Date(year, month - 1, 1))}
-                className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600"
-                title="Previous Month"
+                className="p-1.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition cursor-pointer"
+                title="Previous month"
               >
-                <ChevronLeft size={16} />
+                <ChevronLeft size={15} />
               </button>
-              <h2 className="text-sm font-bold text-slate-900 min-w-36 text-center">
+              <h3 className="text-xs font-bold text-slate-900 px-1">
                 {MONTH_NAMES[month]} {year}
-              </h2>
+              </h3>
               <button
                 type="button"
                 onClick={() => setCurrentMonthDate(new Date(year, month + 1, 1))}
-                className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600"
-                title="Next Month"
+                className="p-1.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition cursor-pointer"
+                title="Next month"
               >
-                <ChevronRight size={16} />
+                <ChevronRight size={15} />
               </button>
             </div>
 
             <button
               type="button"
-              onClick={() => setCurrentMonthDate(new Date())}
-              className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+              onClick={() => {
+                setCurrentMonthDate(new Date());
+                setSelectedDateStr(new Date().toISOString().substring(0, 10));
+              }}
+              className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition"
             >
               Today
             </button>
           </div>
 
-          {/* Quick Summary Badges */}
-          <div className="flex items-center gap-3 text-xs flex-wrap">
-            <span className="font-semibold text-slate-700">
-              Present: <strong className="text-emerald-700">{monthlyStats.presentDays}</strong> days
-            </span>
-            <span className="font-semibold text-slate-700">
-              Late: <strong className="text-amber-700">{monthlyStats.lateDays}</strong>
-            </span>
-            <span className="flex items-center gap-1.5 font-semibold text-slate-700">
-              <Clock size={12} className="text-[#007aff]" />
-              Total Hours: <strong>{monthlyStats.totalHours}</strong>
-            </span>
-          </div>
-        </div>
-
-        {/* Calendar Grid */}
-        <div className="p-3 sm:p-5">
-          {/* Weekday Labels */}
-          <div className="grid grid-cols-7 gap-1 text-center text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+          {/* Weekday Row */}
+          <div className="grid grid-cols-7 text-center text-[10px] font-semibold text-slate-400 py-1">
             {WEEKDAYS.map((w, idx) => (
-              <div key={w} className={`py-1.5 ${idx === 0 || idx === 6 ? 'text-slate-400' : 'text-slate-700'}`}>
+              <div key={w} className={idx === 0 || idx === 6 ? 'text-slate-300' : ''}>
                 {w}
               </div>
             ))}
           </div>
 
-          {/* Days Grid */}
-          <div className="grid grid-cols-7 gap-1.5">
+          {/* Day Cells Grid */}
+          <div className="grid grid-cols-7 gap-1 mt-0.5">
             {calendarDays.map((d, index) => {
               const rec = d.record;
               const hasCheckedIn = Boolean(rec?.checkInTime);
               const isSelected = d.dateStr === selectedDateStr;
+              const isLate = rec?.status === 'LATE';
 
               return (
                 <button
                   key={`${d.dateStr}-${index}`}
                   type="button"
                   onClick={() => setSelectedDateStr(d.dateStr)}
-                  className={`min-h-18 sm:min-h-20 p-1.5 sm:p-2 rounded-xl text-left border flex flex-col justify-between transition-all ${
+                  className={`h-10 rounded-xl flex flex-col items-center justify-center relative transition-all ${
                     isSelected
-                      ? 'ring-2 ring-[#007aff] border-[#007aff]'
-                      : 'border-slate-100 hover:border-slate-300'
-                  } ${
-                    !d.isCurrentMonth
-                      ? 'bg-slate-50/50 text-slate-300'
-                      : d.isToday
-                      ? 'bg-blue-50/40 border-blue-200'
-                      : 'bg-white'
-                  }`}
+                      ? 'ring-2 ring-[#007aff] bg-blue-50/50'
+                      : 'hover:bg-slate-50'
+                  } ${!d.isCurrentMonth ? 'opacity-30' : ''}`}
                 >
-                  {/* Day Number Header */}
-                  <div className="flex items-center justify-between">
-                    <span
-                      className={`text-xs font-bold ${
-                        d.isToday
-                          ? 'w-5 h-5 rounded-full bg-[#007aff] text-white flex items-center justify-center'
-                          : d.isCurrentMonth
-                          ? 'text-slate-800'
-                          : 'text-slate-400'
-                      }`}
-                    >
-                      {d.dayNumber}
-                    </span>
+                  <span
+                    className={`text-xs font-semibold w-5 h-5 flex items-center justify-center rounded-full leading-none ${
+                      d.isToday
+                        ? 'bg-[#007aff] text-white font-bold'
+                        : d.isCurrentMonth
+                        ? 'text-slate-800'
+                        : 'text-slate-400'
+                    }`}
+                  >
+                    {d.dayNumber}
+                  </span>
 
-                    {/* Status on Day */}
-                    {hasCheckedIn && (
-                      <span className={`text-[10px] font-semibold ${rec?.status === 'LATE' ? 'text-amber-700' : 'text-emerald-700'}`}>
-                        {rec?.status === 'LATE' ? 'Late' : 'Present'}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Day Timing / Hours */}
-                  <div className="mt-1">
+                  <div className="h-1.5 flex items-center justify-center mt-0.5">
                     {hasCheckedIn ? (
-                      <div className="text-[10px] font-semibold text-slate-700 font-mono truncate">
-                        {rec?.totalHoursFormatted || `${formatTime(rec?.checkInTime)}`}
-                      </div>
-                    ) : d.isWeekend ? (
-                      <span className="text-[10px] text-slate-400 font-medium">Off</span>
-                    ) : (
-                      <span className="text-[10px] text-slate-300 font-medium">-</span>
-                    )}
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          isLate ? 'bg-amber-500' : 'bg-emerald-500'
+                        }`}
+                      />
+                    ) : d.isWeekend && d.isCurrentMonth && !d.isToday ? (
+                      <span className="text-[8px] text-slate-300 leading-none">·</span>
+                    ) : null}
                   </div>
                 </button>
               );
@@ -505,7 +733,117 @@ export default function StaffProfile() {
         </div>
       </div>
 
-      {/* Enterprise Reusable Biometric Confirmation Modal */}
+      {/* ── 4. Security & Password Card ── */}
+      <div className="bg-white rounded-3xl border border-black/[0.08] p-5 shadow-xs space-y-4">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+          <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
+            <Lock size={16} className="text-[#007aff]" />
+            <h2>Security & Password</h2>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowPasswordSection(!showPasswordSection)}
+            className="text-xs font-semibold text-[#007aff] hover:underline flex items-center gap-1"
+          >
+            <KeyRound size={12} />
+            <span>{showPasswordSection ? 'Hide' : 'Change Password'}</span>
+          </button>
+        </div>
+
+        {showPasswordSection ? (
+          <form onSubmit={handleChangePassword} className="space-y-3 pt-1">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Current Password</label>
+              <input
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Enter current password"
+                className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff]"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">New Password</label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Min 4 characters"
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Confirm New Password</label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter new password"
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff]"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPasswordSection(false);
+                  setCurrentPassword('');
+                  setNewPassword('');
+                  setConfirmPassword('');
+                }}
+                className="px-3.5 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={passwordLoading}
+                className="px-4 py-2 rounded-xl bg-[#007aff] hover:bg-[#0062cc] text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
+              >
+                {passwordLoading ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                <span>Update Password</span>
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50/70 border border-slate-100 text-xs">
+            <div>
+              <p className="font-semibold text-slate-900">Account Password</p>
+              <p className="text-slate-500 text-[11px] mt-0.5">Protected with high-security hash encryption</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowPasswordSection(true)}
+              className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition"
+            >
+              Update
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* ── 5. App Version & Sign Out Card ── */}
+      <div className="bg-white rounded-3xl border border-black/[0.08] p-5 shadow-xs space-y-3">
+        <div className="flex items-center justify-between text-xs text-slate-400">
+          <span>Application</span>
+          <span className="font-mono font-medium">SSA CRM v1.0.36</span>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="w-full py-3 rounded-2xl bg-red-50 hover:bg-red-100 text-[#ff3b30] border border-red-200/80 text-xs font-bold transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+        >
+          <LogOut size={15} />
+          <span>Log Out of Account</span>
+        </button>
+      </div>
+
+      {/* Biometric Confirmation Modal */}
       <BiometricSuccessModal
         isOpen={Boolean(checkInSuccessModal?.isOpen)}
         onClose={closeSuccessModal}

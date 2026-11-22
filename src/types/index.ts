@@ -113,6 +113,7 @@ export interface AuthContextType {
   login: (username: string, password: string, rememberMe?: boolean) => Promise<any>;
   logout: () => void;
   updateUserAvatar: (imageUrl: string) => Promise<void>;
+  updateUserProfile?: (data: Partial<User>) => Promise<void>;
 }
 
 export interface LeadActivity {

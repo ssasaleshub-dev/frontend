@@ -40,13 +40,15 @@ export default function Chat() {
   const [usersList, setUsersList] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState<boolean>(false);
   // Mobile responsive view: 'list' (conversations sidebar) vs 'chat' (active conversation view)
-  const [mobileView, setMobileView] = useState<'list' | 'chat'>('chat');
+  const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [sending, setSending] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [listSearchQuery, setListSearchQuery] = useState<string>('');
+  const [activeFilterTab, setActiveFilterTab] = useState<'all' | 'unread' | 'groups'>('all');
   const [apiNotice, setApiNotice] = useState<string | null>(null);
 
   // File upload state for attachments
@@ -269,13 +271,32 @@ export default function Chat() {
     fetchMessages();
   }, [fetchMessages]);
 
-  // Active Background Live Polling (every 2.5s) to guarantee zero message loss
+  // Smart sync on tab focus or visibility change (like WhatsApp Web & Instagram Direct)
   useEffect(() => {
-    const pollTimer = setInterval(() => {
-      fetchMessages(true);
-    }, 2500);
+    const handleSync = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        fetchMessages(true);
+      }
+    };
 
-    return () => clearInterval(pollTimer);
+    window.addEventListener('visibilitychange', handleSync);
+    window.addEventListener('focus', handleSync);
+    return () => {
+      window.removeEventListener('visibilitychange', handleSync);
+      window.removeEventListener('focus', handleSync);
+    };
+  }, [fetchMessages]);
+
+  // Gentle fallback sync ONLY when WebSocket is disconnected (every 15s, zero polling when WS is connected)
+  useEffect(() => {
+    const fallbackTimer = setInterval(() => {
+      const isWsConnected = teamChatWebSocket.getIsConnected();
+      if (!isWsConnected && typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        fetchMessages(true);
+      }
+    }, 15000);
+
+    return () => clearInterval(fallbackTimer);
   }, [fetchMessages]);
 
   // Real-Time Team Chat WebSocket & SSE Live Push Integration
@@ -440,7 +461,7 @@ export default function Chat() {
       recipientLogin: isP2p ? selectedUser.login : undefined,
       recipientName: isP2p ? getTargetUserName(selectedUser) : undefined,
       isRead: false,
-      userId: currentUserId,
+      userId: Number(currentUserId),
       userName: currentUserName,
       userLogin: currentLogin,
       userImageUrl: user?.imageUrl,
@@ -462,7 +483,7 @@ export default function Chat() {
       content: trimmed,
       channel,
       recipientId,
-      userId: currentUserId,
+      userId: Number(currentUserId),
       userName: currentUserName,
       mediaUrl: uploadedMediaUrl,
       mediaType: uploadedMediaType,
@@ -475,7 +496,7 @@ export default function Chat() {
         content: trimmed,
         channel,
         recipientId,
-        userId: currentUserId,
+        userId: Number(currentUserId),
         userName: currentUserName,
         mediaUrl: uploadedMediaUrl,
         mediaType: uploadedMediaType,
@@ -602,6 +623,20 @@ export default function Chat() {
     });
   }, [usersList, currentLogin]);
 
+  const filteredDirectUsers = useMemo(() => {
+    let list = directUsers;
+    if (activeFilterTab === 'groups') return [];
+    if (listSearchQuery.trim()) {
+      const q = listSearchQuery.toLowerCase();
+      list = list.filter((u) => {
+        const name = getTargetUserName(u).toLowerCase();
+        const login = (u.login || '').toLowerCase();
+        return name.includes(q) || login.includes(q);
+      });
+    }
+    return list;
+  }, [directUsers, listSearchQuery, activeFilterTab]);
+
   const isImageMedia = (msg: ChatMessage) => {
     if (msg.mediaType === 'IMAGE') return true;
     if (!msg.mediaUrl) return false;
@@ -656,7 +691,7 @@ export default function Chat() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-125px)] sm:h-[calc(100vh-130px)] bg-white rounded-2xl border border-[rgba(60,60,67,0.12)] shadow-sm overflow-hidden select-none">
+    <div className="flex flex-col h-[calc(100dvh-113px)] md:h-[calc(100vh-130px)] bg-white md:rounded-2xl md:border md:border-black/[0.08] md:shadow-xs overflow-hidden select-none">
       {apiNotice && (
         <div className="bg-[#fff9e6] border-b border-[#ffe699] px-4 py-2 flex items-center justify-between text-xs text-[#806000]">
           <div className="flex items-center gap-2">
@@ -673,11 +708,11 @@ export default function Chat() {
       )}
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* Left Sidebar: iOS Messages Style (Responsive: full width on mobile list, fixed on desktop) */}
+        {/* Left Sidebar: Messages List (Default screen on mobile, sidebar on desktop) */}
         <div
           className={`${
             mobileView === 'chat' ? 'hidden md:flex' : 'flex'
-          } w-full md:w-80 border-r border-[rgba(60,60,67,0.12)] bg-[#f6f6f8] flex-col shrink-0`}
+          } w-full md:w-80 md:min-w-[320px] border-r border-[rgba(60,60,67,0.12)] bg-[#ffffff] flex-col shrink-0`}
         >
           {/* Header */}
           <div className="p-4 border-b border-[rgba(60,60,67,0.08)] flex items-center justify-between">
@@ -740,7 +775,7 @@ export default function Chat() {
             {/* Direct Messages Section */}
             {directUsers.length > 0 && (
               <div className="px-3.5 py-1.5 bg-black/[0.02] text-[10px] font-bold text-[#8e8e93] uppercase tracking-wider flex items-center justify-between border-y border-[rgba(60,60,67,0.04)] select-none">
-                <span>Direct Messages</span>
+                <span>DIRECT MESSAGES</span>
                 <span className="font-mono text-[10px] text-[#8e8e93]">{directUsers.length}</span>
               </div>
             )}
@@ -821,75 +856,90 @@ export default function Chat() {
           </div>
         </div>
 
-        {/* Right Conversation View: Authentic Apple iMessage Layout (Responsive: full width on mobile chat, flex-1 on desktop) */}
+        {/* Right Conversation View: WhatsApp UX Full Screen on Mobile, Side-by-Side on Desktop */}
         <div
           className={`${
-            mobileView === 'list' ? 'hidden md:flex' : 'flex'
+            mobileView === 'list'
+              ? 'hidden md:flex'
+              : 'fixed inset-0 z-50 md:static md:inset-auto md:z-auto flex'
           } flex-1 flex-col min-w-0 bg-white relative`}
         >
-          {/* iOS Top Bar Header (Apple HIG Regular Material & Centered Contact Name) */}
-          <div className="h-14 px-3 sm:px-6 ios-material-regular flex items-center justify-between shrink-0">
-            {/* Mobile Back Button to Messages List */}
-            <div className="flex items-center md:hidden shrink-0">
+          {/* Conversation Top Bar (WhatsApp UX) */}
+          <div className="h-14 px-3 sm:px-4 bg-white border-b border-black/[0.08] flex items-center justify-between shrink-0 shadow-2xs z-10">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              {/* WhatsApp Back Button on Mobile */}
               <button
                 type="button"
                 onClick={() => setMobileView('list')}
-                className="flex items-center gap-0.5 text-[#007aff] hover:opacity-80 active:scale-95 transition-all py-1.5 pr-2 -ml-1 text-[13px] font-medium cursor-pointer"
-                title="Back to Messages"
+                className="flex items-center text-[#007aff] hover:opacity-80 active:scale-95 transition-all p-1.5 -ml-1 md:hidden cursor-pointer rounded-full"
+                title="Back to Chats"
               >
-                <ChevronLeft size={20} strokeWidth={2.5} />
-                <span>Messages</span>
+                <ChevronLeft size={24} strokeWidth={2.4} />
               </button>
-            </div>
 
-            <div className="flex-1 flex flex-col items-center justify-center text-center min-w-0 px-2">
-              <div className="flex items-center gap-1.5 justify-center max-w-full">
+              {/* Avatar */}
+              <div className="relative shrink-0">
                 {chatType === 'group' ? (
-                  <div className="w-5 h-5 rounded-full bg-[#007aff]/15 text-[#007aff] flex items-center justify-center shrink-0">
-                    <UsersIcon size={12} />
+                  <div className="w-10 h-10 rounded-full bg-[#007aff]/10 text-[#007aff] flex items-center justify-center shrink-0 border border-[#007aff]/20 font-bold">
+                    <UsersIcon size={19} />
                   </div>
                 ) : selectedUser?.imageUrl ? (
                   <img
                     src={selectedUser.imageUrl}
                     alt={selectedUser.login}
-                    className="w-5 h-5 rounded-full object-cover border border-black/10 shrink-0"
+                    className="w-10 h-10 rounded-full object-cover border border-black/10 shrink-0"
                   />
                 ) : (
-                  <div className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 font-bold text-[9px] flex items-center justify-center shrink-0 uppercase">
+                  <div className="w-10 h-10 rounded-full bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center shrink-0 uppercase">
                     {selectedUser?.firstName?.[0] || selectedUser?.login?.[0] || 'U'}
                   </div>
                 )}
-                <h2 className="font-semibold text-[13px] text-[#000000] tracking-tight truncate max-w-[150px] sm:max-w-xs">
+                {chatType === 'p2p' && (
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white" />
+                )}
+              </div>
+
+              {/* Contact / Room Info */}
+              <div className="min-w-0 flex-1 ml-0.5">
+                <h2 className="font-bold text-[14px] text-slate-900 tracking-tight truncate leading-tight">
                   {chatType === 'group'
                     ? 'All Team Chat'
                     : selectedUser
                     ? getTargetUserName(selectedUser)
-                    : 'Private Messages'}
+                    : 'Team Conversation'}
                 </h2>
+                <p className="text-[11px] text-slate-500 font-normal leading-tight truncate mt-0.5">
+                  {chatType === 'group'
+                    ? `${directUsers.length + 1} team members`
+                    : selectedUser
+                    ? 'online'
+                    : 'Select a conversation'}
+                </p>
               </div>
-              <p className="text-[11px] text-[#8e8e93] font-normal leading-none mt-0.5">
-                {chatType === 'group'
-                  ? 'Team conversation'
-                  : selectedUser
-                  ? 'iMessage'
-                  : 'Select a conversation'}
-              </p>
             </div>
 
-            <div className="w-8 shrink-0" />
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setMobileView('list')}
+                className="hidden md:inline-flex px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition"
+              >
+                Switch Chat
+              </button>
+            </div>
           </div>
 
-          {/* Messages Feed */}
+          {/* Messages Feed (Pure White Background) */}
           <div
             ref={messagesContainerRef}
             onScroll={handleScroll}
-            className="flex-1 overflow-y-auto px-5 py-4 space-y-2 bg-[#ffffff] select-text"
+            className="flex-1 overflow-y-auto px-3 sm:px-5 py-3 space-y-2 select-text bg-white"
           >
             {/* Lazy Loading Header for Earlier Messages (Scroll UP to load) */}
             {hasMoreOlder && (
-              <div className="py-2.5 flex items-center justify-center">
+              <div className="py-2 flex items-center justify-center">
                 {loadingOlder ? (
-                  <div className="flex items-center gap-2 text-xs text-[#8e8e93] py-1 bg-slate-50 px-3.5 rounded-full border border-black/[0.04] shadow-xs">
+                  <div className="flex items-center gap-2 text-xs text-slate-500 py-1 bg-white/90 backdrop-blur-md px-3.5 rounded-full border border-black/[0.04] shadow-xs">
                     <RefreshCw size={13} className="animate-spin text-[#007aff]" />
                     <span>Loading earlier messages...</span>
                   </div>
@@ -897,7 +947,7 @@ export default function Chat() {
                   <button
                     type="button"
                     onClick={loadOlderMessages}
-                    className="text-[11px] font-medium text-[#007aff] hover:text-[#005bb5] bg-[#007aff]/10 hover:bg-[#007aff]/15 px-3.5 py-1 rounded-full transition cursor-pointer active:scale-95 shadow-xs"
+                    className="text-[11px] font-medium text-[#007aff] hover:text-[#005bb5] bg-white/90 backdrop-blur-md px-3.5 py-1 rounded-full transition cursor-pointer active:scale-95 shadow-xs border border-black/[0.04]"
                   >
                     Load earlier messages ({totalMessagesCount - visibleCount} more)
                   </button>
@@ -906,35 +956,35 @@ export default function Chat() {
             )}
 
             {!hasMoreOlder && displayedMessages.length > 0 && (
-              <div className="py-3 flex items-center justify-center">
-                <span className="text-[10px] font-medium text-[#8e8e93] bg-[#f2f2f7] px-3 py-1 rounded-full border border-black/[0.04] uppercase tracking-wider">
+              <div className="py-2.5 flex items-center justify-center">
+                <span className="text-[10px] font-semibold text-slate-500 bg-white/85 backdrop-blur-md px-3 py-1 rounded-full border border-black/[0.04] shadow-2xs uppercase tracking-wider">
                   Beginning of conversation
                 </span>
               </div>
             )}
 
             {loading && messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-[#8e8e93] gap-2 select-none">
+              <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2 select-none">
                 <RefreshCw size={20} className="animate-spin text-[#007aff]" />
-                <span className="text-xs">Loading iMessage...</span>
+                <span className="text-xs">Loading conversation...</span>
               </div>
             ) : displayedMessages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-[#8e8e93] py-12 select-none">
-                <div className="w-12 h-12 rounded-full bg-[#f2f2f7] flex items-center justify-center mb-2 text-[#8e8e93]">
+              <div className="flex flex-col items-center justify-center h-full text-slate-400 py-12 select-none">
+                <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mb-2.5 text-slate-400">
                   {chatType === 'group' ? (
-                    <UsersIcon size={22} />
+                    <UsersIcon size={24} />
                   ) : (
-                    <UserIcon size={22} />
+                    <UserIcon size={24} />
                   )}
                 </div>
-                <h4 className="text-sm font-semibold text-[#1c1c1e]">
+                <h4 className="text-sm font-bold text-slate-800">
                   {chatType === 'group'
                     ? 'No messages yet'
                     : selectedUser
-                    ? `iMessage with @${selectedUser.login}`
+                    ? `Conversation with @${selectedUser.login}`
                     : 'Select a conversation'}
                 </h4>
-                <p className="text-xs text-[#8e8e93] mt-1 max-w-xs text-center">
+                <p className="text-xs text-slate-500 mt-1 max-w-xs text-center">
                   {chatType === 'group'
                     ? 'Send a message to start communicating with the team.'
                     : selectedUser
@@ -966,174 +1016,122 @@ export default function Chat() {
                   <React.Fragment key={msg.id || `${msg.userId}-${msg.createdAt}-${index}`}>
                     {dateDivider}
 
-                    <div
-                      className={`flex flex-col ${
-                        isMe ? 'items-end' : 'items-start'
-                      } group my-1`}
-                    >
-                      {/* Inbound sender label for group chats */}
-                      {!isMe && chatType === 'group' && (
-                        <span className="text-[11px] font-medium text-[#8e8e93] ml-3 mb-0.5 select-none">
-                          {author}
-                        </span>
-                      )}
+                    <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} group my-1`}>
+                      {/* Message Bubble: WhatsApp UX with clean Apple/CRM styling */}
+                      <div
+                        className={`relative px-3.5 py-2 text-[14px] leading-relaxed max-w-[85%] sm:max-w-[70%] shadow-2xs select-text ${
+                          isMe
+                            ? 'bg-[#007aff] text-white rounded-2xl rounded-tr-xs'
+                            : 'bg-[#f2f2f7] text-[#1c1c1e] rounded-2xl rounded-tl-xs border border-black/[0.04]'
+                        }`}
+                      >
+                        {/* Inbound sender label for group chats */}
+                        {!isMe && chatType === 'group' && (
+                          <p className="text-[11px] font-bold text-[#007aff] mb-1 select-none">
+                            {author}
+                          </p>
+                        )}
 
-                      {/* Pure Media: Photo or Video without text (Exact Apple iMessage styling: borderless, flush, rounded bubble) */}
-                      {(isImg || isVid) && !text ? (
-                        <div
-                          className={`max-w-[75%] sm:max-w-[70%] overflow-hidden rounded-[18px] ${
-                            isMe ? 'rounded-br-[4px]' : 'rounded-bl-[4px]'
-                          } shadow-xs select-none`}
-                        >
-                          {isImg && (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenMedia(msg)}
-                              className="block hover:opacity-95 transition-opacity text-left cursor-pointer w-full group relative focus:outline-none"
-                              title="Click to view full photo in app"
-                            >
-                              <img
-                                src={msg.mediaUrl}
-                                alt={msg.fileName || 'Attached photo'}
-                                loading="lazy"
-                                onLoad={handleImageLoad}
-                                className="max-w-full max-h-80 object-cover block"
-                              />
-                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors flex items-center justify-center pointer-events-none">
-                                <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/65 text-white text-[11px] px-2.5 py-1 rounded-full font-medium shadow-md">
-                                  View Photo
-                                </span>
-                              </div>
-                            </button>
-                          )}
-                          {isVid && (
-                            <div className="bg-black relative">
-                              <video
-                                src={msg.mediaUrl}
-                                controls
-                                onLoadedData={handleImageLoad}
-                                className="max-w-full max-h-80 block"
-                              />
+                        {/* Image / Video Media */}
+                        {isImg && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenMedia(msg)}
+                            className="block hover:opacity-95 transition-opacity text-left cursor-pointer w-full rounded-xl overflow-hidden mb-1.5"
+                            title="Click to view full photo in app"
+                          >
+                            <img
+                              src={msg.mediaUrl}
+                              alt={msg.fileName || 'Attached photo'}
+                              loading="lazy"
+                              onLoad={handleImageLoad}
+                              className="w-full max-h-72 object-cover block rounded-xl"
+                            />
+                          </button>
+                        )}
+
+                        {isVid && (
+                          <div className="bg-black rounded-xl overflow-hidden mb-1.5">
+                            <video
+                              src={msg.mediaUrl}
+                              controls
+                              onLoadedData={handleImageLoad}
+                              className="w-full max-h-72 block"
+                            />
+                          </div>
+                        )}
+
+                        {/* Document Attachment */}
+                        {msg.mediaUrl && !isImg && !isVid && (
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadMedia(msg.mediaUrl!, msg.fileName)}
+                            className={`flex items-center gap-2.5 p-2 rounded-xl transition-colors w-full text-left cursor-pointer mb-1.5 ${
+                              isMe
+                                ? 'bg-white/15 text-white hover:bg-white/25'
+                                : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
+                            }`}
+                            title="Click to download file"
+                          >
+                            <FileText size={18} className="shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-medium text-[12px]">{msg.fileName || 'Document'}</p>
+                              {msg.fileSize && (
+                                <p className="text-[10px] opacity-75">{formatFileSize(msg.fileSize)}</p>
+                              )}
                             </div>
+                            <Download size={14} className="shrink-0 opacity-70" />
+                          </button>
+                        )}
+
+                        {/* Message Content & Inline WhatsApp Timestamp / Checkmark */}
+                        <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-0.5">
+                          {text && (
+                            <span className="whitespace-pre-wrap break-words font-normal flex-1">
+                              {text}
+                            </span>
                           )}
-                        </div>
-                      ) : (isImg || isVid) && text ? (
-                        /* Media WITH caption: Media is flush to top and sides with zero padding, caption below */
-                        <div
-                          className={`max-w-[75%] sm:max-w-[70%] overflow-hidden rounded-[18px] shadow-2xs select-text ${
-                            isMe ? 'ios-message-sent rounded-br-[4px]' : 'ios-message-received rounded-bl-[4px]'
-                          }`}
-                        >
-                          {isImg && (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenMedia(msg)}
-                              className="block hover:opacity-95 transition-opacity text-left cursor-pointer w-full group relative focus:outline-none"
-                              title="Click to view full photo in app"
-                            >
-                              <img
-                                src={msg.mediaUrl}
-                                alt={msg.fileName || 'Attached photo'}
-                                loading="lazy"
-                                onLoad={handleImageLoad}
-                                className="w-full max-h-80 object-cover block"
-                              />
-                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors flex items-center justify-center pointer-events-none">
-                                <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/65 text-white text-[11px] px-2.5 py-1 rounded-full font-medium shadow-md">
-                                  View Photo
-                                </span>
-                              </div>
-                            </button>
-                          )}
-                          {isVid && (
-                            <div className="bg-black">
-                              <video
-                                src={msg.mediaUrl}
-                                controls
-                                onLoadedData={handleImageLoad}
-                                className="w-full max-h-80 block"
-                              />
-                            </div>
-                          )}
-                          <div className="px-3.5 py-2 text-[14px] leading-relaxed">
-                            <p className="whitespace-pre-wrap break-words font-normal">{text}</p>
+
+                          <div
+                            className={`flex items-center gap-1 shrink-0 ml-auto pt-0.5 select-none text-[10px] ${
+                              isMe ? 'text-white/80' : 'text-slate-400'
+                            }`}
+                          >
+                            <span>{formatTimestamp(msg.createdAt || msg.timestamp)}</span>
+                            {isMe && (
+                              <span className="flex items-center">
+                                {typeof msg.id === 'number' && msg.id < 0 ? (
+                                  <svg className="w-3 h-3 animate-pulse" viewBox="0 0 16 16" fill="currentColor">
+                                    <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/>
+                                    <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/>
+                                  </svg>
+                                ) : msg.isRead ? (
+                                  <svg className="w-3.5 h-3" viewBox="0 0 16 15" fill="none">
+                                    <path d="M10.91 3.4L4.97 9.87L2.14 7.04" stroke="#a5f3fc" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                    <path d="M14.5 3.4L8.56 9.87L7.5 8.8" stroke="#a5f3fc" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </svg>
+                                ) : (
+                                  <svg className="w-3.5 h-3" viewBox="0 0 16 15" fill="none">
+                                    <path d="M10.91 3.4L4.97 9.87L2.14 7.04" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                    <path d="M14.5 3.4L8.56 9.87L7.5 8.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </svg>
+                                )}
+                              </span>
+                            )}
                           </div>
                         </div>
-                      ) : (
-                        /* Text or Document Bubble */
-                        <div
-                          className={`px-3.5 py-2 text-[14px] leading-relaxed max-w-[75%] sm:max-w-[70%] shadow-2xs space-y-2 select-text ${
-                            isMe ? 'ios-message-sent' : 'ios-message-received'
-                          }`}
-                        >
-                          {/* Media Attachment: Document (Downloads cleanly in-app, never opens external URL tab) */}
-                          {msg.mediaUrl && !isImg && !isVid && (
-                            <button
-                              type="button"
-                              onClick={() => handleDownloadMedia(msg.mediaUrl!, msg.fileName)}
-                              className={`flex items-center gap-2.5 p-2.5 rounded-xl transition-colors w-full text-left cursor-pointer ${
-                                isMe
-                                  ? 'bg-white/15 text-white hover:bg-white/25 active:bg-white/30'
-                                  : 'bg-black/5 text-[#000000] hover:bg-black/10 active:bg-black/15'
-                              }`}
-                              title="Click to download file"
-                            >
-                              <FileText size={18} className="shrink-0" />
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate font-medium text-[12px]">{msg.fileName || 'Document'}</p>
-                                {msg.fileSize && (
-                                  <p className="text-[10px] opacity-75">{formatFileSize(msg.fileSize)}</p>
-                                )}
-                              </div>
-                              <Download size={14} className="shrink-0 opacity-70" />
-                            </button>
-                          )}
+                      </div>
 
-                          {/* Message Text Content */}
-                          {text && (
-                            <p className="whitespace-pre-wrap break-words font-normal">
-                              {text}
-                            </p>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Beneath Outgoing Bubble: Signature WhatsApp Read / Delivered Status */}
-                      {isMe ? (
-                        <div className="flex items-center gap-1 mt-0.5 mr-1 text-[11px] text-[#8e8e93] font-normal select-none">
-                          <span>{formatTimestamp(msg.createdAt || msg.timestamp)}</span>
-
-                          {/* WhatsApp Checkmark / Pending Clock */}
-                          {typeof msg.id === 'number' && msg.id < 0 ? (
-                            <svg className="w-3.5 h-3.5 text-[#8e8e93] animate-pulse" viewBox="0 0 16 16" fill="currentColor">
-                              <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/>
-                              <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/>
-                            </svg>
-                          ) : msg.isRead ? (
-                            // Double blue checkmark (WhatsApp Read)
-                            <svg className="w-4 h-3.5" viewBox="0 0 16 15" fill="none">
-                              <path d="M10.91 3.4L4.97 9.87L2.14 7.04" stroke="#34B7F1" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-                              <path d="M14.5 3.4L8.56 9.87L7.5 8.8" stroke="#34B7F1" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          ) : (
-                            // Double gray checkmark (WhatsApp Delivered)
-                            <svg className="w-4 h-3.5" viewBox="0 0 16 15" fill="none">
-                              <path d="M10.91 3.4L4.97 9.87L2.14 7.04" stroke="#8e8e93" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-                              <path d="M14.5 3.4L8.56 9.87L7.5 8.8" stroke="#8e8e93" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          )}
-
+                      {/* Delete button on hover for sent messages */}
+                      {isMe && (
+                        <div className="flex items-center gap-1 mt-0.5 mr-1 text-[11px] select-none">
                           <button
                             onClick={() => handleDeleteMessage(msg.id!)}
                             title="Delete message"
-                            className="opacity-0 group-hover:opacity-100 text-[#8e8e93] hover:text-[#ff3b30] transition-opacity ml-1.5 p-0.5 cursor-pointer"
+                            className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-opacity p-0.5 cursor-pointer"
                           >
                             <Trash2 size={11} />
                           </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1 mt-0.5 ml-1 text-[11px] text-[#8e8e93] font-normal select-none">
-                          <span>{formatTimestamp(msg.createdAt || msg.timestamp)}</span>
                         </div>
                       )}
                     </div>
@@ -1146,7 +1144,7 @@ export default function Chat() {
 
           {/* Scroll to Latest Floating Pill Button */}
           {!isNearBottom && (
-            <div className="absolute bottom-20 right-6 z-10 animate-in fade-in duration-200">
+            <div className="absolute bottom-20 right-5 z-10 animate-in fade-in duration-200">
               <button
                 type="button"
                 onClick={() => scrollToBottom(true)}
@@ -1158,10 +1156,11 @@ export default function Chat() {
             </div>
           )}
 
-          {/* Authentic Apple iOS iMessage Input Bar */}
+          {/* Chat Input Bar (Pure White) */}
           <form
             onSubmit={handleSendMessage}
-            className="p-2 sm:p-3 bg-[#f6f6f6] border-t border-[rgba(60,60,67,0.12)] flex items-end gap-2 sm:gap-2.5"
+            className="p-2 sm:p-2.5 bg-white border-t border-black/[0.08] flex items-end gap-2 shrink-0 z-10"
+            style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}
           >
             {/* Hidden native file picker */}
             <input
@@ -1172,24 +1171,24 @@ export default function Chat() {
               onChange={handleFileSelect}
             />
 
-            {/* Apple Circular Plus Button */}
+            {/* Circular Attachment Button */}
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploadingFile || sending}
               title="Attach photo, video or document"
-              className="w-8 h-8 rounded-full bg-[#e9e9eb] hover:bg-[#dcdce0] active:scale-95 text-[#636366] hover:text-[#000000] flex items-center justify-center transition-all shrink-0 mb-0.5 shadow-2xs disabled:opacity-40 cursor-pointer"
+              className="w-10 h-10 rounded-full bg-white hover:bg-slate-100 active:scale-95 text-slate-600 hover:text-slate-900 flex items-center justify-center transition-all shrink-0 shadow-2xs border border-black/[0.06] disabled:opacity-40 cursor-pointer"
             >
-              <Plus size={18} strokeWidth={2.4} />
+              <Plus size={20} strokeWidth={2.4} />
             </button>
 
-            {/* iOS Capsule Input Pill */}
-            <div className="flex-1 ios-capsule-input px-3.5 py-1.5 flex flex-col justify-center min-h-[38px] transition-all focus-within:ring-0 focus-within:outline-none">
-              {/* Attachment Sticker / Pill INSIDE the Capsule */}
+            {/* Simple Clean Input Field */}
+            <div className="flex-1 flex flex-col min-w-0">
+              {/* Attachment Sticker / Pill if file selected */}
               {pendingFile && (
-                <div className="mb-2 pt-1 select-none">
+                <div className="mb-2 select-none">
                   {filePreviewUrl ? (
-                    <div className="relative inline-block w-16 h-16 rounded-xl overflow-hidden border border-black/10 shadow-xs">
+                    <div className="relative inline-block w-16 h-16 rounded-lg overflow-hidden border border-black/10 shadow-xs">
                       <img
                         src={filePreviewUrl}
                         alt="Attachment"
@@ -1205,7 +1204,7 @@ export default function Chat() {
                       </button>
                     </div>
                   ) : (
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#f2f2f7] rounded-xl border border-black/5 relative max-w-sm">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#f2f2f7] rounded-lg border border-black/5 relative max-w-sm">
                       <FileText size={16} className="text-[#007aff] shrink-0" />
                       <div className="min-w-0 flex-1">
                         <p className="text-[12px] font-medium text-[#1c1c1e] truncate">{pendingFile.name}</p>
@@ -1224,38 +1223,37 @@ export default function Chat() {
                 </div>
               )}
 
-              {/* Text Input Row + Authentic iOS Upward Arrow Send Button */}
-              <div className="flex items-center gap-2 w-full">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  disabled={chatType === 'p2p' && !selectedUser}
-                  placeholder={chatType === 'p2p' && !selectedUser ? 'Select a colleague to start chatting' : 'Message'}
-                  className="flex-1 bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus:border-none text-[14px] text-[#000000] py-0.5 shadow-none"
-                  aria-label="Message text"
-                />
-
-                <button
-                  type="submit"
-                  disabled={
-                    (!inputText.trim() && !pendingFile) ||
-                    sending ||
-                    uploadingFile ||
-                    (chatType === 'p2p' && !selectedUser)
-                  }
-                  className="ios-send-btn shrink-0"
-                  title="Send"
-                >
-                  {uploadingFile || sending ? (
-                    <Loader2 size={14} className="animate-spin text-white" />
-                  ) : (
-                    <ArrowUp size={16} strokeWidth={2.8} />
-                  )}
-                </button>
-              </div>
+              {/* Single Rectangular Input */}
+              <input
+                ref={inputRef}
+                type="text"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                disabled={chatType === 'p2p' && !selectedUser}
+                placeholder={chatType === 'p2p' && !selectedUser ? 'Select a colleague to start chatting' : 'Type a message...'}
+                className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#007aff] focus:ring-1 focus:ring-[#007aff] transition"
+                aria-label="Message text"
+              />
             </div>
+
+            {/* Circular Send Button */}
+            <button
+              type="submit"
+              disabled={
+                (!inputText.trim() && !pendingFile) ||
+                sending ||
+                uploadingFile ||
+                (chatType === 'p2p' && !selectedUser)
+              }
+              className="w-10 h-10 rounded-full bg-[#007aff] hover:bg-[#0071e3] active:scale-95 disabled:bg-slate-300 disabled:opacity-50 text-white flex items-center justify-center transition-all shrink-0 shadow-xs cursor-pointer disabled:cursor-not-allowed"
+              title="Send"
+            >
+              {uploadingFile || sending ? (
+                <Loader2 size={16} className="animate-spin text-white" />
+              ) : (
+                <ArrowUp size={18} strokeWidth={2.6} />
+              )}
+            </button>
           </form>
         </div>
       </div>
