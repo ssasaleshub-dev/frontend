@@ -6,6 +6,7 @@ import {
   Search,
   ChevronRight,
   Send,
+  X,
 } from 'lucide-react';
 import { Lead } from '../../types';
 import { LEAD_STATUSES } from '../../config/constants';
@@ -31,6 +32,27 @@ export interface StaffDashboardViewProps {
   navigate: NavigateFunction;
   renderVisaBadge: (visaType?: string) => React.ReactNode;
 }
+
+// Stage dot colours for the mobile lead cards
+const STAGE_DOT: Record<string, string> = {
+  CREATED: 'bg-slate-400',
+  NEW: 'bg-slate-400',
+  CONTACTED: 'bg-blue-500',
+  QUALIFIED: 'bg-indigo-500',
+  PROPOSAL_SENT: 'bg-sky-500',
+  NEGOTIATION: 'bg-amber-500',
+  CONVERTED: 'bg-emerald-500',
+  WON: 'bg-emerald-500',
+  LOST: 'bg-rose-500',
+};
+
+const getInitials = (name: string): string => {
+  const parts = name.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  const first = parts[0].charAt(0);
+  const last = parts.length > 1 ? parts[parts.length - 1].charAt(0) : '';
+  return (first + last).toUpperCase();
+};
 
 export const StaffDashboardView: React.FC<StaffDashboardViewProps> = ({
   currentUser,
@@ -89,6 +111,14 @@ export const StaffDashboardView: React.FC<StaffDashboardViewProps> = ({
       return st === 'CONVERTED' || st === 'WON';
     });
   }, [leads]);
+
+  const stageTabs: Array<{ key: typeof activeTab; label: string; count: number; activeClass: string }> = [
+    { key: 'ALL', label: 'All Leads', count: leads.length, activeClass: 'bg-slate-900' },
+    { key: 'UNCONTACTED', label: 'Uncontacted', count: uncontactedLeads.length, activeClass: 'bg-amber-600' },
+    { key: 'COUNSELING', label: 'In Counseling', count: inCounselingLeads.length, activeClass: 'bg-indigo-600' },
+    { key: 'IN_PROCESS', label: 'In Process', count: inProcessLeads.length, activeClass: 'bg-blue-600' },
+    { key: 'CONVERTED', label: 'Won / Enrolled', count: convertedLeads.length, activeClass: 'bg-emerald-600' },
+  ];
 
   // Tab-filtered leads
   const tabLeads = useMemo(() => {
@@ -384,76 +414,150 @@ export const StaffDashboardView: React.FC<StaffDashboardViewProps> = ({
       {/* ── My Leads Workspace (Filterable Operational Desk Table) ── */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden">
         {/* Workspace Toolbar */}
-        <div className="p-4 sm:p-5 border-b border-slate-200/90 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-          {/* Filter Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
-            <button
-              type="button"
-              onClick={() => setActiveTab('ALL')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition cursor-pointer ${activeTab === 'ALL'
-                  ? 'bg-slate-900 text-white shadow-2xs'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                }`}
-            >
-              All Leads ({leads.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('UNCONTACTED')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition cursor-pointer ${activeTab === 'UNCONTACTED'
-                  ? 'bg-amber-600 text-white shadow-2xs'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                }`}
-            >
-              Uncontacted ({uncontactedLeads.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('COUNSELING')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition cursor-pointer ${activeTab === 'COUNSELING'
-                  ? 'bg-indigo-600 text-white shadow-2xs'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                }`}
-            >
-              In Counseling ({inCounselingLeads.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('IN_PROCESS')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition cursor-pointer ${activeTab === 'IN_PROCESS'
-                  ? 'bg-blue-600 text-white shadow-2xs'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                }`}
-            >
-              In Process ({inProcessLeads.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('CONVERTED')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition cursor-pointer ${activeTab === 'CONVERTED'
-                  ? 'bg-emerald-600 text-white shadow-2xs'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                }`}
-            >
-              Won / Enrolled ({convertedLeads.length})
-            </button>
+        <div className="px-4 pt-4 pb-3 sm:p-5 border-b border-slate-200/90 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+          {/* Filter Pills: swipeable on phones, scrollbar hidden */}
+          <div
+            role="tablist"
+            aria-label="Filter leads by stage"
+            className="-mx-4 px-4 md:mx-0 md:px-0 flex items-center gap-2 md:gap-1.5 overflow-x-auto no-scrollbar snap-x"
+          >
+            {stageTabs.map((tab) => {
+              const isActive = activeTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`snap-start shrink-0 inline-flex items-center gap-1.5 h-9 md:h-auto px-3.5 md:px-3 md:py-1.5 rounded-full md:rounded-lg text-[13px] md:text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
+                    isActive
+                      ? `${tab.activeClass} text-white shadow-2xs`
+                      : 'bg-slate-100 md:bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  <span
+                    className={`min-w-[20px] px-1.5 py-px rounded-full text-[11px] leading-4 text-center ${
+                      isActive ? 'bg-white/20 text-white' : 'bg-white md:bg-slate-100 text-slate-500'
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Quick Search */}
+          {/* Quick Search (16px text on phones so iOS doesn't zoom on focus) */}
           <div className="relative w-full md:w-64">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
-              type="text"
+              type="search"
+              inputMode="search"
+              enterKeyHint="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search candidate name, phone..."
-              className="w-full !pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs text-slate-800 placeholder:text-slate-400"
+              placeholder="Search name, phone or city"
+              aria-label="Search candidates"
+              className="w-full h-11 md:h-8 !pl-10 md:!pl-9 pr-10 text-base md:text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 md:focus:ring-1 focus:ring-blue-500 shadow-2xs text-slate-800 placeholder:text-slate-400 [&::-webkit-search-cancel-button]:hidden"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                aria-label="Clear search"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+              >
+                <X size={15} />
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Workspace Leads Table */}
-        <div className="overflow-x-auto">
+        {/* ── Mobile: tappable lead cards (no sideways scrolling) ── */}
+        <ul className="md:hidden divide-y divide-slate-100">
+          {filteredLeads.length === 0 ? (
+            <li className="py-14 px-6 text-center">
+              <p className="text-sm font-medium text-slate-600">No candidates here</p>
+              <p className="mt-1 text-xs text-slate-400">
+                {searchQuery ? 'Try a different name, phone number or city.' : 'Leads in this stage will appear here.'}
+              </p>
+            </li>
+          ) : (
+            filteredLeads.slice(0, 20).map((lead) => {
+              const cleanPhone = (lead.phoneNumber || '').replace(/[^0-9]/g, '');
+              const statusKey = (lead.status || 'CREATED').toUpperCase();
+              const stageLabel = (lead.status && LEAD_STATUSES[lead.status]?.label) || lead.status || 'New Lead';
+              const cleanName = (lead.customerName || `Candidate #${formatMaskedLeadRef(lead.id)}`)
+                .replace(/[\uFFFD\uFFFE\uFFFF]/g, '')
+                .trim();
+              const city = lead.city || lead.location;
+
+              return (
+                <li
+                  key={lead.id}
+                  onClick={() => navigate(`/leads/${encryptLeadId(lead.id)}`)}
+                  className="flex items-center gap-3 px-4 py-3.5 active:bg-slate-50 cursor-pointer"
+                >
+                  <div
+                    aria-hidden="true"
+                    className="w-10 h-10 shrink-0 rounded-full bg-slate-100 text-slate-600 text-sm font-semibold flex items-center justify-center"
+                  >
+                    {getInitials(cleanName)}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[15px] font-semibold text-slate-900 leading-5">{cleanName}</p>
+                    <p className="truncate text-[13px] text-slate-500 leading-5">
+                      <span className="tabular-nums">{lead.phoneNumber || 'No phone'}</span>
+                      {city && <span className="capitalize"> · {city}</span>}
+                    </p>
+                    <div className="mt-1.5 flex items-center gap-2 min-w-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenStatusModal(lead);
+                        }}
+                        aria-label={`Stage: ${stageLabel}. Tap to change`}
+                        className="shrink-0 inline-flex items-center gap-1.5 h-6 px-2 rounded-full bg-slate-100 active:bg-slate-200 text-[11px] font-semibold text-slate-700 cursor-pointer"
+                      >
+                        <span className={`w-1.5 h-1.5 rounded-full ${STAGE_DOT[statusKey] || 'bg-slate-400'}`} />
+                        {stageLabel}
+                      </button>
+                      <span className="truncate text-[11px] text-slate-500">{renderVisaBadge(lead.visaType)}</span>
+                    </div>
+                  </div>
+
+                  {cleanPhone && (
+                    <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <a
+                        href={`https://wa.me/${cleanPhone}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-label={`WhatsApp ${cleanName}`}
+                        className="w-10 h-10 rounded-full bg-emerald-50 active:bg-emerald-100 text-emerald-600 flex items-center justify-center"
+                      >
+                        <MessageCircle size={18} />
+                      </a>
+                      <a
+                        href={`tel:${cleanPhone}`}
+                        aria-label={`Call ${cleanName}`}
+                        className="w-10 h-10 rounded-full bg-blue-50 active:bg-blue-100 text-blue-600 flex items-center justify-center"
+                      >
+                        <Phone size={18} />
+                      </a>
+                    </div>
+                  )}
+                </li>
+              );
+            })
+          )}
+        </ul>
+
+        {/* Workspace Leads Table (tablet & desktop) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
@@ -568,17 +672,17 @@ export const StaffDashboardView: React.FC<StaffDashboardViewProps> = ({
         </div>
 
         {/* Table Footer */}
-        <div className="p-3.5 bg-slate-50/70 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <span>
-            Showing {Math.min(filteredLeads.length, 20)} of {filteredLeads.length} candidates in workspace
+        <div className="p-3.5 bg-slate-50/70 border-t border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 text-xs text-slate-500">
+          <span className="text-center sm:text-left">
+            Showing {Math.min(filteredLeads.length, 20)} of {filteredLeads.length} candidates
           </span>
           <button
             type="button"
             onClick={() => navigate('/leads')}
-            className="font-semibold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 cursor-pointer"
+            className="h-11 sm:h-auto rounded-xl sm:rounded-none bg-white sm:bg-transparent border border-slate-200 sm:border-0 font-semibold text-sm sm:text-xs text-blue-600 hover:text-blue-700 sm:hover:underline flex items-center justify-center gap-1 cursor-pointer"
           >
-            <span>Open Full Leads Table</span>
-            <ChevronRight size={13} />
+            <span>View all leads</span>
+            <ChevronRight size={14} />
           </button>
         </div>
       </div>

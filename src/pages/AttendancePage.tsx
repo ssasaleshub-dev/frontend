@@ -132,17 +132,8 @@ export default function AttendancePage() {
         setSelectedMode(res.workMode as 'OFFICE' | 'REMOTE' | 'FIELD');
       }
 
-      // Check stored biometric & sync from backend
-      const stored = biometricService.getStoredBiometric(currentUserId);
-      if (stored) setBiometricCred(stored);
-      biometricService
-        .getUserCredentials(currentUserId)
-        .then((creds) => {
-          if (creds && creds.length > 0) {
-            setBiometricCred(creds[creds.length - 1]);
-          }
-        })
-        .catch(() => {});
+      // Re-sync the registered fingerprint (state lives in useBiometricAttendance)
+      refreshBiometric();
     } catch (err) {
       console.warn('Failed loading my attendance:', err);
     }
@@ -150,6 +141,9 @@ export default function AttendancePage() {
 
   // Load Admin Data (Roster + Summary + Users list)
   const loadAdminData = async () => {
+    // Roster and summary are admin-only endpoints (the server answers 403 for staff), so
+    // staff accounts never request them.
+    if (!isAdmin) return;
     setLoadingRoster(true);
     try {
       const [records, summary, usersList] = await Promise.all([
@@ -184,7 +178,7 @@ export default function AttendancePage() {
 
     window.addEventListener('ssa_attendance_updated', handleUpdate);
     return () => window.removeEventListener('ssa_attendance_updated', handleUpdate);
-  }, [currentUserId, dateRange, staffFilter]);
+  }, [currentUserId, isAdmin, dateRange, staffFilter]);
 
   // Live timer for personal shift
   useEffect(() => {
@@ -224,6 +218,7 @@ export default function AttendancePage() {
     closeSuccessModal,
     handleRegisterBiometric,
     handleBiometricCheckIn,
+    refreshBiometric,
   } = useBiometricAttendance({
     userId: currentUserId,
     userName: displayName,
@@ -237,6 +232,10 @@ export default function AttendancePage() {
       loadAdminData();
     },
   });
+
+  // Check-out progress (check-in progress is tracked by the biometric hook)
+  const [checkingOut, setCheckingOut] = useState<boolean>(false);
+  const isPunchBusy = punching || checkingOut;
 
   // Check In
   const handleCheckIn = async () => {
@@ -253,7 +252,7 @@ export default function AttendancePage() {
       cancelText: 'Cancel',
     });
     if (!confirmed) return;
-    setPunching(true);
+    setCheckingOut(true);
     try {
       const result = await attendanceService.checkOut({
         userId: currentUserId,
@@ -266,7 +265,7 @@ export default function AttendancePage() {
     } catch (err: any) {
       showAlert({ title: 'Attendance', message: `Check-out failed: ${err?.message || 'Server error'}` });
     } finally {
-      setPunching(false);
+      setCheckingOut(false);
     }
   };
 
@@ -434,14 +433,14 @@ export default function AttendancePage() {
                 credential={biometricCred}
                 isLoading={enrollingBiometric}
                 onRegister={handleRegisterBiometric}
-                disabled={punching}
+                disabled={isPunchBusy}
               />
 
               {!isCheckedIn ? (
                 <button
                   type="button"
                   onClick={handleCheckIn}
-                  disabled={punching}
+                  disabled={isPunchBusy}
                   className="px-4 py-2 rounded-xl bg-[#007aff] hover:bg-[#0062cc] text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 active:scale-95"
                 >
                   {punching ? <Loader2 size={13} className="animate-spin" /> : <Clock size={14} />}
@@ -451,10 +450,10 @@ export default function AttendancePage() {
                 <button
                   type="button"
                   onClick={handleCheckOut}
-                  disabled={punching}
+                  disabled={isPunchBusy}
                   className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 active:scale-95"
                 >
-                  {punching ? <Loader2 size={13} className="animate-spin" /> : <LogOut size={14} />}
+                  {checkingOut ? <Loader2 size={13} className="animate-spin" /> : <LogOut size={14} />}
                   <span>Check Out</span>
                 </button>
               ) : (
