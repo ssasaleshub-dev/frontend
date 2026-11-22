@@ -106,7 +106,7 @@ export default function LeadReminderModal({
     setLoading(true);
     try {
       // 1. Fetch from backend API
-      const serverEvents = await notificationApiService.getEvents({ candidateId: candidateId as any });
+      const serverEvents = await notificationApiService.getEventsForCandidate(candidateId);
       if (Array.isArray(serverEvents) && serverEvents.length > 0) {
         setReminders(serverEvents);
         if (serverEvents.length > 0 && !title) {

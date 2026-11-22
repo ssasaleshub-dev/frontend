@@ -2,7 +2,53 @@ import axiosClient from './axiosClient';
 import { API_ENDPOINTS } from '../../config/constants';
 import type { Lead, Customer } from '../../types';
 
+/**
+ * The backend LeadPreference entity still uses column names inherited from the original
+ * project template. Until the backend renames them, CRM concepts map to those columns here and
+ * ONLY here. Keys are CRM field names; values are the backend column names.
+ */
+export const LEAD_PREFERENCE_LEGACY_FIELDS = {
+  paymentStatus: 'mattressType',
+  paymentDetails: 'mattressSize',
+  closingDate: 'purchaseTimeline',
+} as const;
+
+type LegacyMappedField = keyof typeof LEAD_PREFERENCE_LEGACY_FIELDS;
+
+/** Converts CRM-named preference fields into the backend's column names. */
+export function toLeadPreferencePayload(fields: Record<string, any>): Record<string, any> {
+  const payload: Record<string, any> = {};
+  Object.entries(fields).forEach(([key, value]) => {
+    if (value === undefined) return;
+    const legacyKey = LEAD_PREFERENCE_LEGACY_FIELDS[key as LegacyMappedField];
+    payload[legacyKey || key] = value;
+  });
+  return payload;
+}
+
+/** Reads a CRM field from a lead, falling back to the backend's legacy column name. */
+export function readLeadPreferenceField(lead: Record<string, any> | null | undefined, field: LegacyMappedField): any {
+  if (!lead) return undefined;
+  return lead[field] ?? lead[LEAD_PREFERENCE_LEGACY_FIELDS[field]];
+}
+
 export const crmService = {
+  /**
+   * Updates the lead's preference record, or creates one if the lead has none yet.
+   * `fields` use CRM names (paymentStatus, paymentDetails, closingDate, budgetRange, ...).
+   * Throws on failure so callers can surface the error.
+   */
+  upsertLeadPreference: (lead: Lead, fields: Record<string, any>): Promise<any> => {
+    const payload = toLeadPreferencePayload(fields);
+    const prefId = (lead as any).preferenceId || (lead as any).leadPreferenceId;
+    if (prefId) {
+      payload.id = Number(prefId);
+      return axiosClient.patch(`${API_ENDPOINTS.LEAD_PREFERENCES}/${prefId}`, payload);
+    }
+    payload.lead = { id: lead.id };
+    return axiosClient.post(API_ENDPOINTS.LEAD_PREFERENCES, payload);
+  },
+
   getLeadAnalytics: (visaType?: string): Promise<any> => {
     const params = visaType && visaType !== 'ALL' ? { visaType } : undefined;
     return axiosClient.get(API_ENDPOINTS.LEADS_ANALYTICS, params ? { params } : undefined);

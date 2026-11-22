@@ -34,8 +34,8 @@ import {
   BrandLostIcon,
   BrandReminderIcon,
 } from '../components/icons/BrandIcons';
-import axiosClient from '../services/api/axiosClient';
-import crmService from '../services/api/crmService';
+import crmService, { readLeadPreferenceField } from '../services/api/crmService';
+import { parseRemarks, buildRemarkEntry, joinRemarks, sanitizeRemarkText, type RemarkEntry } from '../utils/remarks';
 import adminService from '../services/api/adminService';
 import leadActivityService from '../services/api/leadActivityService';
 import notificationApiService, { CalendarEventDTO } from '../services/api/notificationService';
@@ -51,6 +51,9 @@ import {
   AGE_BRACKETS,
   EDUCATION_QUALIFICATIONS,
   filterLeadsByUserRole,
+  isWorkVisaType,
+  isStudyVisaType,
+  isDomesticAdmissionType,
 } from '../config/constants';
 import { isAdmin as checkIsAdmin } from '../utils/rbac';
 import { useAuth } from '../context/AuthContext';
@@ -88,7 +91,7 @@ export default function CandidateDetail() {
   const [copiedPhone, setCopiedPhone] = useState<boolean>(false);
   const [submittingNote, setSubmittingNote] = useState<boolean>(false);
   const [newNote, setNewNote] = useState<string>('');
-  const [notesHistory, setNotesHistory] = useState<Array<{ note: string; date: string; author: string }>>([]);
+  const [notesHistory, setNotesHistory] = useState<RemarkEntry[]>([]);
   const [activeSection, setActiveSection] = useState<'info' | 'payments' | 'eligibility' | 'notes'>('info');
 
   // Client Budget & Payment State
@@ -132,10 +135,8 @@ export default function CandidateDetail() {
 
     // Fetch activities & candidate reminders in parallel
     leadActivityService.getActivities(targetId).then(setActivities).catch(() => { });
-    notificationApiService.getEvents({ candidateId: targetId as any })
-      .then((evts) => {
-        if (Array.isArray(evts)) setLeadReminders(evts);
-      })
+    notificationApiService.getEventsForCandidate(targetId)
+      .then(setLeadReminders)
       .catch(() => { });
     try {
       let candidateData: Lead | null = null;
@@ -185,8 +186,8 @@ export default function CandidateDetail() {
         }
 
         const effectiveBudget = candidateData.budgetRange || (candidateData as any).budget || (candidateData as any).clientBudget || cachedBudget || '';
-        const effectivePaymentStatus = (candidateData as any).paymentStatus || candidateData.mattressType || cachedPaymentStatus || 'UNPAID';
-        const effectivePaymentDetails = (candidateData as any).paymentDetails || candidateData.mattressSize || cachedPaymentDetails || '';
+        const effectivePaymentStatus = readLeadPreferenceField(candidateData, 'paymentStatus') || cachedPaymentStatus || 'UNPAID';
+        const effectivePaymentDetails = readLeadPreferenceField(candidateData, 'paymentDetails') || cachedPaymentDetails || '';
         const effectivePercentage = (candidateData as any).studentPercentage || (candidateData as any).cgpa || cachedPercentage || extractedPercentage || '';
 
         candidateData.budgetRange = effectiveBudget;
@@ -221,18 +222,14 @@ export default function CandidateDetail() {
           cgpa: effectivePercentage,
         });
 
-        if (candidateData.notes) {
-          const parts = candidateData.notes.split(/\s*\|\s*/).filter(Boolean);
-          setNotesHistory(
-            parts.map((p: string) => ({
-              note: p,
-              date: candidateData.createdTime || candidateData.createdAt || new Date().toISOString(),
-              author: candidateData.assignedTo || 'Counselor',
-            }))
-          );
-        } else {
-          setNotesHistory([]);
-        }
+        // Newest first; entries saved with a "[date · author]" prefix keep their own date and author
+        setNotesHistory(
+          parseRemarks(
+            candidateData.notes,
+            candidateData.createdTime || candidateData.createdAt || new Date().toISOString(),
+            candidateData.assignedTo || 'Counselor'
+          ).reverse()
+        );
       }
     } catch (err: any) {
       const serverDown = Boolean(
@@ -366,24 +363,62 @@ export default function CandidateDetail() {
     }
   };
 
+  // Remarks shown newest-first; stored order (oldest-first) is restored when saving.
+  const toNotesHistory = (notes: string | undefined | null, l: Lead): RemarkEntry[] =>
+    parseRemarks(
+      notes,
+      l.createdTime || l.createdAt || new Date().toISOString(),
+      l.assignedTo || 'Counselor'
+    ).reverse();
+
+  // Local cache mirrors values the server has CONFIRMED (written only after a successful save),
+  // so it can never hide a failed save.
+  const cacheLeadField = (leadId: string | number, key: string, value: string) => {
+    try {
+      localStorage.setItem(`ssa_lead_${key}_${leadId}`, value);
+    } catch {
+      // storage unavailable or full
+    }
+  };
+
+  const actorName = () => currentUser?.login || currentUser?.firstName || 'Counselor';
+
+  // Saves preference fields; remembers a newly created preference id so later saves update it
+  // instead of creating another record.
+  const savePreference = async (target: Lead, fields: Record<string, any>) => {
+    const res = await crmService.upsertLeadPreference(target, fields);
+    const hasPref = (target as any).preferenceId || (target as any).leadPreferenceId;
+    if (!hasPref && res?.id) {
+      setLead((prev) => (prev ? { ...prev, preferenceId: res.id } : prev));
+    }
+    return res;
+  };
+
+  const showSaveError = (what: string, err: any) => {
+    showAlert({
+      title: 'Not Saved',
+      message: `${what} could not be saved: ${err?.message || 'Server error'}. Your change was undone.`,
+      icon: 'error',
+      buttonText: 'OK',
+    });
+  };
+
   const handleAddNote = async (e?: React.FormEvent | React.MouseEvent) => {
     if (e && typeof e.preventDefault === 'function') e.preventDefault();
     if (!newNote.trim() || !lead) return;
-    const noteText = newNote.trim();
+    const noteText = sanitizeRemarkText(newNote);
+    if (!noteText) return;
+    const author = currentUser?.firstName || currentUser?.login || 'Counselor';
+    const now = new Date();
+    const entry = buildRemarkEntry(noteText, author, now);
     setSubmittingNote(true);
     try {
-      const combinedNotes = lead.notes
-        ? `${lead.notes} | ${noteText}`
-        : noteText;
+      const combinedNotes = lead.notes ? `${lead.notes} | ${entry}` : entry;
 
       await crmService.updateLeadStatus(lead.id, lead.status || 'CONTACTED', combinedNotes);
 
       setNotesHistory((prev) => [
-        {
-          note: noteText,
-          date: new Date().toISOString(),
-          author: currentUser?.firstName || currentUser?.login || 'You',
-        },
+        { note: noteText, date: now.toISOString(), author, raw: entry },
         ...prev,
       ]);
 
@@ -392,7 +427,7 @@ export default function CandidateDetail() {
       window.dispatchEvent(new CustomEvent('crm-data-updated'));
 
       leadActivityService.logActivity(lead.id, {
-        userName: currentUser?.login || currentUser?.firstName || 'Counselor',
+        userName: actorName(),
         userRole: currentUser?.authorities?.[0],
         actionType: 'REMARKS_ADDED',
         title: 'Counselor Remark Recorded',
@@ -418,7 +453,8 @@ export default function CandidateDetail() {
     if (!confirmed) return;
 
     const updatedHistory = notesHistory.filter((_, idx) => idx !== indexToDelete);
-    const updatedNotes = updatedHistory.map((item) => item.note).join(' | ');
+    // History is newest-first; rebuild the stored field oldest-first without touching other entries
+    const updatedNotes = joinRemarks([...updatedHistory].reverse());
 
     try {
       try {
@@ -438,26 +474,19 @@ export default function CandidateDetail() {
     if (!lead) return;
     const trimmed = formatCurrencyDisplay(newBudget) || newBudget.trim();
     const oldBudget = lead.budgetRange || '';
+    setIsEditingBudget(false);
+    if (trimmed === oldBudget) return;
 
-    // Optimistically update
+    // Optimistic update, rolled back below if the server rejects it
     setLead((prev) => (prev ? { ...prev, budgetRange: trimmed, clientBudget: trimmed } : null));
     setEditFormData((prev) => ({ ...prev, budgetRange: trimmed }));
-    localStorage.setItem(`ssa_lead_budget_${lead.id}`, trimmed);
-    setIsEditingBudget(false);
 
     try {
-      const prefId = lead.preferenceId || (lead as any).leadPreferenceId;
-      const payload: any = { budgetRange: trimmed };
-      if (prefId) {
-        payload.id = Number(prefId);
-        await axiosClient.patch(`/api/lead-preferences/${prefId}`, payload);
-      } else {
-        payload.lead = { id: lead.id };
-        await axiosClient.post('/api/lead-preferences', payload);
-      }
+      await savePreference(lead, { budgetRange: trimmed });
+      cacheLeadField(lead.id, 'budget', trimmed);
 
       leadActivityService.logActivity(lead.id, {
-        userName: currentUser?.login || currentUser?.firstName || 'Counselor',
+        userName: actorName(),
         userRole: currentUser?.authorities?.[0] || 'STAFF',
         actionType: 'DATA_MODIFY',
         title: 'Updated Client Budget',
@@ -469,39 +498,34 @@ export default function CandidateDetail() {
 
       showAlert({ title: 'Success', message: `Client budget updated to ${trimmed || 'Cleared'}` });
     } catch (err: any) {
-      console.warn('Failed to save budget:', err);
+      setLead((prev) => (prev ? { ...prev, budgetRange: oldBudget, clientBudget: oldBudget } : null));
+      setEditFormData((prev) => ({ ...prev, budgetRange: oldBudget }));
+      setBudgetInput(oldBudget);
+      showSaveError('Client budget', err);
     }
   };
 
   const handleUpdatePaymentStatus = async (status: 'UNPAID' | 'PARTIAL' | 'PAID') => {
     if (!lead || updatingPayment) return;
-    setUpdatingPayment(true);
     const oldStatus = (lead as any).paymentStatus || 'UNPAID';
+    if (oldStatus === status) return;
+    setUpdatingPayment(true);
 
-    // Optimistically update
     setLead((prev) => (prev ? { ...prev, paymentStatus: status } : null));
     setEditFormData((prev) => ({ ...prev, paymentStatus: status }));
-    localStorage.setItem(`ssa_lead_payment_status_${lead.id}`, status);
+
+    const statusLabels: Record<string, string> = {
+      UNPAID: 'Not Paid',
+      PARTIAL: 'Partially Paid',
+      PAID: 'Fully Paid',
+    };
 
     try {
-      const prefId = lead.preferenceId || (lead as any).leadPreferenceId;
-      const payload: any = { mattressType: status };
-      if (prefId) {
-        payload.id = Number(prefId);
-        await axiosClient.patch(`/api/lead-preferences/${prefId}`, payload);
-      } else {
-        payload.lead = { id: lead.id };
-        await axiosClient.post('/api/lead-preferences', payload);
-      }
-
-      const statusLabels: Record<string, string> = {
-        UNPAID: 'Not Paid',
-        PARTIAL: 'Partially Paid',
-        PAID: 'Fully Paid',
-      };
+      await savePreference(lead, { paymentStatus: status });
+      cacheLeadField(lead.id, 'payment_status', status);
 
       leadActivityService.logActivity(lead.id, {
-        userName: currentUser?.login || currentUser?.firstName || 'Counselor',
+        userName: actorName(),
         userRole: currentUser?.authorities?.[0] || 'STAFF',
         actionType: 'STATUS_CHANGE',
         title: 'Updated Payment Status',
@@ -513,7 +537,9 @@ export default function CandidateDetail() {
 
       showAlert({ title: 'Payment Updated', message: `Candidate marked as ${statusLabels[status]}` });
     } catch (err: any) {
-      console.warn('Failed to save payment status:', err);
+      setLead((prev) => (prev ? { ...prev, paymentStatus: oldStatus } : null));
+      setEditFormData((prev) => ({ ...prev, paymentStatus: oldStatus }));
+      showSaveError('Payment status', err);
     } finally {
       setUpdatingPayment(false);
     }
@@ -523,26 +549,18 @@ export default function CandidateDetail() {
     if (!lead) return;
     const trimmed = details.trim();
     const oldDetails = (lead as any).paymentDetails || '';
+    setIsEditingPaymentDetails(false);
+    if (trimmed === oldDetails) return;
 
-    // Optimistically update
     setLead((prev) => (prev ? { ...prev, paymentDetails: trimmed } : null));
     setEditFormData((prev) => ({ ...prev, paymentDetails: trimmed }));
-    localStorage.setItem(`ssa_lead_payment_details_${lead.id}`, trimmed);
-    setIsEditingPaymentDetails(false);
 
     try {
-      const prefId = lead.preferenceId || (lead as any).leadPreferenceId;
-      const payload: any = { mattressSize: trimmed };
-      if (prefId) {
-        payload.id = Number(prefId);
-        await axiosClient.patch(`/api/lead-preferences/${prefId}`, payload);
-      } else {
-        payload.lead = { id: lead.id };
-        await axiosClient.post('/api/lead-preferences', payload);
-      }
+      await savePreference(lead, { paymentDetails: trimmed });
+      cacheLeadField(lead.id, 'payment_details', trimmed);
 
       leadActivityService.logActivity(lead.id, {
-        userName: currentUser?.login || currentUser?.firstName || 'Counselor',
+        userName: actorName(),
         userRole: currentUser?.authorities?.[0] || 'STAFF',
         actionType: 'DATA_MODIFY',
         title: 'Updated Payment Details',
@@ -554,49 +572,48 @@ export default function CandidateDetail() {
 
       showAlert({ title: 'Success', message: 'Payment details saved successfully' });
     } catch (err: any) {
-      console.warn('Failed to save payment details:', err);
+      setLead((prev) => (prev ? { ...prev, paymentDetails: oldDetails } : null));
+      setEditFormData((prev) => ({ ...prev, paymentDetails: oldDetails }));
+      setPaymentDetailsInput(oldDetails);
+      showSaveError('Payment details', err);
     }
   };
 
   const handleUpdatePercentage = async (newPercentage: string) => {
     if (!lead) return;
-    const trimmed = newPercentage.trim();
+    const trimmed = sanitizeRemarkText(newPercentage);
     const oldPercentage = (lead as any).studentPercentage || (lead as any).cgpa || '';
-
-    // Optimistically update
-    setLead((prev) => (prev ? { ...prev, studentPercentage: trimmed, cgpa: trimmed } : null));
-    setEditFormData((prev) => ({ ...prev, studentPercentage: trimmed, cgpa: trimmed }));
-    localStorage.setItem(`ssa_lead_percentage_${lead.id}`, trimmed);
+    const oldNotes = lead.notes || '';
     setIsEditingPercentage(false);
+    if (trimmed === oldPercentage) return;
 
     // Sync to notes: replace existing CGPA entry or prepend
-    let updatedNotes = lead.notes || '';
-    if (/(?:what_is_your_cgpa_or_current_percentage|cgpa|percentage|score|marks)\s*[:=?]\s*([^|\n,;]+)/i.test(updatedNotes)) {
-      updatedNotes = updatedNotes.replace(
-        /(?:what_is_your_cgpa_or_current_percentage|cgpa|percentage|score|marks)\s*[:=?]\s*([^|\n,;]+)/i,
-        `CGPA: ${trimmed}`
-      );
+    let updatedNotes = oldNotes;
+    const cgpaPattern = /(?:what_is_your_cgpa_or_current_percentage|cgpa|percentage|score|marks)\s*[:=?]\s*([^|\n,;]+)/i;
+    if (cgpaPattern.test(updatedNotes)) {
+      updatedNotes = updatedNotes.replace(cgpaPattern, `CGPA: ${trimmed}`);
     } else if (trimmed) {
       updatedNotes = updatedNotes ? `CGPA: ${trimmed} | ${updatedNotes}` : `CGPA: ${trimmed}`;
     }
 
-    try {
-      const promises: Promise<any>[] = [];
-      promises.push(crmService.patchLead(lead.id, { notes: updatedNotes }).catch(() => { }));
+    setLead((prev) => (prev ? { ...prev, studentPercentage: trimmed, cgpa: trimmed, notes: updatedNotes } : null));
+    setEditFormData((prev) => ({ ...prev, studentPercentage: trimmed, cgpa: trimmed, notes: updatedNotes }));
+    setNotesHistory(toNotesHistory(updatedNotes, lead));
 
+    try {
+      // The lead's notes field is the source of truth for the score
+      await crmService.patchLead(lead.id, { notes: updatedNotes });
+
+      // Secondary copy on the preference record; not critical if it fails
       const prefId = lead.preferenceId || (lead as any).leadPreferenceId;
       if (prefId) {
-        promises.push(
-          axiosClient
-            .patch(`/api/lead-preferences/${prefId}`, { id: Number(prefId), notes: updatedNotes })
-            .catch(() => { })
-        );
+        await crmService.upsertLeadPreference(lead, { notes: updatedNotes }).catch(() => { });
       }
 
-      await Promise.allSettled(promises);
+      cacheLeadField(lead.id, 'percentage', trimmed);
 
       leadActivityService.logActivity(lead.id, {
-        userName: currentUser?.login || currentUser?.firstName || 'Counselor',
+        userName: actorName(),
         userRole: currentUser?.authorities?.[0] || 'STAFF',
         actionType: 'DATA_MODIFY',
         title: 'Updated Student Percentage / CGPA',
@@ -608,7 +625,11 @@ export default function CandidateDetail() {
 
       showAlert({ title: 'Success', message: `Student score updated to ${trimmed || 'Cleared'}` });
     } catch (err: any) {
-      console.warn('Failed to save student percentage:', err);
+      setLead((prev) => (prev ? { ...prev, studentPercentage: oldPercentage, cgpa: oldPercentage, notes: oldNotes } : null));
+      setEditFormData((prev) => ({ ...prev, studentPercentage: oldPercentage, cgpa: oldPercentage, notes: oldNotes }));
+      setNotesHistory(toNotesHistory(oldNotes, lead));
+      setPercentageInput(oldPercentage);
+      showSaveError('Student score', err);
     }
   };
 
@@ -666,86 +687,92 @@ export default function CandidateDetail() {
       changes.push(`Student Percentage: "${(lead as any).studentPercentage || 'None'}" → "${editFormData.studentPercentage}"`);
     }
 
-    try {
-      const promises: Promise<any>[] = [];
+    // The student score is persisted inside the lead's notes ("CGPA: ..."), same as the inline editor.
+    const percentageChanged =
+      editFormData.studentPercentage !== undefined &&
+      editFormData.studentPercentage !== (lead as any).studentPercentage;
+    let notesToSave = editFormData.notes !== undefined ? editFormData.notes : lead.notes || '';
+    if (percentageChanged) {
+      const pct = sanitizeRemarkText(editFormData.studentPercentage || '');
+      const cgpaPattern = /(?:what_is_your_cgpa_or_current_percentage|cgpa|percentage|score|marks)\s*[:=?]\s*([^|\n,;]+)/i;
+      if (cgpaPattern.test(notesToSave)) {
+        notesToSave = notesToSave.replace(cgpaPattern, `CGPA: ${pct}`);
+      } else if (pct) {
+        notesToSave = notesToSave ? `CGPA: ${pct} | ${notesToSave}` : `CGPA: ${pct}`;
+      }
+    }
+    const notesChanged = notesToSave !== (lead.notes || '');
 
-      // 1. Update customer profile (must pass id in body)
-      if (lead.customerId) {
-        promises.push(
+    // Each part is saved separately; failures are collected and reported instead of swallowed.
+    const tasks: Array<{ label: string; run: () => Promise<any> }> = [];
+
+    if (lead.customerId) {
+      tasks.push({
+        label: 'Contact details (name, phone, email, city)',
+        run: () =>
           crmService.updateCustomer(lead.customerId, {
             id: Number(lead.customerId),
             fullName: editFormData.customerName || lead.customerName,
             phoneNumber: editFormData.phoneNumber || lead.phoneNumber,
             location: editFormData.city || lead.city || lead.location,
             email: editFormData.email || lead.email,
-          }).catch((err) => {
-            console.warn('Customer profile update warning:', err);
-          })
-        );
+          } as any),
+      });
+    }
+
+    tasks.push({
+      label: 'Program, budget, payment and closing date',
+      run: () =>
+        savePreference(lead, {
+          visaType: editFormData.visaType || lead.visaType,
+          email: editFormData.email || lead.email,
+          city: editFormData.city || lead.city,
+          age: editFormData.age || lead.age,
+          educationalQualification: editFormData.educationalQualification || lead.educationalQualification,
+          notes: notesToSave || lead.notes,
+          closingDate: editFormData.closingDate || lead.closingDate,
+          budgetRange: editFormData.budgetRange !== undefined ? editFormData.budgetRange : lead.budgetRange,
+          paymentStatus: editFormData.paymentStatus !== undefined ? editFormData.paymentStatus : (lead as any).paymentStatus,
+          paymentDetails: editFormData.paymentDetails !== undefined ? editFormData.paymentDetails : (lead as any).paymentDetails,
+        }),
+    });
+
+    if (notesChanged) {
+      tasks.push({
+        label: percentageChanged ? 'Notes and student score' : 'Notes',
+        run: () => crmService.updateLeadStatus(lead.id, lead.status || 'CREATED', notesToSave),
+      });
+    }
+
+    try {
+      const results = await Promise.allSettled(tasks.map((t) => t.run()));
+      const failed = tasks.filter((_, i) => results[i].status === 'rejected');
+      const preferenceSaved = !failed.some((t) => t.label.startsWith('Program'));
+
+      if (preferenceSaved) {
+        // Cache only values the server has confirmed
+        if (editFormData.closingDate !== undefined) cacheLeadField(lead.id, 'closing_date', editFormData.closingDate);
+        if (editFormData.budgetRange !== undefined) cacheLeadField(lead.id, 'budget', editFormData.budgetRange);
+        if (editFormData.paymentStatus !== undefined) cacheLeadField(lead.id, 'payment_status', editFormData.paymentStatus);
+        if (editFormData.paymentDetails !== undefined) cacheLeadField(lead.id, 'payment_details', editFormData.paymentDetails);
+      }
+      const notesSaved = !failed.some((t) => t.label.startsWith('Notes'));
+      if (percentageChanged && notesSaved) {
+        cacheLeadField(lead.id, 'percentage', sanitizeRemarkText(editFormData.studentPercentage || ''));
       }
 
-      // 2. Update lead preferences (must pass id in body)
-      const prefId = lead.preferenceId || (lead as any).leadPreferenceId;
-      const prefPayload: any = {
-        visaType: editFormData.visaType || lead.visaType,
-        email: editFormData.email || lead.email,
-        city: editFormData.city || lead.city,
-        age: editFormData.age || lead.age,
-        educationalQualification: editFormData.educationalQualification || lead.educationalQualification,
-        notes: editFormData.notes || lead.notes,
-        purchaseTimeline: editFormData.closingDate || lead.closingDate,
-        closingDate: editFormData.closingDate || lead.closingDate,
-        budgetRange: editFormData.budgetRange !== undefined ? editFormData.budgetRange : lead.budgetRange,
-        mattressType: editFormData.paymentStatus !== undefined ? editFormData.paymentStatus : (lead as any).paymentStatus,
-        mattressSize: editFormData.paymentDetails !== undefined ? editFormData.paymentDetails : (lead as any).paymentDetails,
-      };
-
-      if (prefId) {
-        prefPayload.id = Number(prefId);
-        promises.push(
-          axiosClient.patch(`/api/lead-preferences/${prefId}`, prefPayload).catch((err) => {
-            console.warn('Lead preference update warning:', err);
-          })
-        );
-      } else {
-        prefPayload.lead = { id: lead.id };
-        promises.push(
-          axiosClient.post('/api/lead-preferences', prefPayload).catch((err) => {
-            console.warn('Lead preference create warning:', err);
-          })
-        );
+      if (failed.length > 0) {
+        // Keep the edit sheet open with the user's values so they can retry
+        const firstError = (results.find((r) => r.status === 'rejected') as PromiseRejectedResult | undefined)?.reason;
+        showAlert({
+          title: 'Some Changes Not Saved',
+          message: `These parts could not be saved:\n• ${failed.map((t) => t.label).join('\n• ')}\n\n${firstError?.message || 'Server error'}. Please try again.`,
+          icon: 'error',
+          buttonText: 'OK',
+        });
+        return;
       }
 
-      // Persist to local storage for instant offline resilience
-      if (editFormData.closingDate !== undefined) {
-        localStorage.setItem(`ssa_lead_closing_date_${lead.id}`, editFormData.closingDate);
-      }
-      if (editFormData.budgetRange !== undefined) {
-        localStorage.setItem(`ssa_lead_budget_${lead.id}`, editFormData.budgetRange);
-      }
-      if (editFormData.paymentStatus !== undefined) {
-        localStorage.setItem(`ssa_lead_payment_status_${lead.id}`, editFormData.paymentStatus);
-      }
-      if (editFormData.paymentDetails !== undefined) {
-        localStorage.setItem(`ssa_lead_payment_details_${lead.id}`, editFormData.paymentDetails);
-      }
-      if (editFormData.studentPercentage !== undefined) {
-        localStorage.setItem(`ssa_lead_percentage_${lead.id}`, editFormData.studentPercentage);
-      }
-
-      // 3. Update lead status/notes if changed
-      if (editFormData.notes !== undefined && editFormData.notes !== lead.notes) {
-        promises.push(
-          crmService.updateLeadStatus(lead.id, lead.status || 'CREATED', editFormData.notes)
-            .catch((err) => {
-              console.warn('Lead status update warning:', err);
-            })
-        );
-      }
-
-      await Promise.all(promises);
-
-      // Optimistically update local state immediately so user sees changes instantly
       setLead((prev) => {
         if (!prev) return null;
         return {
@@ -759,7 +786,7 @@ export default function CandidateDetail() {
           visaType: editFormData.visaType || prev.visaType,
           closingDate: editFormData.closingDate !== undefined ? editFormData.closingDate : prev.closingDate,
           purchaseTimeline: editFormData.closingDate !== undefined ? editFormData.closingDate : (prev as any).purchaseTimeline,
-          notes: editFormData.notes !== undefined ? editFormData.notes : prev.notes,
+          notes: notesToSave,
           budgetRange: editFormData.budgetRange !== undefined ? editFormData.budgetRange : prev.budgetRange,
           clientBudget: editFormData.budgetRange !== undefined ? editFormData.budgetRange : (prev as any).clientBudget,
           paymentStatus: editFormData.paymentStatus !== undefined ? editFormData.paymentStatus : (prev as any).paymentStatus,
@@ -768,13 +795,16 @@ export default function CandidateDetail() {
           cgpa: editFormData.studentPercentage !== undefined ? editFormData.studentPercentage : (prev as any).cgpa,
         };
       });
+      if (notesChanged) {
+        setNotesHistory(toNotesHistory(notesToSave, lead));
+      }
 
       setShowEditModal(false);
       window.dispatchEvent(new CustomEvent('crm-data-updated'));
 
       if (changes.length > 0) {
         leadActivityService.logActivity(lead.id, {
-          userName: currentUser?.login || currentUser?.firstName || 'Counselor',
+          userName: actorName(),
           userRole: currentUser?.authorities?.[0],
           actionType: 'DATA_MODIFY',
           title: 'Candidate Details Updated',
@@ -861,7 +891,14 @@ export default function CandidateDetail() {
 
   const getWhatsAppTemplates = () => {
     const name = lead?.customerName || 'Candidate';
-    const visa = lead?.visaType === 'WORK_VISA' ? 'Work Visa' : 'Study Visa';
+    const vt = lead?.visaType;
+    const visa = isWorkVisaType(vt)
+      ? 'Work Visa'
+      : isStudyVisaType(vt)
+        ? 'Study Visa'
+        : isDomesticAdmissionType(vt)
+          ? 'College Admission'
+          : 'Visa';
     return [
       {
         id: 'intro',
@@ -1891,10 +1928,8 @@ export default function CandidateDetail() {
           assignedStaff={lead.assignedTo || (currentUser as any)?.login}
           onReminderSaved={() => {
             const targetId = resolvedLeadId || lead.id;
-            notificationApiService.getEvents({ candidateId: targetId as any })
-              .then((evts) => {
-                if (Array.isArray(evts)) setLeadReminders(evts);
-              })
+            notificationApiService.getEventsForCandidate(targetId)
+              .then(setLeadReminders)
               .catch(() => { });
             leadActivityService.getActivities(targetId).then(setActivities).catch(() => { });
           }}

@@ -42,8 +42,18 @@ export interface NotificationDTO {
  */
 export const notificationApiService = {
   // --- Calendar Events & Reminders ---
-  getEvents: async (params?: { month?: number; year?: number }): Promise<CalendarEventDTO[]> => {
+  getEvents: async (params?: { month?: number; year?: number; candidateId?: string | number }): Promise<CalendarEventDTO[]> => {
     return axiosClient.get('/api/events', { params });
+  },
+
+  /**
+   * Reminders for one candidate. Filters client-side as well, so the result stays correct
+   * even if the backend ignores the candidateId query parameter and returns every event.
+   */
+  getEventsForCandidate: async (candidateId: string | number): Promise<CalendarEventDTO[]> => {
+    const events = await axiosClient.get<CalendarEventDTO[]>('/api/events', { params: { candidateId } });
+    if (!Array.isArray(events)) return [];
+    return events.filter((e) => e.candidateId != null && String(e.candidateId) === String(candidateId));
   },
 
   getEventById: async (id: string): Promise<CalendarEventDTO> => {

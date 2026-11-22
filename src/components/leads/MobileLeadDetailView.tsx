@@ -5,7 +5,7 @@ import { formatIndianDate, formatIndianDateTime } from '../../utils/dateTimeUtil
 
 export interface MobileLeadDetailViewProps {
   lead: Lead;
-  notesHistory: Array<{ note: string; date: string; author: string }>;
+  notesHistory: Array<{ note: string; date: string; author: string; raw?: string }>;
   activities: LeadActivity[];
   availableStaff: Array<{ login: string; name?: string }>;
   isAdmin: boolean;

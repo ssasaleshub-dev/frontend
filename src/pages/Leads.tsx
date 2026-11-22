@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import IosLeadList, { IosPlatformSquircle } from '../components/leads/IosLeadList';
-import crmService from '../services/api/crmService';
+import crmService, { readLeadPreferenceField } from '../services/api/crmService';
 import adminService from '../services/api/adminService';
 import {
   USER_ROLES,
@@ -51,7 +51,6 @@ import {
   isWorkVisaStaff,
   isStudyVisaStaff,
   isOtherVisaStaff,
-  getRoleBadgeInfo,
 } from '../utils/rbac';
 import { useAuth } from '../context/AuthContext';
 import { useAlert } from '../context/AlertContext';
@@ -194,7 +193,7 @@ function getLeadBudgetDetails(leadItem: Lead): LeadBudgetDetails {
   const cachedPayment = localStorage.getItem(`ssa_lead_payment_status_${leadItem.id}`);
   const rawBudget = (leadItem as any).budgetRange || (leadItem as any).clientBudget || cachedBudget;
   const formattedBudget = formatCurrencyDisplay(rawBudget);
-  const paymentStatus = ((leadItem as any).paymentStatus || cachedPayment || '').toUpperCase();
+  const paymentStatus = (readLeadPreferenceField(leadItem, 'paymentStatus') || cachedPayment || '').toUpperCase();
 
   if (formattedBudget || (paymentStatus && paymentStatus !== 'UNPAID')) {
     return { formattedBudget, paymentStatus, fallbackLabel: '' };
@@ -222,10 +221,12 @@ function getLeadBudgetDetails(leadItem: Lead): LeadBudgetDetails {
  */
 function getLeadQualityText(leadItem: Lead): string {
   if (leadItem.leadQuality) return leadItem.leadQuality;
-  const n = (leadItem.notes || '').toLowerCase();
-  if (n.includes('quality: hot') || n.includes('hot')) return 'Hot';
-  if (n.includes('quality: warm') || n.includes('warm')) return 'Warm';
-  if (n.includes('quality: cold') || n.includes('cold')) return 'Cold';
+  const n = leadItem.notes || '';
+  // Prefer an explicit "Quality: Hot" tag; otherwise match whole words only, so words like
+  // "photo", "screenshot" or "scold" don't get misread as a quality rating.
+  const tagged = n.match(/\bquality\s*[:=-]\s*(hot|warm|cold)\b/i);
+  const word = tagged ? tagged[1] : n.match(/\b(hot|warm|cold)\b/i)?.[1];
+  if (word) return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
   if (leadItem.status === 'QUALIFIED' || leadItem.status === 'CONVERTED' || leadItem.status === 'WON') return 'Hot';
   if (leadItem.status === 'CONTACTED' || leadItem.status === 'PROPOSAL_SENT') return 'Warm';
   return '—';
@@ -316,7 +317,6 @@ export default function Leads() {
   const isWorkVisaCounselor = !isAdmin && isWorkVisa;
   const isStudyVisaCounselor = !isAdmin && isStudyVisa;
   const isOtherVisaCounselor = !isAdmin && isOtherVisa;
-  const roleBadge = getRoleBadgeInfo(currentUser);
 
   // Determine user's desk scope
   const roleDesk: string = useMemo(() => {
@@ -1185,16 +1185,25 @@ export default function Leads() {
         email: newLeadForm.email || undefined,
       });
 
-      const newLead = await crmService.createLead({
-        externalId: 'lead_' + Date.now(),
-        createdTime: new Date().toISOString(),
-        platform: 'OTHER',
-        status: 'CREATED',
-        isOrganic: true,
-        visaType: newLeadForm.visaType,
-        assignedTo: !isAdmin && currentUser?.login ? currentUser.login : undefined,
-        customer: { id: newCustomer.id },
-      });
+      let newLead: Lead;
+      try {
+        newLead = await crmService.createLead({
+          externalId: 'lead_' + Date.now(),
+          createdTime: new Date().toISOString(),
+          platform: 'OTHER',
+          status: 'CREATED',
+          isOrganic: true,
+          visaType: newLeadForm.visaType,
+          assignedTo: !isAdmin && currentUser?.login ? currentUser.login : undefined,
+          customer: { id: newCustomer.id },
+        });
+      } catch (leadErr) {
+        // Roll back the customer we just created so a failed save doesn't leave an orphan contact
+        if (newCustomer?.id) {
+          await crmService.deleteCustomer(newCustomer.id).catch(() => { });
+        }
+        throw leadErr;
+      }
 
       try {
         await crmService.createLeadPreference({
@@ -1705,21 +1714,38 @@ export default function Leads() {
     });
 
     // Fetch existing customers so we can REUSE existing customer IDs instead of creating duplicate customer records
+    // Page through ALL customers (not just the first 500), stopping when a page is empty or
+    // returns nothing new (guards against a backend that ignores the page parameter).
     try {
-      const custRes = await crmService.getCustomers(0, 500);
-      const custList = Array.isArray(custRes) ? custRes : (custRes as any)?.content || [];
-      custList.forEach((c: any) => {
-        const p = (c.phoneNumber || c.rawPhoneNumber || c.phone || '').replace(/[^\d]/g, '');
-        if (p.length >= 10 && c.id) {
-          phoneToCustomerMap.set(p.slice(-10), c.id);
-        }
-      });
+      const seenCustomerIds = new Set<string>();
+      const MAX_CUSTOMER_PAGES = 200;
+      for (let page = 0; page < MAX_CUSTOMER_PAGES; page++) {
+        const custRes = await crmService.getCustomers(page, 500);
+        const custList: any[] = Array.isArray(custRes) ? custRes : (custRes as any)?.content || [];
+        if (custList.length === 0) break;
+        let addedNew = false;
+        custList.forEach((c: any) => {
+          if (!c?.id || seenCustomerIds.has(String(c.id))) return;
+          seenCustomerIds.add(String(c.id));
+          addedNew = true;
+          const p = (c.phoneNumber || c.rawPhoneNumber || c.phone || '').replace(/[^\d]/g, '');
+          if (p.length >= 10) {
+            phoneToCustomerMap.set(p.slice(-10), c.id);
+          }
+        });
+        if (!addedNew) break;
+      }
     } catch {
-      // non-fatal
+      // non-fatal: whatever pages loaded are still used for de-duplication
     }
 
-    for (let i = 0; i < previewRows.length; i++) {
-      const row = previewRows[i];
+    let completedRows = 0;
+    const markRowDone = () => {
+      completedRows++;
+      setImportProgress({ current: completedRows, total: previewRows.length });
+    };
+
+    const processRow = async (row: ParsedLeadPreview, i: number): Promise<void> => {
       const rowExt = (row.externalId || '').trim();
       const rowPhone = (row.phone || '').replace(/[^\d]/g, '');
       const last10 = rowPhone.length >= 10 ? rowPhone.slice(-10) : '';
@@ -1732,8 +1758,8 @@ export default function Leads() {
       // If user enabled "Skip duplicate records", bypass insert entirely - 0 API calls!
       if (skipDuplicates && isKnownDuplicate) {
         skippedCount++;
-        setImportProgress({ current: i + 1, total: previewRows.length });
-        continue;
+        markRowDone();
+        return;
       }
 
       try {
@@ -1828,8 +1854,38 @@ export default function Leads() {
           failCount++;
         }
       }
-      setImportProgress({ current: i + 1, total: previewRows.length });
-    }
+      markRowDone();
+    };
+
+    // Rows sharing a phone number (or external ID) go into the same group and run in order,
+    // so customer reuse and duplicate checks stay correct. Separate groups run in parallel
+    // (a few at a time) instead of one API round-trip after another for the whole sheet.
+    const rowGroups = new Map<string, Array<{ row: ParsedLeadPreview; index: number }>>();
+    previewRows.forEach((row, index) => {
+      const digits = (row.phone || '').replace(/[^\d]/g, '');
+      const key =
+        (digits.length >= 10 ? `p:${digits.slice(-10)}` : '') ||
+        ((row.externalId || '').trim() ? `e:${(row.externalId || '').trim()}` : '') ||
+        `r:${index}`;
+      const group = rowGroups.get(key);
+      if (group) group.push({ row, index });
+      else rowGroups.set(key, [{ row, index }]);
+    });
+
+    const groupQueue = Array.from(rowGroups.values());
+    const IMPORT_CONCURRENCY = 4;
+    const runWorker = async () => {
+      while (groupQueue.length > 0) {
+        const group = groupQueue.shift();
+        if (!group) break;
+        for (const { row, index } of group) {
+          await processRow(row, index);
+        }
+      }
+    };
+    await Promise.all(
+      Array.from({ length: Math.min(IMPORT_CONCURRENCY, groupQueue.length) }, () => runWorker())
+    );
 
     setImportLoading(false);
     setShowAddModal(false);
@@ -1965,49 +2021,6 @@ export default function Leads() {
     },
     [budgetMetaByLeadId]
   );
-
-  const getCounselorDisplayName = (leadItem: Lead): string => {
-    // 1. If explicitly assigned in lead record, return staff name if matched or the login
-    if (leadItem.assignedTo && leadItem.assignedTo.trim() !== '' && leadItem.assignedTo !== 'Unassigned') {
-      const match = availableStaff.find(
-        (s) => s.login.toLowerCase() === leadItem.assignedTo?.toLowerCase()
-      );
-      return match?.name || leadItem.assignedTo;
-    }
-
-    // 2. If staff/counselor is logged in (!isAdmin), display current counselor's name or role
-    if (!isAdmin && currentUser) {
-      const staffFullName = `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim();
-      if (staffFullName) return staffFullName;
-      if (currentUser.login && currentUser.login !== 'user') return currentUser.login;
-      if (isWorkVisa) return 'Work Visa Counselor';
-      if (isStudyVisa) return 'Study Visa Counselor';
-      if (isOtherVisa) return 'Other Visa Counselor';
-      return roleBadge.label || 'Assigned Counselor';
-    }
-
-    // 3. For Admin view: infer primary counselor from visa program / role desk
-    if (isWorkVisaType(leadItem.visaType)) {
-      const workStaff = availableStaff.find(
-        (s) => s.login.toLowerCase().includes('work') || (s.name || '').toLowerCase().includes('work')
-      );
-      return workStaff?.name || 'Work Visa Counselor';
-    }
-    if (isStudyVisaType(leadItem.visaType)) {
-      const studyStaff = availableStaff.find(
-        (s) => s.login.toLowerCase().includes('study') || (s.name || '').toLowerCase().includes('study')
-      );
-      return studyStaff?.name || 'Study Visa Counselor';
-    }
-    if (isOtherVisaType(leadItem.visaType)) {
-      const otherStaff = availableStaff.find(
-        (s) => s.login.toLowerCase().includes('other') || (s.name || '').toLowerCase().includes('other')
-      );
-      return otherStaff?.name || 'Other Visa Counselor';
-    }
-
-    return 'Unassigned';
-  };
 
   const excelStats = useMemo(() => {
     const work = previewRows.filter(

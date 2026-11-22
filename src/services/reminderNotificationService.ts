@@ -893,6 +893,39 @@ class ReminderNotificationService {
     }
   }
 
+  /**
+   * Records a reminder that came due while the app was closed/asleep as an inbox notification.
+   * No banner or sound (avoids a burst of popups on startup), but the counselor can still see it.
+   * Only reminders missed within the last 24 hours are surfaced.
+   */
+  private recordMissedReminder(evt: CalendarEventDTO, eventDateTime: Date, triggerTimeMs: number): void {
+    const MISSED_WINDOW_MS = 24 * 60 * 60 * 1000;
+    if (Date.now() - triggerTimeMs > MISSED_WINDOW_MS) return;
+
+    const strId = String(evt.id);
+    const alreadyInInbox = this.getCachedNotifications().some(
+      (n) => n.referenceType === 'EVENT' && String(n.referenceId) === strId
+    );
+    if (alreadyInInbox) return;
+
+    const cleanCandidate = evt.candidateName ? evt.candidateName.replace(/^Candidate:\s*/i, '').trim() : '';
+    const timeLabel = format12HourTime(evt.eventTime || '09:00');
+    const detail = evt.description?.trim() || cleanCandidate;
+
+    this.addNotification(
+      {
+        userId: evt.userId || this.getCurrentUserLogin(),
+        title: `Missed reminder: ${evt.title}`,
+        message: detail ? `Due ${timeLabel} · ${detail}` : `Due ${timeLabel}`,
+        type: 'REMINDER',
+        referenceId: evt.id,
+        referenceType: 'EVENT',
+        scheduledFor: eventDateTime.toISOString(),
+      },
+      false
+    );
+  }
+
   public markPastEventsNotified(events?: CalendarEventDTO[]): void {
     const list = events || this.getCachedEvents();
     const now = Date.now();
@@ -920,9 +953,12 @@ class ReminderNotificationService {
         const leadOffset = (Number(evt.remindBeforeMinutes) || 0) * 60 * 1000;
         const triggerTime = eventDateTime.getTime() - leadOffset;
 
-        // Any reminder whose scheduled time is ALREADY in the past on startup:
-        // Mark as already notified so it NEVER pops up on page refresh!
+        // Any reminder whose scheduled time is ALREADY in the past on startup and was never
+        // notified: record it in the inbox (no banner), then mark notified so it never re-fires.
         if (triggerTime <= now) {
+          if (!notified.has(strId)) {
+            this.recordMissedReminder(evt, eventDateTime, triggerTime);
+          }
           notified.add(strId);
           evt.notificationSent = true;
           updated = true;
@@ -1045,7 +1081,8 @@ class ReminderNotificationService {
             );
           }
         } else if (diffMs > 30000) {
-          // If it was already past (e.g. browser was sleeping or old reminder), silently mark notified
+          // Already past (e.g. browser was sleeping): record in inbox without a banner, then mark notified
+          this.recordMissedReminder(evt, eventDateTime, triggerTime.getTime());
           evt.notificationSent = true;
           notified.add(strId);
           updated = true;
