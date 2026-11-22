@@ -63,6 +63,9 @@ interface BiometricPluginInterface {
   createAttendanceKey(options: { userId: string }): Promise<{ publicKey: string; deviceId: string; deviceName: string }>;
   hasAttendanceKey(options: { userId: string }): Promise<{ exists: boolean }>;
   signChallenge(options: { userId: string; message: string; title?: string; subtitle?: string }): Promise<SignChallengeResult>;
+  unlockAttendanceKey(options: { userId: string; title?: string; subtitle?: string }): Promise<SignChallengeResult>;
+  signWithUnlockedKey(options: { message: string }): Promise<SignChallengeResult>;
+  cancelUnlock(): Promise<void>;
 }
 
 export const FINGERPRINT_APP_ONLY_MESSAGE =
@@ -257,6 +260,48 @@ export const biometricService = {
       throw error;
     }
     return { signature: res.signature, deviceId: res.deviceId };
+  },
+
+  /**
+   * Fast check-in, step 1: show the fingerprint prompt right away. Resolves once the finger is
+   * accepted; the unlocked key is then held (single use, ~1 minute) for signWithUnlockedKey.
+   */
+  async unlockAttendanceKey(params: { userId: string; title?: string; subtitle?: string }): Promise<{ deviceId: string }> {
+    if (!Capacitor.isNativePlatform()) {
+      throw new Error(FINGERPRINT_APP_ONLY_MESSAGE);
+    }
+    const res = await NativeBiometric.unlockAttendanceKey({
+      userId: params.userId.trim().toLowerCase(),
+      title: params.title,
+      subtitle: params.subtitle,
+    });
+    if (!res?.success || !res.deviceId) {
+      const error: any = new Error(res?.error || 'Fingerprint verification was cancelled');
+      error.code = res?.code;
+      throw error;
+    }
+    return { deviceId: res.deviceId };
+  },
+
+  /** Fast check-in, step 2: sign the server's one-time message with the unlocked key. */
+  async signWithUnlockedKey(message: string): Promise<string> {
+    const res = await NativeBiometric.signWithUnlockedKey({ message });
+    if (!res?.success || !res.signature) {
+      const error: any = new Error(res?.error || 'Fingerprint confirmation expired. Please try again.');
+      error.code = res?.code;
+      throw error;
+    }
+    return res.signature;
+  },
+
+  /** Closes an open fingerprint prompt (used when the server refuses the check-in meanwhile). */
+  async cancelUnlock(): Promise<void> {
+    if (!Capacitor.isNativePlatform()) return;
+    try {
+      await NativeBiometric.cancelUnlock();
+    } catch {
+      // older app build without this method: nothing to cancel
+    }
   },
 
   /** Whether this phone holds the fingerprint key for the user (Android app only). */

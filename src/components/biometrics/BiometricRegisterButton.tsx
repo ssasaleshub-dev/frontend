@@ -34,14 +34,10 @@ export const BiometricRegisterButton: React.FC<BiometricRegisterButtonProps> = (
       type="button"
       onClick={onRegister}
       disabled={disabled || isLoading}
-      className={`px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold border border-slate-200/80 shadow-xs transition-all flex items-center gap-1.5 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+      className={`h-10 px-3.5 rounded-xl bg-[#f2f2f7] active:bg-[#e5e5ea] text-[#007aff] text-[14px] font-medium flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${className}`}
     >
-      {isLoading ? (
-        <Loader2 size={13} className="animate-spin text-slate-600" />
-      ) : (
-        <Fingerprint size={14} className="text-emerald-600" />
-      )}
-      <span>{isOutdated ? 'Re-register Fingerprint' : isPending ? 'Re-bind Fingerprint' : 'Register Office Fingerprint'}</span>
+      {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Fingerprint size={17} />}
+      <span>{isOutdated ? 'Set up fingerprint again' : isPending ? 'Waiting for approval · Redo' : 'Set up fingerprint'}</span>
     </button>
   );
 };

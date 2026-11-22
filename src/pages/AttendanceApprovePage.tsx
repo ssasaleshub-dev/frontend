@@ -75,7 +75,7 @@ export default function AttendanceApprovePage() {
     } catch (err: any) {
       const code = err?.code;
       if (code === 'NO_KEY' || code === 'KEY_INVALIDATED') {
-        setError(`${err.message} Go to Attendance → Register Office Fingerprint, then ask an admin to approve it.`);
+        setError(`${err.message} Go to Profile → Fingerprint → Set up, then ask an admin to approve it.`);
       } else {
         setError(err?.response?.data?.detail || err?.message || 'Fingerprint approval failed.');
       }
@@ -121,7 +121,7 @@ export default function AttendanceApprovePage() {
         <p className="mt-1 text-sm text-slate-600">
           Fingerprint verified{checkInTime ? ` at ${checkInTime}` : ''}. The web page will update in a moment.
         </p>
-        <button type="button" onClick={() => navigate('/attendance')} className="mt-6 w-full h-11 rounded-xl bg-[#007aff] text-white text-sm font-semibold">
+        <button type="button" onClick={() => navigate('/profile')} className="mt-6 w-full h-11 rounded-xl bg-[#007aff] text-white text-sm font-semibold">
           Done
         </button>
       </>
@@ -134,7 +134,7 @@ export default function AttendanceApprovePage() {
         <XCircle size={48} className="mx-auto text-rose-600" />
         <h1 className="mt-3 text-lg font-bold text-slate-900">Request declined</h1>
         <p className="mt-1 text-sm text-slate-600">No check-in was recorded. If you didn't start this, tell your admin and change your password.</p>
-        <button type="button" onClick={() => navigate('/attendance')} className="mt-6 w-full h-11 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700">
+        <button type="button" onClick={() => navigate('/profile')} className="mt-6 w-full h-11 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700">
           Close
         </button>
       </>
@@ -147,8 +147,8 @@ export default function AttendanceApprovePage() {
         <ShieldAlert size={44} className="mx-auto text-slate-400" />
         <h1 className="mt-3 text-lg font-bold text-slate-900">Request not found</h1>
         <p className="mt-1 text-sm text-slate-600">{error || 'This check-in request no longer exists.'}</p>
-        <button type="button" onClick={() => navigate('/attendance')} className="mt-6 w-full h-11 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700">
-          Go to Attendance
+        <button type="button" onClick={() => navigate('/profile')} className="mt-6 w-full h-11 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700">
+          Go to Profile
         </button>
       </>
     );
@@ -160,9 +160,9 @@ export default function AttendanceApprovePage() {
       <>
         <ShieldAlert size={44} className="mx-auto text-slate-400" />
         <h1 className="mt-3 text-lg font-bold text-slate-900">This request was {label}</h1>
-        <p className="mt-1 text-sm text-slate-600">To check in, start again from the web page or from Attendance in this app.</p>
-        <button type="button" onClick={() => navigate('/attendance')} className="mt-6 w-full h-11 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700">
-          Go to Attendance
+        <p className="mt-1 text-sm text-slate-600">To check in, start again from the web page or from your Profile in this app.</p>
+        <button type="button" onClick={() => navigate('/profile')} className="mt-6 w-full h-11 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700">
+          Go to Profile
         </button>
       </>
     );

@@ -684,3 +684,51 @@ select:focus,
   color: #aeaeb2;
   cursor: not-allowed;
 }
+
+/* ───────────── iOS-style success confirmation ───────────── */
+@keyframes ios-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Same feel as an iOS alert appearing: slight zoom-out into place */
+@keyframes ios-alert-in {
+  from { opacity: 0; transform: scale(1.12); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes ios-stroke-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+.ios-success-backdrop {
+  animation: ios-backdrop-in 0.2s ease-out both;
+}
+
+.ios-success-card {
+  animation: ios-alert-in 0.32s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+.ios-success-ring {
+  stroke-dasharray: 202;
+  stroke-dashoffset: 202;
+  animation: ios-stroke-draw 0.5s cubic-bezier(0.65, 0, 0.35, 1) 0.12s forwards;
+}
+
+.ios-success-check {
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: ios-stroke-draw 0.32s cubic-bezier(0.65, 0, 0.35, 1) 0.55s forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ios-success-backdrop,
+  .ios-success-card {
+    animation: none;
+  }
+  .ios-success-ring,
+  .ios-success-check {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}

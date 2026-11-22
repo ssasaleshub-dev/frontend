@@ -1,29 +1,22 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  CheckCircle2,
-  Loader2,
-  LogOut,
-} from 'lucide-react';
+import { Loader2, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useAlert } from '../context/AlertContext';
 import { getDisplayName, getRoleBadgeInfo, isAdmin as checkIsAdmin } from '../utils/rbac';
 import attendanceService, { StaffAttendanceRecord } from '../services/api/attendanceService';
 import { useBiometricAttendance } from '../hooks/useBiometricAttendance';
-import { BiometricRegisterButton } from '../components/biometrics/BiometricRegisterButton';
 import { BiometricSuccessModal } from '../components/biometrics/BiometricSuccessModal';
+import { PhoneApprovalSheet } from '../components/biometrics/PhoneApprovalSheet';
+import { AttendanceCard } from '../components/attendance/AttendanceCard';
+import { Capacitor } from '@capacitor/core';
+import attendanceVerificationService, {
+  AttendanceVerification,
+  describeRequestSource,
+} from '../services/api/attendanceVerificationService';
 import fileService from '../services/api/fileService';
 import authService from '../services/api/authService';
 import { formatIndianTime } from '../utils/dateTimeUtils';
-
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December'
-];
 
 export default function StaffProfile() {
   const { user, updateUserAvatar, updateUserProfile, logout } = useAuth();
@@ -71,18 +64,11 @@ export default function StaffProfile() {
     }
   }, [user]);
 
-  // Attendance & Calendar State for staff
-  const [currentMonthDate, setCurrentMonthDate] = useState<Date>(() => new Date());
-  const [selectedDateStr, setSelectedDateStr] = useState<string>(() => new Date().toISOString().substring(0, 10));
-  const todayStr = useMemo(() => new Date().toISOString().substring(0, 10), []);
-
+  // Attendance state for staff (the calendar lives inside AttendanceCard)
   const [todayRecord, setTodayRecord] = useState<StaffAttendanceRecord | null>(null);
   const [history, setHistory] = useState<StaffAttendanceRecord[]>([]);
   const [loadingAttendance, setLoadingAttendance] = useState<boolean>(true);
   const [punching, setPunching] = useState<boolean>(false);
-
-  const year = currentMonthDate.getFullYear();
-  const month = currentMonthDate.getMonth();
 
   const loadAttendance = async () => {
     if (!userId || isAdmin) return;
@@ -119,6 +105,8 @@ export default function StaffProfile() {
     closeSuccessModal,
     handleRegisterBiometric,
     handleBiometricCheckIn,
+    phoneApproval,
+    cancelPhoneApproval,
   } = useBiometricAttendance({
     userId,
     userName: displayName,
@@ -130,6 +118,24 @@ export default function StaffProfile() {
       loadAttendance();
     },
   });
+
+  // In the app: a check-in started on the web that is waiting for this phone (in case the push was missed)
+  const [pendingWebRequest, setPendingWebRequest] = useState<AttendanceVerification | null>(null);
+  useEffect(() => {
+    if (isAdmin || !userId || !Capacitor.isNativePlatform()) return;
+    let active = true;
+    const check = () =>
+      attendanceVerificationService
+        .getPending()
+        .then((p) => active && setPendingWebRequest(p && p.source === 'WEB' ? p : null))
+        .catch(() => {});
+    check();
+    const timer = setInterval(check, 15000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [isAdmin, userId]);
 
   const handleCheckIn = async () => {
     await handleBiometricCheckIn();
@@ -265,44 +271,7 @@ export default function StaffProfile() {
     }, 400);
   };
 
-  // Calendar days
-  const calendarDays = useMemo(() => {
-    if (isAdmin) return [];
-    const firstDayIndex = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const daysInPrevMonth = new Date(year, month, 0).getDate();
 
-    const historyByDate = new Map<string, StaffAttendanceRecord>();
-    history.forEach((rec) => {
-      if (rec.attendanceDate) {
-        historyByDate.set(rec.attendanceDate, rec);
-      }
-    });
-
-    const days = [];
-    for (let i = firstDayIndex - 1; i >= 0; i--) {
-      const d = daysInPrevMonth - i;
-      const mm = String(month === 0 ? 12 : month).padStart(2, '0');
-      const yyyy = month === 0 ? year - 1 : year;
-      const dateStr = `${yyyy}-${mm}-${String(d).padStart(2, '0')}`;
-      days.push({ dayNumber: d, dateStr, isCurrentMonth: false, record: historyByDate.get(dateStr) });
-    }
-    for (let d = 1; d <= daysInMonth; d++) {
-      const mm = String(month + 1).padStart(2, '0');
-      const dateStr = `${year}-${mm}-${String(d).padStart(2, '0')}`;
-      days.push({
-        dayNumber: d,
-        dateStr,
-        isCurrentMonth: true,
-        isToday: dateStr === todayStr,
-        record: historyByDate.get(dateStr),
-      });
-    }
-    return days;
-  }, [year, month, history, todayStr, isAdmin]);
-
-  const isWorkingNow = Boolean(todayRecord?.checkInTime && !todayRecord?.checkOutTime);
-  const isCheckedOut = Boolean(todayRecord?.checkOutTime);
 
   return (
     <div className="crm-p" id="crmP">
@@ -390,22 +359,7 @@ export default function StaffProfile() {
                   <span style={{ color: 'var(--blue)' }}>›</span>
                 </a>
               </>
-            ) : (
-              <a
-                href="#attendance"
-                onClick={(e) => {
-                  e.preventDefault();
-                  navigate('/attendance');
-                }}
-                data-t="Opening Duty Attendance…"
-              >
-                <div>
-                  Duty Attendance
-                  <small>View roster &amp; shift punches</small>
-                </div>
-                <span style={{ color: 'var(--blue)' }}>›</span>
-              </a>
-            )}
+            ) : null}
           </div>
         </aside>
 
@@ -497,120 +451,38 @@ export default function StaffProfile() {
             </div>
           </section>
 
-          {/* Section 1.5: Duty Attendance Card (Non-Admin Staff) */}
+          {/* Section 1.5: Attendance (non-admin staff) */}
+          {!isAdmin && pendingWebRequest && (
+            <button
+              type="button"
+              onClick={() => navigate(`/attendance/verify/${pendingWebRequest.id}`)}
+              className="w-full text-left bg-white rounded-2xl border border-black/[0.06] px-4 py-3.5 mb-3 flex items-center gap-3 active:bg-[#f2f2f7] cursor-pointer"
+            >
+              <span className="w-2 h-2 rounded-full bg-[#007aff] shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[15px] font-semibold text-[#1c1c1e]">Approve your check-in</p>
+                <p className="text-[13px] text-[#8e8e93] truncate">
+                  Requested from {describeRequestSource(pendingWebRequest.requestedFrom)}
+                </p>
+              </div>
+              <span className="text-[#c7c7cc] text-xl leading-none">›</span>
+            </button>
+          )}
           {!isAdmin && (
-            <section className="card sec">
-              <div className="hd">
-                <h3>Duty &amp; Shift Attendance</h3>
-                <BiometricRegisterButton
-                  credential={biometricCred}
-                  isLoading={enrollingBiometric}
-                  onRegister={handleRegisterBiometric}
-                  disabled={punching || punchingBiometric}
-                />
-              </div>
-
-              <div className="fl" style={{ padding: '14px 20px' }}>
-                {isWorkingNow ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--green)' }} />
-                      <div>
-                        <b>Currently On Duty</b>
-                        <small style={{ color: 'var(--muted)', display: 'block' }}>
-                          Checked in since {formatIndianTime(todayRecord?.checkInTime)}
-                        </small>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      className="b"
-                      onClick={handleCheckOut}
-                      disabled={punching}
-                    >
-                      {punching ? 'Checking out…' : 'Check Out'}
-                    </button>
-                  </div>
-                ) : isCheckedOut ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <CheckCircle2 size={16} color="var(--green)" />
-                      <span>Shift Completed Today</span>
-                    </div>
-                    <b>{todayRecord?.totalHoursFormatted}</b>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    className="b p"
-                    style={{ width: '100%', padding: '10px' }}
-                    onClick={handleCheckIn}
-                    disabled={punching}
-                  >
-                    {punching ? 'Processing…' : 'Check In for Today'}
-                  </button>
-                )}
-
-                {/* Calendar Days Overview */}
-                <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--line)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <button
-                        type="button"
-                        onClick={() => setCurrentMonthDate(new Date(year, month - 1, 1))}
-                        style={{ border: '1px solid var(--line)', background: '#fff', borderRadius: 4, padding: '2px 6px' }}
-                      >
-                        ‹
-                      </button>
-                      <b style={{ fontSize: 13 }}>{MONTH_NAMES[month]} {year}</b>
-                      <button
-                        type="button"
-                        onClick={() => setCurrentMonthDate(new Date(year, month + 1, 1))}
-                        style={{ border: '1px solid var(--line)', background: '#fff', borderRadius: 4, padding: '2px 6px' }}
-                      >
-                        ›
-                      </button>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCurrentMonthDate(new Date());
-                        setSelectedDateStr(new Date().toISOString().substring(0, 10));
-                      }}
-                      style={{ border: 0, background: 'none', color: 'var(--blue)', fontWeight: 600, fontSize: 12 }}
-                    >
-                      Today
-                    </button>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', textAlign: 'center', fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>
-                    {WEEKDAYS.map(w => <div key={w}>{w}</div>)}
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
-                    {calendarDays.map((d, idx) => (
-                      <div
-                        key={idx}
-                        style={{
-                          height: 32,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          borderRadius: 4,
-                          fontSize: 12,
-                          fontWeight: d.isToday ? 700 : 500,
-                          background: d.isToday ? 'var(--blue-soft)' : '#fff',
-                          color: d.isToday ? 'var(--blue)' : d.isCurrentMonth ? 'var(--text)' : 'var(--muted)',
-                          opacity: d.isCurrentMonth ? 1 : 0.4,
-                          border: d.isToday ? '1px solid var(--blue)' : '1px solid transparent'
-                        }}
-                      >
-                        {d.dayNumber}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </section>
+            <div style={{ marginBottom: 16 }}>
+              <AttendanceCard
+                todayRecord={todayRecord}
+                history={history}
+                credential={biometricCred}
+                isNativeApp={Capacitor.isNativePlatform()}
+                enrolling={enrollingBiometric}
+                checkingIn={punchingBiometric}
+                checkingOut={punching}
+                onRegister={handleRegisterBiometric}
+                onCheckIn={handleCheckIn}
+                onCheckOut={handleCheckOut}
+              />
+            </div>
           )}
 
           {/* Section 2: Security & Password */}
@@ -719,6 +591,9 @@ export default function StaffProfile() {
           </div>
         </div>
       </div>
+
+      {/* Web check-in waiting for approval on the phone */}
+      <PhoneApprovalSheet expiresAt={phoneApproval?.expiresAt ?? null} onCancel={cancelPhoneApproval} />
 
       {/* Biometric Confirmation Modal */}
       <BiometricSuccessModal

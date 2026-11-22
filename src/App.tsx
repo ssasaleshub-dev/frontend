@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import AdminRoute from './components/common/AdminRoute';
 import Dashboard from './pages/Dashboard';
 import Leads from './pages/Leads';
+import Campaigns from './pages/Campaigns';
 import ImportLeads from './pages/ImportLeads';
 import Customers from './pages/Customers';
 import Chat from './pages/Chat';
@@ -23,6 +24,15 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import DataDeletion from './pages/DataDeletion';
 import TermsOfService from './pages/TermsOfService';
 import pushNotificationService from './services/pushNotificationService';
+import { useAuth } from './context/AuthContext';
+import { isAdmin as checkIsAdmin } from './utils/rbac';
+
+/** The attendance roster is for admins; staff have their attendance on the Profile page. */
+function AttendanceRoute() {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  return checkIsAdmin(user) ? <AttendancePage /> : <Navigate to="/profile" replace />;
+}
 
 function PushNotificationListener() {
   const navigate = useNavigate();
@@ -71,6 +81,7 @@ export default function App() {
             >
               <Route index element={<Dashboard />} />
               <Route path="leads" element={<Leads />} />
+              <Route path="campaigns" element={<Campaigns />} />
               <Route path="leads/:id" element={<CandidateDetail />} />
               <Route path="candidates/:id" element={<CandidateDetail />} />
               <Route
@@ -83,7 +94,7 @@ export default function App() {
               />
               <Route path="customers" element={<Customers />} />
               <Route path="calendar" element={<CalendarPage />} />
-              <Route path="attendance" element={<AttendancePage />} />
+              <Route path="attendance" element={<AttendanceRoute />} />
               <Route path="attendance/verify/:id" element={<AttendanceApprovePage />} />
               <Route path="profile" element={<StaffProfile />} />
               <Route path="chat" element={<Chat />} />

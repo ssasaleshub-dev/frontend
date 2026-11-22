@@ -51,7 +51,7 @@ export const PhoneApprovalSheet: React.FC<PhoneApprovalSheetProps> = ({ expiresA
         </div>
 
         <p className="mt-3 text-[11px] text-slate-400">
-          Didn't get a notification? Open the SSA app on your phone and go to Attendance.
+          Didn't get a notification? Open the SSA app on your phone and go to Profile.
         </p>
 
         <button

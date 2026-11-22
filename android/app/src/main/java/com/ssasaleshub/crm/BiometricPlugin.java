@@ -311,6 +311,154 @@ public class BiometricPlugin extends Plugin {
         });
     }
 
+    // ───────────── Fast check-in: unlock first, sign when the server's code arrives ─────────────
+    //
+    // The fingerprint prompt is shown immediately (unlockAttendanceKey) while the app fetches the
+    // one-time check-in code from the server in parallel. Once both are done, signWithUnlockedKey
+    // signs the code with the already-unlocked key. The unlocked key is single-use and expires.
+
+    private Signature unlockedSignature;
+    private long unlockedAtMs;
+    private BiometricPrompt activeUnlockPrompt;
+    private static final long UNLOCK_VALID_MS = 60_000;
+
+    @PluginMethod
+    public void unlockAttendanceKey(PluginCall call) {
+        String userId = call.getString("userId");
+        String title = call.getString("title", "Check in");
+        String subtitle = call.getString("subtitle", "Scan your fingerprint to record your attendance");
+        if (userId == null || userId.isBlank()) {
+            call.reject("userId is required");
+            return;
+        }
+
+        final Signature signature;
+        try {
+            KeyStore ks = KeyStore.getInstance(KEYSTORE);
+            ks.load(null);
+            PrivateKey key = (PrivateKey) ks.getKey(keyAlias(userId), null);
+            if (key == null) {
+                resolveFailure(call, "NO_KEY", "This phone has no fingerprint registration for your account. Register your fingerprint first.");
+                return;
+            }
+            signature = Signature.getInstance("SHA256withECDSA");
+            signature.initSign(key);
+        } catch (KeyPermanentlyInvalidatedException e) {
+            resolveFailure(call, "KEY_INVALIDATED", "Fingerprints on this phone changed. Register your fingerprint again.");
+            return;
+        } catch (Exception e) {
+            resolveFailure(call, "KEY_ERROR", "Could not use the fingerprint key: " + e.getMessage());
+            return;
+        }
+
+        FragmentActivity activity = (FragmentActivity) getActivity();
+        if (activity == null) {
+            resolveFailure(call, "NO_ACTIVITY", "App is not in the foreground");
+            return;
+        }
+
+        activity.runOnUiThread(() -> {
+            try {
+                Executor executor = ContextCompat.getMainExecutor(getContext());
+                BiometricPrompt prompt = new BiometricPrompt(activity, executor, new BiometricPrompt.AuthenticationCallback() {
+                    @Override
+                    public void onAuthenticationError(int errorCode, @NonNull CharSequence errString) {
+                        activeUnlockPrompt = null;
+                        resolveFailure(call, "AUTH_ERROR_" + errorCode, errString.toString());
+                    }
+
+                    @Override
+                    public void onAuthenticationSucceeded(@NonNull BiometricPrompt.AuthenticationResult result) {
+                        activeUnlockPrompt = null;
+                        BiometricPrompt.CryptoObject crypto = result.getCryptoObject();
+                        Signature unlocked = crypto != null ? crypto.getSignature() : null;
+                        if (unlocked == null) {
+                            resolveFailure(call, "NO_CRYPTO", "Fingerprint did not unlock the key");
+                            return;
+                        }
+                        synchronized (BiometricPlugin.this) {
+                            unlockedSignature = unlocked;
+                            unlockedAtMs = System.currentTimeMillis();
+                        }
+                        JSObject res = new JSObject();
+                        res.put("success", true);
+                        res.put("deviceId", androidId());
+                        res.put("deviceName", Build.MANUFACTURER + " " + Build.MODEL);
+                        call.resolve(res);
+                    }
+                });
+                activeUnlockPrompt = prompt;
+
+                BiometricPrompt.PromptInfo info = new BiometricPrompt.PromptInfo.Builder()
+                    .setTitle(title)
+                    .setSubtitle(subtitle)
+                    .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+                    .setNegativeButtonText("Cancel")
+                    .build();
+
+                prompt.authenticate(info, new BiometricPrompt.CryptoObject(signature));
+            } catch (Exception e) {
+                activeUnlockPrompt = null;
+                resolveFailure(call, "PROMPT_FAILED", e.getMessage());
+            }
+        });
+    }
+
+    /** Signs the server's message with the key unlocked by unlockAttendanceKey (single use). */
+    @PluginMethod
+    public void signWithUnlockedKey(PluginCall call) {
+        String message = call.getString("message");
+        if (message == null || message.isEmpty()) {
+            call.reject("message is required");
+            return;
+        }
+        Signature sig;
+        synchronized (this) {
+            sig = unlockedSignature;
+            boolean fresh = sig != null && System.currentTimeMillis() - unlockedAtMs <= UNLOCK_VALID_MS;
+            unlockedSignature = null;
+            if (!fresh) {
+                sig = null;
+            }
+        }
+        if (sig == null) {
+            resolveFailure(call, "NOT_UNLOCKED", "Fingerprint confirmation expired. Please try again.");
+            return;
+        }
+        try {
+            sig.update(message.getBytes(StandardCharsets.UTF_8));
+            byte[] signed = sig.sign();
+            JSObject res = new JSObject();
+            res.put("success", true);
+            res.put("signature", Base64.encodeToString(signed, Base64.NO_WRAP));
+            res.put("deviceId", androidId());
+            call.resolve(res);
+        } catch (Exception e) {
+            resolveFailure(call, "SIGN_FAILED", "Could not sign the check-in: " + e.getMessage());
+        }
+    }
+
+    /** Closes an open fingerprint prompt (e.g. the server refused the check-in meanwhile). */
+    @PluginMethod
+    public void cancelUnlock(PluginCall call) {
+        FragmentActivity activity = (FragmentActivity) getActivity();
+        BiometricPrompt prompt = activeUnlockPrompt;
+        activeUnlockPrompt = null;
+        synchronized (this) {
+            unlockedSignature = null;
+        }
+        if (prompt != null && activity != null) {
+            activity.runOnUiThread(() -> {
+                try {
+                    prompt.cancelAuthentication();
+                } catch (Exception ignored) {
+                    // already closed
+                }
+            });
+        }
+        call.resolve();
+    }
+
     private static void resolveFailure(PluginCall call, String code, String error) {
         JSObject res = new JSObject();
         res.put("success", false);

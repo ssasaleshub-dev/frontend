@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { Lead } from '../../types';
 import { encryptLeadId } from '../../utils/leadIdCrypto';
-import { formatCurrencyDisplay } from '../../utils/formatUtils';
+import { formatCurrencyDisplay, getLeadSourceLabel } from '../../utils/formatUtils';
 
 interface IosLeadListProps {
   leads: Lead[];
@@ -353,9 +353,24 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
               {/* Desktop Mid-Column: Campaign, Financials, & Notes */}
               <div className="hidden lg:flex flex-col min-w-[200px] max-w-[280px] shrink-0 text-left">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[12px] font-medium text-[#1d1d1f] truncate" title={lead.campaignName || 'Meta Organic'}>
-                    {lead.campaignName || 'Meta Organic Ingestion'}
-                  </span>
+                  {(() => {
+                    const src = getLeadSourceLabel(lead);
+                    return (
+                      <span
+                        className={`text-[12px] truncate ${
+                          src.kind === 'campaign'
+                            ? 'font-medium text-[#1d1d1f]'
+                            : src.kind === 'organic'
+                              ? 'font-normal text-[#8e8e93] italic'
+                              : src.kind === 'unmapped'
+                                ? 'font-medium text-amber-600'
+                                : 'font-medium text-[#1d1d1f]'
+                        }`}
+                      >
+                        {src.text}
+                      </span>
+                    );
+                  })()}
                 </div>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   {formattedBudget ? (

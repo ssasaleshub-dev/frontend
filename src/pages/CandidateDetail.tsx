@@ -58,7 +58,8 @@ import {
 import { isAdmin as checkIsAdmin } from '../utils/rbac';
 import { useAuth } from '../context/AuthContext';
 import { formatIndianDateTime, formatIndianDate } from '../utils/dateTimeUtils';
-import { formatCurrencyDisplay } from '../utils/formatUtils';
+import { formatCurrencyDisplay, getLeadSourceLabel } from '../utils/formatUtils';
+import { parseFormResponses, humanizeAnswer, getAttributionRows, getOriginLabel } from '../utils/metaLead';
 import { Lead, LeadActivity } from '../types';
 import { encryptLeadId, decryptLeadId, formatMaskedLeadRef } from '../utils/leadIdCrypto';
 
@@ -92,7 +93,8 @@ export default function CandidateDetail() {
   const [submittingNote, setSubmittingNote] = useState<boolean>(false);
   const [newNote, setNewNote] = useState<string>('');
   const [notesHistory, setNotesHistory] = useState<RemarkEntry[]>([]);
-  const [activeSection, setActiveSection] = useState<'info' | 'payments' | 'eligibility' | 'notes'>('info');
+  const [activeSection, setActiveSection] = useState<'info' | 'payments' | 'eligibility' | 'form' | 'attribution' | 'notes'>('info');
+  const [copiedMetaId, setCopiedMetaId] = useState<string | null>(null);
 
   // Client Budget & Payment State
   const [isEditingBudget, setIsEditingBudget] = useState<boolean>(false);
@@ -1039,6 +1041,16 @@ export default function CandidateDetail() {
     return { closingDateDisplay, progressPercent, milestoneBadge, hasCustomClosing: Boolean(rawClosing) };
   };
 
+  // Everything Meta sent for this lead
+  const formResponses = parseFormResponses((lead as any).metaFormResponses);
+  const attributionRows = getAttributionRows(lead as any);
+  const origin = getOriginLabel(lead.isOrganic);
+  const copyMetaId = (id: string) => {
+    navigator.clipboard?.writeText(id).catch(() => {});
+    setCopiedMetaId(id);
+    setTimeout(() => setCopiedMetaId((cur) => (cur === id ? null : cur)), 1500);
+  };
+
   const closingInfo = getClosingDateInfo(lead.createdTime || (lead as any).createdAt || (lead as any).createdDate);
 
   const STAGES = [
@@ -1258,6 +1270,26 @@ export default function CandidateDetail() {
             >
               Eligibility
             </a>
+            <a
+              className={activeSection === 'form' ? 'on' : ''}
+              onClick={() => {
+                setActiveSection('form');
+                document.getElementById('form-responses')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
+              <span>Form Responses</span>
+              <small>{formResponses.length}</small>
+            </a>
+            <a
+              className={activeSection === 'attribution' ? 'on' : ''}
+              onClick={() => {
+                setActiveSection('attribution');
+                document.getElementById('ad-attribution')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
+              <span>Ad Attribution</span>
+              <small>{origin.text}</small>
+            </a>
 
             <h6>Related List</h6>
             <a
@@ -1392,7 +1424,7 @@ export default function CandidateDetail() {
                 </div>
                 <div className="f">
                   <label>Campaign</label>
-                  <span>{lead.campaignName || (lead as any).campaign || 'Meta Campaign null'}</span>
+                  <span>{getLeadSourceLabel(lead).text}</span>
                 </div>
               </div>
             </section>
@@ -1544,6 +1576,84 @@ export default function CandidateDetail() {
                   <span className="capitalize">{lead.areYouInterested || <span className="em">Yes</span>}</span>
                 </div>
               </div>
+            </section>
+
+            {/* Section 4: Lead Form Responses (every answer from the Meta Instant Form / export) */}
+            <section className="card sec" id="form-responses">
+              <h3>
+                <span>Lead Form Responses</span>
+                <span className="tag">
+                  {formResponses.length} answer{formResponses.length === 1 ? '' : 's'}
+                </span>
+              </h3>
+              {formResponses.length === 0 ? (
+                <p className="text-xs text-slate-400 py-1.5 leading-relaxed">
+                  No form answers were captured for this lead. Leads saved before form capture was added, and leads
+                  created by hand, don't have them.
+                </p>
+              ) : (
+                <dl className="divide-y divide-slate-100">
+                  {formResponses.map((r, i) => (
+                    <div key={`${r.key}-${i}`} className="py-2.5 grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4">
+                      <dt className="text-xs text-slate-500 leading-5">{r.label}</dt>
+                      <dd className="text-[13px] font-medium text-slate-900 leading-5 break-words" title={r.value}>
+                        {humanizeAnswer(r.value)}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+            </section>
+
+            {/* Section 5: Ad Attribution (campaign → ad set → ad → form → page) */}
+            <section className="card sec" id="ad-attribution">
+              <h3>
+                <span>Ad Attribution</span>
+                <span
+                  className="tag"
+                  title={
+                    origin.tone === 'organic'
+                      ? 'Meta reported this lead as organic (not from a paid ad).'
+                      : origin.tone === 'paid'
+                        ? 'This lead came from a paid ad.'
+                        : 'Meta did not report whether this lead was organic or paid.'
+                  }
+                >
+                  {origin.text}
+                </span>
+              </h3>
+              <dl className="divide-y divide-slate-100">
+                {attributionRows.map((row) => (
+                  <div key={row.label} className="py-2.5 grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4 items-start">
+                    <dt className="text-xs text-slate-500 leading-5">{row.label}</dt>
+                    <dd className="min-w-0 leading-5">
+                      <span
+                        className={`break-words ${row.idIsValue ? 'font-mono text-[12px] text-slate-800' : 'text-[13px] font-medium text-slate-900'}`}
+                      >
+                        {row.value}
+                      </span>
+                      {row.metaId && (
+                        <span className="flex items-center gap-1.5 mt-0.5">
+                          {!row.idIsValue && <span className="font-mono text-[11px] text-slate-400 truncate">ID {row.metaId}</span>}
+                          <button
+                            type="button"
+                            onClick={() => copyMetaId(row.metaId!)}
+                            className="text-[11px] font-semibold text-[#007aff] hover:underline cursor-pointer"
+                          >
+                            {copiedMetaId === row.metaId ? 'Copied' : 'Copy'}
+                          </button>
+                        </span>
+                      )}
+                    </dd>
+                  </div>
+                ))}
+                <div className="py-2.5 grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4">
+                  <dt className="text-xs text-slate-500 leading-5">Submitted</dt>
+                  <dd className="text-[13px] font-medium text-slate-900 leading-5">
+                    {formatDate(lead.createdTime || (lead as any).createdAt)}
+                  </dd>
+                </div>
+              </dl>
             </section>
           </main>
 

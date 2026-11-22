@@ -57,7 +57,8 @@ import { useAlert } from '../context/AlertContext';
 import { Lead } from '../types';
 import { encryptLeadId, formatMaskedLeadRef } from '../utils/leadIdCrypto';
 import { formatIndianDateTime, formatIndianDate, formatIndianTime, toISTDateKey } from '../utils/dateTimeUtils';
-import { formatCurrencyDisplay } from '../utils/formatUtils';
+import { formatCurrencyDisplay, getLeadSourceLabel } from '../utils/formatUtils';
+import { formResponsesFromSheetRow } from '../utils/metaLead';
 
 export interface ParsedLeadPreview {
   id: number;
@@ -71,7 +72,8 @@ export interface ParsedLeadPreview {
   qualification: string;
   age: string;
   platform: string;
-  isOrganic: boolean;
+  /** undefined = the spreadsheet did not say (unknown), not "paid". */
+  isOrganic?: boolean;
   campaignName?: string;
   campaignId?: string;
   adSetName?: string;
@@ -84,6 +86,8 @@ export interface ParsedLeadPreview {
   surveyCgpa?: string;
   leadStatus?: string;
   rawNotes?: string;
+  /** Every answer column from the sheet row, as JSON (shown under "Lead Form Responses"). */
+  metaFormResponses?: string;
   isDuplicate?: boolean;
   duplicateReason?: string;
   isValid: boolean;
@@ -1446,7 +1450,12 @@ export default function Leads() {
           const formName = getVal('form_name', 'formname', 'leadform');
 
           const rawOrganic = getVal('is_organic', 'isorganic', 'organic').toLowerCase();
-          const isOrganic = rawOrganic === 'true' || rawOrganic === '1';
+          // Keep "not stated" as unknown instead of silently recording it as a paid-ad lead
+          const isOrganic: boolean | undefined = ['true', '1', 'yes'].includes(rawOrganic)
+            ? true
+            : ['false', '0', 'no'].includes(rawOrganic)
+              ? false
+              : undefined;
 
           const rawPlat = getVal('platform', 'source', 'channel');
           const platform = normalizePlatform(rawPlat, `${adSetName} ${campaignName} ${formName}`);
@@ -1537,6 +1546,7 @@ export default function Leads() {
             surveyCgpa: surveyCgpa || undefined,
             leadStatus: leadStatus || undefined,
             rawNotes: notesParts.join(' | '),
+            metaFormResponses: formResponsesFromSheetRow(row),
             isDuplicate,
             duplicateReason,
             isValid: Boolean(name || phone),
@@ -1804,13 +1814,14 @@ export default function Leads() {
           createdTime: row.createdTime || new Date().toISOString(),
           platform: targetPlatform,
           status: 'CREATED',
-          isOrganic: row.isOrganic ?? false,
+          isOrganic: row.isOrganic,
           visaType: targetVisaType,
           campaignName: row.campaignName,
           adSetName: row.adSetName,
           adName: row.adName,
           leadFormName: row.formName,
           notes: row.rawNotes || undefined,
+          metaFormResponses: row.metaFormResponses,
           assignedTo: assignedStaffLogin,
           customer: { id: customerId },
           customerId: customerId,
@@ -2918,9 +2929,31 @@ export default function Leads() {
 
                           {/* Campaign Name */}
                           <td data-col="campaignName" className="py-3 px-3.5 overflow-hidden">
-                            <div className="font-medium text-[#1c1c1e] text-xs truncate w-full" title={lead.campaignName || '—'}>
-                              {lead.campaignName || '—'}
-                            </div>
+                            {(() => {
+                              const src = getLeadSourceLabel(lead);
+                              return (
+                                <div
+                                  className={`text-xs truncate w-full ${
+                                    src.kind === 'campaign'
+                                      ? 'font-medium text-[#1c1c1e]'
+                                      : src.kind === 'organic'
+                                        ? 'font-normal text-slate-500 italic'
+                                        : src.kind === 'unmapped'
+                                          ? 'font-medium text-amber-600'
+                                          : 'font-medium text-[#1c1c1e]'
+                                  }`}
+                                  title={
+                                    src.kind === 'organic'
+                                      ? 'Meta marked this lead as organic — it was never attached to a paid ad/campaign.'
+                                      : src.kind === 'unmapped'
+                                        ? 'No campaign was recorded for this lead. Older leads defaulted to "not organic" when Meta or the import file did not say; newer ones mean Meta returned no campaign details.'
+                                        : src.text
+                                  }
+                                >
+                                  {src.text}
+                                </div>
+                              );
+                            })()}
                           </td>
 
                           {/* Candidate Name */}
@@ -3170,9 +3203,24 @@ export default function Leads() {
 
                             <div className="p-2 rounded-lg bg-white border border-slate-200/80">
                               <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Campaign Name</span>
-                              <span className="font-medium text-slate-800 text-[11px] truncate block mt-0.5" title={lead.campaignName || '—'}>
-                                {lead.campaignName || '—'}
-                              </span>
+                              {(() => {
+                                const src = getLeadSourceLabel(lead);
+                                return (
+                                  <span
+                                    className={`text-[11px] truncate block mt-0.5 ${
+                                      src.kind === 'campaign'
+                                        ? 'font-medium text-slate-800'
+                                        : src.kind === 'organic'
+                                          ? 'font-normal text-slate-500 italic'
+                                          : src.kind === 'unmapped'
+                                            ? 'font-medium text-amber-600'
+                                            : 'font-medium text-slate-800'
+                                    }`}
+                                  >
+                                    {src.text}
+                                  </span>
+                                );
+                              })()}
                             </div>
 
                             <div className="p-2 rounded-lg bg-white border border-slate-200/80">
@@ -3448,7 +3496,31 @@ export default function Leads() {
                     </div>
                     <div className="col-span-2">
                       <span className="text-slate-400 text-[11px]">Campaign Name</span>
-                      <p className="font-semibold text-slate-900 mt-0.5">{dossierLead.campaignName || 'Direct / Organic'}</p>
+                      {(() => {
+                        const src = getLeadSourceLabel(dossierLead);
+                        return (
+                          <p
+                            className={`mt-0.5 ${
+                              src.kind === 'campaign'
+                                ? 'font-semibold text-slate-900'
+                                : src.kind === 'organic'
+                                  ? 'font-normal text-slate-500 italic'
+                                  : src.kind === 'unmapped'
+                                    ? 'font-semibold text-amber-600'
+                                    : 'font-semibold text-slate-900'
+                            }`}
+                            title={
+                              src.kind === 'organic'
+                                ? 'Meta marked this lead as organic — no paid ad/campaign is attached.'
+                                : src.kind === 'unmapped'
+                                  ? 'No campaign was recorded for this lead.'
+                                  : undefined
+                            }
+                          >
+                            {src.text}
+                          </p>
+                        );
+                      })()}
                     </div>
                     {dossierLead.adName && (
                       <div className="col-span-2">

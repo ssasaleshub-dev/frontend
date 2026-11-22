@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { parseFormResponses, humanizeAnswer, getAttributionRows, getOriginLabel } from '../../utils/metaLead';
 import { NavigateFunction } from 'react-router-dom';
 import { Lead, LeadActivity } from '../../types';
 import { formatIndianDate, formatIndianDateTime } from '../../utils/dateTimeUtils';
@@ -58,7 +59,12 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
   onUpdateBudget,
   navigate,
 }) => {
-  const [activeTab, setActiveTab] = useState<'ov' | 'pay' | 'nt' | 'ac'>('ov');
+  const [activeTab, setActiveTab] = useState<'ov' | 'pay' | 'fm' | 'nt' | 'ac'>('ov');
+
+  // Everything Meta sent for this lead
+  const formResponses = parseFormResponses((lead as any).metaFormResponses);
+  const attributionRows = getAttributionRows(lead as any);
+  const origin = getOriginLabel(lead.isOrganic);
   const [showStageSheet, setShowStageSheet] = useState<boolean>(false);
   const [showMoreSheet, setShowMoreSheet] = useState<boolean>(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -217,6 +223,13 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
           onClick={() => setActiveTab('pay')}
         >
           Payments
+        </button>
+        <button
+          type="button"
+          className={`tab ${activeTab === 'fm' ? 'on' : ''}`}
+          onClick={() => setActiveTab('fm')}
+        >
+          Form {formResponses.length > 0 && <em>{formResponses.length}</em>}
         </button>
         <button
           type="button"
@@ -401,6 +414,47 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
               <span className="v">{(lead as any).paymentDetails}</span>
             </div>
           )}
+        </section>
+      </div>
+
+      {/* Pane: Meta form answers + ad attribution */}
+      <div className={`pane ${activeTab === 'fm' ? 'on' : ''}`} id="p-fm">
+        <section className="card">
+          <h3>
+            <span>Lead form responses</span>
+          </h3>
+          {formResponses.length === 0 ? (
+            <div className="f">
+              <span className="v em">No form answers were captured for this lead.</span>
+            </div>
+          ) : (
+            formResponses.map((r, i) => (
+              <div className="f" key={`${r.key}-${i}`} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+                <span className="l" style={{ width: 'auto' }}>{r.label}</span>
+                <span className="v" style={{ textAlign: 'left' }}>{humanizeAnswer(r.value)}</span>
+              </div>
+            ))
+          )}
+        </section>
+
+        <section className="card">
+          <h3>
+            <span>Ad attribution</span>
+            <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--l2, #8e8e93)' }}>{origin.text}</span>
+          </h3>
+          {attributionRows.map((row) => (
+            <div className="f" key={row.label}>
+              <span className="l">{row.label}</span>
+              <span className="v" style={row.idIsValue ? { fontFamily: 'ui-monospace, SFMono-Regular, monospace', fontSize: 12 } : undefined}>
+                {row.value}
+                {row.metaId && !row.idIsValue && (
+                  <span style={{ display: 'block', fontFamily: 'ui-monospace, SFMono-Regular, monospace', fontSize: 11, color: '#8e8e93' }}>
+                    ID {row.metaId}
+                  </span>
+                )}
+              </span>
+            </div>
+          ))}
         </section>
       </div>
 

@@ -132,16 +132,37 @@ export function useBiometricAttendance({
     cancelledRef.current = false;
     try {
       if (Capacitor.isNativePlatform()) {
-        const challenge = await attendanceVerificationService.start({ source: 'APP', workMode, note: note.trim() });
-        if (!challenge.signedMessage) throw new Error('Check-in request could not be started.');
-        const signed = await biometricService.signAttendanceChallenge({
+        // Show the fingerprint prompt immediately and fetch the one-time code from the server at
+        // the same time, so the network wait happens while the finger is on the sensor.
+        const unlockPromise = biometricService.unlockAttendanceKey({
           userId,
-          message: challenge.signedMessage,
-          title: 'Confirm check-in',
+          title: 'Check in',
           subtitle: 'Scan your fingerprint to record your attendance',
         });
-        const result = await attendanceVerificationService.approve(challenge.id, signed.signature, signed.deviceId);
-        announceSuccess(result, biometricCred?.deviceName || signed.deviceId);
+        unlockPromise.catch(() => {}); // handled below; avoid an unhandled rejection meanwhile
+
+        let challenge;
+        try {
+          challenge = await attendanceVerificationService.start({ source: 'APP', workMode, note: note.trim() });
+          if (!challenge.signedMessage) throw new Error('Check-in request could not be started.');
+        } catch (startErr) {
+          // The server refused (e.g. fingerprint not approved yet): close the prompt right away
+          await biometricService.cancelUnlock();
+          throw startErr;
+        }
+
+        let unlocked;
+        try {
+          unlocked = await unlockPromise;
+        } catch (unlockErr) {
+          // Cancelled or failed scan: drop the unused code instead of leaving it pending
+          attendanceVerificationService.reject(challenge.id).catch(() => {});
+          throw unlockErr;
+        }
+
+        const signature = await biometricService.signWithUnlockedKey(challenge.signedMessage);
+        const result = await attendanceVerificationService.approve(challenge.id, signature, unlocked.deviceId);
+        announceSuccess(result, biometricCred?.deviceName || unlocked.deviceId);
         return result;
       }
 

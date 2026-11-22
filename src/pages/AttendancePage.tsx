@@ -583,19 +583,18 @@ export default function AttendancePage() {
         </div>
       )}
 
-      {/* Main Roster & Register Card */}
+      {/* Main Roster & Register Card (Admin only: staff see their own shift status in the punch bar above) */}
+      {isAdmin && (
       <div className="bg-white rounded-3xl border border-black/[0.06] shadow-xs overflow-hidden">
         {/* Table Header & Filter Bar */}
         <div className="p-5 border-b border-slate-100 flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
               <h3 className="text-base font-bold text-slate-900">
-                {isAdmin ? 'Staff Attendance Register & Roster' : 'My Shift Records'}
+                Staff Attendance Register & Roster
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                {isAdmin
-                  ? 'Real-time corporate attendance logs across all counselors and departments'
-                  : 'Daily logs of shift attendance and duration'}
+                Real-time corporate attendance logs across all counselors and departments
               </p>
             </div>
           </div>
@@ -830,6 +829,7 @@ export default function AttendancePage() {
           </table>
         </div>
       </div>
+      )}
 
       {/* Web: waiting for fingerprint approval on the registered phone */}
       <PhoneApprovalSheet expiresAt={phoneApproval?.expiresAt ?? null} onCancel={cancelPhoneApproval} />

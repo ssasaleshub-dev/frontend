@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   Bell,
   Fingerprint,
+  Megaphone,
 } from 'lucide-react';
 import NotificationBell from './NotificationBell';
 import AppleNotificationBanner from './AppleNotificationBanner';
@@ -203,6 +204,13 @@ export default function Layout() {
       exact: false,
     },
     {
+      id: 'campaigns',
+      label: 'Campaigns',
+      icon: Megaphone,
+      to: '/campaigns',
+      exact: false,
+    },
+    {
       id: 'customers',
       label: 'Contacts',
       icon: UserCheck,
@@ -214,13 +222,6 @@ export default function Layout() {
       label: 'Calendar & Reminders',
       icon: Calendar,
       to: '/calendar',
-      exact: false,
-    },
-    {
-      id: 'attendance',
-      label: 'Staff Attendance',
-      icon: Clock,
-      to: '/attendance',
       exact: false,
     },
     {
@@ -246,6 +247,13 @@ export default function Layout() {
     },
     ...(isAdmin
       ? [
+        {
+          id: 'attendance',
+          label: 'Staff Attendance',
+          icon: Clock,
+          to: '/attendance',
+          exact: false,
+        },
         {
           id: 'import',
           label: 'Data Ingestion',
@@ -462,7 +470,7 @@ export default function Layout() {
             {!isAdmin && todayAttendance?.checkInTime && !todayAttendance?.checkOutTime && (
               <button
                 type="button"
-                onClick={() => navigate('/attendance')}
+                onClick={() => navigate('/profile')}
                 className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium shadow-xs transition-all cursor-pointer"
                 title="Shift active - Click to view attendance"
               >
