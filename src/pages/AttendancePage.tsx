@@ -536,26 +536,6 @@ export default function AttendancePage() {
                   : 'Daily logs of shift attendance and duration'}
               </p>
             </div>
-
-            <div className="flex items-center gap-2 self-stretch sm:self-auto justify-end">
-              <button
-                onClick={handleExportCSV}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-xs transition-colors"
-                title="Export filtered records to CSV"
-              >
-                <FileSpreadsheet size={14} className="text-emerald-600" />
-                <span>Export CSV</span>
-              </button>
-
-              <button
-                onClick={loadAdminData}
-                disabled={loadingRoster}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-xs transition-colors"
-              >
-                <RefreshCw size={13} className={loadingRoster ? 'animate-spin' : ''} />
-                <span>Refresh</span>
-              </button>
-            </div>
           </div>
 
           {/* Filters Row */}

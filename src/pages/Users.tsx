@@ -358,19 +358,6 @@ export default function Users() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={fetchUsers}
-            disabled={loading}
-            className="ios-btn-gray text-xs"
-            title="Refresh user list"
-          >
-            <RefreshCw
-              size={13}
-              className={loading ? 'animate-spin text-[#007aff]' : 'text-[#8e8e93]'}
-            />
-            <span>Refresh</span>
-          </button>
-
           <button onClick={openCreateModal} className="ios-btn-primary text-xs">
             <UserPlus size={14} />
             <span>Create New User</span>
@@ -398,37 +385,37 @@ export default function Users() {
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         {/* Total Users */}
         <div className="ios-card ios-card-hover p-4 flex flex-col justify-between">
-          <span className="text-[11px] font-medium text-[#8e8e93]">Total Staff</span>
-          <p className="text-2xl font-bold tracking-tight text-[#1c1c1e] mt-2">{stats.total}</p>
-          <p className="text-[10px] text-[#8e8e93] mt-0.5">{stats.active} active</p>
+          <h5 className="text-xs font-semibold text-black uppercase tracking-wider">Total Staff</h5>
+          <p className="text-2xl font-bold tracking-tight text-black mt-2">{stats.total}</p>
+          <p className="text-xs font-semibold text-black mt-0.5">{stats.active} active</p>
         </div>
 
         {/* Work Visa Staff */}
         <div className="ios-card ios-card-hover p-4 flex flex-col justify-between">
-          <span className="text-[11px] font-medium text-[#8e8e93]">Work Visa Staff</span>
-          <p className="text-2xl font-bold tracking-tight text-[#1c1c1e] mt-2">{stats.workVisa}</p>
-          <p className="text-[10px] text-[#8e8e93] mt-0.5">Overseas jobs</p>
+          <h5 className="text-xs font-semibold text-black uppercase tracking-wider">Work Visa Staff</h5>
+          <p className="text-2xl font-bold tracking-tight text-black mt-2">{stats.workVisa}</p>
+          <p className="text-xs font-semibold text-black mt-0.5">Overseas jobs</p>
         </div>
 
         {/* Study Visa Staff */}
         <div className="ios-card ios-card-hover p-4 flex flex-col justify-between">
-          <span className="text-[11px] font-medium text-[#8e8e93]">Study Visa Staff</span>
-          <p className="text-2xl font-bold tracking-tight text-[#1c1c1e] mt-2">{stats.studyVisa}</p>
-          <p className="text-[10px] text-[#8e8e93] mt-0.5">University desks</p>
+          <h5 className="text-xs font-semibold text-black uppercase tracking-wider">Study Visa Staff</h5>
+          <p className="text-2xl font-bold tracking-tight text-black mt-2">{stats.studyVisa}</p>
+          <p className="text-xs font-semibold text-black mt-0.5">University desks</p>
         </div>
 
         {/* Domestic College Admission Staff */}
         <div className="ios-card ios-card-hover p-4 flex flex-col justify-between">
-          <span className="text-[11px] font-medium text-[#8e8e93]">College Admission</span>
-          <p className="text-2xl font-bold tracking-tight text-[#1c1c1e] mt-2">{stats.domesticCollege}</p>
-          <p className="text-[10px] text-[#8e8e93] mt-0.5">Domestic admissions</p>
+          <h5 className="text-xs font-semibold text-black uppercase tracking-wider">College Admission</h5>
+          <p className="text-2xl font-bold tracking-tight text-black mt-2">{stats.domesticCollege}</p>
+          <p className="text-xs font-semibold text-black mt-0.5">Domestic admissions</p>
         </div>
 
         {/* Admins */}
         <div className="ios-card ios-card-hover p-4 flex flex-col justify-between col-span-2 sm:col-span-1">
-          <span className="text-[11px] font-medium text-[#8e8e93]">Administrators</span>
-          <p className="text-2xl font-bold tracking-tight text-[#1c1c1e] mt-2">{stats.admins}</p>
-          <p className="text-[10px] text-[#8e8e93] mt-0.5">Full access</p>
+          <h5 className="text-xs font-semibold text-black uppercase tracking-wider">Administrators</h5>
+          <p className="text-2xl font-bold tracking-tight text-black mt-2">{stats.admins}</p>
+          <p className="text-xs font-semibold text-black mt-0.5">Full access</p>
         </div>
       </div>
 

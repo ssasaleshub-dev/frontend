@@ -54,12 +54,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(data.user);
     const storedFcm = pushNotificationService.getStoredToken();
     if (storedFcm) {
+      pushNotificationService.resetSyncState();
       pushNotificationService.syncTokenWithBackend(storedFcm, data.user?.login);
     }
     return data;
   };
 
   const logout = () => {
+    try {
+      pushNotificationService.unregisterTokenOnLogout(user?.login);
+    } catch {}
     authService.logout();
     hasFetchedRef.current = false;
     setToken(null);

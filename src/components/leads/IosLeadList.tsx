@@ -285,7 +285,7 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
               <div className="min-w-0 flex-1">
                 {/* Title Line */}
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[14px] sm:text-[15px] font-semibold text-[#1c1c1e] group-hover:text-[#007aff] transition-colors truncate">
+                  <span className="text-[14px] sm:text-[15px] font-semibold text-[#1c1c1e] group-hover:text-[#007aff] transition-colors break-words">
                     {lead.customerName || `Candidate #${lead.id}`}
                   </span>
                   {lead.visaType && (

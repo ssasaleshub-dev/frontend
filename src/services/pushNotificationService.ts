@@ -67,23 +67,9 @@ class PushNotificationService {
         (notification: PushNotificationSchema) => {
           console.info('[PushNotifications] Push received in foreground:', notification);
 
-          // On Android native: display native Android system notification (never show in-app banner)
-          if (Capacitor.isNativePlatform()) {
-            import('@capacitor/local-notifications').then(({ LocalNotifications }) => {
-              LocalNotifications.schedule({
-                notifications: [
-                  {
-                    id: Math.floor(Math.random() * 2147483647),
-                    title: notification.title || 'SSA Sales Hub',
-                    body: notification.body || '',
-                    channelId: 'fcm_default_channel',
-                    smallIcon: 'ic_notification',
-                    extra: notification.data || {},
-                  },
-                ],
-              }).catch(() => {});
-            }).catch(() => {});
-          }
+          // Strictly single notification: Firebase Cloud Messaging native SDK delivers and displays
+          // the notification in the Android system tray. We NEVER invoke LocalNotifications here
+          // to eliminate duplicate notifications.
 
           import('./reminderNotificationService')
             .then((m) => {
@@ -135,28 +121,6 @@ class PushNotificationService {
           }
         }
       );
-
-      // Handle click on native Android local push notifications
-      if (Capacitor.isNativePlatform()) {
-        import('@capacitor/local-notifications').then(({ LocalNotifications }) => {
-          LocalNotifications.addListener('localNotificationActionPerformed', (action: any) => {
-            const data = action.notification?.extra || {};
-            if (data.type === 'CHAT' || data.route === '/chat') {
-              window.dispatchEvent(
-                new CustomEvent('ssa_navigate_to', { detail: { path: '/chat' } })
-              );
-            } else if (data.leadId) {
-              window.dispatchEvent(
-                new CustomEvent('ssa_navigate_to', { detail: { path: `/leads/${encryptLeadId(data.leadId)}` } })
-              );
-            } else if (data.route) {
-              window.dispatchEvent(
-                new CustomEvent('ssa_navigate_to', { detail: { path: data.route } })
-              );
-            }
-          });
-        }).catch(() => {});
-      }
 
       // 3. Check existing permission status
       const permStatus = await PushNotifications.checkPermissions().catch(() => null);
@@ -271,9 +235,12 @@ class PushNotificationService {
         token,
         platform: Capacitor.getPlatform(),
         updatedAt: new Date().toISOString(),
+        replacePreviousUsers: true,
+        overwritePreviousUsers: true,
       };
       if (currentUserId) {
         payload.userId = currentUserId;
+        payload.username = currentUserId;
       }
       if (numericId) {
         payload.numericId = String(numericId);
@@ -286,6 +253,54 @@ class PushNotificationService {
       console.warn('[PushNotifications] Backend token sync deferred until API endpoint available.');
     } finally {
       this.isSyncingToken = false;
+    }
+  }
+
+  /**
+   * Reset synchronization state so token re-syncs unconditionally when a new user logs in
+   */
+  public resetSyncState(): void {
+    this.lastSyncedTokenKey = null;
+    this.isSyncingToken = false;
+  }
+
+  /**
+   * Explicitly unregister / dissociate this device token from previous user on logout.
+   * This ensures the previous user never leaves their token mapped to this device,
+   * preventing duplicate notifications when switching accounts.
+   */
+  public async unregisterTokenOnLogout(userId?: string): Promise<void> {
+    const token = this.getStoredToken();
+    const storedUser = localStorage.getItem('ssa_user') || localStorage.getItem('user');
+    let currentUserId = userId;
+    let numericId: any = undefined;
+    if (storedUser) {
+      try {
+        const parsed = JSON.parse(storedUser);
+        if (!currentUserId) currentUserId = parsed.login || parsed.username;
+        numericId = parsed.id;
+      } catch {}
+    }
+
+    this.lastSyncedTokenKey = null;
+
+    if (token) {
+      const payload: any = {
+        token,
+        userId: currentUserId,
+        numericId: numericId ? String(numericId) : undefined,
+        platform: Capacitor.getPlatform(),
+        action: 'UNREGISTER',
+      };
+      try {
+        await axiosClient.post('/api/notifications/fcm-token/unregister', payload).catch(() => {});
+      } catch {}
+      try {
+        await axiosClient.post('/api/notifications/fcm-token/logout', payload).catch(() => {});
+      } catch {}
+      try {
+        await axiosClient.delete('/api/notifications/fcm-token', { data: payload }).catch(() => {});
+      } catch {}
     }
   }
 

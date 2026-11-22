@@ -1,13 +1,14 @@
 @import "tailwindcss";
+@import "./styles/crm-design-system.css";
 
 @theme {
-  --default-font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
-  --font-sans: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
-  --font-sf-display: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
-  --font-sf-rounded: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+  --default-font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-sf-display: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-sf-rounded: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-sf-mono: ui-monospace, Menlo, Monaco, Consolas, "Segoe UI Mono", monospace;
-  --font-sf-compact: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
-  --font-new-york: Georgia, Cambria, "Times New Roman", serif;
+  --font-sf-compact: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-new-york: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 @layer base {
@@ -29,27 +30,41 @@
     --ios-gray-5: #e5e5ea;
     --ios-gray-6: #f2f2f7;
     --ios-label: #000000;
-    --ios-secondary-label: #3c3c43;
-    --ios-tertiary-label: rgba(60, 60, 67, 0.45);
+    --ios-secondary-label: #000000;
+    --ios-tertiary-label: #1e293b;
     --ios-separator: rgba(60, 60, 67, 0.12);
+  }
+
+  /* Universal High-Contrast Black Typography Standard (No gray & black text combinations) */
+  h1, h2, h3, h4, h5, h6 {
+    color: #000000;
   }
 
   html,
   body,
   #root {
     background-color: #f8fafc;
-    color: #1e293b;
+    color: #000000;
     min-height: 100vh;
-    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif !important;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+    font-size: 15px;
+    line-height: 1.35;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     letter-spacing: normal;
   }
 
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+    font-size: 15px;
+    line-height: 1.35;
+    -webkit-font-smoothing: antialiased;
+  }
+
   *,
   *::before,
   *::after {
-    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
   }
 
   button,
@@ -57,19 +72,20 @@
   optgroup,
   select,
   textarea {
-    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif !important;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
   }
 }
 
 /* Universal Typography Tokens */
 .font-sf-display,
 .font-sf,
-.font-zoho {
-  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif !important;
+.font-zoho,
+.font-sans {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
 }
 
 .font-sf-rounded {
-  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif !important;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
 }
 
 .font-sf-mono {
@@ -77,11 +93,26 @@
 }
 
 .font-sf-compact {
-  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif !important;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
 }
 
 .font-new-york {
-  font-family: Georgia, Cambria, "Times New Roman", serif !important;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+/* Universal High-Contrast Black Typography Standard (No gray and black combination) */
+.text-\[\#86868b\],
+.text-\[\#8e8e93\] {
+  color: #000000 !important;
+}
+
+/* Universal: Remove all placeholder text across all inputs & textareas (clean empty fields) */
+input::placeholder,
+textarea::placeholder,
+::placeholder {
+  color: transparent !important;
+  opacity: 0 !important;
+  user-select: none !important;
 }
 
 /* ==========================================================================
@@ -477,7 +508,8 @@ select:focus,
 }
 
 .ios-search-field::placeholder {
-  color: #94a3b8 !important;
+  color: transparent !important;
+  opacity: 0 !important;
 }
 
 .ios-search-field:hover {

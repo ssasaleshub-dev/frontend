@@ -282,16 +282,16 @@ export default function Layout() {
 
   const getPageInfo = () => {
     if (currentPath === '/') return { title: 'Executive Overview' };
-    if (currentPath.startsWith('/leads')) return { title: 'Candidates & Leads Directory', subtitle: 'Filter, triage, and contact international visa candidates' };
-    if (currentPath.startsWith('/customers')) return { title: 'Contacts', subtitle: 'Verified contacts and customer records' };
-    if (currentPath.startsWith('/calendar')) return { title: 'Calendar & Reminders', subtitle: 'Indian public holidays, counselor callbacks & appointment schedule' };
-    if (currentPath.startsWith('/attendance')) return { title: 'Staff Attendance & Roster', subtitle: 'Daily check-in, check-out punches, duration tracking, and corporate register' };
-    if (currentPath.startsWith('/profile')) return { title: 'Staff Profile & Shift Desk', subtitle: 'Counselor credentials, shift records, and personal attendance history' };
+    if (currentPath.startsWith('/leads')) return { title: 'Candidates & Leads Directory' };
+    if (currentPath.startsWith('/customers')) return { title: 'Contacts' };
+    if (currentPath.startsWith('/calendar')) return { title: 'Calendar & Reminders' };
+    if (currentPath.startsWith('/attendance')) return { title: 'Staff Attendance & Roster' };
+    if (currentPath.startsWith('/profile')) return { title: 'Staff Profile & Shift Desk' };
     if (currentPath.startsWith('/import')) return { title: 'Data Ingestion', subtitle: 'Import Meta ads export spreadsheets & raw lead data' };
-    if (currentPath.startsWith('/chat')) return { title: 'Team Chat', subtitle: 'Internal messaging and staff communication' };
+    if (currentPath.startsWith('/chat')) return { title: 'Team Chat' };
     if (currentPath.startsWith('/notifications')) return { title: 'Notifications' };
     if (currentPath.startsWith('/users')) return { title: 'Team & Permissions', subtitle: 'Manage counselor assignments, roles, and access desks' };
-    if (currentPath.startsWith('/biometrics')) return { title: 'Biometric Approvals', subtitle: 'Admin device lock and staff fingerprint hardware verification' };
+    if (currentPath.startsWith('/biometrics')) return { title: 'Biometric Approvals' };
     return { title: 'SSA CRM', subtitle: 'Work & Study Visa Consultancy' };
   };
 
@@ -299,22 +299,24 @@ export default function Layout() {
 
   return (
     <div
-      className={`min-h-screen ${currentPath.startsWith('/notifications') ? 'bg-white' : 'bg-[#f2f2f7]'
+      className={`min-h-screen ${currentPath.startsWith('/notifications') || currentPath.startsWith('/chat') ? 'bg-[#f4f5f7]' : 'bg-[#f2f2f7]'
         } flex flex-col md:flex-row font-sans text-slate-900 antialiased selection:bg-[#007aff] selection:text-white`}
     >
       {/* Apple HIG Real-Time In-App Notification Banner Popup */}
       <AppleNotificationBanner />
 
       {/* Mobile Top Bar - Solid Opaque White (Zero Bleed-through) */}
-      <div className="md:hidden bg-white text-slate-900 px-4 py-3 flex items-center justify-between sticky top-0 z-40 border-b border-black/[0.08] shadow-2xs">
-        <div className="flex items-center gap-2.5">
-          <img src={brandLogo} alt="SSA Logo" className="w-8 h-8 rounded-xl object-cover shadow-xs border border-black/[0.06]" />
-          <h1 className="font-bold text-sm tracking-tight text-slate-900 leading-tight">SSA CRM</h1>
+      {!currentPath.startsWith('/leads') && !currentPath.startsWith('/notifications') && !currentPath.startsWith('/chat') && (
+        <div className="md:hidden bg-white text-slate-900 px-4 py-3 flex items-center justify-between sticky top-0 z-40 border-b border-black/[0.08] shadow-2xs">
+          <div className="flex items-center gap-2.5">
+            <img src={brandLogo} alt="SSA Logo" className="w-8 h-8 rounded-xl object-cover shadow-xs border border-black/[0.06]" />
+            <h1 className="font-bold text-sm tracking-tight text-slate-900 leading-tight">SSA CRM</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <NotificationBell />
-        </div>
-      </div>
+      )}
 
       {/* Apple macOS Frosted Sidebar */}
       <aside
@@ -590,13 +592,16 @@ export default function Layout() {
 
         {/* Dynamic Route Content */}
         <main
-          className={`flex-1 ${
-            currentPath.startsWith('/notifications')
-              ? 'p-0 bg-white max-w-2xl pb-20 md:pb-0'
-              : currentPath.startsWith('/chat')
-              ? 'p-0 max-w-full md:max-w-[1440px] md:p-4 lg:p-6 pb-0 md:pb-0'
-              : 'p-3.5 sm:p-5 lg:p-6 max-w-[1440px] pb-20 md:pb-0'
-          } w-full mx-auto`}
+          className={`flex-1 ${currentPath.startsWith('/notifications')
+            ? 'p-0 bg-[#f4f5f7] max-w-full pb-20 md:pb-0'
+            : currentPath.startsWith('/chat')
+              ? 'p-0 max-w-full pb-0 md:pb-0 bg-[#f4f5f7]'
+              : currentPath.startsWith('/leads')
+                ? 'p-0 md:p-5 lg:p-6 max-w-[1440px] pb-20 md:pb-0'
+                : currentPath.startsWith('/profile')
+                  ? 'p-0 max-w-[1440px] pb-20 md:pb-0'
+                  : 'p-3.5 sm:p-5 lg:p-6 max-w-[1440px] pb-20 md:pb-0'
+            } w-full mx-auto`}
         >
           <Outlet />
         </main>
@@ -626,9 +631,8 @@ export default function Layout() {
                 key={item.id}
                 to={item.to}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 flex-1 transition-colors duration-150 ${
-                  isActive ? 'text-[#007aff]' : 'text-[#8e8e93] hover:text-slate-700'
-                }`}
+                className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 flex-1 transition-colors duration-150 ${isActive ? 'text-[#007aff]' : 'text-[#8e8e93] hover:text-slate-700'
+                  }`}
               >
                 <Icon size={22} strokeWidth={isActive ? 2.2 : 1.7} className="shrink-0" />
                 <span className={`text-[10px] font-semibold leading-tight tracking-tight ${isActive ? 'text-[#007aff]' : 'text-[#8e8e93]'}`}>

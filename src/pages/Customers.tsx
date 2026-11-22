@@ -367,9 +367,6 @@ export default function Customers() {
                       <h3 className="font-bold text-sm text-[#1c1c1e] truncate">
                         {cust.fullName || 'Unnamed Contact'}
                       </h3>
-                      <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-[#f2f2f7] text-[#8e8e93]">
-                        #{cust.id}
-                      </span>
                     </div>
 
                     {cust.location && (
@@ -486,9 +483,6 @@ export default function Customers() {
                   <tr key={cust.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="py-3.5 px-4">
                       <div className="font-bold text-slate-900">{cust.fullName}</div>
-                      <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                        Cust ID: #{cust.id}
-                      </div>
                     </td>
 
                     <td className="py-3.5 px-4">

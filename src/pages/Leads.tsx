@@ -27,6 +27,7 @@ import {
   FileUp,
   LayoutList,
   Table,
+  Filter,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import IosLeadList, { IosPlatformSquircle } from '../components/leads/IosLeadList';
@@ -253,11 +254,10 @@ const TableTextFilterCell: React.FC<{
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           aria-label={ariaLabel}
-          className={`h-[30px] w-full min-w-0 pl-2.5 pr-6 rounded-md text-[12px] font-normal border transition-colors bg-white ${
-            active
+          className={`h-[30px] w-full min-w-0 pl-2.5 pr-6 rounded-md text-[12px] font-normal border transition-colors bg-white ${active
               ? 'border-blue-600 text-slate-900 font-semibold shadow-2xs'
               : 'border-slate-300 hover:border-slate-400 text-slate-800 placeholder:text-slate-400 shadow-2xs'
-          }`}
+            }`}
         />
         {active && (
           <button
@@ -288,11 +288,10 @@ const TableSelectFilterCell: React.FC<{
         value={value}
         onChange={(e) => onChange(e.target.value)}
         aria-label={ariaLabel}
-        className={`h-[30px] w-full min-w-0 pl-2 pr-6 rounded-md text-[12px] border transition-colors cursor-pointer bg-white ${
-          active
+        className={`h-[30px] w-full min-w-0 pl-2 pr-6 rounded-md text-[12px] border transition-colors cursor-pointer bg-white ${active
             ? 'border-blue-600 text-slate-900 font-semibold shadow-2xs'
             : 'border-slate-300 hover:border-slate-400 text-slate-700 font-normal shadow-2xs'
-        }`}
+          }`}
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value} className="bg-white text-slate-800 font-normal">
@@ -344,6 +343,56 @@ export default function Leads() {
   });
   const [sortBy, setSortBy] = useState<'NEWEST' | 'OLDEST' | 'NAME'>('NEWEST');
 
+  // Pure Meta-style Mobile CRM states
+  const [mobileVisibleCount, setMobileVisibleCount] = useState<number>(30);
+  const [showMobileFilterDrawer, setShowMobileFilterDrawer] = useState<boolean>(false);
+  const [mobileToast, setMobileToast] = useState<string | null>(null);
+  const mobileToastTimerRef = useRef<any>(null);
+
+  const showMobileToast = (msg: string) => {
+    setMobileToast(msg);
+    if (mobileToastTimerRef.current) clearTimeout(mobileToastTimerRef.current);
+    mobileToastTimerRef.current = setTimeout(() => {
+      setMobileToast(null);
+    }, 1500);
+  };
+
+  useEffect(() => {
+    setMobileVisibleCount(30);
+  }, [searchTerm, statusFilter, platformFilter, visaTypeFilter]);
+
+  const formatMobileStatus = (status?: string) => {
+    const s = (status || 'CREATED').toUpperCase();
+    if (s === 'NEW_LEAD' || s === 'CREATED') return 'New Lead';
+    if (s === 'CONTACTED') return 'Contacted';
+    if (s === 'QUALIFIED') return 'Qualified';
+    if (s === 'PROPOSAL_SENT') return 'Docs Requested';
+    if (s === 'NEGOTIATION') return 'In Process';
+    if (s === 'CONVERTED' || s === 'WON') return 'Converted';
+    if (s === 'LOST') return 'Closed Lost';
+    return s;
+  };
+
+  const formatMobileDateTime = (d?: string | Date) => {
+    if (!d) return 'Recently';
+    try {
+      const dt = new Date(d);
+      if (isNaN(dt.getTime())) return String(d);
+      const day = dt.getDate();
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const month = months[dt.getMonth()];
+      let hours = dt.getHours();
+      const minutes = dt.getMinutes();
+      const ampm = hours >= 12 ? 'pm' : 'am';
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      const strMinutes = minutes < 10 ? '0' + minutes : minutes;
+      return day + ' ' + month + ', ' + hours + ':' + strMinutes + ' ' + ampm;
+    } catch (e) {
+      return 'Recently';
+    }
+  };
+
   // Sync visaTypeFilter when user role is available
   useEffect(() => {
     if (!isAdmin) {
@@ -355,26 +404,39 @@ export default function Leads() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(25);
 
-  // Apple HIG View Mode: Inset Grouped List vs Table Grid (Default: table)
+  // Apple HIG View Mode: Inset Grouped List vs Table Grid (Default: table on desktop, list on mobile)
   const [viewMode, setViewMode] = useState<'list' | 'table'>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('ssa_leads_view_mode_v2');
       if (saved === 'list' || saved === 'table') {
         return saved;
       }
-      return 'table';
+      return window.innerWidth < 768 ? 'list' : 'table';
     }
     return 'table';
   });
+
+  // Mobile secondary filters toggle (Desks, Sources, Sort)
+  const [showMobileFilters, setShowMobileFilters] = useState<boolean>(false);
+
+  // Active secondary filters count for badge
+  const activeSecondaryFilterCount = useMemo(() => {
+    let count = 0;
+    if (visaTypeFilter !== 'ALL') count++;
+    if (platformFilter !== 'ALL') count++;
+    if (sortBy !== 'NEWEST') count++;
+    return count;
+  }, [visaTypeFilter, platformFilter, sortBy]);
 
   // Column-wise Table Filters
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(DEFAULT_COLUMN_FILTERS);
   const [showColumnFilters, setShowColumnFilters] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('ssa_leads_show_col_filters');
-      return saved === null ? true : saved === 'true';
+      if (saved !== null) return saved === 'true';
+      return window.innerWidth >= 768;
     }
-    return true;
+    return false;
   });
 
   const updateColumnFilter = useCallback(
@@ -744,6 +806,18 @@ export default function Leads() {
     });
   }, [roleScopedLeads, visaTypeFilter, platformFilter, isAdmin, currentUser?.login]);
 
+  const mobileStages = useMemo(() => {
+    return [
+      { label: 'New Lead', value: 'CREATED', count: deskAndPlatformScopedLeads.filter(l => (l.status || 'CREATED') === 'CREATED' || l.status === 'NEW' || l.status === 'NEW_LEAD').length },
+      { label: 'Contacted', value: 'CONTACTED', count: deskAndPlatformScopedLeads.filter(l => l.status === 'CONTACTED').length },
+      { label: 'Qualified', value: 'QUALIFIED', count: deskAndPlatformScopedLeads.filter(l => l.status === 'QUALIFIED').length },
+      { label: 'Docs Requested', value: 'PROPOSAL_SENT', count: deskAndPlatformScopedLeads.filter(l => l.status === 'PROPOSAL_SENT').length },
+      { label: 'In Process', value: 'NEGOTIATION', count: deskAndPlatformScopedLeads.filter(l => l.status === 'NEGOTIATION').length },
+      { label: 'Converted', value: 'CONVERTED', count: deskAndPlatformScopedLeads.filter(l => l.status === 'CONVERTED' || l.status === 'WON').length },
+      { label: 'Closed Lost', value: 'LOST', count: deskAndPlatformScopedLeads.filter(l => l.status === 'LOST').length },
+    ];
+  }, [deskAndPlatformScopedLeads]);
+
   // Cache resolved budget/payment metadata once per scoped lead list so typing in column filters stays instant
   const budgetMetaByLeadId = useMemo(() => {
     const map = new Map<string | number, LeadBudgetDetails>();
@@ -854,7 +928,19 @@ export default function Leads() {
     let result = deskAndPlatformScopedLeads.filter((lead) => {
       // Status / Current Stage filter
       const leadStatus = lead.status || 'CREATED';
-      if (statusFilter !== 'ALL' && leadStatus !== statusFilter) return false;
+      if (statusFilter !== 'ALL') {
+        if (statusFilter === 'CREATED' || statusFilter === 'NEW' || statusFilter === 'NEW_LEAD') {
+          if (leadStatus !== 'CREATED' && leadStatus !== 'NEW' && leadStatus !== 'NEW_LEAD') {
+            return false;
+          }
+        } else if (statusFilter === 'CONVERTED') {
+          if (leadStatus !== 'CONVERTED' && leadStatus !== 'WON') {
+            return false;
+          }
+        } else if (leadStatus !== statusFilter) {
+          return false;
+        }
+      }
 
       // Global search term
       if (searchTerm.trim()) {
@@ -998,6 +1084,10 @@ export default function Leads() {
     const start = (currentPage - 1) * pageSize;
     return filteredLeads.slice(start, start + pageSize);
   }, [filteredLeads, currentPage, pageSize]);
+
+  const displayedMobileLeads = useMemo(() => {
+    return filteredLeads.slice(0, mobileVisibleCount);
+  }, [filteredLeads, mobileVisibleCount]);
 
 
 
@@ -1936,42 +2026,318 @@ export default function Leads() {
 
   return (
     <div className="space-y-4">
-      {/* Executive iOS Page Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl font-bold tracking-tight text-[#1c1c1e] font-sf-display">
-              Candidates
-            </h1>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-black/[0.05] text-[#3c3c43] whitespace-nowrap shrink-0">
-              {filteredLeads.length}
-            </span>
+      {/* ── MOBILE VIEW: Pure Meta-Style CRM Leads Experience (< 768px) ── */}
+      <div className="block md:hidden">
+        {/* Scoped Meta CRM Mobile Stylesheet handled in crm-design-system.css */}
+        {/* Embedded SVG Symbol Defs */}
+        <svg width="0" height="0" style={{ position: 'absolute', display: 'none' }}>
+          <defs>
+            <symbol id="crm-i-ph" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z" /></symbol>
+            <symbol id="crm-i-wa" viewBox="0 0 24 24"><path d="M4 20l1.3-4.2A8 8 0 1112 20a8 8 0 01-3.8-1z" /><path d="M9 9c0 3 3 6 6 6l1-1.5-2-1-1 .7a4 4 0 01-2-2l.7-1-1-2z" /></symbol>
+            <symbol id="crm-i-se" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6" /><path d="M20 20l-4.5-4.5" /></symbol>
+            <symbol id="crm-i-fl" viewBox="0 0 24 24"><path d="M4 5h16l-6 8v6l-4-2v-4z" /></symbol>
+            <symbol id="crm-i-bl" viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0112 0v6l1.5 2h-15zM10 21h4" /></symbol>
+            <symbol id="crm-i-pl" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol>
+          </defs>
+        </svg>
+
+        <div className="crm-m" id="crmM">
+          {/* Header Bar */}
+          <header className="bar">
+            <div className="t1">
+              <h1>Leads<span id="tot">{filteredLeads.length}</span></h1>
+              <button
+                className="ib"
+                onClick={() => setShowMobileFilterDrawer((prev) => !prev)}
+                aria-label="Filters"
+                title="Filters"
+              >
+                <svg><use href="#crm-i-fl" /></svg>
+              </button>
+              <button
+                className="ib"
+                onClick={() => navigate('/notifications')}
+                aria-label="Notifications"
+                title="Notifications"
+              >
+                <svg><use href="#crm-i-bl" /></svg>
+              </button>
+            </div>
+            <div className="sr">
+              <label className="sb">
+                <svg style={{ width: 18, height: 18 }}><use href="#crm-i-se" /></svg>
+                <input
+                  type="search"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search name, phone or city"
+                />
+              </label>
+            </div>
+            <div className="tabs">
+              <button
+                onClick={() => setStatusFilter('ALL')}
+                className={`tab ${statusFilter === 'ALL' ? 'on' : ''}`}
+              >
+                All<i>{deskAndPlatformScopedLeads.length}</i>
+              </button>
+              {mobileStages.map((s) => (
+                <button
+                  key={s.value}
+                  onClick={() => setStatusFilter(s.value)}
+                  className={`tab ${statusFilter === s.value ? 'on' : ''}`}
+                >
+                  {s.label}<i>{s.count}</i>
+                </button>
+              ))}
+            </div>
+          </header>
+
+          {/* Meta Count */}
+          <div className="meta">
+            {displayedMobileLeads.length} of {filteredLeads.length} leads
           </div>
-          <p className="text-[12px] text-[#8e8e93] mt-0.5">
-            Overseas Immigration & Admissions Global Directory
-          </p>
+
+          {/* Lead List */}
+          <div className="list">
+            {displayedMobileLeads.length === 0 ? (
+              <div className="empty">No leads found</div>
+            ) : (
+              displayedMobileLeads.map((lead) => {
+                const cleanPhone = (lead.phone || '').replace(/\D/g, '');
+                const initial = (lead.customerName || lead.fullName || 'C').trim().charAt(0).toUpperCase();
+                const visa = lead.visaType === 'STUDY_VISA' ? 'Study Visa' : lead.visaType === 'OTHER_VISA' ? 'Other Visa' : 'Work Visa';
+                const statusName = formatMobileStatus(lead.status);
+                const timeText = formatMobileDateTime(lead.createdAt || lead.inquiryDate);
+                const cachedBudget = localStorage.getItem(`ssa_lead_budget_${lead.id}`);
+                const bVal = (lead as any).budgetRange || (lead as any).clientBudget || cachedBudget;
+                const noteVal = bVal ? `Budget ${bVal}` : (lead.notes || '');
+
+                return (
+                  <div
+                    key={lead.id}
+                    className="row"
+                    onClick={() => navigate(`/leads/${encryptLeadId(lead.id)}`)}
+                  >
+                    <div className="av">{initial}</div>
+                    <div className="info">
+                      <div className="nm">
+                        {lead.customerName || lead.fullName || 'Candidate'}
+                        <span>{visa}</span>
+                      </div>
+                      <div className="ln">
+                        {lead.phone || 'No phone'} · {lead.city || lead.state || 'Town'}
+                      </div>
+                      <div className="ln">
+                        <b>{statusName}</b> · {timeText}
+                      </div>
+                      {noteVal && (
+                        <div className="ln">{noteVal}</div>
+                      )}
+                    </div>
+                    <div className="act">
+                      {cleanPhone && (
+                        <a
+                          className="w"
+                          href={`https://wa.me/${cleanPhone}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            showMobileToast(`Opening WhatsApp for ${lead.customerName || 'Lead'}…`);
+                          }}
+                          aria-label="WhatsApp"
+                        >
+                          <svg><use href="#crm-i-wa" /></svg>
+                        </a>
+                      )}
+                      {lead.phone && (
+                        <a
+                          className="c"
+                          href={`tel:${lead.phone}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            showMobileToast(`Calling ${lead.phone}…`);
+                          }}
+                          aria-label="Call"
+                        >
+                          <svg><use href="#crm-i-ph" /></svg>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* See More Button */}
+          {displayedMobileLeads.length < filteredLeads.length && (
+            <button
+              className="more"
+              onClick={() => setMobileVisibleCount((prev) => prev + 30)}
+            >
+              See more
+            </button>
+          )}
+
+          {/* Mobile Filter Sheet Modal */}
+          {showMobileFilterDrawer && (
+            <div
+              className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center animate-in fade-in"
+              onClick={() => setShowMobileFilterDrawer(false)}
+            >
+              <div
+                className="bg-white rounded-t-2xl w-full max-w-[480px] p-5 space-y-4 shadow-2xl animate-in slide-in-from-bottom"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                  <h3 className="font-bold text-base text-slate-900">Filter Leads</h3>
+                  <button
+                    onClick={() => setShowMobileFilterDrawer(false)}
+                    className="text-slate-400 hover:text-slate-700 text-sm font-semibold"
+                  >
+                    Done
+                  </button>
+                </div>
+
+                {/* Desk filter */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Visa Desk</label>
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    {[
+                      { label: 'All Desks', value: 'ALL' },
+                      { label: 'Work Visa', value: 'WORK_VISA' },
+                      { label: 'Study Visa', value: 'STUDY_VISA' },
+                      { label: 'Other Visa', value: 'OTHER_VISA' },
+                    ].map((d) => (
+                      <button
+                        key={d.value}
+                        onClick={() => setVisaTypeFilter(d.value)}
+                        className={`py-2 px-3 rounded-lg text-xs font-semibold border text-center transition ${
+                          visaTypeFilter === d.value
+                            ? 'bg-[#0866ff] text-white border-[#0866ff]'
+                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {d.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Platform filter */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Inbound Source</label>
+                  <div className="grid grid-cols-3 gap-2 mt-2">
+                    {[
+                      { label: 'All Sources', value: 'ALL' },
+                      { label: 'Instagram', value: 'IG' },
+                      { label: 'Facebook', value: 'FB' },
+                      { label: 'WhatsApp', value: 'WA' },
+                      { label: 'Excel Import', value: 'EXCEL' },
+                    ].map((p) => (
+                      <button
+                        key={p.value}
+                        onClick={() => setPlatformFilter(p.value)}
+                        className={`py-2 px-2.5 rounded-lg text-xs font-semibold border text-center transition ${
+                          platformFilter === p.value
+                            ? 'bg-[#0866ff] text-white border-[#0866ff]'
+                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Sort Order */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Sort Order</label>
+                  <div className="grid grid-cols-3 gap-2 mt-2">
+                    {[
+                      { label: 'Newest', value: 'NEWEST' },
+                      { label: 'Oldest', value: 'OLDEST' },
+                      { label: 'Name A-Z', value: 'NAME' },
+                    ].map((s) => (
+                      <button
+                        key={s.value}
+                        onClick={() => setSortBy(s.value as any)}
+                        className={`py-2 px-2.5 rounded-lg text-xs font-semibold border text-center transition ${
+                          sortBy === s.value
+                            ? 'bg-[#0866ff] text-white border-[#0866ff]'
+                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Reset button */}
+                <div className="pt-2 flex justify-between items-center">
+                  <button
+                    onClick={() => {
+                      setVisaTypeFilter('ALL');
+                      setPlatformFilter('ALL');
+                      setSortBy('NEWEST');
+                    }}
+                    className="text-xs font-semibold text-red-600 hover:underline"
+                  >
+                    Reset All Filters
+                  </button>
+                  <button
+                    onClick={() => setShowMobileFilterDrawer(false)}
+                    className="px-5 py-2 bg-[#0866ff] text-white text-xs font-bold rounded-lg"
+                  >
+                    Apply Filters
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Toast Notification */}
+          <div className={`toast ${mobileToast ? 'show' : ''}`}>{mobileToast}</div>
+        </div>
+      </div>
+
+      {/* ── DESKTOP VIEW: Full Cross-Device Enterprise Table & List (>= 768px) ── */}
+      <div className="hidden md:block space-y-4">
+      {/* Executive Clean Header Bar */}
+      <div className="flex items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-sf-display">
+            Candidates
+          </h1>
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 whitespace-nowrap">
+            {filteredLeads.length}
+          </span>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <button
+            onClick={() => fetchLeads()}
+            disabled={loading}
+            className="p-2 sm:px-2.5 sm:py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition cursor-pointer shadow-2xs"
+            title="Refresh candidates"
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin text-blue-600' : ''} />
+          </button>
+
           <button
             onClick={() => {
               setModalTab('excel');
               setShowAddModal(true);
             }}
-            className="zoho-btn"
+            className="px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
             title="Import candidate leads directly from Excel or CSV spreadsheet"
           >
-            <FileSpreadsheet size={13} className="text-[#1366d9]" />
-            <span>Import Excel</span>
-          </button>
-
-          <button
-            onClick={() => fetchLeads()}
-            disabled={loading}
-            className="zoho-btn px-2.5"
-            title="Refresh candidates"
-          >
-            <RefreshCw size={13} className={loading ? 'animate-spin text-[#1366d9]' : 'text-slate-500'} />
+            <FileSpreadsheet size={14} className="text-blue-600" />
+            <span className="hidden sm:inline">Import Excel</span>
+            <span className="sm:hidden text-xs">Import</span>
           </button>
 
           <button
@@ -1979,20 +2345,21 @@ export default function Leads() {
               setModalTab('manual');
               setShowAddModal(true);
             }}
-            className="zoho-btn-primary"
+            className="px-3 py-1.5 sm:px-3.5 sm:py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-2xs transition cursor-pointer flex items-center gap-1.5"
           >
             <Plus size={14} />
-            <span>New Candidate</span>
+            <span className="hidden xs:inline">New Candidate</span>
+            <span className="xs:hidden">New</span>
           </button>
         </div>
       </div>
 
-      {/* Filter & Search Bar Card */}
-      <div className="ios-card p-3 sm:p-4 space-y-3">
-        {/* Row 1: Search, Desk Segmented Control, and Select Filters */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+      {/* Filter & Search Bar Card (Mobile-First Clean Design) */}
+      <div className="bg-white border border-slate-200 rounded-xl p-3 sm:p-4 shadow-2xs space-y-3">
+        {/* Row 1: Search + Mobile Filter Toggle + View Mode Toggle */}
+        <div className="flex items-center gap-2">
           {/* Instant Search Bar */}
-          <div className="relative flex-1 min-w-[180px] max-w-md">
+          <div className="relative flex-1 min-w-0">
             <Search
               size={14}
               className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
@@ -2001,29 +2368,129 @@ export default function Leads() {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search candidate name, mobile, email, ref..."
-              className="w-full !pl-9.5 pr-8 py-1.5 h-[34px] bg-white hover:border-slate-400 focus:bg-white border border-slate-300 focus:border-blue-500 rounded-md text-xs text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-slate-400"
+              placeholder="Search candidate name, mobile, email..."
+              className="w-full !pl-9 pr-8 py-1.5 h-[36px] bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 focus:border-blue-500 rounded-lg text-xs text-slate-900 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-slate-400"
             />
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm('')}
-                className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-700"
+                className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-700 cursor-pointer"
               >
                 <X size={13} />
               </button>
             )}
           </div>
 
-          {/* Filters & Actions */}
-          <div className="flex flex-wrap items-center gap-2">
+          {/* Filter Toggle Button (Mobile) */}
+          <button
+            type="button"
+            onClick={() => setShowMobileFilters((prev) => !prev)}
+            className={`md:hidden h-[36px] px-2.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shrink-0 ${
+              showMobileFilters || activeSecondaryFilterCount > 0
+                ? 'bg-blue-50 border-blue-300 text-blue-700'
+                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+            }`}
+            title="Filter by Desk, Source, or Sort"
+          >
+            <Filter size={13} />
+            <span className="hidden xs:inline">Filters</span>
+            {activeSecondaryFilterCount > 0 && (
+              <span className="w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] flex items-center justify-center font-bold">
+                {activeSecondaryFilterCount}
+              </span>
+            )}
+          </button>
+
+          {/* View Toggle (List vs Table) */}
+          <div className="inline-flex items-center p-0.5 bg-slate-100 rounded-lg text-xs font-medium shrink-0 border border-slate-200 h-[36px]">
+            <button
+              type="button"
+              onClick={() => {
+                setViewMode('list');
+                localStorage.setItem('ssa_leads_view_mode_v2', 'list');
+                localStorage.setItem('ssa_leads_view_mode', 'list');
+              }}
+              className={`flex items-center gap-1 px-2 sm:px-2.5 h-[28px] rounded-md text-xs font-medium transition cursor-pointer ${
+                viewMode === 'list'
+                  ? 'bg-white text-slate-900 font-semibold shadow-2xs'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+              title="Grouped List View"
+            >
+              <LayoutList size={13} strokeWidth={2} />
+              <span className="hidden sm:inline">List</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setViewMode('table');
+                localStorage.setItem('ssa_leads_view_mode_v2', 'table');
+                localStorage.setItem('ssa_leads_view_mode', 'table');
+              }}
+              className={`flex items-center gap-1 px-2 sm:px-2.5 h-[28px] rounded-md text-xs font-medium transition cursor-pointer ${
+                viewMode === 'table'
+                  ? 'bg-white text-slate-900 font-semibold shadow-2xs'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+              title="Multi-column Table View"
+            >
+              <Table size={13} strokeWidth={2} />
+              <span className="hidden sm:inline">Table</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Row 2: Status Filter Tabs (Horizontal Scrollable Chips) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth py-0.5">
+          <button
+            onClick={() => setStatusFilter('ALL')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
+              statusFilter === 'ALL'
+                ? 'bg-slate-900 text-white font-semibold shadow-2xs'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+            }`}
+          >
+            All ({deskAndPlatformScopedLeads.length})
+          </button>
+          {LEAD_STATUS_LIST.map((st) => {
+            const count = deskAndPlatformScopedLeads.filter((l) => (l.status || 'CREATED') === st.value).length;
+            const active = statusFilter === st.value;
+            return (
+              <button
+                key={st.value}
+                onClick={() => setStatusFilter(st.value)}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
+                  active
+                    ? 'bg-slate-900 text-white font-semibold shadow-2xs'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                }`}
+              >
+                <span>{st.label}</span>
+                {count > 0 && (
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-semibold ${
+                      active ? 'bg-white/20 text-white' : 'bg-white text-slate-600 border border-slate-200'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Collapsible Secondary Filters: Visa Desk + Platform + Sort */}
+        <div className={`${showMobileFilters ? 'flex' : 'hidden'} md:flex flex-wrap items-center justify-between gap-2.5 pt-2.5 border-t border-slate-100`}>
+          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
             {/* Visa Desk Filter Buttons */}
             {isAdmin && (
-              <div className="flex items-center bg-slate-100 p-0.5 rounded-md border border-slate-200">
+              <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 overflow-x-auto no-scrollbar w-full sm:w-auto">
                 <button
                   onClick={() => handleVisaTabChange('ALL')}
-                  className={`px-2.5 py-1 rounded text-xs transition-all ${
+                  className={`px-2.5 py-1 rounded-md text-xs transition-all whitespace-nowrap ${
                     visaTypeFilter === 'ALL'
-                      ? 'bg-white text-slate-900 font-semibold shadow-2xs border border-slate-200/80'
+                      ? 'bg-white text-slate-900 font-semibold shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
@@ -2031,9 +2498,9 @@ export default function Leads() {
                 </button>
                 <button
                   onClick={() => handleVisaTabChange('WORK_VISA')}
-                  className={`px-2.5 py-1 rounded text-xs transition-all ${
+                  className={`px-2.5 py-1 rounded-md text-xs transition-all whitespace-nowrap ${
                     visaTypeFilter === 'WORK_VISA'
-                      ? 'bg-white text-slate-900 font-semibold shadow-2xs border border-slate-200/80'
+                      ? 'bg-white text-slate-900 font-semibold shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
@@ -2041,9 +2508,9 @@ export default function Leads() {
                 </button>
                 <button
                   onClick={() => handleVisaTabChange('STUDY_VISA')}
-                  className={`px-2.5 py-1 rounded text-xs transition-all ${
+                  className={`px-2.5 py-1 rounded-md text-xs transition-all whitespace-nowrap ${
                     visaTypeFilter === 'STUDY_VISA'
-                      ? 'bg-white text-slate-900 font-semibold shadow-2xs border border-slate-200/80'
+                      ? 'bg-white text-slate-900 font-semibold shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
@@ -2051,9 +2518,9 @@ export default function Leads() {
                 </button>
                 <button
                   onClick={() => handleVisaTabChange('OTHER_VISA')}
-                  className={`px-2.5 py-1 rounded text-xs transition-all ${
+                  className={`px-2.5 py-1 rounded-md text-xs transition-all whitespace-nowrap ${
                     visaTypeFilter === 'OTHER_VISA'
-                      ? 'bg-white text-slate-900 font-semibold shadow-2xs border border-slate-200/80'
+                      ? 'bg-white text-slate-900 font-semibold shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
@@ -2066,7 +2533,7 @@ export default function Leads() {
             <select
               value={platformFilter}
               onChange={(e) => setPlatformFilter(e.target.value)}
-              className="h-[34px] pl-2.5 pr-7 bg-white hover:bg-slate-50 hover:border-slate-400 border border-slate-300 rounded-md text-xs text-slate-700 font-medium focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs transition-colors cursor-pointer min-w-0 max-w-full truncate"
+              className="h-[32px] pl-2.5 pr-7 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 font-medium focus:outline-none focus:border-blue-500 shadow-2xs transition-colors cursor-pointer flex-1 sm:flex-initial"
             >
               <option value="ALL">All Sources</option>
               <option value="IG">Instagram</option>
@@ -2079,86 +2546,27 @@ export default function Leads() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="h-[34px] pl-2.5 pr-7 bg-white hover:bg-slate-50 hover:border-slate-400 border border-slate-300 rounded-md text-xs text-slate-700 font-medium focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs transition-colors cursor-pointer min-w-0 max-w-full truncate"
+              className="h-[32px] pl-2.5 pr-7 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 font-medium focus:outline-none focus:border-blue-500 shadow-2xs transition-colors cursor-pointer flex-1 sm:flex-initial"
             >
               <option value="NEWEST">Newest Inquiries</option>
               <option value="OLDEST">Oldest Inquiries</option>
               <option value="NAME">Name (A–Z)</option>
             </select>
           </div>
-        </div>
 
-        {/* Row 2: Status Filter Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-2 pb-1 border-t border-slate-200">
-          <button
-            onClick={() => setStatusFilter('ALL')}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-all cursor-pointer border ${statusFilter === 'ALL'
-                ? 'bg-slate-900 text-white border-slate-900 font-semibold shadow-2xs'
-                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50 hover:border-slate-400 shadow-2xs'
-              }`}
-          >
-            All Candidates ({deskAndPlatformScopedLeads.length})
-          </button>
-          {LEAD_STATUS_LIST.map((st) => {
-            const count = deskAndPlatformScopedLeads.filter((l) => (l.status || 'CREATED') === st.value).length;
-            const active = statusFilter === st.value;
-            return (
-              <button
-                key={st.value}
-                onClick={() => setStatusFilter(st.value)}
-                className={`px-2.5 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer border ${active
-                    ? 'bg-slate-900 text-white border-slate-900 font-semibold shadow-2xs'
-                    : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50 hover:border-slate-400 shadow-2xs'
-                  }`}
-              >
-                <span>{st.label}</span>
-                {count > 0 && (
-                  <span
-                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-semibold ${active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600 border border-slate-200'
-                      }`}
-                  >
-                    {count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-
-          {/* View Toggle (List vs Table) */}
-          <div className="inline-flex items-center p-0.5 bg-slate-100 rounded-md text-xs font-medium shrink-0 ml-auto border border-slate-200">
+          {activeSecondaryFilterCount > 0 && (
             <button
               type="button"
               onClick={() => {
-                setViewMode('list');
-                localStorage.setItem('ssa_leads_view_mode_v2', 'list');
-                localStorage.setItem('ssa_leads_view_mode', 'list');
+                setVisaTypeFilter('ALL');
+                setPlatformFilter('ALL');
+                setSortBy('NEWEST');
               }}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition-all cursor-pointer ${viewMode === 'list'
-                  ? 'bg-white text-slate-900 font-semibold shadow-2xs border border-slate-200/80'
-                  : 'text-slate-600 hover:text-slate-900'
-                }`}
-              title="Grouped List View"
+              className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition cursor-pointer py-1"
             >
-              <LayoutList size={13} strokeWidth={2} />
-              <span>List</span>
+              Reset Filters
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                setViewMode('table');
-                localStorage.setItem('ssa_leads_view_mode_v2', 'table');
-                localStorage.setItem('ssa_leads_view_mode', 'table');
-              }}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition-all cursor-pointer ${viewMode === 'table'
-                  ? 'bg-white text-slate-900 font-semibold shadow-2xs border border-slate-200/80'
-                  : 'text-slate-600 hover:text-slate-900'
-                }`}
-              title="Multi-column Table View"
-            >
-              <Table size={13} strokeWidth={2} />
-              <span>Table</span>
-            </button>
-          </div>
+          )}
         </div>
       </div>
 
@@ -2220,25 +2628,23 @@ export default function Leads() {
       ) : (
         /* ── Candidate Table Directory (Responsive with smooth horizontal scroll) ── */
         <div className="space-y-2.5">
-          {/* Apple HIG Grouped Table View Header */}
-          <div className="flex flex-wrap items-center justify-between gap-3 px-3 font-sf select-none">
+          {/* Candidate Table Directory Header */}
+          <div className="flex items-center justify-between gap-2 px-2 sm:px-3 text-xs select-none">
             <div className="flex items-center gap-2 min-w-0">
-              <span className="text-[12px] font-semibold tracking-wider text-[#6e6e73] uppercase whitespace-nowrap">
-                Candidate Table Directory
+              <span className="font-bold text-slate-800 uppercase tracking-wider text-[11px] truncate">
+                Candidate Directory
               </span>
-              <span className="text-[12px] font-normal text-[#86868b] bg-black/[0.04] px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0">
-                {activeColumnFilterCount > 0 && filteredLeads.length !== deskAndPlatformScopedLeads.length
-                  ? `${filteredLeads.length} of ${deskAndPlatformScopedLeads.length}`
-                  : `${filteredLeads.length} ${filteredLeads.length === 1 ? 'candidate' : 'candidates'}`}
+              <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md shrink-0">
+                {filteredLeads.length}
               </span>
             </div>
 
-            <div className="flex items-center gap-4 ml-auto shrink-0">
+            <div className="flex items-center gap-2.5 sm:gap-4 shrink-0 text-xs">
               {activeColumnFilterCount > 0 && (
                 <button
                   type="button"
                   onClick={() => clearColumnFilters(false)}
-                  className="text-[13px] font-normal text-[#007aff] hover:opacity-70 active:opacity-50 transition-opacity cursor-pointer whitespace-nowrap"
+                  className="font-medium text-blue-600 hover:underline cursor-pointer"
                 >
                   Clear
                 </button>
@@ -2247,7 +2653,7 @@ export default function Leads() {
                 <button
                   type="button"
                   onClick={resetColumnWidths}
-                  className="text-[13px] font-normal text-[#007aff] hover:opacity-70 active:opacity-50 transition-opacity cursor-pointer whitespace-nowrap"
+                  className="hidden sm:inline font-medium text-blue-600 hover:underline cursor-pointer"
                 >
                   Reset Widths
                 </button>
@@ -2255,11 +2661,11 @@ export default function Leads() {
               <button
                 type="button"
                 onClick={toggleColumnFiltersRow}
-                className="text-[13px] font-normal text-[#007aff] hover:opacity-70 active:opacity-50 transition-opacity cursor-pointer whitespace-nowrap"
+                className="font-medium text-blue-600 hover:underline cursor-pointer"
               >
-                {showColumnFilters ? 'Hide Filters' : 'Filters'}
+                {showColumnFilters ? 'Hide Column Filters' : 'Column Filters'}
               </button>
-              <span className="text-[12px] font-normal text-[#86868b] whitespace-nowrap">
+              <span className="text-slate-500 font-medium">
                 Page {currentPage} of {totalPages}
               </span>
             </div>
@@ -2319,8 +2725,8 @@ export default function Leads() {
                           >
                             <span
                               className={`h-full transition-colors ${resizingCol === col.key
-                                  ? 'w-[2px] bg-[#007aff]'
-                                  : 'w-[2px] bg-transparent group-hover/resize:bg-[#007aff]/60'
+                                ? 'w-[2px] bg-[#007aff]'
+                                : 'w-[2px] bg-transparent group-hover/resize:bg-[#007aff]/60'
                                 }`}
                             />
                           </div>
@@ -2401,11 +2807,10 @@ export default function Leads() {
                             value={columnFilters.followUpDate}
                             onChange={(e) => updateColumnFilter('followUpDate', e.target.value)}
                             aria-label="Filter by Follow-up Date"
-                            className={`h-[30px] flex-1 min-w-0 px-2 rounded-md text-[12px] border transition-colors bg-white ${
-                              columnFilters.followUpDate
+                            className={`h-[30px] flex-1 min-w-0 px-2 rounded-md text-[12px] border transition-colors bg-white ${columnFilters.followUpDate
                                 ? 'border-blue-600 text-slate-900 font-semibold shadow-2xs'
                                 : 'border-slate-300 hover:border-slate-400 text-slate-700 font-normal shadow-2xs'
-                            }`}
+                              }`}
                           />
                           {columnFilters.followUpDate && (
                             <button
@@ -2507,7 +2912,7 @@ export default function Leads() {
 
                           {/* Candidate Name */}
                           <td data-col="candidateName" className="py-3 px-3.5 overflow-hidden">
-                            <div className="font-semibold text-[13px] text-[#1c1c1e] group-hover:text-[#007aff] transition-colors truncate" title={lead.customerName || `Candidate #${lead.id}`}>
+                            <div className="font-semibold text-[13px] text-[#1c1c1e] group-hover:text-[#007aff] transition-colors break-words" title={lead.customerName || `Candidate #${lead.id}`}>
                               {lead.customerName || `Candidate #${lead.id}`}
                             </div>
                             <div className="flex items-center gap-1.5 text-[11px] text-[#8e8e93] mt-0.5 min-w-0">
@@ -2796,8 +3201,8 @@ export default function Leads() {
                             </div>
                           )}
 
-                          {/* Action Strip: WhatsApp, Call, Update Stage, View Full Profile */}
-                          <div className="flex flex-wrap items-center gap-2 pt-1">
+                          {/* Action Strip: Clean Human Design */}
+                          <div className="flex items-center gap-1.5 pt-2 border-t border-slate-100">
                             {lead.phoneNumber && (
                               <>
                                 <a
@@ -2805,17 +3210,17 @@ export default function Leads() {
                                   target="_blank"
                                   rel="noreferrer"
                                   title="WhatsApp"
-                                  className="flex-1 py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-xs flex items-center justify-center gap-1.5 border border-emerald-200 transition-colors"
+                                  className="flex-1 h-8 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-slate-700 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
                                 >
-                                  <MessageCircle size={15} className="text-emerald-600" />
+                                  <MessageCircle size={14} className="text-emerald-600" />
                                   <span>WhatsApp</span>
                                 </a>
                                 <a
                                   href={`tel:${cleanPhone}`}
                                   title="Call"
-                                  className="flex-1 py-2 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#007aff] font-semibold text-xs flex items-center justify-center gap-1.5 border border-blue-200 transition-colors"
+                                  className="flex-1 h-8 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-slate-700 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
                                 >
-                                  <Phone size={15} />
+                                  <Phone size={14} className="text-slate-600" />
                                   <span>Call</span>
                                 </a>
                               </>
@@ -2830,17 +3235,17 @@ export default function Leads() {
                                   notes: lead.notes || '',
                                 });
                               }}
-                              className="py-2 px-3 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs border border-slate-200 transition-colors cursor-pointer"
+                              className="h-8 px-2.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-slate-700 text-xs font-medium transition-colors cursor-pointer"
                             >
                               Stage
                             </button>
                             <button
                               type="button"
                               onClick={() => navigate(`/leads/${encryptLeadId(lead.id)}`)}
-                              className="py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-colors flex items-center gap-1 cursor-pointer"
+                              className="h-8 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-medium transition-colors flex items-center gap-0.5 cursor-pointer"
                             >
                               <span>Profile</span>
-                              <ChevronRight size={13} />
+                              <ChevronRight size={13} className="text-slate-400" />
                             </button>
                           </div>
                         </div>
@@ -2909,6 +3314,7 @@ export default function Leads() {
           </div>
         </div>
       )}
+      </div>
 
       {/* iOS-Style Slide-Over Candidate Dossier Drawer */}
       {dossierLead && (
@@ -3653,10 +4059,10 @@ export default function Leads() {
                                   </td>
                                   <td className="py-2 px-3 border-l border-[#f1f5f9]">
                                     <span className={`inline-block px-2 py-0.5 text-[11px] font-medium rounded-[3px] border ${currentVisa === 'WORK_VISA'
-                                        ? 'bg-[#f0f4f9] text-[#1e40af] border-[#dbeafe]'
-                                        : currentVisa === 'STUDY_VISA'
-                                          ? 'bg-[#f0fdf4] text-[#166534] border-[#bbf7d0]'
-                                          : 'bg-[#fffbeb] text-[#92400e] border-[#fde68a]'
+                                      ? 'bg-[#f0f4f9] text-[#1e40af] border-[#dbeafe]'
+                                      : currentVisa === 'STUDY_VISA'
+                                        ? 'bg-[#f0fdf4] text-[#166534] border-[#bbf7d0]'
+                                        : 'bg-[#fffbeb] text-[#92400e] border-[#fde68a]'
                                       }`}>
                                       {currentVisa === 'WORK_VISA' ? 'Work Visa' : currentVisa === 'STUDY_VISA' ? 'Study Visa' : 'Other Visa'}
                                     </span>

@@ -718,6 +718,24 @@ class ReminderNotificationService {
     }
   }
 
+  public async markAsUnread(id: string): Promise<void> {
+    if (!id) return;
+    const strId = String(id);
+    const cached = this.getCachedNotifications();
+    const item = cached.find((n) => String(n.id) === strId);
+    if (!item) return;
+
+    cached.forEach((n) => {
+      if (String(n.id) === strId || this.isSameNotification(n, item)) {
+        n.isRead = false;
+        delete (n as any).readAt;
+      }
+    });
+
+    localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(cached));
+    window.dispatchEvent(new CustomEvent('ssa_notifications_updated'));
+  }
+
   public async markAllAsRead(): Promise<void> {
     const cached = this.getCachedNotifications();
     const nowIso = new Date().toISOString();

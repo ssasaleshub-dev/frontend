@@ -221,28 +221,7 @@ export default function SwipeableNotificationCard({
             : 'bg-white hover:bg-[#fafafa]'
         }`}
       >
-        {/* Left: Circular icon avatar with active indicator */}
-        <div
-          className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 border transition-all ${
-            item.type === 'CALL'
-              ? 'bg-emerald-50 text-emerald-600 border-emerald-200/50'
-              : item.type === 'REMINDER'
-              ? 'bg-orange-50 text-orange-600 border-orange-200/50'
-              : item.type === 'LEAD_ASSIGNED'
-              ? 'bg-purple-50 text-purple-600 border-purple-200/50'
-              : 'bg-blue-50 text-[#0071e3] border-blue-200/50'
-          } ${!item.isRead ? 'ring-2 ring-[#0071e3]/20 shadow-xs' : ''}`}
-        >
-          {item.type === 'CALL' ? (
-            <Phone size={18} strokeWidth={2.2} />
-          ) : item.type === 'LEAD_ASSIGNED' ? (
-            <User size={18} strokeWidth={2.2} />
-          ) : (
-            <Clock size={18} strokeWidth={2.2} />
-          )}
-        </div>
-
-        {/* Center: Instagram-style inline notification text */}
+        {/* Center: Clean inline notification text */}
         <div className="flex-1 min-w-0 pr-1">
           <p className="text-[14px] leading-snug">
             <span

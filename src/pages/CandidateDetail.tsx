@@ -41,6 +41,7 @@ import leadActivityService from '../services/api/leadActivityService';
 import notificationApiService, { CalendarEventDTO } from '../services/api/notificationService';
 import CandidateActivityLogsModal from '../components/CandidateActivityLogsModal';
 import LeadReminderModal from '../components/LeadReminderModal';
+import MobileLeadDetailView from '../components/leads/MobileLeadDetailView';
 import { useAlert } from '../context/AlertContext';
 import {
   PLATFORMS,
@@ -88,6 +89,7 @@ export default function CandidateDetail() {
   const [submittingNote, setSubmittingNote] = useState<boolean>(false);
   const [newNote, setNewNote] = useState<string>('');
   const [notesHistory, setNotesHistory] = useState<Array<{ note: string; date: string; author: string }>>([]);
+  const [activeSection, setActiveSection] = useState<'info' | 'payments' | 'eligibility' | 'notes'>('info');
 
   // Client Budget & Payment State
   const [isEditingBudget, setIsEditingBudget] = useState<boolean>(false);
@@ -364,8 +366,8 @@ export default function CandidateDetail() {
     }
   };
 
-  const handleAddNote = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAddNote = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
     if (!newNote.trim() || !lead) return;
     const noteText = newNote.trim();
     setSubmittingNote(true);
@@ -1002,851 +1004,605 @@ export default function CandidateDetail() {
 
   const closingInfo = getClosingDateInfo(lead.createdTime || (lead as any).createdAt || (lead as any).createdDate);
 
+  const STAGES = [
+    { key: 'CREATED', label: 'New Lead' },
+    { key: 'CONTACTED', label: 'Contacted' },
+    { key: 'QUALIFIED', label: 'Qualified' },
+    { key: 'PROPOSAL_SENT', label: 'Docs Requested' },
+    { key: 'NEGOTIATION', label: 'In Process' },
+    { key: 'CONVERTED', label: 'Converted' },
+    { key: 'WON', label: 'Closed Won' },
+    { key: 'LOST', label: 'Closed Lost' },
+  ];
+
+  const currentStatus = (lead.status || 'CREATED').toUpperCase();
+  let curStageIndex = STAGES.findIndex((s) => s.key === currentStatus);
+  if (curStageIndex === -1) curStageIndex = 0;
+
+  const effectivePaymentStatus = ((lead as any).paymentStatus || 'UNPAID').toUpperCase();
+
+  const handleOpenEdit = () => {
+    if (!lead) return;
+    setEditFormData({
+      customerName: lead.customerName || '',
+      phoneNumber: lead.phoneNumber || '',
+      email: lead.email || '',
+      city: lead.city || lead.location || '',
+      visaType: lead.visaType || 'WORK_VISA',
+      closingDate: (lead.closingDate || (lead as any).purchaseTimeline || '').substring(0, 10),
+      age: lead.age || AGE_BRACKETS[0],
+      educationalQualification: lead.educationalQualification || EDUCATION_QUALIFICATIONS[2],
+      areYouWorking: lead.areYouWorking || 'yes',
+      areYouInterested: lead.areYouInterested || 'yes',
+      leadConfirm: lead.leadConfirm || 'Confirmed',
+      notes: lead.notes || '',
+      budgetRange: lead.budgetRange || '',
+      clientBudget: lead.budgetRange || '',
+      paymentStatus: (lead as any).paymentStatus || 'UNPAID',
+      paymentDetails: (lead as any).paymentDetails || '',
+      studentPercentage: (lead as any).studentPercentage || (lead as any).cgpa || '',
+      cgpa: (lead as any).studentPercentage || (lead as any).cgpa || '',
+    });
+    setShowEditModal(true);
+  };
+
   return (
-    <div className="space-y-5 max-w-6xl mx-auto pb-12">
-      {/* Top Breadcrumb & Quick Actions Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <button
-          onClick={() => navigate('/leads')}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 hover:bg-white text-xs font-semibold text-[#007aff] transition-all shadow-xs border border-black/[0.05] active:scale-95 backdrop-blur-md"
-        >
-          <ChevronLeft size={16} />
-          <span>Back to Leads</span>
-        </button>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              if (lead) {
-                setEditFormData({
-                  customerName: lead.customerName || '',
-                  phoneNumber: lead.phoneNumber || '',
-                  email: lead.email || '',
-                  city: lead.city || lead.location || '',
-                  visaType: lead.visaType || 'WORK_VISA',
-                  closingDate: (lead.closingDate || (lead as any).purchaseTimeline || '').substring(0, 10),
-                  age: lead.age || AGE_BRACKETS[0],
-                  educationalQualification: lead.educationalQualification || EDUCATION_QUALIFICATIONS[2],
-                  areYouWorking: lead.areYouWorking || 'yes',
-                  areYouInterested: lead.areYouInterested || 'yes',
-                  leadConfirm: lead.leadConfirm || 'Confirmed',
-                  notes: lead.notes || '',
-                  budgetRange: lead.budgetRange || '',
-                  clientBudget: lead.budgetRange || '',
-                  paymentStatus: (lead as any).paymentStatus || 'UNPAID',
-                  paymentDetails: (lead as any).paymentDetails || '',
-                  studentPercentage: (lead as any).studentPercentage || (lead as any).cgpa || '',
-                  cgpa: (lead as any).studentPercentage || (lead as any).cgpa || '',
-                });
-              }
-              setShowEditModal(true);
-            }}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white/80 hover:bg-white text-slate-800 rounded-xl border border-black/[0.06] text-xs font-semibold shadow-xs transition-all active:scale-95 backdrop-blur-md cursor-pointer"
-          >
-            <Edit2 size={13} className="text-[#007aff]" />
-            <span>Edit Details</span>
-          </button>
-
-          {isAdmin && (
-            <button
-              onClick={handleDelete}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white hover:bg-black/[0.04] text-[#8e8e93] hover:text-[#ff3b30] rounded-xl border border-black/[0.08] hover:border-black/[0.15] text-xs font-medium transition-all active:scale-95 shadow-2xs cursor-pointer"
-            >
-              <Trash2 size={13} />
-              <span>Delete</span>
-            </button>
-          )}
-        </div>
+    <>
+      {/* Mobile Screen Lead Detail Layout (< 768px) */}
+      <div className="block md:hidden">
+        <MobileLeadDetailView
+          lead={lead}
+          notesHistory={notesHistory}
+          activities={activities}
+          availableStaff={availableStaff}
+          isAdmin={isAdmin}
+          STAGES={STAGES}
+          curStageIndex={curStageIndex}
+          closingInfo={closingInfo}
+          effectivePaymentStatus={effectivePaymentStatus}
+          handleStatusChange={handleStatusChange}
+          handleUpdatePaymentStatus={handleUpdatePaymentStatus}
+          handleCreateNote={handleAddNote}
+          handleDeleteRemark={handleDeleteRemark}
+          newNote={newNote}
+          setNewNote={setNewNote}
+          submittingNote={submittingNote}
+          onOpenEdit={handleOpenEdit}
+          onOpenReminder={() => setShowReminderModal(true)}
+          onDelete={handleDelete}
+          onAssignStaff={handleAssignStaff}
+          assigningStaff={assigningStaff}
+          onUpdateBudget={handleUpdateBudget}
+          navigate={navigate}
+        />
       </div>
 
-      {/* Candidate Profile Hero Card - Apple macOS / iOS Inset Card */}
-      <div className="ios-card p-6 bg-white space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 pb-5 border-b border-black/[0.06]">
-          {/* Avatar and Primary Identity */}
-          <div className="flex items-start gap-4">
-            <div className="w-16 h-16 rounded-[22px] bg-gradient-to-br from-slate-900 to-slate-700 text-white flex items-center justify-center font-bold text-2xl shadow-md shrink-0 border border-white/10">
-              {(lead.customerName?.[0] || 'C').toUpperCase()}
-            </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2.5">
-                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#1c1c1e] leading-tight">
-                  {lead.customerName || `Candidate #${formatMaskedLeadRef(lead.id)}`}
-                </h1>
-                {renderVisaBadge(lead.visaType)}
-                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-black/[0.04] text-[#1c1c1e] border border-black/[0.06]">
-                  {currentStatusConfig.label}
-                </span>
-              </div>
+      {/* Desktop Screen Lead Detail Layout (>= 768px) */}
+      <div className="hidden md:block crm-page" id="crmPage">
+        <div className="wrap">
+        <a className="crumb" onClick={() => navigate('/leads')}>
+          ‹ Back to Leads
+        </a>
 
-              <div className="flex flex-wrap items-center gap-2.5 mt-2 text-xs text-[#86868b] font-medium">
-                <span className="font-mono text-slate-400">
-                  {lead.externalId ? `ID: ${lead.externalId}` : `Ref #${formatMaskedLeadRef(lead.id)}`}
+        {/* Top Header Card */}
+        <section className="card">
+          <div className="head">
+            <div className="av">
+              {(lead.customerName || 'C').charAt(0).toUpperCase()}
+            </div>
+            <div className="hi">
+              <h1>
+                <span>{lead.customerName || 'Candidate'}</span>
+                <span className="tag">
+                  {lead.visaType === 'WORK_VISA' ? 'Work Visa' : lead.visaType === 'STUDY_VISA' ? 'Study Visa' : 'Other Visa'}
                 </span>
-                <span>·</span>
-                {(lead.city || lead.location) && (
-                  <span className="flex items-center gap-1 capitalize text-slate-600">
-                    <MapPin size={12} className="text-[#007aff]" />
-                    <span>{lead.city || lead.location}</span>
-                  </span>
-                )}
-                <span>·</span>
-                <span>Inquired on {formatDate(lead.createdTime || lead.createdAt)}</span>
+              </h1>
+              <div className="sub">
+                ID: {lead.externalId || lead.id} · {lead.city || lead.location || 'Location'} · Inquired on {formatIndianDateTime(lead.createdTime || (lead as any).createdAt, { fallback: 'Recent' })}
               </div>
             </div>
-          </div>
-
-          {/* Direct Communication Hub & Stage Selector */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Direct WhatsApp Trigger */}
-            {lead.phoneNumber && (
-              <button
-                onClick={() => {
-                  setCustomWhatsAppMsg(
-                    `Hello ${lead.customerName || 'Candidate'}, greetings from our Overseas Visa Consultancy! We received your ${lead.visaType === 'WORK_VISA' ? 'Work Visa' : 'Study Visa'
-                    } inquiry.`
-                  );
-                  setShowWhatsAppTemplateModal(true);
-                }}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-[#34c759] hover:bg-[#30b753] text-white rounded-xl text-xs font-semibold shadow-[0_2px_10px_rgba(52,199,89,0.35)] transition-all active:scale-95"
-                title="Send personalized WhatsApp message"
-              >
-                <MessageCircle size={15} />
-                <span>WhatsApp Outreach</span>
-              </button>
-            )}
-
-            {lead.phoneNumber && (
-              <a
-                href={`tel:${lead.phoneNumber}`}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-[#f2f2f7] hover:bg-[#e5e5ea] text-slate-800 rounded-xl text-xs font-semibold transition-all active:scale-95"
-                title="Call phone number"
-              >
-                <Phone size={14} />
-                <span>Call Phone</span>
-              </a>
-            )}
-
-            {lead.email && (
-              <a
-                href={`mailto:${lead.email}`}
-                className="p-2.5 bg-[#f2f2f7] hover:bg-[#e5e5ea] text-slate-700 rounded-xl transition-all active:scale-95"
-                title="Send email"
-              >
-                <Mail size={15} />
-              </a>
-            )}
-
-            {/* Apple iOS Activity & Audit Logs Button */}
-            <button
-              onClick={() => setShowActivityLogsModal(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-[#f2f2f7] text-[#1c1c1e] rounded-xl text-xs font-medium border border-black/[0.08] shadow-2xs transition-all active:scale-95 cursor-pointer"
-              title="View counselor audit logs and candidate activity history"
-            >
-              <BrandActivityIcon size={14} className="text-[#8e8e93]" />
-              <span>Activity Logs</span>
-              {activities.length > 0 && (
-                <span className="text-xs text-[#8e8e93] font-normal">
-                  ({activities.length})
-                </span>
-              )}
-            </button>
-
-            {/* Apple iOS Candidate Reminder Button */}
-            <button
-              onClick={() => setShowReminderModal(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-[#f2f2f7] text-[#1c1c1e] rounded-xl text-xs font-medium border border-black/[0.08] shadow-2xs transition-all active:scale-95 cursor-pointer"
-              title="Set and manage reminders for this candidate"
-            >
-              <BrandReminderIcon size={14} className="text-[#8e8e93]" />
-              <span>Reminder</span>
-              {leadReminders.filter((r) => !r.isCompleted).length > 0 && (
-                <span className="text-xs text-[#8e8e93] font-normal">
-                  ({leadReminders.filter((r) => !r.isCompleted).length})
-                </span>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Apple Segmented Pipeline Stage Control */}
-        <div className="space-y-2.5 pt-1">
-          {/* Top Metadata Row: START & CLOSING */}
-          <div className="flex items-center justify-between px-1">
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[#86868b]">
-                START
-              </span>
-              <span className="text-xs font-medium text-slate-700">
-                {formatPipelineDate(lead.createdTime || (lead as any).createdAt || (lead as any).createdDate)}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[#86868b]">
-                CLOSING
-              </span>
+            <div className="acts">
               <button
                 type="button"
-                onClick={() => setShowEditModal(true)}
-                className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-800 hover:text-[#007aff] px-2 py-0.5 rounded-lg hover:bg-black/[0.04] transition-colors cursor-pointer group"
-                title="Click to edit target conversion closing date"
+                className="btn g"
+                onClick={() => setShowWhatsAppTemplateModal(true)}
               >
-                <Clock size={13} className="text-[#8e8e93] group-hover:text-[#007aff]" />
-                <span className="font-semibold underline decoration-dotted underline-offset-2">
-                  {closingInfo.closingDateDisplay}
-                </span>
-                {closingInfo.milestoneBadge && lead.status !== 'WON' && lead.status !== 'LOST' && (
-                  <span
-                    className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${closingInfo.progressPercent && closingInfo.progressPercent >= 100
-                      ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                      : closingInfo.progressPercent && closingInfo.progressPercent >= 75
-                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                        : 'bg-blue-50 text-blue-700 border border-blue-200'
-                      }`}
-                  >
-                    {closingInfo.milestoneBadge}
-                  </span>
-                )}
+                WhatsApp
               </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  if (lead.phoneNumber) window.location.href = `tel:${lead.phoneNumber}`;
+                  else showAlert({ title: 'Call', message: 'No phone number available' });
+                }}
+              >
+                Call
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  if (lead.email) window.location.href = `mailto:${lead.email}`;
+                  else showAlert({ title: 'Email', message: 'No email address available' });
+                }}
+              >
+                Send Email
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setShowReminderModal(true)}
+              >
+                Reminder
+              </button>
+              <button
+                type="button"
+                className="btn p"
+                onClick={handleOpenEdit}
+              >
+                Edit
+              </button>
+              {isAdmin && (
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={handleDelete}
+                >
+                  Delete
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Apple iOS Human Interface Segmented Pipeline Control */}
-          <div className="p-1 bg-[#767680]/12 rounded-xl flex items-center gap-0.5 overflow-x-auto border border-black/[0.04]">
-            {LEAD_STATUS_LIST.map((st) => {
-              const isCurrent = lead.status === st.value;
-              const isWon = st.value === 'WON';
-              const isLost = st.value === 'LOST';
+          <div className="dates">
+            <span>
+              Start: <b>{formatIndianDate(lead.createdTime || (lead as any).createdAt, { fallback: '22 Nov 2026' })}</b>
+            </span>
+            <span>
+              Closing: <b>{closingInfo.closingDateDisplay || '24 Jan 2027'}</b>
+            </span>
+          </div>
 
-              let stageLabel = st.label;
-              if (isWon) stageLabel = 'Closed Won';
-              if (isLost) stageLabel = 'Closed Lost';
-
-              let activeClasses = 'bg-white text-[#1c1c1e] shadow-[0_1px_3px_rgba(0,0,0,0.08),0_1px_1px_rgba(0,0,0,0.04)] font-semibold';
-              if (isWon && isCurrent) activeClasses = 'bg-[#34c759] text-white shadow-sm font-semibold';
-              if (isLost && isCurrent) activeClasses = 'bg-[#ff3b30] text-white shadow-sm font-semibold';
-
+          {/* Chevron Stages Pipeline */}
+          <div className="stages">
+            {STAGES.map((s, i) => {
+              const isDone = i < curStageIndex && curStageIndex < 7;
+              const isCur = i === curStageIndex;
+              const isLostCur = i === 7 && isCur;
+              const className = `st ${isDone ? 'done' : ''} ${isCur ? 'cur' : ''} ${isLostCur ? 'lost cur' : ''}`.trim();
               return (
                 <button
-                  key={st.value}
+                  key={s.key}
                   type="button"
-                  onClick={() => handleStatusChange(st.value)}
-                  title={`${st.label} (${st.value})`}
-                  className={`flex-1 min-w-[90px] py-1.5 px-2.5 rounded-lg text-xs transition-all duration-150 flex items-center justify-center gap-1.5 cursor-pointer select-none ${isCurrent
-                    ? activeClasses
-                    : 'text-[#636366] hover:text-[#1c1c1e] hover:bg-black/[0.03] font-medium'
-                    }`}
+                  className={className}
+                  onClick={() => handleStatusChange(s.key)}
+                  title={`Move stage to ${s.label}`}
                 >
-                  {isWon && (
-                    <BrandWonIcon
-                      size={13}
-                      className={isCurrent ? 'text-white' : 'text-[#34c759]'}
-                    />
-                  )}
-                  {isLost && (
-                    <BrandLostIcon
-                      size={13}
-                      className={isCurrent ? 'text-white' : 'text-[#8e8e93]'}
-                    />
-                  )}
-                  <span className="truncate">{stageLabel}</span>
+                  {isDone ? '✓ ' : ''}{s.label}
                 </button>
               );
             })}
           </div>
-        </div>
-      </div>
+        </section>
 
-      {/* Two-Column Dossier Content - Apple Inset Grouped Architecture */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Left Column: Candidate Detailed Profile (7 Cols) */}
-        <div className="lg:col-span-7 space-y-5 min-w-0">
-          {/* Section 1: Contact Information */}
-          <div className="ios-card p-6 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#86868b] flex items-center gap-2">
-                <UserCheck size={14} className="text-[#007aff]" />
-                <span>Contact Details</span>
+        {/* 3-Column Grid */}
+        <div className="grid">
+          {/* Left Aside: Navigation & Related Counts */}
+          <aside className="card side">
+            <h6>Overview</h6>
+            <a
+              className={activeSection === 'info' ? 'on' : ''}
+              onClick={() => {
+                setActiveSection('info');
+                document.getElementById('lead-info')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
+              Lead Information
+            </a>
+            <a
+              className={activeSection === 'payments' ? 'on' : ''}
+              onClick={() => {
+                setActiveSection('payments');
+                document.getElementById('payment-settlement')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
+              <span>Payments</span>
+              <small style={{ color: effectivePaymentStatus === 'PAID' ? 'var(--done)' : effectivePaymentStatus === 'PARTIAL' ? 'var(--warn)' : 'var(--danger)', fontWeight: 600 }}>
+                {effectivePaymentStatus === 'PAID' ? 'Paid' : effectivePaymentStatus === 'PARTIAL' ? 'Partially Paid' : 'Not Paid'}
+              </small>
+            </a>
+            <a
+              className={activeSection === 'eligibility' ? 'on' : ''}
+              onClick={() => {
+                setActiveSection('eligibility');
+                document.getElementById('eligibility-responses')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
+              Eligibility
+            </a>
+
+            <h6>Related List</h6>
+            <a
+              className={activeSection === 'notes' ? 'on' : ''}
+              onClick={() => {
+                setActiveSection('notes');
+                document.getElementById('notes-section')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
+              <span>Notes</span>
+              <small>{notesHistory.length}</small>
+            </a>
+            <a
+              onClick={() => setShowActivityLogsModal(true)}
+              title="Open full audit activity logs"
+            >
+              <span>Activity Logs</span>
+              <small>{activities.length}</small>
+            </a>
+            <a
+              onClick={() => {
+                if (lead.email) window.location.href = `mailto:${lead.email}`;
+                else showAlert({ title: 'Email', message: 'No email address registered for this candidate.' });
+              }}
+            >
+              <span>Emails</span>
+              <small>{lead.email ? '1' : '0'}</small>
+            </a>
+            <a
+              onClick={() => {
+                showAlert({ title: 'Documents', message: 'No documents attached to this candidate dossier yet.' });
+              }}
+            >
+              <span>Documents</span>
+              <small>0</small>
+            </a>
+          </aside>
+
+          {/* Center Main: Lead Info, Payment Settlement, Eligibility */}
+          <main>
+            {/* Section 1: Lead Information */}
+            <section className="card sec" id="lead-info">
+              <h3>
+                <span>Lead Information</span>
+                <button type="button" onClick={handleOpenEdit}>
+                  Edit
+                </button>
               </h3>
-              <button
-                onClick={handleCopyPhone}
-                className="text-xs font-semibold text-[#007aff] hover:text-[#0071e3] flex items-center gap-1 transition-colors"
-              >
-                {copiedPhone ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
-                <span>{copiedPhone ? 'Phone Copied!' : 'Copy Phone'}</span>
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors min-w-0">
-                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Primary Phone</span>
-                <p className="font-mono text-sm font-bold text-[#1c1c1e] mt-1 truncate">
-                  {lead.phoneNumber || '—'}
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors min-w-0">
-                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Email Address</span>
-                <p className="text-sm font-semibold text-[#1c1c1e] mt-1 truncate">
-                  {lead.email || '—'}
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors min-w-0">
-                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">City / Location</span>
-                <p className="text-sm font-semibold text-[#1c1c1e] mt-1 capitalize truncate">
-                  {lead.city || lead.location || '—'}
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors min-w-0 overflow-hidden">
-                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider block">Assigned Counselor</span>
-                {isAdmin ? (
-                  <div className="mt-1 flex items-center gap-2 min-w-0 w-full">
-                    <select
-                      value={lead.assignedTo || ''}
-                      onChange={(e) => handleAssignStaff(e.target.value)}
-                      disabled={assigningStaff}
-                      className="w-full min-w-0 max-w-full text-xs font-semibold text-slate-800 bg-white border border-slate-300 rounded-md px-2.5 py-1.5 focus:outline-none focus:border-blue-500 shadow-2xs disabled:opacity-50 truncate cursor-pointer"
-                    >
-                      <option value="">Unassigned (General Pool)</option>
-                      {availableStaff.map((staff) => (
-                        <option key={staff.login} value={staff.login}>
-                          {staff.name ? `${staff.name} (@${staff.login})` : staff.login}
-                        </option>
-                      ))}
-                    </select>
-                    {assigningStaff && <RefreshCw size={12} className="animate-spin text-[#007aff] shrink-0" />}
-                  </div>
-                ) : (
-                  <p className="text-sm font-semibold text-[#1c1c1e] mt-1 truncate">
-                    {lead.assignedTo || 'General Pool'}
-                  </p>
-                )}
-              </div>
-
-              {/* Client Budget Quick Card */}
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors min-w-0">
-                <div className="flex items-center justify-between">
-                  <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1">
-                    <CreditCard size={12} className="text-[#007aff]" />
-                    <span>Client Budget</span>
+              <div className="fields">
+                <div className="f">
+                  <label>Lead Name</label>
+                  <span>{lead.customerName || '—'}</span>
+                </div>
+                <div className="f">
+                  <label>Phone</label>
+                  <span>
+                    {lead.phoneNumber || '—'}{' '}
+                    {lead.phoneNumber && (
+                      <>
+                        · <button type="button" onClick={handleCopyPhone}>{copiedPhone ? 'Copied!' : 'Copy'}</button>
+                      </>
+                    )}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setBudgetInput(lead.budgetRange || '');
-                      setIsEditingBudget(true);
-                    }}
-                    className="text-[11px] font-semibold text-[#007aff] hover:underline"
-                  >
-                    {lead.budgetRange ? 'Change' : '+ Set'}
-                  </button>
                 </div>
-                <p className="text-sm font-bold text-[#1c1c1e] mt-1 truncate">
-                  {formatCurrencyDisplay(lead.budgetRange) || <span className="text-[#8e8e93] font-normal italic">Not specified</span>}
-                </p>
-              </div>
-
-              {/* Payment Status Quick Card */}
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors min-w-0">
-                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider block">Payment Status</span>
-                <div className="mt-1 flex items-center gap-2">
-                  {(() => {
-                    const st = ((lead as any).paymentStatus || 'UNPAID').toUpperCase();
-                    if (st === 'PAID') {
-                      return (
-                        <span className="text-xs font-semibold text-emerald-700">
-                          Fully Paid
-                        </span>
-                      );
-                    }
-                    if (st === 'PARTIAL') {
-                      return (
-                        <span className="text-xs font-medium text-amber-700">
-                          Partially Paid
-                        </span>
-                      );
-                    }
-                    return (
-                      <span className="text-xs font-medium text-slate-500">
-                        Not Paid
-                      </span>
-                    );
-                  })()}
+                <div className="f">
+                  <label>Email</label>
+                  <span>
+                    {lead.email ? (
+                      <a href={`mailto:${lead.email}`}>{lead.email}</a>
+                    ) : (
+                      <span className="em">Not provided</span>
+                    )}
+                  </span>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Section: Client Budget & Payment Settlement (Apple HIG Inset Grouped Card) */}
-          <div className="ios-card p-6 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#86868b] flex items-center gap-2">
-                <Wallet size={14} className="text-[#007aff]" />
-                <span>Financial & Payment Settlement</span>
-              </h3>
-              <span className="text-[11px] text-[#86868b] font-medium">Manual Staff Settlement</span>
-            </div>
-
-            {/* Quick 1-Click Status Segmented Control */}
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold text-[#86868b] uppercase tracking-wider block">
-                Settlement Status (1-Click Toggle)
-              </label>
-              <div className="grid grid-cols-3 gap-1.5 sm:gap-2 p-1 bg-[#f2f2f7] rounded-2xl border border-black/[0.04]">
-                {[
-                  { value: 'UNPAID', label: 'Not Paid', color: 'bg-rose-500 text-white shadow-xs', inactive: 'text-rose-700 hover:bg-rose-500/10' },
-                  { value: 'PARTIAL', label: 'Partially Paid', color: 'bg-amber-500 text-white shadow-xs', inactive: 'text-amber-700 hover:bg-amber-500/10' },
-                  { value: 'PAID', label: 'Fully Paid', color: 'bg-emerald-500 text-white shadow-xs', inactive: 'text-emerald-700 hover:bg-emerald-500/10' },
-                ].map((st) => {
-                  const currentStatus = ((lead as any).paymentStatus || 'UNPAID').toUpperCase();
-                  const isSelected = currentStatus === st.value;
-                  return (
-                    <button
-                      key={st.value}
-                      type="button"
-                      onClick={() => handleUpdatePaymentStatus(st.value as any)}
-                      disabled={updatingPayment}
-                      className={`py-2 px-1.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-semibold transition-all duration-150 flex items-center justify-center cursor-pointer active:scale-95 text-center truncate ${isSelected
-                        ? st.color
-                        : `${st.inactive} font-medium`
-                        }`}
-                    >
-                      <span className="truncate">{st.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Budget Range / Client Budget Details */}
-            <div className="p-4 rounded-2xl bg-[#f2f2f7]/60 border border-black/[0.04] space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1.5">
-                  <CreditCard size={13} className="text-[#007aff]" />
-                  <span>Client Budget (Dynamic & Editable)</span>
-                </span>
-                {!isEditingBudget && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setBudgetInput(lead.budgetRange || '');
-                      setIsEditingBudget(true);
-                    }}
-                    className="text-xs font-semibold text-[#007aff] hover:text-[#0071e3] transition-colors"
+                <div className="f">
+                  <label>City / Location</label>
+                  <span>{lead.city || lead.location || '—'}</span>
+                </div>
+                <div className="f">
+                  <label>Lead Owner</label>
+                  <select
+                    value={lead.assignedTo || ''}
+                    onChange={(e) => handleAssignStaff(e.target.value)}
+                    disabled={assigningStaff || !isAdmin}
                   >
-                    Edit Budget
-                  </button>
-                )}
-              </div>
-
-              {isEditingBudget ? (
-                <div className="space-y-2.5 pt-1">
-                  <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
-                    <div className="relative flex-1 min-w-[140px]">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#8e8e93]">₹</span>
-                      <input
-                        type="text"
-                        value={budgetInput}
-                        onChange={(e) => setBudgetInput(e.target.value)}
-                        placeholder="e.g. 1,50,000 or 2 Lakhs"
-                        className="w-full pl-7 pr-3 py-2 text-xs font-semibold bg-white border border-black/[0.08] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/30"
-                        autoFocus
-                      />
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => handleUpdateBudget(budgetInput)}
-                        className="px-3.5 py-2 bg-[#007aff] text-white rounded-xl text-xs font-semibold hover:bg-[#0071e3] transition-colors cursor-pointer"
-                      >
-                        Save
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setIsEditingBudget(false)}
-                        className="px-3 py-2 bg-black/[0.05] text-[#1c1c1e] rounded-xl text-xs font-medium hover:bg-black/[0.1] transition-colors cursor-pointer"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                  {/* Preset quick buttons */}
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {['₹25K', '₹50K', '₹1 Lakh', '₹2 Lakhs', '₹3.5 Lakhs', '₹5 Lakhs+'].map((preset) => (
-                      <button
-                        key={preset}
-                        type="button"
-                        onClick={() => {
-                          setBudgetInput(preset);
-                          handleUpdateBudget(preset);
-                        }}
-                        className="px-2.5 py-1 rounded-lg bg-white border border-black/[0.08] text-[11px] font-medium text-[#1c1c1e] hover:bg-black/[0.04] transition-colors cursor-pointer"
-                      >
-                        {preset}
-                      </button>
+                    <option value="">Unassigned (General Pool)</option>
+                    {availableStaff.map((staff) => (
+                      <option key={staff.login} value={staff.login}>
+                        {staff.name || staff.login}
+                      </option>
                     ))}
-                  </div>
+                  </select>
                 </div>
-              ) : (
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xl font-bold tracking-tight text-[#1c1c1e]">
-                    {formatCurrencyDisplay(lead.budgetRange) || 'Not Specified'}
+                <div className="f">
+                  <label>Visa Type</label>
+                  <span>
+                    {lead.visaType === 'WORK_VISA'
+                      ? 'Work Visa'
+                      : lead.visaType === 'STUDY_VISA'
+                      ? 'Study Visa'
+                      : 'Other Visa'}
                   </span>
                 </div>
-              )}
-            </div>
+                <div className="f">
+                  <label>Client Budget</label>
+                  <span>
+                    {lead.budgetRange ? lead.budgetRange : <span className="em">Not specified</span>}
+                  </span>
+                </div>
+                <div className="f">
+                  <label>Payment Status</label>
+                  <span
+                    style={{
+                      color:
+                        effectivePaymentStatus === 'PAID'
+                          ? 'var(--done)'
+                          : effectivePaymentStatus === 'PARTIAL'
+                          ? 'var(--warn)'
+                          : 'var(--danger)',
+                    }}
+                  >
+                    {effectivePaymentStatus === 'PAID'
+                      ? 'Fully Paid'
+                      : effectivePaymentStatus === 'PARTIAL'
+                      ? 'Partially Paid'
+                      : 'Not Paid'}
+                  </span>
+                </div>
+                <div className="f">
+                  <label>Lead Source</label>
+                  <span>{plat.label || lead.platform || 'Meta Lead Ads'}</span>
+                </div>
+                <div className="f">
+                  <label>Campaign</label>
+                  <span>{lead.campaignName || (lead as any).campaign || 'Meta Campaign null'}</span>
+                </div>
+              </div>
+            </section>
 
-            {/* Payment Remarks & Receipt Notes */}
-            <div className="p-4 rounded-2xl bg-[#f2f2f7]/60 border border-black/[0.04] space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">
-                  Payment Details & Transaction Remarks
-                </span>
-                {!isEditingPaymentDetails && (
+            {/* Section 2: Payment Settlement */}
+            <section className="card sec" id="payment-settlement">
+              <h3>
+                <span>Payment Settlement</span>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingPaymentDetails((prev) => !prev)}
+                >
+                  {isEditingPaymentDetails ? 'Close Remarks' : 'Edit Remarks'}
+                </button>
+              </h3>
+              <div className="pay">
+                <div className="seg">
                   <button
                     type="button"
-                    onClick={() => {
-                      setPaymentDetailsInput((lead as any).paymentDetails || '');
-                      setIsEditingPaymentDetails(true);
-                    }}
-                    className="text-xs font-semibold text-[#007aff] hover:text-[#0071e3] transition-colors"
+                    className={effectivePaymentStatus === 'UNPAID' ? 'on np' : ''}
+                    onClick={() => handleUpdatePaymentStatus('UNPAID')}
                   >
-                    Edit Remarks
+                    Not Paid
                   </button>
-                )}
-              </div>
-
-              {isEditingPaymentDetails ? (
-                <div className="space-y-2 pt-1">
-                  <textarea
-                    value={paymentDetailsInput}
-                    onChange={(e) => setPaymentDetailsInput(e.target.value)}
-                    rows={2}
-                    placeholder="e.g. Advance ₹25,000 received via UPI on Oct 24. Ref: UPI98231..."
-                    className="w-full px-3 py-2 text-xs bg-white border border-black/[0.08] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 leading-relaxed"
-                    autoFocus
-                  />
-                  <div className="flex justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsEditingPaymentDetails(false)}
-                      className="px-3 py-1.5 bg-black/[0.05] text-[#1c1c1e] rounded-xl text-xs font-medium hover:bg-black/[0.1] transition-colors cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleUpdatePaymentDetails(paymentDetailsInput)}
-                      className="px-3.5 py-1.5 bg-[#007aff] text-white rounded-xl text-xs font-semibold hover:bg-[#0071e3] transition-colors cursor-pointer"
-                    >
-                      Save Remarks
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-xs text-[#3c3c43] font-medium leading-relaxed">
-                  {(lead as any).paymentDetails || (
-                    <span className="text-[#8e8e93] italic">No payment transactions recorded yet. Tap "Edit Remarks" to record advance, receipts, or notes.</span>
-                  )}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Section 2: Candidate Eligibility & Survey Answers */}
-          <div className="ios-card p-6 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#86868b] flex items-center gap-2">
-                <GraduationCap size={14} className="text-[#007aff]" />
-                <span>Eligibility & Survey Responses</span>
-              </h3>
-              <span className="text-[11px] text-[#86868b] font-medium">Candidate Profile</span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors min-w-0">
-                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Highest Qualification</span>
-                <p className="font-bold text-[#1c1c1e] text-sm mt-1 truncate">
-                  {lead.educationalQualification || '—'}
-                </p>
-              </div>
-
-              {/* Student Percentage / CGPA (Dynamic & Inline-Editable) */}
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors min-w-0">
-                <div className="flex items-center justify-between">
-                  <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1.5">
-                    <Award size={13} className="text-[#007aff]" />
-                    <span>Student Percentage / CGPA</span>
-                  </span>
-                  {!isEditingPercentage && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPercentageInput((lead as any).studentPercentage || (lead as any).cgpa || '');
-                        setIsEditingPercentage(true);
-                      }}
-                      className="text-[11px] font-semibold text-[#007aff] hover:underline cursor-pointer"
-                    >
-                      {(lead as any).studentPercentage || (lead as any).cgpa ? 'Edit' : '+ Set'}
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    className={effectivePaymentStatus === 'PARTIAL' ? 'on pp' : ''}
+                    onClick={() => handleUpdatePaymentStatus('PARTIAL')}
+                  >
+                    Partially Paid
+                  </button>
+                  <button
+                    type="button"
+                    className={effectivePaymentStatus === 'PAID' ? 'on fp' : ''}
+                    onClick={() => handleUpdatePaymentStatus('PAID')}
+                  >
+                    Fully Paid
+                  </button>
                 </div>
 
-                {isEditingPercentage ? (
-                  <div className="space-y-2 mt-1.5">
-                    <div className="flex flex-wrap sm:flex-nowrap items-center gap-1.5 min-w-0 w-full">
-                      <input
-                        type="text"
-                        value={percentageInput}
-                        onChange={(e) => setPercentageInput(e.target.value)}
-                        placeholder="e.g. 75% or 7.8 CGPA or RNR"
-                        className="flex-1 min-w-[110px] px-2.5 py-1.5 text-xs font-semibold bg-white border border-black/[0.08] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/30"
-                        autoFocus
-                      />
-                      <div className="flex items-center gap-1 shrink-0">
+                <div className="amt">
+                  <div>
+                    <div className="sub">Client Budget</div>
+                    {isEditingBudget ? (
+                      <div className="flex items-center gap-2 mt-1">
+                        <input
+                          type="text"
+                          value={budgetInput}
+                          onChange={(e) => setBudgetInput(e.target.value)}
+                          placeholder="e.g. ₹5,00,000"
+                          className="border border-slate-300 rounded px-2 py-1 text-sm font-bold w-40"
+                          autoFocus
+                        />
                         <button
                           type="button"
-                          onClick={() => handleUpdatePercentage(percentageInput)}
-                          className="px-2.5 py-1.5 bg-[#007aff] text-white rounded-xl text-xs font-semibold hover:bg-[#0071e3] transition-colors cursor-pointer"
+                          className="btn p text-xs py-1 px-2.5"
+                          onClick={() => handleUpdateBudget(budgetInput)}
                         >
                           Save
                         </button>
                         <button
                           type="button"
-                          onClick={() => setIsEditingPercentage(false)}
-                          className="px-2 py-1.5 bg-black/[0.05] text-[#1c1c1e] rounded-xl text-xs font-medium hover:bg-black/[0.1] transition-colors cursor-pointer"
+                          className="btn text-xs py-1 px-2"
+                          onClick={() => {
+                            setBudgetInput(lead.budgetRange || '');
+                            setIsEditingBudget(false);
+                          }}
                         >
                           ✕
                         </button>
                       </div>
-                    </div>
-                    {/* Quick percentage chips */}
-                    <div className="flex flex-wrap gap-1">
-                      {['60-70%', '70-80%', '80%+', '6.5+ CGPA', '7.5+ CGPA', 'RNR'].map((chip) => (
-                        <button
-                          key={chip}
-                          type="button"
-                          onClick={() => {
-                            setPercentageInput(chip);
-                            handleUpdatePercentage(chip);
-                          }}
-                          className="px-2 py-0.5 rounded-lg bg-white border border-black/[0.08] text-[10px] font-medium text-[#1c1c1e] hover:bg-black/[0.04] cursor-pointer"
-                        >
-                          {chip}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-baseline gap-2 mt-1">
-                    <p className="font-bold text-[#1c1c1e] text-sm truncate">
-                      {(lead as any).studentPercentage || (lead as any).cgpa || '—'}
-                    </p>
-                    {((lead as any).studentPercentage || (lead as any).cgpa) && (
-                      <span className="text-[10px] font-semibold text-[#007aff] bg-[#007aff]/10 px-2 py-0.5 rounded-full shrink-0">
-                        Score Set
-                      </span>
+                    ) : (
+                      <b>{lead.budgetRange || 'Not Specified'}</b>
                     )}
                   </div>
-                )}
-              </div>
+                  {!isEditingBudget && (
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={() => setIsEditingBudget(true)}
+                    >
+                      {lead.budgetRange ? 'Change Budget' : '+ Set Budget'}
+                    </button>
+                  )}
+                </div>
 
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors min-w-0">
-                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Age Demographic</span>
-                <p className="font-bold text-[#1c1c1e] text-sm mt-1 truncate">
-                  {lead.age || '—'}
-                </p>
+                {isEditingPaymentDetails ? (
+                  <div className="mt-3 pt-3 border-t border-slate-100">
+                    <textarea
+                      value={paymentDetailsInput}
+                      onChange={(e) => setPaymentDetailsInput(e.target.value)}
+                      placeholder="Advance, payment schedule, or receipt remarks..."
+                    />
+                    <div className="flex justify-end gap-2 mt-2">
+                      <button
+                        type="button"
+                        className="btn p text-xs"
+                        onClick={() => handleUpdatePaymentDetails(paymentDetailsInput)}
+                      >
+                        Save Remarks
+                      </button>
+                      <button
+                        type="button"
+                        className="btn text-xs"
+                        onClick={() => setIsEditingPaymentDetails(false)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (lead as any).paymentDetails ? (
+                  <div className="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-700">
+                    <span className="font-semibold text-slate-900 block mb-0.5">Payment Remarks:</span>
+                    {(lead as any).paymentDetails}
+                  </div>
+                ) : null}
               </div>
+            </section>
 
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors min-w-0">
-                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Currently Employed?</span>
-                <p className="font-bold text-[#1c1c1e] text-sm mt-1 capitalize truncate">
-                  {lead.areYouWorking ? (lead.areYouWorking === 'yes' ? 'Yes, Employed' : 'No / Fresher') : '—'}
-                </p>
+            {/* Section 3: Eligibility & Survey Responses */}
+            <section className="card sec" id="eligibility-responses">
+              <h3>
+                <span>Eligibility &amp; Survey Responses</span>
+                <span className="tag">Candidate Profile</span>
+              </h3>
+              <div className="fields">
+                <div className="f">
+                  <label>Qualification</label>
+                  <span>{lead.educationalQualification || <span className="em">Not specified</span>}</span>
+                </div>
+                <div className="f">
+                  <label>Age Bracket</label>
+                  <span>{lead.age || <span className="em">Not specified</span>}</span>
+                </div>
+                <div className="f">
+                  <label>Working Status</label>
+                  <span className="capitalize">{lead.areYouWorking || <span className="em">Not specified</span>}</span>
+                </div>
+                <div className="f">
+                  <label>Score / CGPA</label>
+                  <span>{(lead as any).studentPercentage || (lead as any).cgpa || <span className="em">Not specified</span>}</span>
+                </div>
+                <div className="f">
+                  <label>Confirmation</label>
+                  <span>{lead.leadConfirm || <span className="em">Confirmed</span>}</span>
+                </div>
+                <div className="f">
+                  <label>Interested</label>
+                  <span className="capitalize">{lead.areYouInterested || <span className="em">Yes</span>}</span>
+                </div>
               </div>
+            </section>
+          </main>
 
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors min-w-0">
-                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Interested in Visa Process?</span>
-                <p className="font-bold text-[#1c1c1e] text-sm mt-1 capitalize truncate">
-                  {lead.areYouInterested ? (lead.areYouInterested === 'yes' ? 'Yes, Ready' : 'Exploring') : '—'}
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors min-w-0">
-                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Lead Confirmation Status</span>
-                <p className="font-bold text-[#1c1c1e] text-sm mt-1 truncate">
-                  {lead.leadConfirm || 'Confirmed Candidate'}
-                </p>
-              </div>
-
-              {/* Candidate Remarks Card */}
-              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 col-span-1 sm:col-span-2 space-y-1.5 min-w-0">
-                <div className="flex items-center justify-between">
-                  <span className="text-amber-900 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5">
-                    <FileText size={13} className="text-amber-600" />
-                    <span>Candidate Remarks</span>
-                  </span>
+          {/* Right Aside: Notes & WhatsApp Shortcuts */}
+          <aside>
+            {/* Notes Section */}
+            <section className="card sec" id="notes-section">
+              <h3>Notes</h3>
+              <div className="note-in">
+                <textarea
+                  id="nt"
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  placeholder="Add a note…"
+                />
+                <div style={{ textAlign: 'right', marginTop: '8px' }}>
                   <button
                     type="button"
-                    onClick={() => {
-                      const input = document.getElementById('counselor-remarks-input');
-                      input?.focus();
-                    }}
-                    className="text-xs font-semibold text-amber-800 hover:text-amber-950 transition-colors"
+                    className="btn p"
+                    id="add"
+                    disabled={!newNote.trim() || submittingNote}
+                    onClick={handleAddNote}
                   >
-                    + Add New Remark
+                    {submittingNote ? 'Adding…' : 'Add Note'}
                   </button>
                 </div>
-                <p className="text-xs font-medium text-slate-800 mt-1.5 whitespace-pre-line leading-relaxed break-words">
-                  {lead.notes || 'No remarks recorded yet.'}
-                </p>
               </div>
-            </div>
-          </div>
-
-          {/* Section 3: Marketing Attribution & Origin */}
-          <div className="ios-card p-6 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#86868b] flex items-center gap-2">
-                <BrandAttributionIcon size={14} className="text-[#007aff]" />
-                <span>Lead Source</span>
-              </h3>
-              <span className={`text-[11px] font-bold px-3 py-1 rounded-full border ${plat.color}`}>
-                {plat.label}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors col-span-1 sm:col-span-2 min-w-0">
-                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Meta Campaign Name</span>
-                <p className="font-bold text-[#1c1c1e] text-sm mt-1 break-words">
-                  {lead.campaignName || 'Direct / Organic Walk-in'}
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors min-w-0">
-                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Ad Set Name</span>
-                <p className="font-bold text-[#1c1c1e] text-sm mt-1 truncate">
-                  {lead.adSetName || '—'}
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors min-w-0">
-                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Ad Creative</span>
-                <p className="font-bold text-[#1c1c1e] text-sm mt-1 truncate">
-                  {lead.adName || '—'}
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-[#f2f2f7]/60 hover:bg-[#f2f2f7] border border-black/[0.04] transition-colors col-span-1 sm:col-span-2 min-w-0">
-                <span className="text-[#86868b] text-[11px] font-semibold uppercase tracking-wider">Meta Instant Form Name / ID</span>
-                <p className="font-bold text-[#1c1c1e] text-sm mt-1 break-words">
-                  {lead.leadFormName || lead.formId || 'Instant Lead Form'}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column: Counselor Discussion Notes & Communication (5 Cols) */}
-        <div className="lg:col-span-5 space-y-5 min-w-0">
-          {/* Counselor Note-Taking Box */}
-          <div className="ios-card p-6 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#86868b] flex items-center gap-2">
-                <MessageCircle size={14} className="text-[#007aff]" />
-                <span>Counselor Notes</span>
-              </h3>
-              <span className="text-[11px] text-[#86868b] font-medium">Quick Note</span>
-            </div>
-
-            <form onSubmit={handleAddNote} className="space-y-3">
-              <textarea
-                id="counselor-remarks-input"
-                value={newNote}
-                onChange={(e) => setNewNote(e.target.value)}
-                rows={3}
-                placeholder="Record candidate conversation notes, eligibility checks, or next steps..."
-                className="w-full px-4 py-3 bg-[#f2f2f7] border border-black/[0.06] rounded-2xl text-xs text-slate-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff] transition-all font-medium placeholder:text-slate-400"
-              />
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  disabled={submittingNote || !newNote.trim()}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#007aff] hover:bg-[#0071e3] text-white rounded-xl text-xs font-semibold shadow-[0_2px_8px_rgba(0,122,255,0.3)] transition-all active:scale-95 disabled:opacity-40"
-                >
-                  <Send size={12} />
-                  <span>{submittingNote ? 'Saving...' : 'Add Note'}</span>
-                </button>
-              </div>
-            </form>
-
-            {/* Historical Notes Stream */}
-            <div className="pt-3 border-t border-black/[0.06] space-y-3">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[#86868b]">
-                Notes History
-              </span>
-
-              {notesHistory.length === 0 ? (
-                <p className="text-xs text-slate-400 py-3 text-center">
-                  No discussion notes recorded yet.
-                </p>
-              ) : (
-                notesHistory.map((item, idx) => (
-                  <div key={idx} className="p-3.5 rounded-2xl bg-[#f8f9fa] border border-black/[0.04] space-y-1.5 text-xs group hover:border-black/[0.08] transition-all">
-                    <div className="flex items-center justify-between text-[11px] text-[#86868b]">
-                      <span className="font-semibold text-slate-800">{item.author}</span>
-                      <div className="flex items-center gap-2">
-                        <span>{formatDate(item.date)}</span>
+              <div className="nl" id="nl">
+                {notesHistory.length > 0 ? (
+                  notesHistory.map((n, i) => (
+                    <div key={i} className="n">
+                      <div>
+                        <span>{n.author || 'Counselor'} · {formatDate(n.date)}</span>
                         <button
                           type="button"
-                          onClick={() => handleDeleteRemark(idx)}
-                          title="Delete this remark"
-                          className="text-slate-400 hover:text-[#ff3b30] p-1 rounded-full transition-colors cursor-pointer"
+                          onClick={() => handleDeleteRemark(i)}
+                          title="Delete remark"
                         >
-                          <Trash2 size={12} />
+                          ✕
                         </button>
                       </div>
+                      <p>{n.note}</p>
                     </div>
-                    <p className="text-slate-800 leading-relaxed pt-0.5 whitespace-pre-wrap font-medium">{item.note}</p>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-400 py-3 text-center">No notes recorded yet</p>
+                )}
+              </div>
+            </section>
 
-          {/* Quick WhatsApp Templates Card */}
-          <div className="ios-card p-6 space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#86868b] flex items-center gap-2">
-              <MessageCircle size={14} className="text-[#34c759]" />
-              <span>WhatsApp Outreach Shortcuts</span>
-            </h3>
-            <p className="text-xs text-[#86868b]">
-              One-click preset outreach messages tailored for this candidate:
-            </p>
-
-            <div className="space-y-2">
-              {getWhatsAppTemplates().map((tpl) => (
+            {/* WhatsApp Shortcuts */}
+            <section className="card sec">
+              <h3>WhatsApp Shortcuts</h3>
+              <div className="wa">
                 <button
-                  key={tpl.id}
-                  onClick={() => openWhatsAppWithText(tpl.text)}
-                  className="w-full p-3.5 rounded-2xl border border-black/[0.06] hover:border-emerald-300 hover:bg-emerald-50/40 text-left transition-all text-xs group bg-white shadow-xs active:scale-[0.99]"
+                  type="button"
+                  onClick={() =>
+                    openWhatsAppWithText(
+                      `Hello ${lead.customerName || 'Candidate'}, greetings from our Overseas Visa Consultancy! We received your inquiry regarding our international ${
+                        lead.visaType === 'WORK_VISA' ? 'Work Visa' : 'Study Visa'
+                      } programs. Are you available for a brief discussion regarding eligibility and visa requirements?`
+                    )
+                  }
                 >
-                  <p className="font-bold text-[#1c1c1e] group-hover:text-emerald-800">
-                    {tpl.title}
-                  </p>
-                  <p className="text-slate-500 text-[11px] mt-1 line-clamp-2 leading-relaxed">
-                    "{tpl.text}"
-                  </p>
+                  👋 Intro &amp; greeting
                 </button>
-              ))}
-            </div>
-          </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    openWhatsAppWithText(
+                      `Dear ${lead.customerName || 'Candidate'}, following our counseling discussion regarding your ${
+                        lead.visaType === 'WORK_VISA' ? 'Work Visa' : 'Study Visa'
+                      } application, please share your updated resume/CV, highest educational certificates, and passport copy so our team can evaluate your profile.`
+                    )
+                  }
+                >
+                  📄 Request documents
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    openWhatsAppWithText(
+                      `Hello ${lead.customerName || 'Candidate'}, this is a gentle reminder regarding the processing fee and enrollment advance for your ${
+                        lead.visaType === 'WORK_VISA' ? 'Work Visa' : 'Study Visa'
+                      } application. Please let us know once transferred so we can proceed with your dossier.`
+                    )
+                  }
+                >
+                  💳 Payment reminder
+                </button>
+              </div>
+            </section>
+          </aside>
         </div>
       </div>
-
+      </div>
       {/* Edit Candidate Details Modal (Apple HIG Glass Sheet UI) */}
       {showEditModal && (
         <div className="ios-modal-backdrop animate-in fade-in duration-200">
@@ -1884,7 +1640,6 @@ export default function CandidateDetail() {
                   required
                   value={editFormData.customerName || ''}
                   onChange={(e) => setEditFormData({ ...editFormData, customerName: e.target.value })}
-                  placeholder="e.g. Mahendran"
                   className="w-full px-3 py-2 bg-white hover:border-slate-400 focus:bg-white border border-slate-300 rounded-md text-xs text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium"
                 />
               </div>
@@ -1899,7 +1654,6 @@ export default function CandidateDetail() {
                   required
                   value={editFormData.phoneNumber || ''}
                   onChange={(e) => setEditFormData({ ...editFormData, phoneNumber: e.target.value })}
-                  placeholder="e.g. +919360185226"
                   className="w-full px-3 py-2 bg-white hover:border-slate-400 focus:bg-white border border-slate-300 rounded-md text-xs text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium"
                 />
               </div>
@@ -1913,7 +1667,6 @@ export default function CandidateDetail() {
                   type="email"
                   value={editFormData.email || ''}
                   onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                  placeholder="candidate@example.com"
                   className="w-full px-3 py-2 bg-white hover:border-slate-400 focus:bg-white border border-slate-300 rounded-md text-xs text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 />
               </div>
@@ -1927,7 +1680,6 @@ export default function CandidateDetail() {
                   type="text"
                   value={editFormData.city || ''}
                   onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
-                  placeholder="e.g. Namakkal, Salem, Chennai"
                   className="w-full px-3 py-2 bg-white hover:border-slate-400 focus:bg-white border border-slate-300 rounded-md text-xs text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 />
               </div>
@@ -1966,7 +1718,6 @@ export default function CandidateDetail() {
                       cgpa: e.target.value,
                     })
                   }
-                  placeholder="e.g. 75% or 8.2 CGPA or RNR"
                   className="w-full px-3 py-2 bg-white hover:border-slate-400 focus:bg-white border border-slate-300 rounded-md text-xs text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 />
               </div>
@@ -1999,7 +1750,6 @@ export default function CandidateDetail() {
                   type="text"
                   value={editFormData.budgetRange || ''}
                   onChange={(e) => setEditFormData({ ...editFormData, budgetRange: e.target.value })}
-                  placeholder="e.g. ₹1,50,000 or ₹2 Lakhs"
                   className="w-full px-3 py-2 bg-white hover:border-slate-400 focus:bg-white border border-slate-300 rounded-md text-xs text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 />
               </div>
@@ -2029,7 +1779,6 @@ export default function CandidateDetail() {
                   type="text"
                   value={editFormData.paymentDetails || ''}
                   onChange={(e) => setEditFormData({ ...editFormData, paymentDetails: e.target.value })}
-                  placeholder="e.g. Advance ₹20,000 received via UPI on 24 Oct"
                   className="w-full px-3 py-2 bg-white hover:border-slate-400 focus:bg-white border border-slate-300 rounded-md text-xs text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 />
               </div>
@@ -2043,7 +1792,6 @@ export default function CandidateDetail() {
                   value={editFormData.notes || ''}
                   onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
                   rows={3}
-                  placeholder="Add notes about this candidate..."
                   className="w-full px-3 py-2 bg-white hover:border-slate-400 focus:bg-white border border-slate-300 rounded-md text-xs text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all leading-relaxed"
                 />
               </div>
@@ -2152,6 +1900,6 @@ export default function CandidateDetail() {
           }}
         />
       )}
-    </div>
+    </>
   );
 }

@@ -192,9 +192,6 @@ export default function BiometricApprovalsPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-lg font-bold text-slate-900 tracking-tight">Biometric Approvals</h1>
-                <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  Admin Device Lock
-                </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
                 Review office tablet registrations and permanently lock counselor fingerprints to authorized office devices.
@@ -280,7 +277,6 @@ export default function BiometricApprovalsPage() {
               <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
                 <th className="py-3 px-4">Staff Member</th>
                 <th className="py-3 px-4">Office Device Info</th>
-                <th className="py-3 px-4">Biometric Key ID</th>
                 <th className="py-3 px-4">Submitted At</th>
                 <th className="py-3 px-4">Status</th>
                 <th className="py-3 px-4 text-right">Action</th>
@@ -289,7 +285,7 @@ export default function BiometricApprovalsPage() {
             <tbody className="divide-y divide-slate-100 text-xs">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-400">
+                  <td colSpan={5} className="py-12 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Loader2 size={24} className="animate-spin text-emerald-600" />
                       <span className="text-xs font-medium text-slate-600">Loading biometric credentials...</span>
@@ -298,7 +294,7 @@ export default function BiometricApprovalsPage() {
                 </tr>
               ) : filteredCredentials.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-16 text-center">
+                  <td colSpan={5} className="py-16 text-center">
                     <div className="max-w-sm mx-auto flex flex-col items-center justify-center gap-2 text-slate-400">
                       <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 mb-1">
                         <Fingerprint size={24} />
@@ -351,25 +347,6 @@ export default function BiometricApprovalsPage() {
                         </div>
                       </td>
 
-                      {/* Biometric Key ID (Truncated + Copy button) */}
-                      <td className="py-3.5 px-4">
-                        <div className="inline-flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-md border border-slate-200/80 font-mono text-[11px] text-slate-700">
-                          <span>{formatTruncatedKey(item.biometricKeyId)}</span>
-                          <button
-                            type="button"
-                            onClick={() => handleCopyKey(item.biometricKeyId)}
-                            title="Copy full key"
-                            className="text-slate-400 hover:text-slate-700 p-0.5 rounded transition-colors"
-                          >
-                            {copiedKeyId === item.biometricKeyId ? (
-                              <Check size={12} className="text-emerald-600" />
-                            ) : (
-                              <Copy size={12} />
-                            )}
-                          </button>
-                        </div>
-                      </td>
-
                       {/* Submitted At (Asia/Kolkata timezone) */}
                       <td className="py-3.5 px-4 text-slate-600 text-xs">
                         {item.createdAt ? (
@@ -380,23 +357,23 @@ export default function BiometricApprovalsPage() {
                       </td>
 
                       {/* Status Badge */}
-                      <td className="py-3.5 px-4">
+                      <td className="py-3.5 px-4 whitespace-nowrap">
                         {isPending && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                            <span>PENDING_APPROVAL</span>
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-medium bg-amber-50 text-amber-800">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                            <span>Pending approval</span>
                           </span>
                         )}
                         {isLocked && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                            <Lock size={11} className="text-emerald-600" />
-                            <span>LOCKED</span>
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-medium bg-emerald-50 text-emerald-800">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            <span>Locked</span>
                           </span>
                         )}
                         {isRevoked && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-800 border border-rose-200">
-                            <Unlock size={11} className="text-rose-500" />
-                            <span>REVOKED</span>
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600">
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                            <span>Revoked</span>
                           </span>
                         )}
                       </td>
