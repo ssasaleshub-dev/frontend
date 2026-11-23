@@ -101,10 +101,17 @@ export function useBiometricAttendance({
         icon: 'success',
       });
     } catch (err: any) {
-      const errorMsg = err?.response?.data?.message || err?.message || 'Biometric enrollment failed';
+      const status = err?.response?.status;
+      const raw = err?.response?.data?.detail || err?.response?.data?.message || err?.message || '';
+      let msg = raw || 'Biometric enrollment failed';
+      if (/cancel/i.test(raw)) {
+        msg = 'Fingerprint setup was cancelled.';
+      } else if (status === 403) {
+        msg = 'Permission denied. Please verify your staff account permissions.';
+      }
       showAlert({
         title: 'Biometric Enrollment',
-        message: errorMsg,
+        message: msg,
       });
     } finally {
       setEnrollingBiometric(false);
@@ -204,9 +211,34 @@ export function useBiometricAttendance({
       }
       return null;
     } catch (err: any) {
-      const errorMsg = err?.response?.data?.detail || err?.response?.data?.message || err?.message || 'Check-in failed';
+      const status = err?.response?.status;
+      const rawDetail =
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        '';
+
+      let errorTitle = 'Check-in Blocked';
+      let errorMsg = rawDetail || 'Check-in failed';
+
+      if (
+        status === 403 ||
+        /403|approved|approval|not approved|unauthorized|forbidden|no approved fingerprint/i.test(rawDetail)
+      ) {
+        errorTitle = 'Device Awaiting Admin Approval';
+        errorMsg =
+          'Your fingerprint is registered on this device, but requires Administrator approval before you can check in.\n\nPlease ask an Administrator to approve and lock this device under Biometric Approvals.';
+      } else if (status === 401) {
+        errorTitle = 'Session Expired';
+        errorMsg = 'Your session has expired. Please sign in again to record attendance.';
+      } else if (/cancel|user.*cancel/i.test(rawDetail)) {
+        errorTitle = 'Fingerprint Cancelled';
+        errorMsg = 'Fingerprint scan was cancelled. Please tap Check In again when ready.';
+      }
+
       showAlert({
-        title: 'Attendance Blocked',
+        title: errorTitle,
         message: errorMsg,
       });
       return null;

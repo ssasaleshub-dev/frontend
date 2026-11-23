@@ -3,6 +3,7 @@ import { parseFormResponses, humanizeAnswer, getAttributionRows, getOriginLabel 
 import { NavigateFunction } from 'react-router-dom';
 import { Lead, LeadActivity } from '../../types';
 import { formatIndianDate, formatIndianDateTime } from '../../utils/dateTimeUtils';
+import { formatCurrencyDisplay, isAcademicScore, formatAcademicScore } from '../../utils/formatUtils';
 
 export interface MobileLeadDetailViewProps {
   lead: Lead;
@@ -102,7 +103,8 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
 
   // Budget prompt
   const handleBudgetClick = async () => {
-    const currentBudget = lead.budgetRange || lead.clientBudget || '';
+    const raw = lead.budgetRange || lead.clientBudget || '';
+    const currentBudget = isAcademicScore(raw) ? '' : raw;
     const entered = window.prompt('Set client budget:', currentBudget);
     if (entered !== null) {
       await onUpdateBudget(entered);
@@ -334,12 +336,32 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
             </span>
           </div>
 
-          <div className="f">
-            <span className="l">Budget</span>
-            <span className={`v ${lead.budgetRange || lead.clientBudget ? '' : 'em'}`}>
-              {lead.budgetRange || lead.clientBudget || 'Not specified'}
-            </span>
-          </div>
+          {(() => {
+            const raw = lead.budgetRange || lead.clientBudget || '';
+            const valid = !isAcademicScore(raw) && raw;
+            const display = valid ? (formatCurrencyDisplay(raw) || raw) : '';
+            return (
+              <div className="f">
+                <span className="l">Budget</span>
+                <span className={`v ${display ? '' : 'em'}`}>
+                  {display || 'Not specified'}
+                </span>
+              </div>
+            );
+          })()}
+
+          {(((lead as any).studentPercentage || (lead as any).cgpa) || isAcademicScore(lead.budgetRange || lead.clientBudget)) && (
+            <div className="f">
+              <span className="l">Score / CGPA</span>
+              <span className="v">
+                {formatAcademicScore(
+                  (lead as any).studentPercentage ||
+                  (lead as any).cgpa ||
+                  (isAcademicScore(lead.budgetRange || lead.clientBudget) ? (lead.budgetRange || lead.clientBudget) : '')
+                )}
+              </span>
+            </div>
+          )}
 
           {lead.educationalQualification && (
             <div className="f">
@@ -394,19 +416,26 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
             </button>
           </div>
 
-          <div className="big">
-            <div>
-              <small>Client budget</small>
-              <b>{lead.budgetRange || lead.clientBudget || 'Not specified'}</b>
-            </div>
-            <button
-              type="button"
-              className="btn"
-              onClick={handleBudgetClick}
-            >
-              Set budget
-            </button>
-          </div>
+          {(() => {
+            const raw = lead.budgetRange || lead.clientBudget || '';
+            const valid = !isAcademicScore(raw) && raw;
+            const display = valid ? (formatCurrencyDisplay(raw) || raw) : '';
+            return (
+              <div className="big">
+                <div>
+                  <small>Client budget</small>
+                  <b>{display || 'Not specified'}</b>
+                </div>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={handleBudgetClick}
+                >
+                  {display ? 'Change budget' : 'Set budget'}
+                </button>
+              </div>
+            );
+          })()}
 
           {(lead as any).paymentDetails && (
             <div className="f">

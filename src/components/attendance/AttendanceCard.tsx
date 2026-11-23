@@ -182,7 +182,17 @@ export const AttendanceCard: React.FC<AttendanceCardProps> = ({
             {fp === 'ready' && !isNativeApp && (
               <p className="mt-2 text-center text-[12px] text-[#8e8e93]">You'll confirm it with your fingerprint on your phone</p>
             )}
-            {fp !== 'ready' && (
+            {fp === 'pending' && (
+              <p className="mt-2 text-center text-[12px] text-[#f59e0b] font-medium">
+                ⏳ Device registered · Awaiting Admin approval in Biometric Approvals
+              </p>
+            )}
+            {fp === 'redo' && (
+              <p className="mt-2 text-center text-[12px] text-[#ef4444] font-medium">
+                Fingerprint needs to be re-enrolled
+              </p>
+            )}
+            {fp === 'none' && (
               <p className="mt-2 text-center text-[12px] text-[#8e8e93]">Set up your fingerprint to check in</p>
             )}
           </div>

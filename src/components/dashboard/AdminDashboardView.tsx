@@ -408,10 +408,9 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
             <div className="h-8 w-[1px] bg-slate-200 hidden sm:block" />
 
-            <div className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-50 text-[#0866ff] hover:bg-blue-100 transition-colors">
-              <span>{showTodayLeads ? 'Hide' : 'View'}</span>
+            <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-[#0866ff] hover:bg-blue-100 transition-colors" title={showTodayLeads ? 'Collapse' : 'Expand'}>
               <ChevronDown
-                size={14}
+                size={16}
                 className={`transition-transform duration-200 ${
                   showTodayLeads ? 'rotate-180' : 'rotate-0'
                 }`}

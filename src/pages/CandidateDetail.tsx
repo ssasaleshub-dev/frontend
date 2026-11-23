@@ -58,7 +58,7 @@ import {
 import { isAdmin as checkIsAdmin } from '../utils/rbac';
 import { useAuth } from '../context/AuthContext';
 import { formatIndianDateTime, formatIndianDate } from '../utils/dateTimeUtils';
-import { formatCurrencyDisplay, getLeadSourceLabel } from '../utils/formatUtils';
+import { formatCurrencyDisplay, getLeadSourceLabel, isAcademicScore, formatAcademicScore } from '../utils/formatUtils';
 import { parseFormResponses, humanizeAnswer, getAttributionRows, getOriginLabel } from '../utils/metaLead';
 import { Lead, LeadActivity } from '../types';
 import { encryptLeadId, decryptLeadId, formatMaskedLeadRef } from '../utils/leadIdCrypto';
@@ -178,19 +178,46 @@ export default function CandidateDetail() {
         const cachedPaymentDetails = localStorage.getItem(`ssa_lead_payment_details_${candidateData.id}`);
         const cachedPercentage = localStorage.getItem(`ssa_lead_percentage_${candidateData.id}`);
 
-        // Extract student percentage from notes if available (e.g. "CGPA: RNR" or "CGPA: 75%")
+        // Extract student percentage from notes if available (e.g. "CGPA: RNR" or "CGPA/Percentage: 65-75%_(6.5-7.5_cgpa)")
         let extractedPercentage = '';
         if (candidateData.notes) {
-          const m = candidateData.notes.match(/(?:what_is_your_cgpa_or_current_percentage|cgpa|percentage|score|marks)\s*[:=?]\s*([^|\n,;]+)/i);
+          const m = candidateData.notes.match(/(?:what_is_your_cgpa_or_current_percentage|cgpa[\s/]*percentage|cgpa|percentage|score|marks)\s*[:=?/]\s*([^|\n,;]+)/i);
           if (m && m[1]) {
-            extractedPercentage = m[1].trim();
+            extractedPercentage = formatAcademicScore(m[1].trim());
           }
         }
 
-        const effectiveBudget = candidateData.budgetRange || (candidateData as any).budget || (candidateData as any).clientBudget || cachedBudget || '';
+        // Also check Meta Form Responses JSON for academic score if present
+        if (!extractedPercentage && candidateData.metaFormResponses) {
+          try {
+            const parsed = JSON.parse(candidateData.metaFormResponses);
+            if (Array.isArray(parsed)) {
+              const scoreEntry = parsed.find(
+                (r: any) =>
+                  r &&
+                  (/cgpa|percentage|score|marks|grade/i.test(r.key || '') ||
+                    /cgpa|percentage|score|marks|grade/i.test(r.label || ''))
+              );
+              if (scoreEntry && scoreEntry.value) {
+                extractedPercentage = formatAcademicScore(String(scoreEntry.value).trim());
+              }
+            }
+          } catch {}
+        }
+
+        // Check whether raw budgetRange was erroneously populated with CGPA / percentage
+        const rawBudgetCandidate = candidateData.budgetRange || (candidateData as any).budget || (candidateData as any).clientBudget || cachedBudget || '';
+        const budgetIsScore = isAcademicScore(rawBudgetCandidate);
+        if (!extractedPercentage && budgetIsScore) {
+          extractedPercentage = formatAcademicScore(rawBudgetCandidate);
+        }
+
+        const effectiveBudget = budgetIsScore ? '' : rawBudgetCandidate;
         const effectivePaymentStatus = readLeadPreferenceField(candidateData, 'paymentStatus') || cachedPaymentStatus || 'UNPAID';
         const effectivePaymentDetails = readLeadPreferenceField(candidateData, 'paymentDetails') || cachedPaymentDetails || '';
-        const effectivePercentage = (candidateData as any).studentPercentage || (candidateData as any).cgpa || cachedPercentage || extractedPercentage || '';
+        const effectivePercentage = formatAcademicScore(
+          (candidateData as any).studentPercentage || (candidateData as any).cgpa || cachedPercentage || extractedPercentage || ''
+        );
 
         candidateData.budgetRange = effectiveBudget;
         candidateData.clientBudget = effectiveBudget;
@@ -1395,7 +1422,11 @@ export default function CandidateDetail() {
                 <div className="f">
                   <label>Client Budget</label>
                   <span>
-                    {lead.budgetRange ? lead.budgetRange : <span className="em">Not specified</span>}
+                    {lead.budgetRange && !isAcademicScore(lead.budgetRange) ? (
+                      formatCurrencyDisplay(lead.budgetRange) || lead.budgetRange
+                    ) : (
+                      <span className="em">Not specified</span>
+                    )}
                   </span>
                 </div>
                 <div className="f">
@@ -1488,7 +1519,7 @@ export default function CandidateDetail() {
                           type="button"
                           className="btn text-xs py-1 px-2"
                           onClick={() => {
-                            setBudgetInput(lead.budgetRange || '');
+                            setBudgetInput(lead.budgetRange && !isAcademicScore(lead.budgetRange) ? lead.budgetRange : '');
                             setIsEditingBudget(false);
                           }}
                         >
@@ -1496,7 +1527,11 @@ export default function CandidateDetail() {
                         </button>
                       </div>
                     ) : (
-                      <b>{lead.budgetRange || 'Not Specified'}</b>
+                      <b>
+                        {lead.budgetRange && !isAcademicScore(lead.budgetRange)
+                          ? (formatCurrencyDisplay(lead.budgetRange) || lead.budgetRange)
+                          : 'Not Specified'}
+                      </b>
                     )}
                   </div>
                   {!isEditingBudget && (
@@ -1505,7 +1540,7 @@ export default function CandidateDetail() {
                       className="btn"
                       onClick={() => setIsEditingBudget(true)}
                     >
-                      {lead.budgetRange ? 'Change Budget' : '+ Set Budget'}
+                      {lead.budgetRange && !isAcademicScore(lead.budgetRange) ? 'Change Budget' : '+ Set Budget'}
                     </button>
                   )}
                 </div>
@@ -1564,7 +1599,7 @@ export default function CandidateDetail() {
                 </div>
                 <div className="f">
                   <label>Score / CGPA</label>
-                  <span>{(lead as any).studentPercentage || (lead as any).cgpa || <span className="em">Not specified</span>}</span>
+                  <span>{formatAcademicScore((lead as any).studentPercentage || (lead as any).cgpa) || <span className="em">Not specified</span>}</span>
                 </div>
                 <div className="f">
                   <label>Confirmation</label>
@@ -1899,8 +1934,9 @@ export default function CandidateDetail() {
                 </div>
                 <input
                   type="text"
-                  value={editFormData.budgetRange || ''}
+                  value={isAcademicScore(editFormData.budgetRange) ? '' : (editFormData.budgetRange || '')}
                   onChange={(e) => setEditFormData({ ...editFormData, budgetRange: e.target.value })}
+                  placeholder="e.g. ₹5,00,000"
                   className="w-full px-3 py-2 bg-white hover:border-slate-400 focus:bg-white border border-slate-300 rounded-md text-xs text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 />
               </div>
