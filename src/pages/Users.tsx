@@ -517,7 +517,6 @@ export default function Users() {
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-[#f2f2f7]/60 border-b border-[rgba(60,60,67,0.1)] text-[11px] font-semibold text-[#8e8e93] uppercase tracking-wider">
-                <th className="py-3 px-4 w-16">ID</th>
                 <th className="py-3 px-4">Username</th>
                 <th className="py-3 px-4">Full Name</th>
                 <th className="py-3 px-4">Email</th>
@@ -529,7 +528,7 @@ export default function Users() {
             <tbody className="divide-y divide-[rgba(60,60,67,0.06)]">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-[#8e8e93]">
+                  <td colSpan={6} className="py-12 text-center text-[#8e8e93]">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <RefreshCw size={18} className="animate-spin text-[#007aff]" />
                       <p className="text-xs font-medium">Loading user directory...</p>
@@ -538,7 +537,7 @@ export default function Users() {
                 </tr>
               ) : paginatedUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-[#8e8e93]">
+                  <td colSpan={6} className="py-12 text-center text-[#8e8e93]">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <UsersIcon size={24} className="text-[#c7c7cc]" />
                       <p className="font-semibold text-[#1c1c1e]">No users found</p>
@@ -562,11 +561,6 @@ export default function Users() {
                       key={item.login || item.id}
                       className="hover:bg-[#f2f2f7]/50 transition-colors"
                     >
-                      {/* ID */}
-                      <td className="py-3 px-4 font-mono text-[11px] text-[#8e8e93]">
-                        #{item.id ?? '—'}
-                      </td>
-
                       {/* Username */}
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2.5">

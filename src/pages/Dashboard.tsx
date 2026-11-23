@@ -522,7 +522,7 @@ export default function Dashboard() {
                   <input
                     type="text"
                     disabled
-                    value={statusModalLead.customerName || `Candidate #${statusModalLead.id}`}
+                    value={statusModalLead.customerName || 'Candidate'}
                     className="ios-input w-full font-medium text-slate-800 opacity-90 cursor-not-allowed"
                   />
                 </div>

@@ -157,7 +157,7 @@ export default function CandidateDetail() {
         if (found) {
           candidateData = found;
         } else {
-          throw new Error(`Candidate #${formatMaskedLeadRef(targetId)} could not be found.`);
+          throw new Error('The requested candidate could not be found.');
         }
       }
 
@@ -828,7 +828,7 @@ export default function CandidateDetail() {
     if (!lead) return;
     const confirmed = await showConfirm({
       title: 'Delete Candidate',
-      message: `Permanently delete candidate dossier Ref #${formatMaskedLeadRef(lead.id)} (${lead.customerName || 'record'})? This cannot be undone.`,
+      message: `Permanently delete candidate dossier for "${lead.customerName || 'this record'}"? This cannot be undone.`,
       confirmText: 'Delete',
       cancelText: 'Cancel',
       isDestructive: true,
@@ -1147,7 +1147,7 @@ export default function CandidateDetail() {
                 </span>
               </h1>
               <div className="sub">
-                ID: {lead.externalId || lead.id} · {lead.city || lead.location || 'Location'} · Inquired on {formatIndianDateTime(lead.createdTime || (lead as any).createdAt, { fallback: 'Recent' })}
+                {lead.externalId ? `ID: ${lead.externalId} · ` : ''}{lead.city || lead.location || 'Location'} · Inquired on {formatIndianDateTime(lead.createdTime || (lead as any).createdAt, { fallback: 'Recent' })}
               </div>
             </div>
             <div className="acts">

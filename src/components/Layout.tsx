@@ -334,7 +334,22 @@ export default function Layout() {
             <img src={brandLogo} alt="SSA Logo" className="w-8 h-8 rounded-xl object-cover shadow-xs border border-black/[0.06]" />
             <h1 className="font-bold text-sm tracking-tight text-slate-900 leading-tight">SSA CRM</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => navigate('/attendance')}
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                  currentPath.startsWith('/attendance')
+                    ? 'bg-[#007aff]/10 text-[#007aff]'
+                    : 'text-[#48484a] hover:text-[#1d1d1f] hover:bg-black/[0.05]'
+                }`}
+                title="Staff Attendance & Roster"
+                aria-label="Staff Attendance"
+              >
+                <Clock size={18} strokeWidth={1.8} />
+              </button>
+            )}
             <NotificationBell />
           </div>
         </div>
@@ -583,14 +598,24 @@ export default function Layout() {
                         My Profile
                       </button>
                       {isAdmin && (
-                        <button
-                          type="button"
-                          onClick={() => { navigate('/users'); setUserMenuOpen(false); }}
-                          className="w-full px-4 py-2.5 text-left text-xs font-medium text-[#1c1c1e] hover:bg-[#f2f2f7] flex items-center gap-2.5 transition-colors"
-                        >
-                          <UserCog size={14} className="text-[#8e8e93]" />
-                          User Management
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => { navigate('/attendance'); setUserMenuOpen(false); }}
+                            className="w-full px-4 py-2.5 text-left text-xs font-medium text-[#1c1c1e] hover:bg-[#f2f2f7] flex items-center gap-2.5 transition-colors"
+                          >
+                            <Clock size={14} className="text-[#8e8e93]" />
+                            Staff Attendance
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { navigate('/users'); setUserMenuOpen(false); }}
+                            className="w-full px-4 py-2.5 text-left text-xs font-medium text-[#1c1c1e] hover:bg-[#f2f2f7] flex items-center gap-2.5 transition-colors"
+                          >
+                            <UserCog size={14} className="text-[#8e8e93]" />
+                            User Management
+                          </button>
+                        </>
                       )}
                     </div>
 

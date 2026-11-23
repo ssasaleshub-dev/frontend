@@ -78,7 +78,7 @@ export default function CandidateActivityLogsModal({
                 </span>
               </div>
               <p className="text-xs text-[#8e8e93] font-medium mt-0.5">
-                {candidateName} • Candidate #{leadId}
+                {candidateName || 'Candidate Timeline'}
               </p>
             </div>
           </div>

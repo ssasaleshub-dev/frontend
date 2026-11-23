@@ -1165,7 +1165,7 @@ export default function Leads() {
     }
     const confirmed = await showConfirm({
       title: 'App',
-      message: `Delete candidate lead #${id} (${name || 'record'})? This action cannot be undone.`,
+      message: `Delete candidate ${name ? `"${name}"` : 'record'}? This action cannot be undone.`,
       confirmText: 'Delete',
       isDestructive: true,
     });
@@ -1517,8 +1517,8 @@ export default function Leads() {
           const isDuplicate = Boolean(matchedLead);
           const duplicateReason = matchedLead
             ? matchedLead.externalId && String(matchedLead.externalId).trim() === cleanExt
-              ? `Already saved in CRM (Lead #${matchedLead.id || 'Existing'})`
-              : `Phone matches Lead #${matchedLead.id || 'Existing'}`
+              ? 'Already saved in CRM'
+              : 'Phone matches existing candidate'
             : undefined;
 
           return {
@@ -2929,15 +2929,17 @@ export default function Leads() {
 
                           {/* Candidate Name */}
                           <td data-col="candidateName" className="py-3 px-3.5 overflow-hidden">
-                            <div className="font-semibold text-[13px] text-[#1c1c1e] group-hover:text-[#007aff] transition-colors break-words" title={lead.customerName || `Candidate #${lead.id}`}>
-                              {lead.customerName || `Candidate #${lead.id}`}
+                            <div className="font-semibold text-[13px] text-[#1c1c1e] group-hover:text-[#007aff] transition-colors break-words" title={lead.customerName || 'Candidate'}>
+                              {lead.customerName || 'Candidate'}
                             </div>
                             <div className="flex items-center gap-1.5 text-[11px] text-[#8e8e93] mt-0.5 min-w-0">
                               {lead.email && <span className="truncate">{lead.email}</span>}
-                              {lead.email && <span className="shrink-0">·</span>}
-                              <span className="font-sf-mono text-[10px] truncate">
-                                {lead.externalId ? lead.externalId : `#${lead.id}`}
-                              </span>
+                              {lead.email && lead.externalId && <span className="shrink-0">·</span>}
+                              {lead.externalId && (
+                                <span className="font-sf-mono text-[10px] truncate">
+                                  {lead.externalId}
+                                </span>
+                              )}
                             </div>
                           </td>
 
@@ -3365,9 +3367,11 @@ export default function Leads() {
                     </h3>
                     <div className="flex items-center gap-2 mt-1">
                       {renderVisaBadge(dossierLead.visaType)}
-                      <span className="text-[11px] text-slate-400 font-mono">
-                        {dossierLead.externalId ? `ID: ${dossierLead.externalId}` : `#${dossierLead.id}`}
-                      </span>
+                      {dossierLead.externalId && (
+                        <span className="text-[11px] text-slate-400 font-mono">
+                          ID: {dossierLead.externalId}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -3604,7 +3608,7 @@ export default function Leads() {
                   <input
                     type="text"
                     disabled
-                    value={statusModalLead.customerName || `Candidate #${statusModalLead.id}`}
+                    value={statusModalLead.customerName || 'Candidate'}
                     className="ios-input w-full font-medium text-slate-800 opacity-90 cursor-not-allowed"
                   />
                 </div>

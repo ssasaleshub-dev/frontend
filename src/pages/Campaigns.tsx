@@ -437,7 +437,7 @@ export default function Campaigns() {
                       label: lead.status || 'New Lead',
                     };
                     const plat = (lead.platform && PLATFORMS[lead.platform]) || PLATFORMS.OTHER;
-                    const cleanName = (lead.customerName || `Candidate #${formatMaskedLeadRef(lead.id)}`).trim();
+                    const cleanName = (lead.customerName || 'Candidate').trim();
                     return (
                       <tr
                         key={lead.id}
@@ -531,7 +531,7 @@ export default function Campaigns() {
               const stConfig = (lead.status && LEAD_STATUSES[lead.status]) || {
                 label: lead.status || 'New Lead',
               };
-              const cleanName = (lead.customerName || `Candidate #${formatMaskedLeadRef(lead.id)}`).trim();
+              const cleanName = (lead.customerName || 'Candidate').trim();
               return (
                 <li
                   key={lead.id}

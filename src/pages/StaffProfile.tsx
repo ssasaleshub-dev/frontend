@@ -344,6 +344,20 @@ export default function StaffProfile() {
             {isAdmin ? (
               <>
                 <a
+                  href="#attendance"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate('/attendance');
+                  }}
+                  data-t="Opening Staff Attendance…"
+                >
+                  <div>
+                    Staff Attendance
+                    <small>Daily register &amp; roster records</small>
+                  </div>
+                  <span style={{ color: 'var(--blue)' }}>›</span>
+                </a>
+                <a
                   href="#staff"
                   onClick={(e) => {
                     e.preventDefault();

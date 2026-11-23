@@ -14,6 +14,7 @@ import {
   MapPin,
   TrendingUp,
   LogOut,
+  ChevronLeft,
   ChevronRight,
   Shield,
   Loader2,
@@ -407,6 +408,19 @@ export default function AttendancePage() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
+      {/* Mobile Header / Back Navigation */}
+      <div className="md:hidden flex items-center justify-between pb-1 pt-1">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 active:scale-95 transition-all cursor-pointer py-1"
+        >
+          <ChevronLeft size={16} />
+          <span>Back</span>
+        </button>
+        <span className="text-xs font-bold text-slate-800">Staff Attendance &amp; Roster</span>
+      </div>
+
       {/* Toast Alert */}
       {toastMessage && (
         <div className="fixed bottom-22 sm:bottom-6 right-6 z-50 bg-[#1d1d1f] text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-white/10">
