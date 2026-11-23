@@ -1129,111 +1129,114 @@ export default function CandidateDetail() {
       {/* Desktop Screen Lead Detail Layout (>= 768px) */}
       <div className="hidden md:block crm-page" id="crmPage">
         <div className="wrap">
-        <a className="crumb" onClick={() => navigate('/leads')}>
-          ‹ Back to Leads
-        </a>
+        {/* Sticky Top Header Area (Pinned when scrolling lead details) */}
+        <div className="sticky top-[52px] z-20 bg-[#f4f5f7] pt-1 pb-3 shadow-[0_4px_12px_rgba(0,0,0,0.02)]">
+          <a className="crumb" onClick={() => navigate('/leads')}>
+            ‹ Back to Leads
+          </a>
 
-        {/* Top Header Card */}
-        <section className="card">
-          <div className="head">
-            <div className="av">
-              {(lead.customerName || 'C').charAt(0).toUpperCase()}
-            </div>
-            <div className="hi">
-              <h1>
-                <span>{lead.customerName || 'Candidate'}</span>
-                <span className="tag">
-                  {lead.visaType === 'WORK_VISA' ? 'Work Visa' : lead.visaType === 'STUDY_VISA' ? 'Study Visa' : 'Other Visa'}
-                </span>
-              </h1>
-              <div className="sub">
-                {lead.externalId ? `ID: ${lead.externalId} · ` : ''}{lead.city || lead.location || 'Location'} · Inquired on {formatIndianDateTime(lead.createdTime || (lead as any).createdAt, { fallback: 'Recent' })}
+          {/* Top Header Card */}
+          <section className="card">
+            <div className="head">
+              <div className="av">
+                {(lead.customerName || 'C').charAt(0).toUpperCase()}
               </div>
-            </div>
-            <div className="acts">
-              <button
-                type="button"
-                className="btn g"
-                onClick={() => setShowWhatsAppTemplateModal(true)}
-              >
-                WhatsApp
-              </button>
-              <button
-                type="button"
-                className="btn"
-                onClick={() => {
-                  if (lead.phoneNumber) window.location.href = `tel:${lead.phoneNumber}`;
-                  else showAlert({ title: 'Call', message: 'No phone number available' });
-                }}
-              >
-                Call
-              </button>
-              <button
-                type="button"
-                className="btn"
-                onClick={() => {
-                  if (lead.email) window.location.href = `mailto:${lead.email}`;
-                  else showAlert({ title: 'Email', message: 'No email address available' });
-                }}
-              >
-                Send Email
-              </button>
-              <button
-                type="button"
-                className="btn"
-                onClick={() => setShowReminderModal(true)}
-              >
-                Reminder
-              </button>
-              <button
-                type="button"
-                className="btn p"
-                onClick={handleOpenEdit}
-              >
-                Edit
-              </button>
-              {isAdmin && (
+              <div className="hi">
+                <h1>
+                  <span>{lead.customerName || 'Candidate'}</span>
+                  <span className="tag">
+                    {lead.visaType === 'WORK_VISA' ? 'Work Visa' : lead.visaType === 'STUDY_VISA' ? 'Study Visa' : 'Other Visa'}
+                  </span>
+                </h1>
+                <div className="sub">
+                  {lead.city || lead.location || 'Location'} · Inquired on {formatIndianDateTime(lead.createdTime || (lead as any).createdAt, { fallback: 'Recent' })}
+                </div>
+              </div>
+              <div className="acts">
+                <button
+                  type="button"
+                  className="btn g"
+                  onClick={() => setShowWhatsAppTemplateModal(true)}
+                >
+                  WhatsApp
+                </button>
                 <button
                   type="button"
                   className="btn"
-                  onClick={handleDelete}
+                  onClick={() => {
+                    if (lead.phoneNumber) window.location.href = `tel:${lead.phoneNumber}`;
+                    else showAlert({ title: 'Call', message: 'No phone number available' });
+                  }}
                 >
-                  Delete
+                  Call
                 </button>
-              )}
-            </div>
-          </div>
-
-          <div className="dates">
-            <span>
-              Start: <b>{formatIndianDate(lead.createdTime || (lead as any).createdAt, { fallback: '22 Nov 2026' })}</b>
-            </span>
-            <span>
-              Closing: <b>{closingInfo.closingDateDisplay || '24 Jan 2027'}</b>
-            </span>
-          </div>
-
-          {/* Chevron Stages Pipeline */}
-          <div className="stages">
-            {STAGES.map((s, i) => {
-              const isDone = i < curStageIndex && curStageIndex < 7;
-              const isCur = i === curStageIndex;
-              const isLostCur = i === 7 && isCur;
-              const className = `st ${isDone ? 'done' : ''} ${isCur ? 'cur' : ''} ${isLostCur ? 'lost cur' : ''}`.trim();
-              return (
                 <button
-                  key={s.key}
                   type="button"
-                  className={className}
-                  onClick={() => handleStatusChange(s.key)}
-                  title={`Move stage to ${s.label}`}
+                  className="btn"
+                  onClick={() => {
+                    if (lead.email) window.location.href = `mailto:${lead.email}`;
+                    else showAlert({ title: 'Email', message: 'No email address available' });
+                  }}
                 >
-                  {isDone ? '✓ ' : ''}{s.label}
+                  Send Email
                 </button>
-              );
-            })}
-          </div>
-        </section>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => setShowReminderModal(true)}
+                >
+                  Reminder
+                </button>
+                <button
+                  type="button"
+                  className="btn p"
+                  onClick={handleOpenEdit}
+                >
+                  Edit
+                </button>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={handleDelete}
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="dates">
+              <span>
+                Start: <b>{formatIndianDate(lead.createdTime || (lead as any).createdAt, { fallback: '22 Nov 2026' })}</b>
+              </span>
+              <span>
+                Closing: <b>{closingInfo.closingDateDisplay || '24 Jan 2027'}</b>
+              </span>
+            </div>
+
+            {/* Chevron Stages Pipeline */}
+            <div className="stages">
+              {STAGES.map((s, i) => {
+                const isDone = i < curStageIndex && curStageIndex < 7;
+                const isCur = i === curStageIndex;
+                const isLostCur = i === 7 && isCur;
+                const className = `st ${isDone ? 'done' : ''} ${isCur ? 'cur' : ''} ${isLostCur ? 'lost cur' : ''}`.trim();
+                return (
+                  <button
+                    key={s.key}
+                    type="button"
+                    className={className}
+                    onClick={() => handleStatusChange(s.key)}
+                    title={`Move stage to ${s.label}`}
+                  >
+                    {isDone ? '✓ ' : ''}{s.label}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        </div>
 
         {/* 3-Column Grid */}
         <div className="grid">
@@ -1626,19 +1629,20 @@ export default function CandidateDetail() {
                   {origin.text}
                 </span>
               </h3>
-              <dl className="divide-y divide-slate-100">
+              <div className="fields" style={{ gridTemplateColumns: '1fr', padding: '10px 20px 14px' }}>
                 {attributionRows.map((row) => (
-                  <div key={row.label} className="py-2.5 grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4 items-start">
-                    <dt className="text-xs text-slate-500 leading-5">{row.label}</dt>
-                    <dd className="min-w-0 leading-5">
+                  <div key={row.label} className="f" style={{ gridTemplateColumns: '170px 1fr', alignItems: 'flex-start' }}>
+                    <label style={{ paddingTop: '2px' }}>{row.label}</label>
+                    <div className="min-w-0">
                       <span
-                        className={`break-words ${row.idIsValue ? 'font-mono text-[12px] text-slate-800' : 'text-[13px] font-medium text-slate-900'}`}
+                        className={`block select-text ${row.idIsValue ? 'font-mono text-[12px] text-slate-800' : 'text-[13px] font-semibold text-slate-900'}`}
+                        style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
                       >
                         {row.value}
                       </span>
                       {row.metaId && (
-                        <span className="flex items-center gap-1.5 mt-0.5">
-                          {!row.idIsValue && <span className="font-mono text-[11px] text-slate-400 truncate">ID {row.metaId}</span>}
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          {!row.idIsValue && <span className="font-mono text-[11px] text-slate-400">ID {row.metaId}</span>}
                           <button
                             type="button"
                             onClick={() => copyMetaId(row.metaId!)}
@@ -1646,18 +1650,18 @@ export default function CandidateDetail() {
                           >
                             {copiedMetaId === row.metaId ? 'Copied' : 'Copy'}
                           </button>
-                        </span>
+                        </div>
                       )}
-                    </dd>
+                    </div>
                   </div>
                 ))}
-                <div className="py-2.5 grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4">
-                  <dt className="text-xs text-slate-500 leading-5">Submitted</dt>
-                  <dd className="text-[13px] font-medium text-slate-900 leading-5">
+                <div className="f" style={{ gridTemplateColumns: '170px 1fr' }}>
+                  <label>Submitted</label>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>
                     {formatDate(lead.createdTime || (lead as any).createdAt)}
-                  </dd>
+                  </span>
                 </div>
-              </dl>
+              </div>
             </section>
           </main>
 

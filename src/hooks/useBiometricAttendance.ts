@@ -5,6 +5,7 @@ import attendanceService, { StaffAttendanceRecord } from '../services/api/attend
 import attendanceVerificationService from '../services/api/attendanceVerificationService';
 import { useAlert } from '../context/AlertContext';
 import { formatIndianTime } from '../utils/dateTimeUtils';
+import { captureExactLocation } from '../utils/locationUtils';
 
 export interface UseBiometricAttendanceParams {
   userId: string;
@@ -131,6 +132,10 @@ export function useBiometricAttendance({
     setPunching(true);
     cancelledRef.current = false;
     try {
+      // Capture exact GPS location
+      const gpsLocation = await captureExactLocation().catch(() => '');
+      const noteWithGps = [gpsLocation ? `📍 ${gpsLocation}` : '', note.trim()].filter(Boolean).join(' | ');
+
       if (Capacitor.isNativePlatform()) {
         // Show the fingerprint prompt immediately and fetch the one-time code from the server at
         // the same time, so the network wait happens while the finger is on the sensor.
@@ -143,7 +148,7 @@ export function useBiometricAttendance({
 
         let challenge;
         try {
-          challenge = await attendanceVerificationService.start({ source: 'APP', workMode, note: note.trim() });
+          challenge = await attendanceVerificationService.start({ source: 'APP', workMode, note: noteWithGps });
           if (!challenge.signedMessage) throw new Error('Check-in request could not be started.');
         } catch (startErr) {
           // The server refused (e.g. fingerprint not approved yet): close the prompt right away
@@ -167,7 +172,7 @@ export function useBiometricAttendance({
       }
 
       // Web: approval happens on the phone
-      const challenge = await attendanceVerificationService.start({ source: 'WEB', workMode, note: note.trim() });
+      const challenge = await attendanceVerificationService.start({ source: 'WEB', workMode, note: noteWithGps });
       setPhoneApproval({ challengeId: challenge.id, expiresAt: challenge.expiresAt });
 
       const deadline = new Date(challenge.expiresAt).getTime() + 5000;

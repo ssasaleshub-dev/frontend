@@ -44,6 +44,7 @@ import attendanceVerificationService, {
 import { Capacitor } from '@capacitor/core';
 import { useNavigate } from 'react-router-dom';
 import { formatIndianTime } from '../utils/dateTimeUtils';
+import { extractLocationFromNote } from '../utils/locationUtils';
 import type { User } from '../types';
 
 export default function AttendancePage() {
@@ -368,24 +369,29 @@ export default function AttendancePage() {
       'Check Out (IST)',
       'Total Duration',
       'Status',
+      'Check-in Location',
       'Check In Note',
       'Check Out Note',
       'Device Info',
     ];
-    const rows = filteredRoster.map((r) => [
-      r.attendanceDate,
-      `"${r.userName || r.userId}"`,
-      r.userId,
-      `"${r.userRole || 'Counselor'}"`,
-      r.workMode,
-      r.checkInTime ? formatIndianTime(r.checkInTime, { includeSeconds: true }) : '-',
-      r.checkOutTime ? formatIndianTime(r.checkOutTime, { includeSeconds: true }) : '-',
-      r.totalHoursFormatted || `${r.totalMinutes || 0}m`,
-      r.status,
-      `"${r.checkInNote || ''}"`,
-      `"${r.checkOutNote || ''}"`,
-      `"${r.deviceInfo || ''}"`,
-    ]);
+    const rows = filteredRoster.map((r) => {
+      const loc = extractLocationFromNote(r.checkInNote);
+      return [
+        r.attendanceDate,
+        `"${r.userName || r.userId}"`,
+        r.userId,
+        `"${r.userRole || 'Counselor'}"`,
+        r.workMode,
+        r.checkInTime ? formatIndianTime(r.checkInTime, { includeSeconds: true }) : '-',
+        r.checkOutTime ? formatIndianTime(r.checkOutTime, { includeSeconds: true }) : '-',
+        r.totalHoursFormatted || `${r.totalMinutes || 0}m`,
+        r.status,
+        `"${loc.locationText || '-'}"`,
+        `"${loc.userNote || ''}"`,
+        `"${r.checkOutNote || ''}"`,
+        `"${r.deviceInfo || ''}"`,
+      ];
+    });
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
@@ -728,26 +734,28 @@ export default function AttendancePage() {
                 <th className="py-3 px-4">Check Out</th>
                 <th className="py-3 px-4">Duration</th>
                 <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4">Check-in Location</th>
                 <th className="py-3 px-4">Notes</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
               {loadingRoster ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400">
+                  <td colSpan={9} className="py-12 text-center text-slate-400">
                     <Loader2 size={22} className="animate-spin mx-auto text-[#007aff] mb-2" />
                     Loading attendance records...
                   </td>
                 </tr>
               ) : filteredRoster.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400">
+                  <td colSpan={9} className="py-12 text-center text-slate-400">
                     No attendance records found for this period.
                   </td>
                 </tr>
               ) : (
                 filteredRoster.map((rec, idx) => {
                   const isStaffWorkingNow = Boolean(rec.checkInTime && !rec.checkOutTime);
+                  const locInfo = extractLocationFromNote(rec.checkInNote);
                   return (
                     <tr key={rec.id || idx} className="hover:bg-slate-50/60 transition-colors">
                       {/* Staff Member */}
@@ -831,9 +839,34 @@ export default function AttendancePage() {
                         )}
                       </td>
 
+                      {/* Check-in Location */}
+                      <td className="py-3.5 px-4 max-w-xs">
+                        {locInfo.locationText ? (
+                          <div className="flex items-center gap-1.5 text-xs text-slate-700 min-w-0">
+                            <MapPin size={13} className="text-rose-500 shrink-0" />
+                            <span className="truncate font-medium text-slate-800" title={locInfo.locationText}>
+                              {locInfo.locationText}
+                            </span>
+                            {locInfo.coords && (
+                              <a
+                                href={`https://www.google.com/maps/search/?api=1&query=${locInfo.coords.lat},${locInfo.coords.lon}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-[11px] text-[#007aff] hover:underline font-semibold shrink-0 ml-1 inline-flex items-center"
+                                title="Open in Google Maps"
+                              >
+                                Map ↗
+                              </a>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 text-xs">—</span>
+                        )}
+                      </td>
+
                       {/* Notes */}
-                      <td className="py-3.5 px-4 max-w-xs truncate text-slate-500" title={[rec.checkInNote, rec.checkOutNote].filter(Boolean).join(' | ')}>
-                        {[rec.checkInNote, rec.checkOutNote].filter(Boolean).join(' | ') || '-'}
+                      <td className="py-3.5 px-4 max-w-xs truncate text-slate-500" title={[locInfo.userNote, rec.checkOutNote].filter(Boolean).join(' | ')}>
+                        {[locInfo.userNote, rec.checkOutNote].filter(Boolean).join(' | ') || '-'}
                       </td>
                     </tr>
                   );

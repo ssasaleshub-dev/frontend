@@ -144,6 +144,20 @@
   .crm-page .grid { grid-template-columns: 1fr; }
   .crm-page .side { display: flex; overflow-x: auto; }
 }
+@media (min-width: 1021px) {
+  .crm-page .side {
+    position: sticky;
+    top: 248px;
+    max-height: calc(100vh - 270px);
+    overflow-y: auto;
+  }
+  .crm-page .grid > aside:last-child {
+    position: sticky;
+    top: 248px;
+    max-height: calc(100vh - 270px);
+    overflow-y: auto;
+  }
+}
 .crm-page .side { padding: 8px 0; }
 .crm-page .side a {
   display: flex;

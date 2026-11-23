@@ -2337,9 +2337,6 @@ export default function Leads() {
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-sf-display">
             Candidates
           </h1>
-          <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 whitespace-nowrap">
-            {filteredLeads.length}
-          </span>
         </div>
 
         <div className="flex items-center gap-1.5 sm:gap-2">
