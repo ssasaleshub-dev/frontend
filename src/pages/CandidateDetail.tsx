@@ -1053,6 +1053,20 @@ export default function CandidateDetail() {
 
   const closingInfo = getClosingDateInfo(lead.createdTime || (lead as any).createdAt || (lead as any).createdDate);
 
+  const scrollToSection = (id: string, sectionKey: any) => {
+    setActiveSection(sectionKey);
+    const el = document.getElementById(id);
+    if (el) {
+      const topOffset = 230; // offset below sticky candidate card header
+      const elementPosition = el.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - topOffset;
+      window.scrollTo({
+        top: Math.max(0, offsetPosition),
+        behavior: 'smooth',
+      });
+    }
+  };
+
   const STAGES = [
     { key: 'CREATED', label: 'New Lead' },
     { key: 'CONTACTED', label: 'Contacted' },
@@ -1130,7 +1144,7 @@ export default function CandidateDetail() {
       <div className="hidden md:block crm-page" id="crmPage">
         <div className="wrap">
         {/* Sticky Top Header Area (Pinned when scrolling lead details) */}
-        <div className="sticky top-[52px] z-20 bg-[#f4f5f7] pt-1 pb-3 shadow-[0_4px_12px_rgba(0,0,0,0.02)]">
+        <div className="sticky top-[52px] z-20 bg-[#f4f5f7] pt-1 pb-3">
           <a className="crumb" onClick={() => navigate('/leads')}>
             ‹ Back to Leads
           </a>
@@ -1245,19 +1259,13 @@ export default function CandidateDetail() {
             <h6>Overview</h6>
             <a
               className={activeSection === 'info' ? 'on' : ''}
-              onClick={() => {
-                setActiveSection('info');
-                document.getElementById('lead-info')?.scrollIntoView({ behavior: 'smooth' });
-              }}
+              onClick={() => scrollToSection('lead-info', 'info')}
             >
               Lead Information
             </a>
             <a
               className={activeSection === 'payments' ? 'on' : ''}
-              onClick={() => {
-                setActiveSection('payments');
-                document.getElementById('payment-settlement')?.scrollIntoView({ behavior: 'smooth' });
-              }}
+              onClick={() => scrollToSection('payment-settlement', 'payments')}
             >
               <span>Payments</span>
               <small style={{ color: effectivePaymentStatus === 'PAID' ? 'var(--done)' : effectivePaymentStatus === 'PARTIAL' ? 'var(--warn)' : 'var(--danger)', fontWeight: 600 }}>
@@ -1266,29 +1274,20 @@ export default function CandidateDetail() {
             </a>
             <a
               className={activeSection === 'eligibility' ? 'on' : ''}
-              onClick={() => {
-                setActiveSection('eligibility');
-                document.getElementById('eligibility-responses')?.scrollIntoView({ behavior: 'smooth' });
-              }}
+              onClick={() => scrollToSection('eligibility-responses', 'eligibility')}
             >
               Eligibility
             </a>
             <a
               className={activeSection === 'form' ? 'on' : ''}
-              onClick={() => {
-                setActiveSection('form');
-                document.getElementById('form-responses')?.scrollIntoView({ behavior: 'smooth' });
-              }}
+              onClick={() => scrollToSection('form-responses', 'form')}
             >
               <span>Form Responses</span>
               <small>{formResponses.length}</small>
             </a>
             <a
               className={activeSection === 'attribution' ? 'on' : ''}
-              onClick={() => {
-                setActiveSection('attribution');
-                document.getElementById('ad-attribution')?.scrollIntoView({ behavior: 'smooth' });
-              }}
+              onClick={() => scrollToSection('ad-attribution', 'attribution')}
             >
               <span>Ad Attribution</span>
               <small>{origin.text}</small>
@@ -1297,10 +1296,7 @@ export default function CandidateDetail() {
             <h6>Related List</h6>
             <a
               className={activeSection === 'notes' ? 'on' : ''}
-              onClick={() => {
-                setActiveSection('notes');
-                document.getElementById('notes-section')?.scrollIntoView({ behavior: 'smooth' });
-              }}
+              onClick={() => scrollToSection('notes-section', 'notes')}
             >
               <span>Notes</span>
               <small>{notesHistory.length}</small>

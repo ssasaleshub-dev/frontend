@@ -321,8 +321,11 @@ export default function Layout() {
 
   return (
     <div
-      className={`min-h-screen ${currentPath.startsWith('/notifications') || currentPath.startsWith('/chat') ? 'bg-[#f4f5f7]' : 'bg-[#f2f2f7]'
-        } flex flex-col md:flex-row font-sans text-slate-900 antialiased selection:bg-[#007aff] selection:text-white`}
+      className={`min-h-screen ${
+        currentPath.startsWith('/notifications') || currentPath.startsWith('/chat') || currentPath.startsWith('/leads')
+          ? 'bg-[#f4f5f7]'
+          : 'bg-[#f2f2f7]'
+      } flex flex-col md:flex-row font-sans text-slate-900 antialiased selection:bg-[#007aff] selection:text-white`}
     >
       {/* Apple HIG Real-Time In-App Notification Banner Popup */}
       <AppleNotificationBanner />
@@ -480,7 +483,7 @@ export default function Layout() {
       </aside>
 
       {/* Main App Container */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className={`flex-1 flex flex-col min-w-0 ${currentPath.startsWith('/leads') ? 'bg-[#f4f5f7]' : ''}`}>
         {/* Desktop Header - Solid Clean White (Hidden on Mobile) */}
         <header className="hidden md:flex bg-white px-4 sm:px-6 py-3 items-center justify-between sticky top-0 z-30 border-b border-black/[0.08] shadow-2xs">
           <div className="min-w-0">
@@ -643,8 +646,10 @@ export default function Layout() {
             ? 'p-0 bg-[#f4f5f7] max-w-full pb-20 md:pb-0'
             : currentPath.startsWith('/chat')
               ? 'p-0 max-w-full pb-0 md:pb-0 bg-[#f4f5f7]'
-              : currentPath.startsWith('/leads')
-                ? 'p-0 md:p-5 lg:p-6 max-w-[1440px] pb-20 md:pb-0'
+              : currentPath === '/leads'
+                ? 'p-0 md:p-5 lg:p-6 max-w-[1440px] pb-20 md:pb-0 bg-[#f4f5f7]'
+                : currentPath.startsWith('/leads/')
+                  ? 'p-0 bg-[#f4f5f7] max-w-full pb-20 md:pb-0'
                 : currentPath.startsWith('/profile')
                   ? 'p-0 max-w-[1440px] pb-20 md:pb-0'
                   : 'p-3.5 sm:p-5 lg:p-6 max-w-[1440px] pb-20 md:pb-0'
