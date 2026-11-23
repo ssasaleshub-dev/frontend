@@ -229,14 +229,14 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
           className={`tab ${activeTab === 'fm' ? 'on' : ''}`}
           onClick={() => setActiveTab('fm')}
         >
-          Form {formResponses.length > 0 && <em>{formResponses.length}</em>}
+          Form
         </button>
         <button
           type="button"
           className={`tab ${activeTab === 'nt' ? 'on' : ''}`}
           onClick={() => setActiveTab('nt')}
         >
-          Notes {notesHistory.length > 0 && <em>{notesHistory.length}</em>}
+          Notes
         </button>
         <button
           type="button"
@@ -429,9 +429,15 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
             </div>
           ) : (
             formResponses.map((r, i) => (
-              <div className="f" key={`${r.key}-${i}`} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
-                <span className="l" style={{ width: 'auto' }}>{r.label}</span>
-                <span className="v" style={{ textAlign: 'left' }}>{humanizeAnswer(r.value)}</span>
+              <div className="f" key={`${r.key}-${i}`} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 4, padding: '12px 16px' }}>
+                <span className="l" style={{ width: '100%', fontSize: 13, color: 'var(--muted)', lineHeight: 1.4 }}>
+                  {r.label}
+                </span>
+                <div style={{ textAlign: 'left', marginTop: 2 }}>
+                  <span className="v" style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
+                    {humanizeAnswer(r.value)}
+                  </span>
+                </div>
               </div>
             ))
           )}

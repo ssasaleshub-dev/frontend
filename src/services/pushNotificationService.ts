@@ -73,14 +73,20 @@ class PushNotificationService {
 
           import('./reminderNotificationService')
             .then((m) => {
+              const data = notification.data || {};
+              const candidateName = data.candidateName || (notification.title ? notification.title.replace(/^New Lead Received:\s*/i, '').trim() : '');
+              const phone = data.phoneNumber || '';
+              const title = notification.title || data.title || (candidateName ? `New Lead Received: ${candidateName}` : 'SSA Notification');
+              const message = notification.body || data.body || data.message || (phone ? `${phone} | Meta Ad Campaign` : '');
+
               m.default.addNotification({
-                userId: notification.data?.userId || 'current',
-                title: notification.title || 'SSA Notification',
-                message: notification.body || '',
-                type: (notification.data?.type as any) || 'SYSTEM',
-                referenceId: notification.data?.referenceId || notification.data?.leadId || notification.data?.eventId,
-                referenceType: notification.data?.referenceType || (notification.data?.leadId ? 'LEAD' : 'EVENT'),
-              });
+                userId: data.userId || 'current',
+                title,
+                message,
+                type: (data.type as any) || (data.leadId ? 'NEW_LEAD' : 'SYSTEM'),
+                referenceId: data.referenceId || data.leadId || data.eventId,
+                referenceType: data.referenceType || (data.leadId ? 'LEAD' : data.eventId ? 'EVENT' : undefined),
+              }, false);
             })
             .catch(() => {});
 
@@ -101,7 +107,27 @@ class PushNotificationService {
         'pushNotificationActionPerformed',
         (action: ActionPerformed) => {
           console.info('[PushNotifications] Push notification action performed:', action);
-          const data = action.notification.data || {};
+          const notification = action.notification;
+          const data = notification?.data || {};
+
+          // MNC Standard: Save the actioned push notification into in-app mailbox
+          import('./reminderNotificationService')
+            .then((m) => {
+              const candidateName = data.candidateName || (notification?.title ? notification.title.replace(/^New Lead Received:\s*/i, '').trim() : '');
+              const phone = data.phoneNumber || '';
+              const title = notification?.title || data.title || (candidateName ? `New Lead Received: ${candidateName}` : 'SSA Notification');
+              const message = notification?.body || data.body || data.message || (phone ? `${phone} | Meta Ad Campaign` : '');
+
+              m.default.addNotification({
+                userId: data.userId || 'current',
+                title,
+                message,
+                type: (data.type as any) || (data.leadId ? 'NEW_LEAD' : 'SYSTEM'),
+                referenceId: data.referenceId || data.leadId || data.eventId,
+                referenceType: data.referenceType || (data.leadId ? 'LEAD' : data.eventId ? 'EVENT' : undefined),
+              }, false);
+            })
+            .catch(() => {});
 
           // Dispatch route navigation event for React Router
           if (data.type === 'CHAT' || data.route === '/chat') {

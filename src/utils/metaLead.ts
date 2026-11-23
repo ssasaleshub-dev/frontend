@@ -18,6 +18,26 @@ export interface AttributionRow {
   idIsValue?: boolean;
 }
 
+// Standard contact columns already shown in the primary Lead Information section
+const STANDARD_CONTACT_COLUMNS = new Set([
+  'full_name', 'name', 'first_name', 'last_name',
+  'email', 'email_address',
+  'phone_number', 'phone', 'phone_no', 'mobile_number', 'mobile',
+  'city', 'state', 'location'
+]);
+
+/** Clean up typos in questions from ad forms (e.g. "₹ 10,00,000 lakhs" → "₹ 10 Lakhs", "trc" → "TRC") */
+export function cleanQuestionLabel(label: string): string {
+  let cleaned = (label || '').trim();
+  // Fix "₹ 10,00,000 lakhs" or "10,00,000 lakhs" typo from Meta form
+  cleaned = cleaned.replace(/₹?\s*10[,.]?00[,.]?000\s*(?:lakhs?|lac|lacs)?/gi, '₹ 10 Lakhs');
+  // Fix lowercase acronyms like "trc" -> "TRC"
+  cleaned = cleaned.replace(/\btrc\b/gi, 'TRC');
+  // Clean multiple spaces
+  cleaned = cleaned.replace(/\s+/g, ' ');
+  return cleaned ? cleaned.charAt(0).toUpperCase() + cleaned.slice(1) : '';
+}
+
 /** Form answers stored as JSON on the lead; tolerant of missing/invalid data. */
 export function parseFormResponses(json?: string | null): FormResponse[] {
   if (!json) return [];
@@ -25,10 +45,15 @@ export function parseFormResponses(json?: string | null): FormResponse[] {
     const parsed = JSON.parse(json);
     if (!Array.isArray(parsed)) return [];
     return parsed
-      .filter((r) => r && typeof r.key === 'string')
+      .filter((r) => {
+        if (!r || typeof r.key !== 'string') return false;
+        const normKey = r.key.trim().toLowerCase().replace(/\s+/g, '_');
+        // Exclude redundant standard contact fields (already displayed prominently in the Lead Information card)
+        return !STANDARD_CONTACT_COLUMNS.has(normKey);
+      })
       .map((r) => ({
         key: r.key,
-        label: typeof r.label === 'string' && r.label ? r.label : humanizeKey(r.key),
+        label: cleanQuestionLabel(typeof r.label === 'string' && r.label ? r.label : humanizeKey(r.key)),
         value: typeof r.value === 'string' ? r.value : String(r.value ?? ''),
       }))
       .filter((r) => r.value.trim() !== '');

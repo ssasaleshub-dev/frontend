@@ -445,9 +445,23 @@ class ReminderNotificationService {
     if (reminderKey && deletedKeys.has(reminderKey)) {
       return true;
     }
+    if (n.referenceType && n.referenceId) {
+      const typedKey = `${n.referenceType}_${n.referenceId}`.toLowerCase();
+      if (deletedKeys.has(typedKey)) {
+        return true;
+      }
+    }
     if (
       n.referenceId &&
+      (n.referenceType === 'EVENT' || n.type === 'REMINDER') &&
       (deletedKeys.has(String(n.referenceId)) || deletedKeys.has(`event_${n.referenceId}`.toLowerCase()))
+    ) {
+      return true;
+    }
+    if (
+      n.referenceId &&
+      (n.referenceType === 'LEAD' || (n.type as string) === 'NEW_LEAD') &&
+      (deletedKeys.has(`lead_${n.referenceId}`.toLowerCase()) || deletedKeys.has(`new_lead_${n.referenceId}`.toLowerCase()))
     ) {
       return true;
     }
@@ -507,14 +521,14 @@ class ReminderNotificationService {
           }
 
           for (const cNotif of cached) {
-            // If notification was marked server-backed but no longer exists on server, it was deleted! Do not re-add!
-            if (cNotif.isServerBacked && !currentServerIds.has(String(cNotif.id))) {
-              continue;
-            }
             const alreadyInList = deduplicatedList.some((item) => this.isSameNotification(item, cNotif));
             if (!alreadyInList) {
               deduplicatedList.push(cNotif);
             }
+          }
+
+          if (deduplicatedList.length === 0) {
+            return await this.populateFromRecentLeadsAndEvents([]);
           }
 
           deduplicatedList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -523,16 +537,139 @@ class ReminderNotificationService {
           window.dispatchEvent(new CustomEvent('ssa_notifications_updated'));
           return deduplicatedList;
         }
-      } catch {} finally {
+      } catch (err) {
+        console.warn('[Notifications] Failed to fetch server notifications:', err);
+      } finally {
         this.inFlightFetchNotifications = null;
       }
 
       const validCached = this.getCachedNotifications().filter((n) => !this.isDeletedNotification(n));
+      if (validCached.length === 0) {
+        return await this.populateFromRecentLeadsAndEvents([]);
+      }
       return validCached;
     })();
 
     this.inFlightFetchNotifications = fetchPromise;
     return fetchPromise;
+  }
+
+  /**
+   * Enterprise Lead & Event Notification Synthesizer (MNC Standard)
+   * Automatically synchronizes lead arrivals and upcoming/recent calendar reminders into the
+   * notifications mailbox so the counselor's notification center always reflects real CRM activity.
+   */
+  public async populateFromRecentLeadsAndEvents(existingList: NotificationDTO[] = []): Promise<NotificationDTO[]> {
+    const deletedKeys = this.getDeletedNotificationKeys();
+    const deletedIds = this.getDeletedNotificationIds();
+    const result: NotificationDTO[] = [...existingList];
+
+    // 1. Synchronize recent leads
+    try {
+      const crmModule = await import('./api/crmService');
+      let leads: any[] = [];
+      try {
+        const detailed = await crmModule.default.getDetailedLeads();
+        if (Array.isArray(detailed) && detailed.length > 0) {
+          leads = detailed;
+        }
+      } catch {}
+
+      if (leads.length === 0) {
+        try {
+          const pageRes = await crmModule.default.getLeads(0, 50, 'id,desc');
+          leads = Array.isArray(pageRes) ? pageRes : (pageRes as any)?.content || [];
+        } catch {}
+      }
+
+      const recentLeads = leads.slice(0, 40);
+      for (const lead of recentLeads) {
+        if (!lead || !lead.id) continue;
+        const strId = String(lead.id);
+        const name = lead.customerName || (lead.customer && lead.customer.fullName) || 'New Lead';
+        const phone = lead.phoneNumber || (lead.customer && lead.customer.phoneNumber) || '';
+        const source = lead.campaignName || lead.leadFormName || 'Meta Ad Campaign';
+        const notifId = `lead-${strId}`;
+        const dedupeKey = `new_lead_lead_${strId}`.toLowerCase();
+
+        if (
+          deletedIds.has(notifId) ||
+          deletedKeys.has(dedupeKey) ||
+          deletedKeys.has(`lead_${strId}`.toLowerCase()) ||
+          deletedKeys.has(notifId)
+        ) {
+          continue;
+        }
+
+        const isUncontacted = !lead.status || lead.status === 'CREATED' || lead.status === 'NEW';
+        const notifItem: NotificationDTO = {
+          id: notifId,
+          userId: 'current',
+          title: `New Lead Received: ${name}`,
+          message: phone ? `${phone} • ${source}` : source,
+          type: 'NEW_LEAD' as any,
+          referenceId: strId,
+          referenceType: 'LEAD',
+          isRead: !isUncontacted,
+          createdAt: lead.createdTime || new Date().toISOString(),
+          isServerBacked: false,
+        };
+
+        const alreadyExists = result.some((item) => this.isSameNotification(item, notifItem));
+        if (!alreadyExists) {
+          result.push(notifItem);
+        }
+      }
+    } catch (leadErr) {
+      console.warn('[Reminders] Failed to populate lead notifications:', leadErr);
+    }
+
+    // 2. Synchronize calendar events & reminders
+    try {
+      const events = this.getCachedEvents();
+      for (const evt of events) {
+        if (!evt || !evt.id) continue;
+        const strId = String(evt.id);
+        const notifId = `evt-${strId}`;
+        const dedupeKey = `reminder_event_${strId}`.toLowerCase();
+
+        if (
+          deletedIds.has(notifId) ||
+          deletedKeys.has(dedupeKey) ||
+          deletedKeys.has(`event_${strId}`.toLowerCase()) ||
+          deletedKeys.has(notifId)
+        ) {
+          continue;
+        }
+
+        const notifItem: NotificationDTO = {
+          id: notifId,
+          userId: 'current',
+          title: `Reminder: ${evt.title || 'Follow-up with Candidate'}`,
+          message: evt.candidateName
+            ? `Candidate: ${evt.candidateName}${evt.eventTime ? ` at ${evt.eventTime}` : ''}`
+            : (evt.description || 'Follow-up reminder'),
+          type: 'REMINDER',
+          referenceId: strId,
+          referenceType: 'EVENT',
+          isRead: evt.isCompleted || false,
+          createdAt: evt.createdAt || new Date().toISOString(),
+          isServerBacked: false,
+        };
+
+        const alreadyExists = result.some((item) => this.isSameNotification(item, notifItem));
+        if (!alreadyExists) {
+          result.push(notifItem);
+        }
+      }
+    } catch (evtErr) {
+      console.warn('[Reminders] Failed to populate event notifications:', evtErr);
+    }
+
+    result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(result));
+    window.dispatchEvent(new CustomEvent('ssa_notifications_updated'));
+    return result;
   }
 
   public getServerNotificationIds(): Set<string> {

@@ -2071,7 +2071,7 @@ export default function Leads() {
             <div className="t1">
               <h1>Leads<span id="tot">{filteredLeads.length}</span></h1>
               <button
-                className="ib"
+                className="ib !bg-transparent"
                 onClick={() => setShowMobileFilterDrawer((prev) => !prev)}
                 aria-label="Filters"
                 title="Filters"
@@ -2079,7 +2079,7 @@ export default function Leads() {
                 <svg><use href="#crm-i-fl" /></svg>
               </button>
               <button
-                className="ib"
+                className="ib !bg-transparent"
                 onClick={() => navigate('/notifications')}
                 aria-label="Notifications"
                 title="Notifications"
@@ -2095,6 +2095,7 @@ export default function Leads() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search name, phone or city"
+                  className="!bg-transparent !border-none !shadow-none !rounded-none !p-0 !outline-none focus:!ring-0"
                 />
               </label>
             </div>
@@ -2577,20 +2578,6 @@ export default function Leads() {
               <option value="NAME">Name (A–Z)</option>
             </select>
           </div>
-
-          {activeSecondaryFilterCount > 0 && (
-            <button
-              type="button"
-              onClick={() => {
-                setVisaTypeFilter('ALL');
-                setPlatformFilter('ALL');
-                setSortBy('NEWEST');
-              }}
-              className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition cursor-pointer py-1"
-            >
-              Reset Filters
-            </button>
-          )}
         </div>
       </div>
 
@@ -2673,22 +2660,6 @@ export default function Leads() {
                   Clear
                 </button>
               )}
-              {hasCustomColumnWidths && (
-                <button
-                  type="button"
-                  onClick={resetColumnWidths}
-                  className="hidden sm:inline font-medium text-blue-600 hover:underline cursor-pointer"
-                >
-                  Reset Widths
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={toggleColumnFiltersRow}
-                className="font-medium text-blue-600 hover:underline cursor-pointer"
-              >
-                {showColumnFilters ? 'Hide Column Filters' : 'Column Filters'}
-              </button>
               <span className="text-slate-500 font-medium">
                 Page {currentPage} of {totalPages}
               </span>

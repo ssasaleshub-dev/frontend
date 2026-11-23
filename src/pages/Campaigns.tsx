@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Megaphone,
+  Target,
   Search,
   ChevronLeft,
   ChevronRight,
@@ -205,10 +205,12 @@ export default function Campaigns() {
                 {KIND_NOTE[selectedCampaign.kind] ? ` · ${KIND_NOTE[selectedCampaign.kind]}` : ''}
               </p>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">{breakdown.won} Won</span>
-              <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">{breakdown.inProcess} In Process</span>
-              <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-50 text-slate-600 border border-slate-200">{breakdown.uncontacted} Uncontacted</span>
+            <div className="flex items-center gap-3 text-xs text-slate-600 flex-wrap self-center">
+              <span><strong className="font-semibold text-slate-900">{breakdown.won}</strong> won</span>
+              <span className="text-slate-300">·</span>
+              <span><strong className="font-semibold text-slate-900">{breakdown.inProcess}</strong> in process</span>
+              <span className="text-slate-300">·</span>
+              <span><strong className="font-semibold text-slate-900">{breakdown.uncontacted}</strong> uncontacted</span>
             </div>
           </div>
         </div>
@@ -354,20 +356,22 @@ export default function Campaigns() {
                     <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-slate-100 text-[11px] font-semibold text-slate-700">{stConfig.label}</span>
                   </div>
                   {cleanPhone && (
-                    <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                       <a
                         href={`https://wa.me/${cleanPhone}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="w-10 h-10 rounded-full bg-emerald-50 active:bg-emerald-100 text-emerald-600 flex items-center justify-center"
+                        aria-label="WhatsApp"
+                        className="w-9 h-9 flex items-center justify-center text-emerald-600 hover:text-emerald-700 active:opacity-60 transition-opacity"
                       >
-                        <MessageCircle size={18} />
+                        <MessageCircle size={20} />
                       </a>
                       <a
                         href={`tel:${cleanPhone}`}
-                        className="w-10 h-10 rounded-full bg-blue-50 active:bg-blue-100 text-blue-600 flex items-center justify-center"
+                        aria-label="Call"
+                        className="w-9 h-9 flex items-center justify-center text-blue-600 hover:text-blue-700 active:opacity-60 transition-opacity"
                       >
-                        <Phone size={18} />
+                        <Phone size={19} />
                       </a>
                     </div>
                   )}
@@ -386,10 +390,9 @@ export default function Campaigns() {
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <Megaphone size={20} className="text-[#007aff]" />
+            <Target size={20} className="text-[#007aff]" />
             Campaigns
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">Every Meta campaign (and organic source) your leads came from</p>
         </div>
         <div className="relative w-full sm:w-64">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />

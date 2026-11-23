@@ -423,7 +423,7 @@ textarea:focus-visible {
 .ios-input,
 .zoho-input,
 .zoho-select,
-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="hidden"]):not(.chat-input-no-border):not([class*="pl-"]):not([class*="!pl-"]),
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="hidden"]):not(.chat-input-no-border):not([class*="pl-"]):not([class*="!pl-"]):not(.sb input):not(.crm-m input),
 textarea {
   font-family: inherit;
   font-size: 13px;
@@ -439,7 +439,7 @@ textarea {
 
 .ios-input:hover,
 .zoho-input:hover,
-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="hidden"]):not(.chat-input-no-border):hover,
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="hidden"]):not(.chat-input-no-border):not(.sb input):not(.crm-m input):hover,
 textarea:hover {
   border-color: #94a3b8;
 }
@@ -447,7 +447,7 @@ textarea:hover {
 .ios-input:focus,
 .zoho-input:focus,
 .zoho-select:focus,
-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="hidden"]):not(.chat-input-no-border):focus,
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="hidden"]):not(.chat-input-no-border):not(.sb input):not(.crm-m input):focus,
 textarea:focus {
   background-color: #ffffff;
   border-color: #2563eb;

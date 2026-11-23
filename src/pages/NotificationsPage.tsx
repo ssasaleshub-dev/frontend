@@ -47,9 +47,20 @@ export default function NotificationsPage() {
   const loadNotifications = useCallback(async () => {
     try {
       const list = await reminderNotificationService.fetchNotifications();
-      setNotifications(list);
+      if (list && list.length > 0) {
+        setNotifications(list);
+      } else {
+        const enriched = await reminderNotificationService.populateFromRecentLeadsAndEvents([]);
+        setNotifications(enriched);
+      }
     } catch (e) {
       console.warn('Failed to fetch notifications:', e);
+      const cached = reminderNotificationService.getCachedNotifications();
+      if (cached && cached.length > 0) {
+        setNotifications(cached);
+      } else {
+        reminderNotificationService.populateFromRecentLeadsAndEvents([]).then(setNotifications);
+      }
     }
   }, []);
 
@@ -126,7 +137,7 @@ export default function NotificationsPage() {
       await reminderNotificationService.markAsRead(item.id);
     }
 
-    if (item.referenceType === 'LEAD' && item.referenceId) {
+    if ((item.referenceType === 'LEAD' || (item.type as string) === 'NEW_LEAD') && item.referenceId) {
       navigate(`/leads/${encryptLeadId(item.referenceId)}`);
     } else if (item.type === 'REMINDER' || item.referenceType === 'EVENT') {
       navigate('/calendar');
@@ -335,7 +346,6 @@ export default function NotificationsPage() {
                             {cleanSub && <p className="sb">{cleanSub}</p>}
                             {timeStr && <span className="tm">{timeStr}</span>}
                           </div>
-                          <span className="dot" />
 
                           {/* Quick Hover / Focus Actions */}
                           <div className="ac">

@@ -240,7 +240,6 @@ export const StaffDashboardView: React.FC<StaffDashboardViewProps> = ({
               <p className="text-xs text-slate-500 mt-1 flex items-center gap-2">
                 <span>{formatIndianDate(new Date(), { weekday: true })}</span>
                 <span>·</span>
-                <span>Manage your candidate pipeline and daily follow-up calls</span>
               </p>
             </div>
           </div>
@@ -272,11 +271,10 @@ export const StaffDashboardView: React.FC<StaffDashboardViewProps> = ({
         {/* Card 1: Today's Inflow */}
         <div
           onClick={() => setActiveTab('ALL')}
-          className={`bg-white rounded-xl border p-4 sm:p-5 shadow-2xs transition-colors cursor-pointer ${
-            activeTab === 'ALL'
-              ? 'border-slate-900 ring-1 ring-slate-900'
-              : 'border-slate-200/90 hover:border-slate-300'
-          }`}
+          className={`bg-white rounded-xl border p-4 sm:p-5 shadow-2xs transition-colors cursor-pointer ${activeTab === 'ALL'
+            ? 'border-slate-900 ring-1 ring-slate-900'
+            : 'border-slate-200/90 hover:border-slate-300'
+            }`}
         >
           <div className="text-xs font-medium text-slate-500 truncate">
             Today's Inflow
@@ -292,11 +290,10 @@ export const StaffDashboardView: React.FC<StaffDashboardViewProps> = ({
         {/* Card 2: Needs Immediate Call */}
         <div
           onClick={() => setActiveTab('UNCONTACTED')}
-          className={`bg-white rounded-xl border p-4 sm:p-5 shadow-2xs transition-colors cursor-pointer ${
-            activeTab === 'UNCONTACTED'
-              ? 'border-slate-900 ring-1 ring-slate-900'
-              : 'border-slate-200/90 hover:border-slate-300'
-          }`}
+          className={`bg-white rounded-xl border p-4 sm:p-5 shadow-2xs transition-colors cursor-pointer ${activeTab === 'UNCONTACTED'
+            ? 'border-slate-900 ring-1 ring-slate-900'
+            : 'border-slate-200/90 hover:border-slate-300'
+            }`}
         >
           <div className="text-xs font-medium text-slate-500 truncate">
             Needs First Call
@@ -312,11 +309,10 @@ export const StaffDashboardView: React.FC<StaffDashboardViewProps> = ({
         {/* Card 3: Active Counseling & Follow-ups */}
         <div
           onClick={() => setActiveTab('COUNSELING')}
-          className={`bg-white rounded-xl border p-4 sm:p-5 shadow-2xs transition-colors cursor-pointer ${
-            activeTab === 'COUNSELING'
-              ? 'border-slate-900 ring-1 ring-slate-900'
-              : 'border-slate-200/90 hover:border-slate-300'
-          }`}
+          className={`bg-white rounded-xl border p-4 sm:p-5 shadow-2xs transition-colors cursor-pointer ${activeTab === 'COUNSELING'
+            ? 'border-slate-900 ring-1 ring-slate-900'
+            : 'border-slate-200/90 hover:border-slate-300'
+            }`}
         >
           <div className="text-xs font-medium text-slate-500 truncate">
             In Counseling
@@ -332,11 +328,10 @@ export const StaffDashboardView: React.FC<StaffDashboardViewProps> = ({
         {/* Card 4: Enrolled & Converted */}
         <div
           onClick={() => setActiveTab('CONVERTED')}
-          className={`bg-white rounded-xl border p-4 sm:p-5 shadow-2xs transition-colors cursor-pointer ${
-            activeTab === 'CONVERTED'
-              ? 'border-slate-900 ring-1 ring-slate-900'
-              : 'border-slate-200/90 hover:border-slate-300'
-          }`}
+          className={`bg-white rounded-xl border p-4 sm:p-5 shadow-2xs transition-colors cursor-pointer ${activeTab === 'CONVERTED'
+            ? 'border-slate-900 ring-1 ring-slate-900'
+            : 'border-slate-200/90 hover:border-slate-300'
+            }`}
         >
           <div className="text-xs font-medium text-slate-500 truncate">
             Visas Approved / Won
@@ -354,12 +349,9 @@ export const StaffDashboardView: React.FC<StaffDashboardViewProps> = ({
       {recentSlice.length > 0 && (
         <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-2xs">
           <div className="flex items-center justify-between gap-3 mb-3">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-blue-500" />
-              <h3 className="text-sm font-semibold text-slate-900 tracking-tight">
-                Recent Leads ({uncontactedLeads.length})
-              </h3>
-            </div>
+            <h3 className="text-sm font-semibold text-slate-900 tracking-tight">
+              Recent Leads ({uncontactedLeads.length})
+            </h3>
             {recentSlice.length > 1 && (
               <span className="sm:hidden text-[11px] font-mono text-slate-400">
                 {activeRecentIndex + 1}/{recentSlice.length}
@@ -394,9 +386,8 @@ export const StaffDashboardView: React.FC<StaffDashboardViewProps> = ({
                     key={dotIdx}
                     type="button"
                     onClick={() => setActiveRecentIndex(dotIdx)}
-                    className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                      activeRecentIndex === dotIdx ? 'w-5 bg-blue-600' : 'w-1.5 bg-slate-300'
-                    }`}
+                    className={`h-1.5 rounded-full transition-all cursor-pointer ${activeRecentIndex === dotIdx ? 'w-5 bg-blue-600' : 'w-1.5 bg-slate-300'
+                      }`}
                     aria-label={`Slide ${dotIdx + 1}`}
                   />
                 ))}
@@ -419,7 +410,7 @@ export const StaffDashboardView: React.FC<StaffDashboardViewProps> = ({
           <div
             role="tablist"
             aria-label="Filter leads by stage"
-            className="-mx-4 px-4 md:mx-0 md:px-0 flex items-center gap-2 md:gap-1.5 overflow-x-auto no-scrollbar snap-x"
+            className="flex items-center gap-2 md:gap-1.5 overflow-x-auto no-scrollbar snap-x py-0.5"
           >
             {stageTabs.map((tab) => {
               const isActive = activeTab === tab.key;
@@ -430,17 +421,15 @@ export const StaffDashboardView: React.FC<StaffDashboardViewProps> = ({
                   role="tab"
                   aria-selected={isActive}
                   onClick={() => setActiveTab(tab.key)}
-                  className={`snap-start shrink-0 inline-flex items-center gap-1.5 h-9 md:h-auto px-3.5 md:px-3 md:py-1.5 rounded-full md:rounded-lg text-[13px] md:text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
-                    isActive
-                      ? `${tab.activeClass} text-white shadow-2xs`
-                      : 'bg-slate-100 md:bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                  }`}
+                  className={`snap-start shrink-0 inline-flex items-center gap-1.5 h-9 md:h-auto px-3.5 md:px-3 md:py-1.5 rounded-full md:rounded-lg text-[13px] md:text-xs font-semibold whitespace-nowrap transition cursor-pointer ${isActive
+                    ? `${tab.activeClass} text-white shadow-2xs`
+                    : 'bg-slate-100 md:bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    }`}
                 >
                   <span>{tab.label}</span>
                   <span
-                    className={`min-w-[20px] px-1.5 py-px rounded-full text-[11px] leading-4 text-center ${
-                      isActive ? 'bg-white/20 text-white' : 'bg-white md:bg-slate-100 text-slate-500'
-                    }`}
+                    className={`min-w-[20px] px-1.5 py-px rounded-full text-[11px] leading-4 text-center ${isActive ? 'bg-white/20 text-white' : 'bg-white md:bg-slate-100 text-slate-500'
+                      }`}
                   >
                     {tab.count}
                   </span>
@@ -531,22 +520,22 @@ export const StaffDashboardView: React.FC<StaffDashboardViewProps> = ({
                   </div>
 
                   {cleanPhone && (
-                    <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                       <a
                         href={`https://wa.me/${cleanPhone}`}
                         target="_blank"
                         rel="noreferrer"
                         aria-label={`WhatsApp ${cleanName}`}
-                        className="w-10 h-10 rounded-full bg-emerald-50 active:bg-emerald-100 text-emerald-600 flex items-center justify-center"
+                        className="w-9 h-9 flex items-center justify-center text-emerald-600 hover:text-emerald-700 active:opacity-60 transition-opacity"
                       >
-                        <MessageCircle size={18} />
+                        <MessageCircle size={20} />
                       </a>
                       <a
                         href={`tel:${cleanPhone}`}
                         aria-label={`Call ${cleanName}`}
-                        className="w-10 h-10 rounded-full bg-blue-50 active:bg-blue-100 text-blue-600 flex items-center justify-center"
+                        className="w-9 h-9 flex items-center justify-center text-blue-600 hover:text-blue-700 active:opacity-60 transition-opacity"
                       >
-                        <Phone size={18} />
+                        <Phone size={19} />
                       </a>
                     </div>
                   )}

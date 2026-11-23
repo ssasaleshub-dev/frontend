@@ -20,6 +20,17 @@ export default function Chat() {
   const [cur, setCur] = useState<string>('all');
   const [isMobileOpen, setIsMobileOpen] = useState<boolean>(false);
 
+  useEffect(() => {
+    if (isMobileOpen) {
+      document.body.classList.add('chat-conversation-open');
+    } else {
+      document.body.classList.remove('chat-conversation-open');
+    }
+    return () => {
+      document.body.classList.remove('chat-conversation-open');
+    };
+  }, [isMobileOpen]);
+
   const [usersList, setUsersList] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -647,6 +658,9 @@ export default function Chat() {
                 value={inputText}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
+                onFocus={() => {
+                  setTimeout(() => scrollToBottom(true), 150);
+                }}
               />
               <button
                 type="button"

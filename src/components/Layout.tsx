@@ -20,7 +20,7 @@ import {
   CheckCircle2,
   Bell,
   Fingerprint,
-  Megaphone,
+  BarChart3,
 } from 'lucide-react';
 import NotificationBell from './NotificationBell';
 import AppleNotificationBanner from './AppleNotificationBanner';
@@ -47,8 +47,20 @@ export default function Layout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Monitor chat conversation modal state to hide bottom navigation
+  useEffect(() => {
+    const checkChatOpen = () => {
+      setIsChatOpen(document.body.classList.contains('chat-conversation-open'));
+    };
+    const observer = new MutationObserver(checkChatOpen);
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    checkChatOpen();
+    return () => observer.disconnect();
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -206,7 +218,7 @@ export default function Layout() {
     {
       id: 'campaigns',
       label: 'Campaigns',
-      icon: Megaphone,
+      icon: BarChart3,
       to: '/campaigns',
       exact: false,
     },
@@ -279,10 +291,11 @@ export default function Layout() {
       : []),
   ];
 
-  // Bottom nav items — 5 core tabs for mobile thumb-zone (Notification bell is in top header)
+  // Bottom nav items — core tabs for mobile thumb-zone (Notification bell is in top header)
   const bottomNavItems = [
     { id: 'dashboards', label: 'Home', icon: LayoutDashboard, to: '/', exact: true },
     { id: 'leads', label: 'Leads', icon: Users, to: '/leads', exact: false },
+    { id: 'campaigns', label: 'Campaigns', icon: BarChart3, to: '/campaigns', exact: false },
     { id: 'chat', label: 'Chat', icon: MessageSquare, to: '/chat', exact: false },
     { id: 'calendar', label: 'Calendar', icon: Calendar, to: '/calendar', exact: false },
     { id: 'profile', label: 'Profile', icon: User, to: '/profile', exact: false },
@@ -291,6 +304,7 @@ export default function Layout() {
   const getPageInfo = () => {
     if (currentPath === '/') return { title: 'Executive Overview' };
     if (currentPath.startsWith('/leads')) return { title: 'Candidates & Leads Directory' };
+    if (currentPath.startsWith('/campaigns')) return { title: 'Campaigns & Ads' };
     if (currentPath.startsWith('/customers')) return { title: 'Contacts' };
     if (currentPath.startsWith('/calendar')) return { title: 'Calendar & Reminders' };
     if (currentPath.startsWith('/attendance')) return { title: 'Staff Attendance & Roster' };
@@ -624,9 +638,9 @@ export default function Layout() {
       )}
 
       {/* ── Mobile Bottom Navigation Bar (Docked Edge-to-Edge) ── */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-black/[0.08] shadow-[0_-2px_10px_rgba(0,0,0,0.03)]">
+      <nav className={`md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-black/[0.08] shadow-[0_-2px_10px_rgba(0,0,0,0.03)] ${isChatOpen ? '!hidden pointer-events-none' : ''}`}>
         <div
-          className="flex items-center justify-around px-1 pt-1.5"
+          className="flex items-center justify-around px-0.5 pt-1.5"
           style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}
         >
           {bottomNavItems.map((item) => {
@@ -639,11 +653,11 @@ export default function Layout() {
                 key={item.id}
                 to={item.to}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 flex-1 transition-colors duration-150 ${isActive ? 'text-[#007aff]' : 'text-[#8e8e93] hover:text-slate-700'
+                className={`flex flex-col items-center justify-center gap-0.5 py-1 px-0.5 flex-1 min-w-0 transition-colors duration-150 ${isActive ? 'text-[#007aff]' : 'text-[#8e8e93] hover:text-slate-700'
                   }`}
               >
-                <Icon size={22} strokeWidth={isActive ? 2.2 : 1.7} className="shrink-0" />
-                <span className={`text-[10px] font-semibold leading-tight tracking-tight ${isActive ? 'text-[#007aff]' : 'text-[#8e8e93]'}`}>
+                <Icon size={20} strokeWidth={isActive ? 2.2 : 1.7} className="shrink-0" />
+                <span className={`text-[10px] font-semibold leading-tight tracking-tight truncate max-w-full text-center ${isActive ? 'text-[#007aff]' : 'text-[#8e8e93]'}`}>
                   {item.label}
                 </span>
               </NavLink>

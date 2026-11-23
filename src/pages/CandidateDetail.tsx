@@ -1594,10 +1594,14 @@ export default function CandidateDetail() {
               ) : (
                 <dl className="divide-y divide-slate-100">
                   {formResponses.map((r, i) => (
-                    <div key={`${r.key}-${i}`} className="py-2.5 grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4">
-                      <dt className="text-xs text-slate-500 leading-5">{r.label}</dt>
-                      <dd className="text-[13px] font-medium text-slate-900 leading-5 break-words" title={r.value}>
-                        {humanizeAnswer(r.value)}
+                    <div key={`${r.key}-${i}`} className="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-6">
+                      <dt className="text-xs sm:text-[13px] text-slate-600 leading-snug flex-1">
+                        {r.label}
+                      </dt>
+                      <dd className="shrink-0 text-left sm:text-right">
+                        <span className="text-[13px] font-semibold text-slate-900 break-words" title={r.value}>
+                          {humanizeAnswer(r.value)}
+                        </span>
                       </dd>
                     </div>
                   ))}

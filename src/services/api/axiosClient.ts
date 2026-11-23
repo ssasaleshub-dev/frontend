@@ -70,9 +70,22 @@ instance.interceptors.response.use(
       rawMsg.toLowerCase().includes('gateway') ||
       rawMsg.toLowerCase().includes('service unavailable');
 
+    const rawDetail = errData?.detail;
+    const rawMessage = errData?.message;
+    const detailClean = typeof rawDetail === 'string' && !rawDetail.startsWith('error.') ? rawDetail : '';
+    const messageClean = typeof rawMessage === 'string' && !rawMessage.startsWith('error.') ? rawMessage : '';
+
+    let resolvedMsg = detailClean || messageClean;
+    if (!resolvedMsg && (errData?.type?.includes('invalid-password') || errData?.errorKey === 'invalidpassword')) {
+      resolvedMsg = 'Incorrect password';
+    }
+    if (!resolvedMsg && error.message && !error.message.startsWith('error.')) {
+      resolvedMsg = error.message;
+    }
+
     const message = isServerDown
       ? 'Server is down. Please contact support team.'
-      : errData?.detail || errData?.message || error.message || 'Request failed';
+      : resolvedMsg || (status === 400 ? 'Invalid request or incorrect data' : 'Request failed');
 
     const customError: any = new Error(message);
     customError.status = status;

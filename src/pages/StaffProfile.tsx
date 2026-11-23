@@ -128,7 +128,7 @@ export default function StaffProfile() {
       attendanceVerificationService
         .getPending()
         .then((p) => active && setPendingWebRequest(p && p.source === 'WEB' ? p : null))
-        .catch(() => {});
+        .catch(() => { });
     check();
     const timer = setInterval(check, 15000);
     return () => {
@@ -249,7 +249,20 @@ export default function StaffProfile() {
       setConfirmPassword('');
       showToast('Password updated');
     } catch (err: any) {
-      setPasswordError(err?.response?.data?.message || err?.message || 'Failed to update password');
+      const data = err?.response?.data || err?.data;
+      let msg = 'Failed to update password';
+      if (data?.type?.includes('invalid-password') || data?.detail?.toLowerCase()?.includes('incorrect password')) {
+        msg = 'Incorrect current password. Please try again.';
+      } else if (data?.detail && typeof data.detail === 'string' && !data.detail.startsWith('error.')) {
+        msg = data.detail;
+      } else if (data?.message && typeof data.message === 'string' && !data.message.startsWith('error.')) {
+        msg = data.message;
+      } else if (err?.message && !err.message.startsWith('error.')) {
+        msg = err.message;
+      } else if (err?.response?.status === 400) {
+        msg = 'Incorrect current password. Please try again.';
+      }
+      setPasswordError(msg);
     } finally {
       setPasswordLoading(false);
     }
@@ -416,7 +429,6 @@ export default function StaffProfile() {
                 <label>Login username</label>
                 <span>
                   @{userId}
-                  <small>Cannot be changed</small>
                 </span>
               </div>
 
@@ -488,20 +500,28 @@ export default function StaffProfile() {
           {/* Section 2: Security & Password */}
           <section className="card sec">
             <div className="hd">
-              <h3>Security &amp; Password</h3>
+              <h3>Security</h3>
             </div>
-            <div className="row">
+            <div
+              className="row"
+              style={{ cursor: 'pointer' }}
+              onClick={() => setShowPasswordModal(true)}
+            >
               <div>
-                <b>Account password</b>
-                <small>Protected with high-security hash encryption</small>
+                <b>Password</b>
+                <small>Change your login password</small>
               </div>
               <button
                 type="button"
                 className="b"
                 id="pw"
-                onClick={() => setShowPasswordModal(true)}
+                style={{ whiteSpace: 'nowrap' }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowPasswordModal(true);
+                }}
               >
-                Change password
+                Change
               </button>
             </div>
           </section>
@@ -516,7 +536,7 @@ export default function StaffProfile() {
               >
                 Sign out
               </button>
-              <span>v1.0.36</span>
+              <span>v1.0.40</span>
             </div>
           </section>
         </main>
