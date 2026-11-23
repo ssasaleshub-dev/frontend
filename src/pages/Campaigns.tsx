@@ -64,12 +64,6 @@ const CH = (
   </svg>
 );
 
-const SORTS: Record<string, string> = {
-  leads: 'Most leads',
-  latest: 'Latest lead',
-  az: 'Name A–Z',
-};
-
 export default function Campaigns() {
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
@@ -81,11 +75,6 @@ export default function Campaigns() {
   const hasLoadedRef = useRef<boolean>(false);
 
   // Filter & interaction state
-  const [tab, setTab] = useState<'all' | 'fb' | 'ig'>('all');
-  const [sort, setSort] = useState<'leads' | 'latest' | 'az'>('leads');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
-  const [isSortOpen, setIsSortOpen] = useState<boolean>(false);
   const [selectedDetail, setSelectedDetail] = useState<CampaignItem | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -93,8 +82,6 @@ export default function Campaigns() {
   // Candidate list search when drilled down
   const [candidateSearch, setCandidateSearch] = useState<string>('');
   const selectedKey = searchParams.get('campaign');
-
-  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const showToast = useCallback((msg: string) => {
     setToastMsg(msg);
@@ -133,7 +120,6 @@ export default function Campaigns() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setSelectedDetail(null);
-        setIsSortOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -248,26 +234,12 @@ export default function Campaigns() {
       : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ', ' + t;
   };
 
-  // Filtered and sorted campaigns
+  // Sorted campaigns
   const visibleCampaigns = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    const filtered = campaigns.filter((c) => {
-      const matchesSearch = !q || c.name.toLowerCase().includes(q);
-      const matchesTab =
-        tab === 'all' ||
-        (tab === 'fb' && c.fb > 0) ||
-        (tab === 'ig' && c.ig > 0);
-      return matchesSearch && matchesTab;
-    });
-
-    filtered.sort((a, b) => {
-      if (sort === 'leads') return tot(b) - tot(a);
-      if (sort === 'latest') return new Date(b.last || 0).getTime() - new Date(a.last || 0).getTime();
-      return a.name.localeCompare(b.name);
-    });
-
-    return filtered;
-  }, [campaigns, searchQuery, tab, sort]);
+    const list = [...campaigns];
+    list.sort((a, b) => tot(b) - tot(a));
+    return list;
+  }, [campaigns]);
 
   const selectedCampaign = useMemo(
     () => campaigns.find((c) => c.key === selectedKey) || null,
@@ -776,49 +748,6 @@ export default function Campaigns() {
         {/* Header */}
         <div className="hd">
           <h1>Campaigns</h1>
-          <button
-            className="ib md:hidden"
-            id="bs"
-            aria-label="Search"
-            onClick={() => {
-              setIsSearchOpen((prev) => {
-                const next = !prev;
-                if (next) {
-                  setTimeout(() => searchInputRef.current?.focus(), 50);
-                } else {
-                  setSearchQuery('');
-                }
-                return next;
-              });
-            }}
-          >
-            <svg viewBox="0 0 24 24">
-              <circle cx="11" cy="11" r="6.5" />
-              <path d="M20 20l-4.5-4.5" />
-            </svg>
-          </button>
-          <button
-            className="ib"
-            id="bo"
-            aria-label="Sort"
-            onClick={() => setIsSortOpen(true)}
-          >
-            <svg viewBox="0 0 24 24">
-              <path d="M4 7h16M7 12h10M10 17h4" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Search input (mobile toggleable + desktop always visible) */}
-        <div className={`sr ${isSearchOpen ? 'show' : ''}`} id="sr">
-          <input
-            ref={searchInputRef}
-            id="q"
-            type="search"
-            placeholder="Search campaigns"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
         </div>
 
         {/* Top 4 KPI Metrics */}
@@ -852,31 +781,6 @@ export default function Campaigns() {
           </div>
         </div>
 
-        {/* Platform Filter Tabs */}
-        <div className="tabs" id="tb">
-          <button
-            type="button"
-            className={`tab ${tab === 'all' ? 'on' : ''}`}
-            onClick={() => setTab('all')}
-          >
-            All
-          </button>
-          <button
-            type="button"
-            className={`tab ${tab === 'fb' ? 'on' : ''}`}
-            onClick={() => setTab('fb')}
-          >
-            Facebook
-          </button>
-          <button
-            type="button"
-            className={`tab ${tab === 'ig' ? 'on' : ''}`}
-            onClick={() => setTab('ig')}
-          >
-            Instagram
-          </button>
-        </div>
-
         {/* Campaign List */}
         <div id="ls">
           {visibleCampaigns.length === 0 ? (
@@ -888,7 +792,6 @@ export default function Campaigns() {
                   {visibleCampaigns.length}{' '}
                   {visibleCampaigns.length === 1 ? 'campaign' : 'campaigns'}
                 </span>
-                <span>{SORTS[sort]}</span>
               </div>
 
               {visibleCampaigns.map((c) => {
@@ -1017,38 +920,6 @@ export default function Campaigns() {
               >
                 Copy campaign name
               </button>
-            </div>
-          )}
-        </div>
-
-        {/* Sort Options Modal / Bottom Sheet */}
-        <div
-          className={`ov ${isSortOpen ? 'show' : ''}`}
-          onClick={() => setIsSortOpen(false)}
-        >
-          {isSortOpen && (
-            <div
-              className="sheet"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="gr"></div>
-              <div className="sh1">
-                <h2>Sort by</h2>
-              </div>
-              {Object.keys(SORTS).map((k) => (
-                <button
-                  key={k}
-                  type="button"
-                  className={`op ${sort === k ? 'on' : ''}`}
-                  onClick={() => {
-                    setSort(k as any);
-                    setIsSortOpen(false);
-                  }}
-                >
-                  <i></i>
-                  <span>{SORTS[k]}</span>
-                </button>
-              ))}
             </div>
           )}
         </div>

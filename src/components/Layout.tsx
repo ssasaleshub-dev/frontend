@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import NotificationBell from './NotificationBell';
 import AppleNotificationBanner from './AppleNotificationBanner';
+import { ButtonSpinner } from './common/SmallLoader';
 import notificationWebSocket from '../services/websocket/notificationWebSocket';
 import teamChatWebSocket from '../services/websocket/teamChatWebSocket';
 import notificationBannerService from '../services/banner/notificationBannerService';
@@ -338,21 +339,6 @@ export default function Layout() {
             <h1 className="font-bold text-sm tracking-tight text-slate-900 leading-tight">SSA CRM</h1>
           </div>
           <div className="flex items-center gap-1.5">
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={() => navigate('/attendance')}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                  currentPath.startsWith('/attendance')
-                    ? 'bg-[#007aff]/10 text-[#007aff]'
-                    : 'text-[#48484a] hover:text-[#1d1d1f] hover:bg-black/[0.05]'
-                }`}
-                title="Staff Attendance & Roster"
-                aria-label="Staff Attendance"
-              >
-                <Clock size={18} strokeWidth={1.8} />
-              </button>
-            )}
             <NotificationBell />
           </div>
         </div>
@@ -435,7 +421,7 @@ export default function Layout() {
               >
                 {uploadingAvatar ? (
                   <div className="w-full h-full bg-white/20 flex items-center justify-center text-white">
-                    <Loader2 size={13} className="animate-spin" />
+                    <ButtonSpinner size="xs" color="white" />
                   </div>
                 ) : user?.imageUrl ? (
                   <img src={user.imageUrl} alt={displayName} className="w-full h-full object-cover" />

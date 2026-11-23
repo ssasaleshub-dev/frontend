@@ -15,6 +15,7 @@ import {
 import { Lead } from '../../types';
 import { encryptLeadId } from '../../utils/leadIdCrypto';
 import { formatCurrencyDisplay, getLeadSourceLabel } from '../../utils/formatUtils';
+import { SmallLoader } from '../common/SmallLoader';
 
 interface IosLeadListProps {
   leads: Lead[];
@@ -187,9 +188,8 @@ export const IosLeadList: React.FC<IosLeadListProps> = ({
 
   if (loading) {
     return (
-      <div className="bg-white rounded-2xl border border-[rgba(60,60,67,0.08)] p-12 flex flex-col items-center justify-center gap-3 text-[#8e8e93]">
-        <RefreshCw size={24} className="animate-spin text-[#007aff]" />
-        <p className="text-xs font-medium">Loading candidate records...</p>
+      <div className="bg-white rounded-2xl border border-[rgba(60,60,67,0.08)] p-12 flex flex-col items-center justify-center">
+        <SmallLoader size="md" color="primary" text="Loading candidate records..." subtext="Synchronizing directory..." />
       </div>
     );
   }

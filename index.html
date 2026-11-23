@@ -23,7 +23,47 @@
     </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="ssa-initial-splash" style="
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+        background: #ffffff;
+        padding: 2.5rem 1.5rem;
+        padding-top: calc(env(safe-area-inset-top, 0px) + 3rem);
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 2.5rem);
+        font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+        user-select: none;
+        box-sizing: border-box;
+      ">
+        <!-- Top Spacer -->
+        <div style="height: 10px;"></div>
+
+        <!-- Center: Clean Brand Logo -->
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+          <img
+            src="/brand-logo.png"
+            onerror="this.onerror=null; this.src='/brand-logo.jpg';"
+            alt="SSA"
+            style="width: 96px; height: 96px; object-fit: contain; border-radius: 22px;"
+          />
+        </div>
+
+        <!-- Bottom App Signature -->
+        <div style="
+          font-size: 13px;
+          font-weight: 500;
+          color: #9aa0a6;
+          letter-spacing: 0.3px;
+        ">
+          SSA CRM
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

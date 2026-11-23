@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import crmService from '../services/api/crmService';
+import { UploadLoader, ButtonSpinner } from '../components/common/SmallLoader';
 
 export default function ImportLeads() {
   const navigate = useNavigate();
@@ -191,8 +192,17 @@ export default function ImportLeads() {
               </div>
             </div>
 
+            {loading && (
+              <UploadLoader
+                fileName={selectedFile?.name}
+                text="Uploading & processing file..."
+                subtext="Validating rows and importing leads into database..."
+                className="mt-3"
+              />
+            )}
+
             <div className="flex items-center justify-end gap-2.5 pt-1">
-              {selectedFile && (
+              {selectedFile && !loading && (
                 <button
                   type="button"
                   onClick={() => setSelectedFile(null)}
@@ -204,10 +214,16 @@ export default function ImportLeads() {
               <button
                 type="submit"
                 disabled={loading || !selectedFile}
-                className="ios-btn-primary text-xs px-5 py-2.5 w-full sm:w-auto"
+                className="ios-btn-primary text-xs px-5 py-2.5 w-full sm:w-auto flex items-center justify-center gap-2"
               >
-                {loading && <RefreshCw size={13} className="animate-spin" />}
-                <span>{loading ? 'Uploading...' : 'Upload File'}</span>
+                {loading ? (
+                  <>
+                    <ButtonSpinner size="xs" color="white" />
+                    <span>Uploading...</span>
+                  </>
+                ) : (
+                  <span>Upload File</span>
+                )}
               </button>
             </div>
           </form>
@@ -237,10 +253,16 @@ export default function ImportLeads() {
               <button
                 type="submit"
                 disabled={loading || !rawText.trim()}
-                className="ios-btn-primary text-xs px-5 py-2.5 w-full sm:w-auto"
+                className="ios-btn-primary text-xs px-5 py-2.5 w-full sm:w-auto flex items-center justify-center gap-2"
               >
-                {loading && <RefreshCw size={13} className="animate-spin" />}
-                <span>{loading ? 'Processing...' : 'Upload Leads'}</span>
+                {loading ? (
+                  <>
+                    <ButtonSpinner size="xs" color="white" />
+                    <span>Processing...</span>
+                  </>
+                ) : (
+                  <span>Upload Leads</span>
+                )}
               </button>
             </div>
           </form>
