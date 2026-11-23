@@ -399,7 +399,7 @@ export default function Chat() {
 
   // Current active conversation details
   const activeHeaderName = cur === 'all' ? 'All Team Chat' : selectedUser?.firstName || selectedUser?.login || 'Chat';
-  const activeHeaderSub = cur === 'all' ? `${usersList.length + 1} team members` : `@${selectedUser?.login || ''}`;
+  const activeHeaderSub = cur === 'all' ? `${usersList.length + 1} team members` : '';
 
   return (
     <>
@@ -475,7 +475,6 @@ export default function Chat() {
                         <div className="ct">
                           <div className="r1">
                             <b>{p.firstName ? `${p.firstName} ${p.lastName || ''}`.trim() : p.login}</b>
-                            <span>@{p.login}</span>
                           </div>
                           <div className="r2">
                             <span className="pv">Tap to message</span>
@@ -520,7 +519,7 @@ export default function Chat() {
               </div>
               <div>
                 <b id="mn">{activeHeaderName}</b>
-                <small id="ms2">{activeHeaderSub}</small>
+                {activeHeaderSub ? <small id="ms2">{activeHeaderSub}</small> : null}
               </div>
             </div>
 

@@ -1,9 +1,10 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { NavigateFunction } from 'react-router-dom';
 import {
   Phone,
   MessageCircle,
   Search,
+  ChevronLeft,
   ChevronRight,
   Send,
   X,
@@ -80,16 +81,29 @@ export const StaffDashboardView: React.FC<StaffDashboardViewProps> = ({
   // Recent leads slice (max 6 fresh candidates for quick outreach)
   const recentSlice = useMemo(() => uncontactedLeads.slice(0, 6), [uncontactedLeads]);
   const [activeRecentIndex, setActiveRecentIndex] = useState(0);
-  const [isRecentPaused, setIsRecentPaused] = useState(false);
+  const recentCarouselRef = useRef<HTMLDivElement | null>(null);
 
-  // Auto-looping carousel: changes slide every 2 seconds on mobile
-  useEffect(() => {
-    if (recentSlice.length <= 1 || isRecentPaused) return;
-    const interval = setInterval(() => {
-      setActiveRecentIndex((prev) => (prev + 1) % recentSlice.length);
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [recentSlice.length, isRecentPaused]);
+  // Sync active slide index when user manually swipes
+  const handleRecentScroll = () => {
+    const el = recentCarouselRef.current;
+    if (!el || el.clientWidth === 0) return;
+    const index = Math.round(el.scrollLeft / el.clientWidth);
+    if (index !== activeRecentIndex && index >= 0 && index < recentSlice.length) {
+      setActiveRecentIndex(index);
+    }
+  };
+
+  const scrollToRecentSlide = (idx: number) => {
+    const targetIdx = Math.max(0, Math.min(recentSlice.length - 1, idx));
+    const el = recentCarouselRef.current;
+    if (el) {
+      el.scrollTo({
+        left: targetIdx * el.clientWidth,
+        behavior: 'smooth',
+      });
+    }
+    setActiveRecentIndex(targetIdx);
+  };
 
   const inCounselingLeads = useMemo(() => {
     return leads.filter((l) => {
@@ -353,41 +367,62 @@ export const StaffDashboardView: React.FC<StaffDashboardViewProps> = ({
               Recent Leads ({uncontactedLeads.length})
             </h3>
             {recentSlice.length > 1 && (
-              <span className="sm:hidden text-[11px] font-mono text-slate-400">
-                {activeRecentIndex + 1}/{recentSlice.length}
-              </span>
+              <div className="sm:hidden flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => scrollToRecentSlide(activeRecentIndex - 1)}
+                  disabled={activeRecentIndex === 0}
+                  className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+                  aria-label="Previous lead"
+                >
+                  <ChevronLeft size={15} />
+                </button>
+                <span className="text-[11px] font-mono text-slate-400 min-w-[28px] text-center">
+                  {activeRecentIndex + 1}/{recentSlice.length}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => scrollToRecentSlide(activeRecentIndex + 1)}
+                  disabled={activeRecentIndex === recentSlice.length - 1}
+                  className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+                  aria-label="Next lead"
+                >
+                  <ChevronRight size={15} />
+                </button>
+              </div>
             )}
           </div>
 
-          {/* Mobile Auto-Looping Carousel (< 640px) */}
-          <div
-            className="block sm:hidden overflow-hidden"
-            onTouchStart={() => setIsRecentPaused(true)}
-            onTouchEnd={() => setIsRecentPaused(false)}
-            onMouseEnter={() => setIsRecentPaused(true)}
-            onMouseLeave={() => setIsRecentPaused(false)}
-          >
+          {/* Mobile Manual Swipeable Carousel (< 640px) */}
+          <div className="block sm:hidden">
             <div
-              className="flex transition-transform duration-500 ease-out"
-              style={{ transform: `translateX(-${activeRecentIndex * 100}%)` }}
+              ref={recentCarouselRef}
+              onScroll={handleRecentScroll}
+              className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar touch-pan-x"
+              style={{
+                WebkitOverflowScrolling: 'touch',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+              }}
             >
               {recentSlice.map((lead) => (
-                <div key={lead.id} className="w-full shrink-0 px-0.5">
+                <div key={lead.id} className="w-full shrink-0 snap-center snap-always px-0.5">
                   {renderRecentCard(lead)}
                 </div>
               ))}
             </div>
 
-            {/* Carousel Loop Indicators */}
+            {/* Carousel Dot Indicators */}
             {recentSlice.length > 1 && (
               <div className="flex items-center justify-center gap-1.5 mt-2.5">
                 {recentSlice.map((_, dotIdx) => (
                   <button
                     key={dotIdx}
                     type="button"
-                    onClick={() => setActiveRecentIndex(dotIdx)}
-                    className={`h-1.5 rounded-full transition-all cursor-pointer ${activeRecentIndex === dotIdx ? 'w-5 bg-blue-600' : 'w-1.5 bg-slate-300'
-                      }`}
+                    onClick={() => scrollToRecentSlide(dotIdx)}
+                    className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                      activeRecentIndex === dotIdx ? 'w-5 bg-blue-600' : 'w-1.5 bg-slate-300'
+                    }`}
                     aria-label={`Slide ${dotIdx + 1}`}
                   />
                 ))}

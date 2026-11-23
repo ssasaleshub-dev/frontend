@@ -536,7 +536,7 @@ export default function StaffProfile() {
               >
                 Sign out
               </button>
-              <span>v1.0.40</span>
+              <span>v1.0.41</span>
             </div>
           </section>
         </main>
