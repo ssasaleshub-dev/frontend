@@ -2069,7 +2069,7 @@ export default function Leads() {
           {/* Header Bar */}
           <header className="bar">
             <div className="t1">
-              <h1>Leads<span id="tot">{filteredLeads.length}</span></h1>
+              <h1>Leads</h1>
               <button
                 className="ib !bg-transparent"
                 onClick={() => setShowMobileFilterDrawer((prev) => !prev)}

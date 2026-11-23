@@ -408,15 +408,6 @@ export default function Chat() {
           {/* Left Sidebar */}
           <aside className="side">
             <h2>Messages</h2>
-            <div className="sr">
-              <input
-                id="q"
-                type="search"
-                placeholder="Search people or groups"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
 
             <div className="gl" id="gl">
               {/* Groups Section */}
@@ -440,7 +431,6 @@ export default function Chat() {
                     <div className="ct">
                       <div className="r1">
                         <b>All Team Chat</b>
-                        <span>Group</span>
                       </div>
                       <div className="r2">
                         <span className="pv">Common group chat for all team members</span>
@@ -453,10 +443,7 @@ export default function Chat() {
               {/* Direct Messages Section */}
               {filteredStaff.length > 0 && (
                 <>
-                  <div className="sec">
-                    <span>Direct messages</span>
-                    <span>{filteredStaff.length}</span>
-                  </div>
+                  <div className="sec">Direct messages</div>
                   {filteredStaff.map((p) => {
                     const isSelected = cur === String(p.id) || cur === p.login;
                     const initial = (p.firstName || p.login).charAt(0).toUpperCase();

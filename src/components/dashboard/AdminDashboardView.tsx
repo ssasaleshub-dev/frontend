@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { NavigateFunction } from 'react-router-dom';
 import {
   Clock,
@@ -11,6 +11,7 @@ import {
   Calendar,
   MessageCircle,
   Phone,
+  Loader2,
 } from 'lucide-react';
 import { Lead } from '../../types';
 import { PLATFORMS, LEAD_STATUSES } from '../../config/constants';
@@ -95,10 +96,64 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   navigate,
   renderVisaBadge,
 }) => {
+  // Mobile accordion state for Recent Candidate Inquiries
+  const [expandedLeadId, setExpandedLeadId] = useState<number | null>(null);
+
+  const toggleExpandLead = (leadId: number) => {
+    setExpandedLeadId((prev) => (prev === leadId ? null : leadId));
+  };
+
+  // Pagination & Lazy Loading for Today's Leads (starts at 10 items)
+  const [todayLeadsLimit, setTodayLeadsLimit] = useState<number>(10);
+  const [isLoadingMoreToday, setIsLoadingMoreToday] = useState<boolean>(false);
+  const todaySentinelRef = useRef<HTMLDivElement | null>(null);
+
+  // Reset to 10 when collapsed
+  useEffect(() => {
+    if (!showTodayLeads) {
+      setTodayLeadsLimit(10);
+    }
+  }, [showTodayLeads]);
+
+  // Sliced leads for lazy loading
+  const visibleTodayLeads = useMemo(() => {
+    return todayLeads.slice(0, todayLeadsLimit);
+  }, [todayLeads, todayLeadsLimit]);
+
+  const hasMoreTodayLeads = todayLeads.length > todayLeadsLimit;
+
+  const handleLoadMoreToday = () => {
+    if (!hasMoreTodayLeads || isLoadingMoreToday) return;
+    setIsLoadingMoreToday(true);
+    setTimeout(() => {
+      setTodayLeadsLimit((prev) => Math.min(prev + 10, todayLeads.length));
+      setIsLoadingMoreToday(false);
+    }, 180);
+  };
+
+  // IntersectionObserver for automated lazy load when scrolling near bottom
+  useEffect(() => {
+    if (!showTodayLeads || !hasMoreTodayLeads) return;
+    const sentinel = todaySentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          handleLoadMoreToday();
+        }
+      },
+      { rootMargin: '120px' }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [showTodayLeads, hasMoreTodayLeads, isLoadingMoreToday, todayLeads.length]);
+
   return (
     <div className="space-y-5">
-      {/* ── Top Desk Filter Tabs (Admin Global Command) ── */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-3 overflow-x-auto">
+      {/* ── Top Desk Filter Tabs (Admin Global Command - Hidden on Mobile) ── */}
+      <div className="hidden sm:flex items-center gap-2 border-b border-slate-200 pb-3 overflow-x-auto">
         <button
           type="button"
           onClick={() => handleDeskChange('ALL')}
@@ -328,31 +383,14 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           onClick={() => setShowTodayLeads((v) => !v)}
           className="w-full px-4 py-3 sm:px-5 sm:py-3.5 flex items-center justify-between gap-3 text-left hover:bg-slate-50/80 transition-colors cursor-pointer"
         >
-          {/* Left: Branded Icon & Lead Information */}
-          <div className="flex items-center gap-3 sm:gap-3.5 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0866ff] border border-blue-100 flex items-center justify-center shrink-0 shadow-2xs">
-              <Clock size={18} className="text-[#0866ff]" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
-                  Today's Leads
-                </h3>
-                {todayLeads.length > 0 ? (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#0866ff] text-white shadow-2xs">
-                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                    <span>{todayLeads.length}</span>
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-500">
-                    0
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-500 mt-0.5 font-medium">
-                {formatIndianDate(new Date(), { weekday: true })}
-              </p>
-            </div>
+          {/* Left: Lead Information */}
+          <div className="min-w-0">
+            <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+              Today's Leads
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5 font-medium">
+              {formatIndianDate(new Date(), { weekday: true })}
+            </p>
           </div>
 
           {/* Right: Prominent Count & Interactive Action */}
@@ -365,10 +403,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 <span className="text-xs font-semibold text-slate-500">
                   {todayLeads.length === 1 ? 'lead' : 'leads'}
                 </span>
-              </div>
-              <div className="text-[11px] font-semibold flex items-center justify-end gap-1 mt-0.5 text-emerald-600">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                <span className="hidden xs:inline">Today's Inflow</span>
               </div>
             </div>
 
@@ -396,7 +430,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             ) : (
               <>
                 <div className="divide-y divide-black/[0.06]">
-                  {todayLeads.map((lead) => {
+                  {visibleTodayLeads.map((lead) => {
                     const cleanPhone = (lead.phoneNumber || '').replace(/[^0-9]/g, '');
                     const cleanName = (lead.customerName || `Candidate #${formatMaskedLeadRef(lead.id)}`)
                       .replace(/[\uFFFD\uFFFE\uFFFF]/g, '')
@@ -477,16 +511,46 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   })}
                 </div>
 
+                {/* Lazy Loading Sentinel & Load More Action */}
+                {hasMoreTodayLeads && (
+                  <div
+                    ref={todaySentinelRef}
+                    className="p-3 text-center border-t border-black/[0.04] bg-slate-50/60 flex flex-col sm:flex-row items-center justify-between gap-2"
+                  >
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      Showing {visibleTodayLeads.length} of {todayLeads.length} records
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleLoadMoreToday}
+                      disabled={isLoadingMoreToday}
+                      className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-[#007aff] hover:bg-blue-50 transition-colors cursor-pointer border border-blue-200/80 bg-white shadow-2xs"
+                    >
+                      {isLoadingMoreToday ? (
+                        <>
+                          <Loader2 size={13} className="animate-spin text-[#007aff]" />
+                          <span>Loading more…</span>
+                        </>
+                      ) : (
+                        <span>
+                          Load next 10 ({todayLeads.length - visibleTodayLeads.length} remaining)
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                )}
+
                 {/* Footer Link to Leads Table */}
                 <div className="px-4 py-2.5 sm:px-5 bg-black/[0.015] border-t border-black/[0.06] flex items-center justify-between text-xs">
                   <span className="text-[#8e8e93] text-[11px]">
+                    {visibleTodayLeads.length >= todayLeads.length ? 'All ' : ''}
                     {todayLeads.length} {todayLeads.length === 1 ? 'lead' : 'leads'} received today
                   </span>
                   <button
                     onClick={() => navigate('/leads')}
                     className="font-medium text-[#007aff] hover:underline flex items-center gap-1 cursor-pointer"
                   >
-                    <span>View all leads</span>
+                    <span>View all in leads table</span>
                     <ChevronRight size={13} />
                   </button>
                 </div>
@@ -846,7 +910,154 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           </button>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* ── Mobile Accordion Card List (< 640px) - No Horizontal Scrolling ── */}
+        <div className="block sm:hidden divide-y divide-slate-100">
+          {recentLeads.length === 0 ? (
+            <div className="py-8 text-center text-slate-400">
+              <p className="text-xs font-medium">No candidate records in this desk yet.</p>
+            </div>
+          ) : (
+            recentLeads.map((lead) => {
+              const isExpanded = expandedLeadId === lead.id;
+              const plat = (lead.platform && PLATFORMS[lead.platform]) || PLATFORMS.OTHER;
+              const stConfig = (lead.status && LEAD_STATUSES[lead.status]) || {
+                label: lead.status || 'New',
+                color: 'bg-black/[0.05] text-[#3c3c43]',
+              };
+              const cleanPhone = (lead.phoneNumber || '').replace(/[^0-9]/g, '');
+              const cleanName = (lead.customerName || `Candidate #${formatMaskedLeadRef(lead.id)}`)
+                .replace(/[\uFFFD\uFFFE\uFFFF]/g, '')
+                .trim();
+
+              return (
+                <div key={lead.id} className="transition-colors">
+                  {/* Compact Summary Header (Always fits mobile width) */}
+                  <div
+                    onClick={() => toggleExpandLead(lead.id)}
+                    className="p-3.5 flex items-center justify-between gap-2.5 cursor-pointer hover:bg-slate-50/70 select-none"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-xs text-slate-900 truncate">
+                          {cleanName}
+                        </span>
+                        <span className="text-[10px] text-slate-500 font-medium px-1.5 py-0.5 bg-slate-100 rounded shrink-0">
+                          {lead.visaType === 'WORK_VISA'
+                            ? 'Work'
+                            : lead.visaType === 'STUDY_VISA'
+                              ? 'Study'
+                              : 'Other'}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1.5 truncate">
+                        {lead.city && <span>{lead.city}</span>}
+                        {lead.phoneNumber && (
+                          <>
+                            {lead.city && <span>·</span>}
+                            <span className="font-mono">{lead.phoneNumber}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Quick WhatsApp/Call & Accordion Chevron */}
+                    <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                      {lead.phoneNumber && (
+                        <>
+                          <a
+                            href={`https://wa.me/${cleanPhone}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            title="Chat on WhatsApp"
+                            className="p-1.5 text-slate-400 hover:text-emerald-600 transition-colors"
+                          >
+                            <MessageCircle size={15} />
+                          </a>
+                          <a
+                            href={`tel:${cleanPhone}`}
+                            title="Call candidate"
+                            className="p-1.5 text-slate-400 hover:text-blue-600 transition-colors"
+                          >
+                            <Phone size={15} />
+                          </a>
+                        </>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => toggleExpandLead(lead.id)}
+                        className="p-1 text-slate-400 hover:text-slate-700 transition-colors"
+                        aria-label="Toggle details"
+                      >
+                        <ChevronDown
+                          size={15}
+                          className={`transition-transform duration-200 ${isExpanded ? 'rotate-180 text-blue-600' : 'rotate-0'}`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Expanded Detail View (Revealed on Click) */}
+                  {isExpanded && (
+                    <div className="px-3.5 pb-3.5 pt-1 bg-slate-50/60 border-t border-slate-100 text-xs space-y-2.5 animate-in fade-in duration-150">
+                      <div className="grid grid-cols-2 gap-2 text-[11px]">
+                        <div>
+                          <span className="text-slate-400 block text-[10px] uppercase font-semibold">Email</span>
+                          <span className="text-slate-800 break-all">{lead.email || '—'}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[10px] uppercase font-semibold">Visa Program</span>
+                          <span className="text-slate-800 font-medium">
+                            {lead.visaType === 'WORK_VISA'
+                              ? 'Work Visa'
+                              : lead.visaType === 'STUDY_VISA'
+                                ? 'Study Visa'
+                                : 'Other Visa'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[10px] uppercase font-semibold">Education & Age</span>
+                          <span className="text-slate-800">
+                            {lead.educationalQualification || '—'}{lead.age ? ` (${lead.age} yrs)` : ''}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[10px] uppercase font-semibold">Source & Campaign</span>
+                          <span className="text-slate-800">
+                            {plat.label} {lead.campaignName ? `· ${lead.campaignName}` : ''}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-200/60">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-slate-400 uppercase font-semibold">Stage:</span>
+                          <button
+                            type="button"
+                            onClick={() => onOpenStatusModal(lead)}
+                            className="text-xs font-semibold text-blue-600 hover:underline"
+                          >
+                            {stConfig.label} ✎
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/leads/${encryptLeadId(lead.id)}`)}
+                          className="text-xs font-semibold text-slate-700 hover:text-blue-600 flex items-center gap-0.5"
+                        >
+                          <span>Full Profile</span>
+                          <ChevronRight size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* ── Desktop Table (>= 640px) ── */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
