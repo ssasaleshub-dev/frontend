@@ -2149,19 +2149,6 @@ export default function Leads() {
                 </svg>
                 <b></b>
               </button>
-              <button
-                type="button"
-                className="ib"
-                id="nwHead"
-                aria-label="New candidate"
-                onClick={() => {
-                  setModalTab('single');
-                  setShowAddModal(true);
-                }}
-                style={{ marginLeft: 4 }}
-              >
-                <img src="/icons/plus-fab.png" alt="Add lead" className="w-[30px] h-[30px] rounded-full object-contain" />
-              </button>
             </div>
             <div className="sr">
               <label className="sb">
@@ -2281,17 +2268,32 @@ export default function Leads() {
                     </div>
                     <div className="ac">
                       {cleanPhone ? (
-                        <a
-                          className="c"
-                          href={`tel:${cleanPhone}`}
-                          aria-label="Call"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            showMobileToast(`Calling ${displayPhone || cleanPhone}…`);
-                          }}
-                        >
-                          <img src="/icons/phone.png" alt="Call" className="w-[24px] h-[24px] object-contain" />
-                        </a>
+                        <>
+                          <a
+                            className="w"
+                            href={`https://wa.me/${waPhone}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label="WhatsApp"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              showMobileToast(`Opening WhatsApp for ${candidateName}…`);
+                            }}
+                          >
+                            <img src="/icons/whatsapp.png" alt="WhatsApp" className="w-[22px] h-[22px] object-contain" />
+                          </a>
+                          <a
+                            className="c"
+                            href={`tel:${cleanPhone}`}
+                            aria-label="Call"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              showMobileToast(`Calling ${displayPhone || cleanPhone}…`);
+                            }}
+                          >
+                            <img src="/icons/phone.png" alt="Call" className="w-[22px] h-[22px] object-contain" />
+                          </a>
+                        </>
                       ) : null}
                     </div>
                   </div>
@@ -2310,6 +2312,20 @@ export default function Leads() {
               Load more
             </button>
           )}
+
+          {/* Floating Action Button (New Lead) */}
+          <button
+            className="fab"
+            id="nw"
+            aria-label="New lead"
+            onClick={() => {
+              setModalTab('manual');
+              setShowAddModal(true);
+            }}
+            style={{ padding: 0, overflow: 'hidden', background: 'none', border: 0 }}
+          >
+            <img src="/icons/plus-fab.png" alt="Add lead" className="w-full h-full object-cover" />
+          </button>
 
           {/* Bottom Filter Sheet */}
           <div
@@ -4293,19 +4309,6 @@ export default function Leads() {
           </div>
         </div>
       )}
-      {/* Floating Action Button: Create New Candidate */}
-      <button
-        type="button"
-        onClick={() => {
-          setModalTab('manual');
-          setShowAddModal(true);
-        }}
-        title="Create New Candidate"
-        aria-label="Create New Candidate"
-        className="fixed bottom-22 right-5 sm:bottom-8 sm:right-8 z-40 w-14 h-14 rounded-full bg-[#007aff] hover:bg-[#0062cc] active:scale-90 text-white shadow-[0_10px_25px_rgba(0,122,255,0.45)] hover:shadow-[0_14px_30px_rgba(0,122,255,0.55)] flex items-center justify-center transition-all duration-200 group focus:outline-none cursor-pointer"
-      >
-        <Plus size={28} strokeWidth={2.5} className="group-hover:rotate-90 transition-transform duration-200" />
-      </button>
     </div>
   );
 }
