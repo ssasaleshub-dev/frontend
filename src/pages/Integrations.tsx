@@ -22,15 +22,6 @@ import integrationsService, {
   DEFAULT_GOOGLE_CLIENT_ID,
 } from '../services/api/integrationsService';
 
-interface WebhookInfo {
-  id: string;
-  title: string;
-  category: 'WEBHOOKS';
-  description: string;
-  endpoint: string;
-  instructions: string[];
-}
-
 export default function Integrations() {
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -47,14 +38,13 @@ export default function Integrations() {
     cachedProfilesCount: 0,
   });
 
-  // Filter tabs: ALL, DIRECT (Gmail & Instagram DM), GOOGLE (Workspace), WEBHOOKS
-  const [activeTab, setActiveTab] = useState<'ALL' | 'DIRECT' | 'GOOGLE' | 'WEBHOOKS'>('ALL');
+  // Filter tabs: ALL, DIRECT (Gmail & Instagram DM), GOOGLE (Workspace)
+  const [activeTab, setActiveTab] = useState<'ALL' | 'DIRECT' | 'GOOGLE'>('ALL');
 
   // Copy feedback state (holds provider id)
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Modals state
-  const [selectedWebhook, setSelectedWebhook] = useState<WebhookInfo | null>(null);
   const [showGoogleSetupModal, setShowGoogleSetupModal] = useState<boolean>(false);
   const [showTestEmailModal, setShowTestEmailModal] = useState<boolean>(false);
   const [showInstagramWebhookModal, setShowInstagramWebhookModal] = useState<boolean>(false);
@@ -282,86 +272,6 @@ export default function Integrations() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const WEBHOOK_BASE = 'https://api.ssasaleshub.cloud/api/webhooks/inbound';
-
-  const webhooks: WebhookInfo[] = [
-    {
-      id: 'wix',
-      title: 'Wix Form',
-      category: 'WEBHOOKS',
-      description: 'Capture leads submitted through Wix website forms.',
-      endpoint: `${WEBHOOK_BASE}/wix`,
-      instructions: [
-        'Open your Wix site dashboard and go to Automations.',
-        'Choose "When visitor submits form" as the trigger.',
-        'Select "Send via Webhook" as the action.',
-        'Paste the Webhook URL and set HTTP Method to POST.',
-        'Save and activate the automation.',
-      ],
-    },
-    {
-      id: 'jotform',
-      title: 'Jotform',
-      category: 'WEBHOOKS',
-      description: 'Capture form inquiries and student registrations from Jotform.',
-      endpoint: `${WEBHOOK_BASE}/jotform`,
-      instructions: [
-        'In Jotform Builder, go to Settings > Integrations.',
-        'Select Webhooks.',
-        'Paste the Webhook URL into the Add Webhook field.',
-        'Click Complete Integration.',
-      ],
-    },
-    {
-      id: 'google-forms',
-      title: 'Google Forms',
-      category: 'WEBHOOKS',
-      description: 'Push responses from Google Forms directly into your pipeline.',
-      endpoint: `${WEBHOOK_BASE}/google-forms`,
-      instructions: [
-        'Open Google Forms > Extensions > Apps Script.',
-        'Set up an onFormSubmit trigger pushing responses as JSON to this webhook URL.',
-        'Save the script and authorize execution.',
-      ],
-    },
-    {
-      id: 'urbanpro',
-      title: 'UrbanPro',
-      category: 'WEBHOOKS',
-      description: 'Capture student course inquiries and tutoring leads from UrbanPro.',
-      endpoint: `${WEBHOOK_BASE}/urbanpro`,
-      instructions: [
-        'In your UrbanPro partner dashboard, open API & Webhook Settings.',
-        'Add this webhook URL under Lead Notifications.',
-        'Save changes.',
-      ],
-    },
-    {
-      id: 'aajjo',
-      title: 'AAJJO.com',
-      category: 'WEBHOOKS',
-      description: 'Receive buyer leads and trade RFQs from aajjo.com.',
-      endpoint: `${WEBHOOK_BASE}/aajjo`,
-      instructions: [
-        'Sign in to your AAJJO seller portal.',
-        'Navigate to Lead Settings > Webhooks.',
-        'Paste the Webhook URL and activate notifications.',
-      ],
-    },
-    {
-      id: 'calendly',
-      title: 'Calendly',
-      category: 'WEBHOOKS',
-      description: 'Sync scheduled appointments and automatically log consultations.',
-      endpoint: `${WEBHOOK_BASE}/calendly`,
-      instructions: [
-        'In your Calendly account, go to Integrations > Webhooks.',
-        'Add a webhook subscription for invitee.created events.',
-        'Paste the URL and save.',
-      ],
-    },
-  ];
-
   const connectedEmail = googleStatus.email || googleStatus.googleEmail;
 
   return (
@@ -371,7 +281,7 @@ export default function Integrations() {
         <div>
           <h1 className="text-xl font-semibold text-slate-900 tracking-tight">Integrations Hub</h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Connect communication channels, Google Workspace, and inbound webhooks to your candidate pipeline.
+            Connect communication channels and Google Workspace to your candidate pipeline.
           </p>
         </div>
 
@@ -426,7 +336,6 @@ export default function Integrations() {
           { id: 'ALL', label: 'All Integrations' },
           { id: 'DIRECT', label: 'Gmail & Instagram DM' },
           { id: 'GOOGLE', label: 'Google Workspace' },
-          { id: 'WEBHOOKS', label: 'Inbound Webhooks' },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -745,99 +654,6 @@ export default function Integrations() {
             </div>
           </div>
         )}
-
-        {/* ═════════════════════════════════════════════════════════════════════ */}
-        {/* INBOUND WEBHOOK CARDS                                               */}
-        {/* ═════════════════════════════════════════════════════════════════════ */}
-        {(activeTab === 'ALL' || activeTab === 'WEBHOOKS') &&
-          webhooks.map((hook) => (
-            <div
-              key={hook.id}
-              className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col justify-between shadow-sm hover:border-slate-300 transition-all"
-            >
-              <div className="space-y-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2.5">
-                    {hook.id === 'google-forms' ? (
-                      <img src="/icons/google-forms.png" alt="Google Forms" className="w-8 h-8 object-contain shrink-0" />
-                    ) : (
-                      <div className="w-8 h-8 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs uppercase">
-                        {hook.id.slice(0, 2)}
-                      </div>
-                    )}
-                    <div>
-                      <h3 className="text-sm font-semibold text-slate-900">{hook.title}</h3>
-                      <span className="text-[11px] text-slate-400">Inbound Webhook</span>
-                    </div>
-                  </div>
-
-                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                    Live
-                  </span>
-                </div>
-
-                <p className="text-xs text-slate-600 leading-relaxed">{hook.description}</p>
-
-                {/* Compact URL Box */}
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between text-[11px] text-slate-500">
-                    <span>Webhook URL</span>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedWebhook(hook)}
-                      className="text-slate-600 hover:text-slate-900 underline cursor-pointer"
-                    >
-                      Instructions
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-1 p-1.5 bg-slate-50 border border-slate-200 rounded text-[11px] font-mono text-slate-700">
-                    <span className="truncate flex-1 select-all">{hook.endpoint}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(hook.id, hook.endpoint)}
-                      title="Copy URL"
-                      className="p-1 hover:bg-slate-200 rounded text-slate-600 cursor-pointer"
-                    >
-                      {copiedId === hook.id ? (
-                        <Check size={13} className="text-emerald-600" />
-                      ) : (
-                        <Copy size={13} />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-3 mt-3 border-t border-slate-100 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleCopy(hook.id, hook.endpoint)}
-                  className="flex-1 h-8 px-3 text-xs font-medium rounded border border-slate-300 hover:bg-slate-50 text-slate-800 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  {copiedId === hook.id ? (
-                    <>
-                      <Check size={13} className="text-emerald-600" />
-                      <span>Copied</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy size={13} />
-                      <span>Copy URL</span>
-                    </>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedWebhook(hook)}
-                  title="View setup guide"
-                  className="h-8 px-2.5 text-xs font-medium rounded border border-slate-200 hover:bg-slate-50 text-slate-600 cursor-pointer"
-                >
-                  Guide
-                </button>
-              </div>
-            </div>
-          ))}
       </div>
 
       {/* ═════════════════════════════════════════════════════════════════════ */}
@@ -1150,66 +966,7 @@ export default function Integrations() {
       )}
 
       {/* ═════════════════════════════════════════════════════════════════════ */}
-      {/* DIALOG 4: INBOUND WEBHOOK SETUP GUIDE MODAL                          */}
-      {/* ═════════════════════════════════════════════════════════════════════ */}
-      {selectedWebhook && (
-        <div
-          className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
-          onClick={() => setSelectedWebhook(null)}
-        >
-          <div
-            className="bg-white rounded-lg max-w-md w-full p-5 space-y-4 border border-slate-200 shadow-lg"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <h3 className="text-sm font-semibold text-slate-900">{selectedWebhook.title} Setup</h3>
-              <button
-                type="button"
-                onClick={() => setSelectedWebhook(null)}
-                className="text-slate-400 hover:text-slate-700 cursor-pointer"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div className="space-y-1">
-              <span className="text-xs text-slate-500 font-medium">Inbound Webhook URL:</span>
-              <div className="flex items-center gap-1.5 p-2 bg-slate-50 border border-slate-200 rounded font-mono text-xs text-slate-700">
-                <span className="truncate flex-1 select-all">{selectedWebhook.endpoint}</span>
-                <button
-                  type="button"
-                  onClick={() => handleCopy(selectedWebhook.id, selectedWebhook.endpoint)}
-                  className="px-2 py-0.5 text-[11px] font-medium border border-slate-300 rounded bg-white hover:bg-slate-50 text-slate-700 cursor-pointer"
-                >
-                  {copiedId === selectedWebhook.id ? 'Copied' : 'Copy'}
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <span className="text-xs font-semibold text-slate-800">Instructions:</span>
-              <ol className="text-xs text-slate-600 list-decimal list-inside space-y-1.5 leading-relaxed bg-slate-50 p-3 rounded border border-slate-100">
-                {selectedWebhook.instructions.map((step, idx) => (
-                  <li key={idx}>{step}</li>
-                ))}
-              </ol>
-            </div>
-
-            <div className="pt-2 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setSelectedWebhook(null)}
-                className="h-8 px-4 text-xs font-medium rounded bg-slate-900 hover:bg-slate-800 text-white cursor-pointer"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ═════════════════════════════════════════════════════════════════════ */}
-      {/* DIALOG 5: GOOGLE WORKSPACE OAUTH SETUP MODAL                         */}
+      {/* DIALOG 4: GOOGLE WORKSPACE OAUTH SETUP MODAL                         */}
       {/* ═════════════════════════════════════════════════════════════════════ */}
       {showGoogleSetupModal && (
         <div
