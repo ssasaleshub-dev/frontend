@@ -27,7 +27,7 @@
   color-scheme: light;
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 13.5px;
   line-height: 1.4;
   -webkit-font-smoothing: antialiased;
@@ -618,7 +618,7 @@
   color-scheme: light;
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 13.5px;
   line-height: 1.4;
   -webkit-font-smoothing: antialiased;
@@ -783,7 +783,7 @@
   color-scheme: light;
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 13.5px;
   line-height: 1.4;
   -webkit-font-smoothing: antialiased;
@@ -952,7 +952,7 @@
   color-scheme: light;
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 13.5px;
   line-height: 1.4;
   -webkit-font-smoothing: antialiased;
@@ -1150,9 +1150,18 @@
 }
 .crm-t textarea:focus { box-shadow: 0 0 0 2px var(--blue) inset; background: #fff; }
 
-body.chat-conversation-open nav,
-body:has(.crm-t .app.open) nav {
-  display: none !important;
+/* Only hide mobile bottom navigation bar when chat conversation is open on mobile */
+@media (max-width: 767px) {
+  body.chat-conversation-open nav.fixed,
+  body:has(.crm-t .app.open) nav.fixed {
+    display: none !important;
+  }
+}
+
+/* Ensure desktop sidebar navigation links in Layout are ALWAYS visible and never hidden */
+aside nav {
+  display: flex !important;
+  flex-direction: column !important;
 }
 
 @media (max-width: 760px) {
@@ -1215,7 +1224,7 @@ body:has(.crm-t .app.open) nav {
   color-scheme: light;
   width: 100%;
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 13.5px;
   line-height: 1.4;
   -webkit-font-smoothing: antialiased;
@@ -1362,7 +1371,7 @@ body:has(.crm-t .app.open) nav {
   color-scheme: light;
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 13.5px;
   line-height: 1.4;
   -webkit-font-smoothing: antialiased;

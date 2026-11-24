@@ -1143,10 +1143,18 @@ export default function ReportsPage() {
                         <div key={idx} className="space-y-1">
                           <div className="flex justify-between text-xs">
                             <span className="font-semibold text-slate-700 flex items-center gap-1.5">
-                              <span
-                                className="w-2.5 h-2.5 rounded-xs shrink-0"
-                                style={{ backgroundColor: slice.color }}
-                              />
+                              {slice.source.toLowerCase().includes('facebook') ? (
+                                <img src="/icons/facebook.png" alt="FB" className="w-3.5 h-3.5 rounded-full object-cover shrink-0" />
+                              ) : slice.source.toLowerCase().includes('instagram') ? (
+                                <img src="/icons/instagram.png" alt="IG" className="w-3.5 h-3.5 rounded-full object-cover shrink-0" />
+                              ) : slice.source.toLowerCase().includes('whatsapp') ? (
+                                <img src="/icons/whatsapp.png" alt="WA" className="w-3.5 h-3.5 rounded-full object-cover shrink-0" />
+                              ) : (
+                                <span
+                                  className="w-2.5 h-2.5 rounded-xs shrink-0"
+                                  style={{ backgroundColor: slice.color }}
+                                />
+                              )}
                               <span className="truncate max-w-[140px]">{slice.source}</span>
                             </span>
                             <span className="font-mono font-bold text-slate-900">

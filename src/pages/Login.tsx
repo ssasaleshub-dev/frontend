@@ -144,80 +144,70 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-[#f0f2f5] font-sans text-[#172B4D] antialiased">
-      {/* ── CENTERED 2-COLUMN UNIFIED CARD ── */}
-      <div className="w-full max-w-4xl bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.12)] border border-slate-200/90 overflow-hidden grid grid-cols-1 md:grid-cols-2">
-        {/* LEFT COLUMN: Deep Branded SSA Panel with Network Mesh */}
-        <div className="relative bg-gradient-to-br from-[#0c532b] via-[#063f1f] to-[#022411] text-white p-8 sm:p-10 flex flex-col justify-between items-center text-center overflow-hidden min-h-[360px] md:min-h-[540px]">
+    <div className="min-h-screen w-full flex items-center justify-center p-3 sm:p-6 lg:p-8 bg-[#f0f2f5] font-sans text-[#172B4D] antialiased">
+      {/* ── CENTERED 2-COLUMN UNIFIED CARD (COMPACT SINGLE COLUMN ON MOBILE) ── */}
+      <div className="w-full max-w-[360px] sm:max-w-md md:max-w-4xl bg-white rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.08)] border border-slate-200/90 overflow-hidden grid grid-cols-1 md:grid-cols-2">
+        {/* LEFT COLUMN: Deep Branded SSA Panel (Desktop Only) */}
+        <div className="hidden md:flex relative bg-gradient-to-br from-[#029757] via-[#028b50] to-[#01683b] text-white p-8 sm:p-10 flex-col justify-center items-center text-center overflow-hidden min-h-[540px]">
           {/* Subtle Geometric Network Constellation Background */}
           <svg
-            className="absolute inset-0 w-full h-full opacity-25 pointer-events-none"
+            className="absolute inset-0 w-full h-full opacity-20 pointer-events-none"
             xmlns="http://www.w3.org/2000/svg"
           >
             <defs>
               <pattern id="network-mesh" width="100" height="100" patternUnits="userSpaceOnUse">
-                <circle cx="15" cy="15" r="2" fill="#a7f3d0" />
-                <circle cx="85" cy="45" r="2" fill="#a7f3d0" />
-                <circle cx="45" cy="85" r="2" fill="#a7f3d0" />
+                <circle cx="15" cy="15" r="2" fill="#ffffff" />
+                <circle cx="85" cy="45" r="2" fill="#ffffff" />
+                <circle cx="45" cy="85" r="2" fill="#ffffff" />
                 <line x1="15" y1="15" x2="85" y2="45" stroke="#ffffff" strokeWidth="0.8" />
                 <line x1="85" y1="45" x2="45" y2="85" stroke="#ffffff" strokeWidth="0.8" />
                 <line x1="45" y1="85" x2="15" y2="15" stroke="#ffffff" strokeWidth="0.8" />
-                <line x1="15" y1="15" x2="100" y2="15" stroke="#ffffff" strokeWidth="0.5" strokeDasharray="3 3" />
-                <line x1="85" y1="45" x2="100" y2="70" stroke="#ffffff" strokeWidth="0.5" strokeDasharray="3 3" />
               </pattern>
             </defs>
             <rect width="100%" height="100%" fill="url(#network-mesh)" />
           </svg>
 
-          {/* Top spacer */}
-          <div className="hidden md:block"></div>
-
-          {/* Center Brand Grouping */}
-          <div className="my-auto relative z-10 flex flex-col items-center">
-            {/* White Circular Brand Emblem - Prominent & Bigger */}
-            <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full bg-white p-3 sm:p-3.5 shadow-[0_12px_40px_rgba(0,0,0,0.4)] flex items-center justify-center mb-5 border-4 border-white/90 ring-4 ring-emerald-500/25">
+          {/* Center Brand: Logo + SSA SalesHub CRM */}
+          <div className="relative z-10 flex flex-col items-center">
+            {/* White Circular Brand Emblem */}
+            <div className="w-36 h-36 rounded-full bg-white p-3 shadow-[0_16px_40px_rgba(0,0,0,0.25)] flex items-center justify-center mb-6 border-4 border-white">
               <img
                 src={brandLogo}
-                alt="SSA Career Solutions"
+                alt="SSA SalesHub CRM"
                 className="w-full h-full object-cover rounded-full"
               />
             </div>
 
-            {/* Internal Access Badge */}
-            <span className="inline-block px-3 py-1 rounded-full bg-[#022411]/70 border border-emerald-400/30 text-[10px] font-bold uppercase tracking-wider text-emerald-200 mb-2">
-              Authorized Staff Only
-            </span>
-
-            {/* Company Name */}
-            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white mb-1">
-              SSA Career Solutions
-            </h2>
-
-            {/* Department / Internal Subtitle */}
-            <p className="text-xs uppercase tracking-widest font-bold text-amber-300/90 mb-3">
-              Internal CRM & Operations Desk
-            </p>
-
-            {/* Internal Notice Description */}
-            <p className="text-xs text-emerald-100/80 max-w-xs leading-relaxed font-normal">
-              Internal operations system for SSA counselors, admissions officers, and visa processing staff. Strictly for authorized use.
-            </p>
-          </div>
-
-          {/* Footer Copyright */}
-          <div className="relative z-10 text-[11px] text-emerald-200/60 pt-4">
-            © 2026 SSA Careers · Internal System
+            {/* Title: SSA SalesHub CRM */}
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white drop-shadow-xs">
+              SSA SalesHub CRM
+            </h1>
           </div>
         </div>
 
         {/* RIGHT COLUMN: Clean Sign In Form */}
-        <div className="p-8 sm:p-10 lg:p-12 flex flex-col justify-center bg-white">
-          <div className="text-center mb-6">
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight">
-              Staff Sign In
+        <div className="p-6 sm:p-8 lg:p-12 flex flex-col justify-center bg-white">
+          {/* Mobile-Only Compact Brand Header */}
+          <div className="md:hidden flex flex-col items-center text-center mb-6">
+            <div className="w-16 h-16 rounded-full bg-white p-1 shadow-md border-2 border-[#029757]/30 mb-2.5 flex items-center justify-center">
+              <img
+                src={brandLogo}
+                alt="SSA SalesHub CRM"
+                className="w-full h-full object-cover rounded-full"
+              />
+            </div>
+            <h1 className="text-lg font-extrabold text-slate-800 tracking-tight leading-tight">
+              SSA SalesHub CRM
             </h1>
+          </div>
+
+          {/* Desktop-Only Form Title */}
+          <div className="hidden md:block text-center mb-6">
+            <h2 className="text-2xl font-bold text-slate-800 tracking-tight">
+              Sign In
+            </h2>
             <p className="text-xs text-slate-500 mt-1.5">
-              Enter your credentials to access your internal desk
+              Enter your credentials to access your account
             </p>
           </div>
 
@@ -243,7 +233,7 @@ export default function Login() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   style={{ paddingLeft: '2.5rem' }}
-                  className="w-full pr-3 py-2.5 text-xs font-medium text-slate-800 bg-[#f8fafc] border border-slate-300 rounded-lg focus:bg-white focus:outline-none focus:border-[#0c532b] focus:ring-1 focus:ring-[#0c532b] transition"
+                  className="w-full pr-3 py-2.5 text-xs font-medium text-slate-800 bg-[#f8fafc] border border-slate-300 rounded-lg focus:bg-white focus:outline-none focus:border-[#029757] focus:ring-1 focus:ring-[#029757] transition"
                   placeholder="e.g. kavin"
                   required
                   autoComplete="username"
@@ -265,7 +255,7 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   style={{ paddingLeft: '2.5rem', paddingRight: '2.5rem' }}
-                  className="w-full py-2.5 text-xs font-medium text-slate-800 bg-[#f8fafc] border border-slate-300 rounded-lg focus:bg-white focus:outline-none focus:border-[#0c532b] focus:ring-1 focus:ring-[#0c532b] transition"
+                  className="w-full py-2.5 text-xs font-medium text-slate-800 bg-[#f8fafc] border border-slate-300 rounded-lg focus:bg-white focus:outline-none focus:border-[#029757] focus:ring-1 focus:ring-[#029757] transition"
                   placeholder="••••••••"
                   required
                   autoComplete="current-password"
@@ -288,14 +278,14 @@ export default function Login() {
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-300 text-[#0c532b] focus:ring-[#0c532b] cursor-pointer accent-[#0c532b]"
+                  className="w-4 h-4 rounded border-slate-300 text-[#029757] focus:ring-[#029757] cursor-pointer accent-[#029757]"
                 />
                 <span>Remember Me</span>
               </label>
               <button
                 type="button"
                 onClick={handleOpenForgotModal}
-                className="text-xs font-semibold text-[#0c532b] hover:underline focus:outline-none cursor-pointer"
+                className="text-xs font-semibold text-[#029757] hover:underline focus:outline-none cursor-pointer"
               >
                 Forgot password?
               </button>
@@ -306,7 +296,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 px-4 bg-[#0c532b] hover:bg-[#073f1f] text-white rounded-lg text-xs font-bold disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm transition active:scale-[0.99] cursor-pointer"
+                className="w-full py-2.5 px-4 bg-[#029757] hover:bg-[#02844c] text-white rounded-lg text-xs font-bold disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm transition active:scale-[0.99] cursor-pointer"
               >
                 {loading ? (
                   <>
@@ -366,14 +356,15 @@ export default function Login() {
 
                 <form onSubmit={handleSendForgotOtp} className="space-y-3">
                   <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">
-                      Username or Email
+                    <label className="flex items-center gap-1.5 text-xs font-medium text-slate-700 mb-1">
+                      <img src="/icons/gmail.png" alt="Email" className="w-3.5 h-3.5 object-contain" />
+                      <span>Username or Email</span>
                     </label>
                     <input
                       type="text"
                       value={forgotEmail}
                       onChange={(e) => setForgotEmail(e.target.value)}
-                      className="w-full border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#0c532b]"
+                      className="w-full border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#029757]"
                       placeholder="e.g. kavin"
                       required
                       autoFocus
@@ -391,7 +382,7 @@ export default function Login() {
                     <button
                       type="submit"
                       disabled={forgotLoading}
-                      className="px-4 py-1.5 bg-[#0c532b] hover:bg-[#073f1f] text-white rounded text-xs font-semibold disabled:opacity-50 transition cursor-pointer"
+                      className="px-4 py-1.5 bg-[#029757] hover:bg-[#02844c] text-white rounded text-xs font-semibold disabled:opacity-50 transition cursor-pointer"
                     >
                       {forgotLoading ? 'Sending…' : 'Send Code'}
                     </button>
@@ -419,7 +410,7 @@ export default function Login() {
                       maxLength={6}
                       value={forgotOtp}
                       onChange={(e) => setForgotOtp(e.target.value.replace(/\D/g, ''))}
-                      className="w-full border border-slate-300 rounded py-2 text-center font-mono text-base tracking-widest font-semibold focus:outline-none focus:border-[#0c532b]"
+                      className="w-full border border-slate-300 rounded py-2 text-center font-mono text-base tracking-widest font-semibold focus:outline-none focus:border-[#029757]"
                       placeholder="123456"
                       required
                       autoFocus
@@ -435,7 +426,7 @@ export default function Login() {
                         type={showForgotNewPassword ? 'text' : 'password'}
                         value={forgotNewPassword}
                         onChange={(e) => setForgotNewPassword(e.target.value)}
-                        className="w-full border border-slate-300 rounded px-3 py-2 pr-9 text-xs text-slate-900 focus:outline-none focus:border-[#0c532b]"
+                        className="w-full border border-slate-300 rounded px-3 py-2 pr-9 text-xs text-slate-900 focus:outline-none focus:border-[#029757]"
                         placeholder="At least 4 characters"
                         required
                       />
@@ -457,7 +448,7 @@ export default function Login() {
                       type={showForgotNewPassword ? 'text' : 'password'}
                       value={forgotConfirmPassword}
                       onChange={(e) => setForgotConfirmPassword(e.target.value)}
-                      className="w-full border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0c532b]"
+                      className="w-full border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#029757]"
                       placeholder="Re-enter new password"
                       required
                     />
@@ -469,7 +460,7 @@ export default function Login() {
                       type="button"
                       disabled={forgotCountdown > 0 || forgotLoading}
                       onClick={handleSendForgotOtp}
-                      className="font-medium text-[#0c532b] hover:underline disabled:text-slate-400 disabled:no-underline cursor-pointer"
+                      className="font-medium text-[#029757] hover:underline disabled:text-slate-400 disabled:no-underline cursor-pointer"
                     >
                       {forgotCountdown > 0 ? `Resend in ${forgotCountdown}s` : 'Resend'}
                     </button>
@@ -486,7 +477,7 @@ export default function Login() {
                     <button
                       type="submit"
                       disabled={forgotLoading}
-                      className="px-4 py-1.5 bg-[#0c532b] hover:bg-[#073f1f] text-white rounded text-xs font-semibold disabled:opacity-50 transition cursor-pointer"
+                      className="px-4 py-1.5 bg-[#029757] hover:bg-[#02844c] text-white rounded text-xs font-semibold disabled:opacity-50 transition cursor-pointer"
                     >
                       {forgotLoading ? 'Saving…' : 'Save Password'}
                     </button>
@@ -512,7 +503,7 @@ export default function Login() {
                     setUsername(forgotEmail);
                     setPassword('');
                   }}
-                  className="w-full py-2 bg-[#0c532b] hover:bg-[#073f1f] text-white rounded text-xs font-semibold transition cursor-pointer"
+                  className="w-full py-2 bg-[#029757] hover:bg-[#02844c] text-white rounded text-xs font-semibold transition cursor-pointer"
                 >
                   Back to Sign In
                 </button>

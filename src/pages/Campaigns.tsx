@@ -41,21 +41,19 @@ const KIND_NOTE: Record<LeadSourceLabelKind, string> = {
 };
 
 const FBI = (
-  <svg viewBox="0 0 24 24" className="w-[15px] h-[15px]">
-    <path
-      d="M14 8.5V7c0-.8.4-1 1-1h1.5V3H14c-2.5 0-3.5 1.6-3.5 3.7V8.5H8v3h2.5V21h3.5v-9.5h2.4l.6-3z"
-      fill="currentColor"
-      stroke="none"
-    />
-  </svg>
+  <img
+    src="/icons/facebook.png"
+    alt="Facebook"
+    className="w-full h-full object-cover rounded-full"
+  />
 );
 
 const IGI = (
-  <svg viewBox="0 0 24 24" className="w-[15px] h-[15px]">
-    <rect x="4" y="4" width="16" height="16" rx="5" />
-    <circle cx="12" cy="12" r="3.6" />
-    <circle cx="17" cy="7" r=".6" fill="currentColor" />
-  </svg>
+  <img
+    src="/icons/instagram.png"
+    alt="Instagram"
+    className="w-full h-full object-cover rounded-full"
+  />
 );
 
 const CH = (
@@ -564,7 +562,7 @@ export default function Campaigns() {
           --bg:#fff;
           --soft:#f4f5f7;
           --line:#e6e8eb;
-          --text:#172B4D;
+          --text:#1c1e21;
           --muted:#6b6f76;
           --faint:#9a9ea5;
           --blue:#0866ff;
@@ -574,11 +572,10 @@ export default function Campaigns() {
           color-scheme:light;
           background:var(--bg);
           color:var(--text);
-          font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-          font-size:13.5px;
-          line-height:1.45;
+          font-family:system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+          font-size:15px;
+          line-height:1.35;
           -webkit-font-smoothing:antialiased;
-          -moz-osx-font-smoothing:grayscale;
           max-width:480px;
           margin:0 auto;
           min-height:100vh;
@@ -587,8 +584,8 @@ export default function Campaigns() {
         .crm-h * { box-sizing:border-box; }
         .crm-h button { font:inherit; cursor:pointer; color:inherit; }
         .crm-h svg { fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; flex:none; }
-        .crm-h .hd { display:flex; align-items:center; padding:14px 12px 4px 20px; }
-        .crm-h .hd h1 { flex:1; margin:0; font-size:28px; font-weight:700; letter-spacing:-.5px; }
+        .crm-h .hd { display:flex; align-items:center; padding:14px 12px 6px 20px; }
+        .crm-h .hd h1 { flex:1; margin:0; font-size:26px; font-weight:700; letter-spacing:-.4px; }
         .crm-h .ib { width:42px; height:42px; border:0; background:none; border-radius:50%; display:grid; place-items:center; }
         .crm-h .ib svg { width:22px; height:22px; }
         .crm-h .ib:active { background:var(--soft); }
@@ -599,7 +596,7 @@ export default function Campaigns() {
         .crm-h .st { display:grid; grid-template-columns:repeat(4,auto); justify-content:space-between; gap:0; padding:16px 20px 14px; }
         .crm-h .st div { padding-right:8px; }
         .crm-h .st div+div { border-left:1px solid var(--line); padding-left:14px; }
-        .crm-h .st b { display:block; font-size:24px; font-weight:700; letter-spacing:-.5px; line-height:1.1; font-variant-numeric:tabular-nums; }
+        .crm-h .st b { display:block; font-size:24px; font-weight:700; letter-spacing:-.4px; line-height:1.1; font-variant-numeric:tabular-nums; }
         .crm-h .st small { font-size:12px; color:var(--muted); }
         .crm-h .mix { padding:0 20px 14px; border-bottom:8px solid var(--soft); }
         .crm-h .mix p { margin:0 0 7px; font-size:13px; color:var(--muted); }
@@ -614,8 +611,7 @@ export default function Campaigns() {
         .crm-h .row:active { background:var(--soft); }
         .crm-h .row+.row::before { content:""; position:absolute; top:0; left:78px; right:0; border-top:1px solid var(--line); }
         .crm-h .av { position:relative; width:46px; height:46px; flex:none; }
-        .crm-h .av i { position:absolute; width:30px; height:30px; border-radius:50%; display:grid; place-items:center; color:#fff; border:2px solid #fff; }
-        .crm-h .av i svg { width:15px; height:15px; stroke-width:2; }
+        .crm-h .av i { position:absolute; width:30px; height:30px; border-radius:50%; display:grid; place-items:center; background:#fff; border:1px solid #e6e8eb; box-shadow:0 1px 3px rgba(0,0,0,0.08); overflow:hidden; }
         .crm-h .av .a { left:0; top:0; }
         .crm-h .av .b { right:0; bottom:0; }
         .crm-h .av.one i { left:8px; top:8px; width:30px; height:30px; }
@@ -881,13 +877,13 @@ export default function Campaigns() {
               </div>
               <div className="kv">
                 <div>
-                  <i style={{ background: 'var(--fb)' }}></i>
+                  <img src="/icons/facebook.png" alt="Facebook" className="w-[18px] h-[18px] rounded-full object-cover shrink-0" />
                   <span>Facebook</span>
                   <b>{selectedDetail.fb}</b>
                   <em>{pc(selectedDetail.fb, tot(selectedDetail))}%</em>
                 </div>
                 <div>
-                  <i style={{ background: 'var(--ig)' }}></i>
+                  <img src="/icons/instagram.png" alt="Instagram" className="w-[18px] h-[18px] rounded-full object-cover shrink-0" />
                   <span>Instagram</span>
                   <b>{selectedDetail.ig}</b>
                   <em>{pc(selectedDetail.ig, tot(selectedDetail))}%</em>

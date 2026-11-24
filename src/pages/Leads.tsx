@@ -172,7 +172,7 @@ const MIN_COLUMN_WIDTH = 70;
 const MAX_COLUMN_WIDTH = 640;
 
 let textMeasureCtx: CanvasRenderingContext2D | null = null;
-function measureTextPx(text: string, font = '500 13px "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif'): number {
+function measureTextPx(text: string, font = '500 13px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'): number {
   if (!text) return 0;
   if (typeof document === 'undefined') return text.length * 7;
   if (!textMeasureCtx) {
@@ -2280,10 +2280,7 @@ export default function Leads() {
                               showMobileToast(`Opening WhatsApp for ${candidateName}…`);
                             }}
                           >
-                            <svg viewBox="0 0 24 24">
-                              <path d="M4 20l1.3-4.2A8 8 0 1112 20a8 8 0 01-3.8-1z" />
-                              <path d="M9 9c0 3 3 6 6 6l1-1.5-2-1-1 .7a4 4 0 01-2-2l.7-1-1-2z" />
-                            </svg>
+                            <img src="/icons/whatsapp.png" alt="WhatsApp" className="w-[22px] h-[22px] object-contain" />
                           </a>
                           <a
                             className="c"
@@ -2294,9 +2291,7 @@ export default function Leads() {
                               showMobileToast(`Calling ${displayPhone || cleanPhone}…`);
                             }}
                           >
-                            <svg viewBox="0 0 24 24">
-                              <path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z" />
-                            </svg>
+                            <img src="/icons/phone.png" alt="Call" className="w-[22px] h-[22px] object-contain" />
                           </a>
                         </>
                       ) : null}
@@ -2327,10 +2322,9 @@ export default function Leads() {
               setModalTab('single');
               setShowAddModal(true);
             }}
+            style={{ padding: 0, overflow: 'hidden', background: 'none', border: 0 }}
           >
-            <svg viewBox="0 0 24 24">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
+            <img src="/icons/plus-fab.png" alt="Add lead" className="w-full h-full object-cover" />
           </button>
 
           {/* Bottom Filter Sheet */}
@@ -3112,16 +3106,16 @@ export default function Leads() {
                                     target="_blank"
                                     rel="noreferrer"
                                     title="WhatsApp Direct Chat"
-                                    className="w-7 h-7 rounded-lg flex items-center justify-center text-[#8e8e93] hover:text-[#34c759] hover:bg-[#34c759]/10 transition-colors"
+                                    className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-emerald-50 transition-colors"
                                   >
-                                    <MessageCircle size={14} />
+                                    <img src="/icons/whatsapp.png" alt="WhatsApp" className="w-4 h-4 object-contain" />
                                   </a>
                                   <a
                                     href={`tel:${lead.phoneNumber}`}
                                     title="Call Candidate"
-                                    className="w-7 h-7 rounded-lg flex items-center justify-center text-[#8e8e93] hover:text-[#007aff] hover:bg-[#007aff]/10 transition-colors"
+                                    className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-blue-50 transition-colors"
                                   >
-                                    <Phone size={14} />
+                                    <img src="/icons/phone.png" alt="Call" className="w-4 h-4 object-contain" />
                                   </a>
                                 </>
                               )}
@@ -3478,15 +3472,15 @@ export default function Leads() {
                           rel="noreferrer"
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold shadow-2xs transition-colors"
                         >
-                          <MessageCircle size={13} />
+                          <img src="/icons/whatsapp.png" alt="WhatsApp" className="w-3.5 h-3.5 object-contain" />
                           <span>WhatsApp</span>
                         </a>
                         <a
                           href={`tel:${dossierLead.phoneNumber}`}
-                          className="p-1.5 text-slate-700 hover:bg-slate-200/80 rounded-lg border border-slate-300 transition-colors"
+                          className="p-1.5 text-slate-700 hover:bg-slate-200/80 rounded-lg border border-slate-300 transition-colors flex items-center justify-center"
                           title="Call phone"
                         >
-                          <Phone size={14} />
+                          <img src="/icons/phone.png" alt="Call" className="w-3.5 h-3.5 object-contain" />
                         </a>
                       </>
                     )}

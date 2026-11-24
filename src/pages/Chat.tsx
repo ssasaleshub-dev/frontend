@@ -22,12 +22,18 @@ export default function Chat() {
   const [isMobileOpen, setIsMobileOpen] = useState<boolean>(false);
 
   useEffect(() => {
-    if (isMobileOpen) {
-      document.body.classList.add('chat-conversation-open');
-    } else {
-      document.body.classList.remove('chat-conversation-open');
-    }
+    const updateBodyClass = () => {
+      if (isMobileOpen && typeof window !== 'undefined' && window.innerWidth < 768) {
+        document.body.classList.add('chat-conversation-open');
+      } else {
+        document.body.classList.remove('chat-conversation-open');
+      }
+    };
+
+    updateBodyClass();
+    window.addEventListener('resize', updateBodyClass);
     return () => {
+      window.removeEventListener('resize', updateBodyClass);
       document.body.classList.remove('chat-conversation-open');
     };
   }, [isMobileOpen]);
@@ -630,7 +636,15 @@ export default function Chat() {
                         {isFirst && !me && cur === 'all' && (
                           <div className="nm">{m.userName || m.userLogin}</div>
                         )}
-                        <div className="bb">
+                        <div
+                          className="bb select-none transition-transform active:scale-[0.99] cursor-pointer"
+                          onContextMenu={(e) => handleContextMenu(e, m)}
+                          onTouchStart={(e) => handleTouchStart(e, m)}
+                          onTouchMove={handleTouchMove}
+                          onTouchEnd={handleTouchEnd}
+                          onTouchCancel={handleTouchEnd}
+                          title="Right-click or hold to delete"
+                        >
                           {m.mediaUrl && isImageMedia(m) && (
                             <img
                               src={m.mediaUrl}
@@ -824,6 +838,113 @@ export default function Chat() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Message Context Menu: Desktop Floating Menu & Mobile Action Sheet */}
+      {activeContextMenu && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-[99990] bg-black/25 backdrop-blur-[1px]"
+            onClick={() => setActiveContextMenu(null)}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setActiveContextMenu(null);
+            }}
+          />
+
+          {/* Desktop Right-Click Floating Context Menu */}
+          {!activeContextMenu.isMobileSheet ? (
+            <div
+              className="fixed z-[99995] bg-white rounded-lg shadow-2xl border border-slate-200 py-1 min-w-[160px] text-xs font-medium text-slate-700 animate-in fade-in zoom-in-95 duration-100 select-none"
+              style={{
+                left: `${activeContextMenu.x}px`,
+                top: `${activeContextMenu.y}px`,
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {activeContextMenu.message.content && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(activeContextMenu.message.content || '');
+                    setActiveContextMenu(null);
+                  }}
+                  className="w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center gap-2 text-slate-700 transition cursor-pointer"
+                >
+                  <Copy size={13} className="text-slate-400" />
+                  <span>Copy Text</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => handleDeleteMessage(activeContextMenu.message)}
+                disabled={deletingId === activeContextMenu.message.id}
+                className="w-full px-3 py-2 text-left hover:bg-red-50 flex items-center gap-2 text-red-600 transition cursor-pointer font-semibold border-t border-slate-100"
+              >
+                <Trash2 size={13} className="text-red-500" />
+                <span>
+                  {deletingId === activeContextMenu.message.id ? 'Deleting…' : 'Delete Message'}
+                </span>
+              </button>
+            </div>
+          ) : (
+            /* Mobile Long-Press Bottom Action Sheet */
+            <div className="fixed inset-0 z-[99995] flex items-end justify-center p-3 pointer-events-none select-none">
+              <div
+                className="w-full max-w-sm bg-white rounded-2xl overflow-hidden shadow-2xl animate-in slide-in-from-bottom duration-200 pointer-events-auto text-xs"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Grab handle & snippet */}
+                <div className="pt-2.5 pb-2 px-4 bg-slate-50 border-b border-slate-100 text-center">
+                  <div className="w-8 h-1 rounded-full bg-slate-300 mx-auto mb-2" />
+                  <p className="text-[11px] text-slate-500 truncate max-w-xs mx-auto">
+                    {activeContextMenu.message.content ||
+                      (activeContextMenu.message.mediaUrl ? 'Attachment' : 'Message')}
+                  </p>
+                </div>
+
+                <div className="divide-y divide-slate-100">
+                  {activeContextMenu.message.content && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(activeContextMenu.message.content || '');
+                        setActiveContextMenu(null);
+                      }}
+                      className="w-full py-3.5 flex items-center justify-center gap-2 font-medium text-slate-800 hover:bg-slate-50 active:bg-slate-100 transition cursor-pointer"
+                    >
+                      <Copy size={15} className="text-slate-500" />
+                      <span>Copy Text</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteMessage(activeContextMenu.message)}
+                    disabled={deletingId === activeContextMenu.message.id}
+                    className="w-full py-3.5 flex items-center justify-center gap-2 font-bold text-red-600 hover:bg-red-50 active:bg-red-100 transition cursor-pointer"
+                  >
+                    <Trash2 size={15} className="text-red-500" />
+                    <span>
+                      {deletingId === activeContextMenu.message.id ? 'Deleting…' : 'Delete Message'}
+                    </span>
+                  </button>
+                </div>
+
+                <div className="p-2 bg-slate-50 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setActiveContextMenu(null)}
+                    className="w-full py-2.5 rounded-xl bg-white border border-slate-200 font-semibold text-slate-700 hover:bg-slate-100 active:scale-98 transition cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </>
   );

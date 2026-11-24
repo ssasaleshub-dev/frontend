@@ -300,14 +300,22 @@ export default function Layout() {
       : []),
   ];
 
+  const HomeNavIcon: React.FC<{ size?: number; className?: string; strokeWidth?: number }> = ({ size = 20, className }) => (
+    <img src="/icons/home.png" alt="Home" className={className || ''} style={{ width: size, height: size, objectFit: 'contain' }} />
+  );
+
+  const ProfileNavIcon: React.FC<{ size?: number; className?: string; strokeWidth?: number }> = ({ size = 20, className }) => (
+    <img src="/icons/profile.png" alt="Profile" className={className || ''} style={{ width: size, height: size, objectFit: 'contain' }} />
+  );
+
   // Bottom nav items — core tabs for mobile thumb-zone (Notification bell is in top header)
   const bottomNavItems = [
-    { id: 'dashboards', label: 'Home', icon: LayoutDashboard, to: '/', exact: true },
+    { id: 'dashboards', label: 'Home', icon: HomeNavIcon as any, to: '/', exact: true },
     { id: 'leads', label: 'Leads', icon: Users, to: '/leads', exact: false },
     { id: 'campaigns', label: 'Campaigns', icon: BarChart3, to: '/campaigns', exact: false },
     { id: 'chat', label: 'Chat', icon: MessageSquare, to: '/chat', exact: false },
     { id: 'calendar', label: 'Calendar', icon: Calendar, to: '/calendar', exact: false },
-    { id: 'profile', label: 'Profile', icon: User, to: '/profile', exact: false },
+    { id: 'profile', label: 'Profile', icon: ProfileNavIcon as any, to: '/profile', exact: false },
   ];
 
   const getPageInfo = () => {
@@ -324,7 +332,7 @@ export default function Layout() {
     if (currentPath.startsWith('/users')) return { title: 'Team & Permissions', subtitle: 'Manage counselor assignments, roles, and access desks' };
     if (currentPath.startsWith('/reports')) return { title: 'Executive Reports & Analytics' };
     if (currentPath.startsWith('/biometrics')) return { title: 'Biometric Approvals' };
-    return { title: 'SSA CRM', subtitle: 'Work & Study Visa Consultancy' };
+    return { title: 'SSA SalesHub CRM', subtitle: 'Work & Study Visa Consultancy' };
   };
 
   const pageInfo = getPageInfo();
@@ -344,7 +352,7 @@ export default function Layout() {
         <div className="md:hidden bg-white text-slate-900 px-4 py-3 flex items-center justify-between sticky top-0 z-40 border-b border-black/[0.08] shadow-2xs">
           <div className="flex items-center gap-2.5">
             <img src={brandLogo} alt="SSA Logo" className="w-8 h-8 rounded-xl object-cover shadow-xs border border-black/[0.06]" />
-            <h1 className="font-bold text-sm tracking-tight text-slate-900 leading-tight">SSA CRM</h1>
+            <h1 className="font-bold text-sm tracking-tight text-slate-900 leading-tight">SSA SalesHub CRM</h1>
           </div>
           <div className="flex items-center gap-1.5">
             <NotificationBell />
@@ -363,7 +371,7 @@ export default function Layout() {
             <button
               onClick={() => navigate('/')}
               className="flex items-center gap-3 text-left focus:outline-none group min-w-0"
-              title="SSA CRM - Home"
+              title="SSA SalesHub CRM - Home"
             >
               <img
                 src={brandLogo}
@@ -373,7 +381,7 @@ export default function Layout() {
               {!sidebarCollapsed && (
                 <div className="min-w-0">
                   <h2 className="font-bold text-sm tracking-tight text-white truncate leading-tight">
-                    SSA CRM
+                    SSA SalesHub CRM
                   </h2>
                 </div>
               )}
