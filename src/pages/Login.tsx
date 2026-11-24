@@ -144,192 +144,215 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col md:flex-row bg-[#f2f2f7] font-sans text-[#1c1c1e] antialiased">
-      {/* LEFT SIDE: Brand Showcase & Logo Panel */}
-      <div className="hidden md:flex md:w-5/12 lg:w-1/2 bg-white/80 border-r border-black/[0.06] p-8 lg:p-14 flex-col justify-between relative overflow-hidden backdrop-blur-2xl">
-        {/* Soft Ambient Radial Background Highlights */}
-        <div className="absolute -top-32 -left-32 w-96 h-96 bg-[#007aff]/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-[#34c759]/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-[#f0f2f5] font-sans text-[#172B4D] antialiased">
+      {/* ── CENTERED 2-COLUMN UNIFIED CARD ── */}
+      <div className="w-full max-w-4xl bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.12)] border border-slate-200/90 overflow-hidden grid grid-cols-1 md:grid-cols-2">
+        {/* LEFT COLUMN: Deep Branded SSA Panel with Network Mesh */}
+        <div className="relative bg-gradient-to-br from-[#0c532b] via-[#063f1f] to-[#022411] text-white p-8 sm:p-10 flex flex-col justify-between items-center text-center overflow-hidden min-h-[360px] md:min-h-[540px]">
+          {/* Subtle Geometric Network Constellation Background */}
+          <svg
+            className="absolute inset-0 w-full h-full opacity-25 pointer-events-none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <defs>
+              <pattern id="network-mesh" width="100" height="100" patternUnits="userSpaceOnUse">
+                <circle cx="15" cy="15" r="2" fill="#a7f3d0" />
+                <circle cx="85" cy="45" r="2" fill="#a7f3d0" />
+                <circle cx="45" cy="85" r="2" fill="#a7f3d0" />
+                <line x1="15" y1="15" x2="85" y2="45" stroke="#ffffff" strokeWidth="0.8" />
+                <line x1="85" y1="45" x2="45" y2="85" stroke="#ffffff" strokeWidth="0.8" />
+                <line x1="45" y1="85" x2="15" y2="15" stroke="#ffffff" strokeWidth="0.8" />
+                <line x1="15" y1="15" x2="100" y2="15" stroke="#ffffff" strokeWidth="0.5" strokeDasharray="3 3" />
+                <line x1="85" y1="45" x2="100" y2="70" stroke="#ffffff" strokeWidth="0.5" strokeDasharray="3 3" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#network-mesh)" />
+          </svg>
 
-        {/* Brand Centerpiece */}
-        <div className="relative z-10 my-auto py-8">
-          <div className="flex items-center gap-4 mb-5">
-            <img
-              src={brandLogo}
-              alt="SSA Logo"
-              className="w-20 h-20 lg:w-24 lg:h-24 rounded-[26px] object-cover shadow-[0_8px_30px_rgba(0,0,0,0.12)] border border-black/[0.08]"
-            />
+          {/* Top spacer */}
+          <div className="hidden md:block"></div>
+
+          {/* Center Brand Grouping */}
+          <div className="my-auto relative z-10 flex flex-col items-center">
+            {/* White Circular Brand Emblem - Prominent & Bigger */}
+            <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full bg-white p-3 sm:p-3.5 shadow-[0_12px_40px_rgba(0,0,0,0.4)] flex items-center justify-center mb-5 border-4 border-white/90 ring-4 ring-emerald-500/25">
+              <img
+                src={brandLogo}
+                alt="SSA Career Solutions"
+                className="w-full h-full object-cover rounded-full"
+              />
+            </div>
+
+            {/* Internal Access Badge */}
+            <span className="inline-block px-3 py-1 rounded-full bg-[#022411]/70 border border-emerald-400/30 text-[10px] font-bold uppercase tracking-wider text-emerald-200 mb-2">
+              Authorized Staff Only
+            </span>
+
+            {/* Company Name */}
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white mb-1">
+              SSA Career Solutions
+            </h2>
+
+            {/* Department / Internal Subtitle */}
+            <p className="text-xs uppercase tracking-widest font-bold text-amber-300/90 mb-3">
+              Internal CRM & Operations Desk
+            </p>
+
+            {/* Internal Notice Description */}
+            <p className="text-xs text-emerald-100/80 max-w-xs leading-relaxed font-normal">
+              Internal operations system for SSA counselors, admissions officers, and visa processing staff. Strictly for authorized use.
+            </p>
+          </div>
+
+          {/* Footer Copyright */}
+          <div className="relative z-10 text-[11px] text-emerald-200/60 pt-4">
+            © 2026 SSA Careers · Internal System
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: Clean Sign In Form */}
+        <div className="p-8 sm:p-10 lg:p-12 flex flex-col justify-center bg-white">
+          <div className="text-center mb-6">
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight">
+              Staff Sign In
+            </h1>
+            <p className="text-xs text-slate-500 mt-1.5">
+              Enter your credentials to access your internal desk
+            </p>
+          </div>
+
+          {error && (
+            <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2 font-medium">
+              <AlertCircle size={15} className="shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+            {/* Username / Email Field */}
             <div>
-              <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-[#1c1c1e] leading-tight">
-                SSA CRM
-              </h1>
-              <p className="text-xs lg:text-sm font-medium text-[#8e8e93] mt-0.5">
-                Overseas Work & Study Visa Consultancy
-              </p>
-            </div>
-          </div>
-
-          <p className="text-xs lg:text-sm text-[#3c3c43] font-normal leading-relaxed max-w-md">
-            Integrated counselor command center for international student admissions, employment visas, and role-scoped pipeline governance.
-          </p>
-        </div>
-
-        {/* Footer Brand Info */}
-        <div className="relative z-10 flex items-center justify-end text-[11px] text-[#8e8e93] pt-4 border-t border-black/[0.05]">
-          <span>© 2026 SSA Careers</span>
-        </div>
-      </div>
-
-      {/* RIGHT SIDE: Login ID & Password Form */}
-      <div className="flex-1 flex items-center justify-center p-4 sm:p-8 lg:p-12">
-        <div className="w-full max-w-md">
-          {/* Mobile-Only Header Brand */}
-          <div className="md:hidden text-center mb-6">
-            <img
-              src={brandLogo}
-              alt="SSA Logo"
-              className="inline-block w-14 h-14 rounded-2xl object-cover shadow-xs border border-black/[0.08] mb-2.5"
-            />
-            <h1 className="text-xl font-bold text-[#1c1c1e] tracking-tight">SSA CRM</h1>
-            <p className="text-xs text-[#8e8e93]">Overseas Visa Consultancy</p>
-          </div>
-
-          {/* Login Card Container */}
-          <div className="ios-card p-6 sm:p-8 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-black/[0.07]">
-            <div className="pb-4 mb-5 border-b border-black/[0.06]">
-              <h2 className="text-base sm:text-lg font-bold text-[#1c1c1e] tracking-tight">
-                Sign in
-              </h2>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                Staff Username or Email <span className="text-red-500">*</span>
+              </label>
+              <div className="relative flex items-center">
+                <div className="absolute left-3.5 flex items-center pointer-events-none text-slate-400">
+                  <User size={15} />
+                </div>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  style={{ paddingLeft: '2.5rem' }}
+                  className="w-full pr-3 py-2.5 text-xs font-medium text-slate-800 bg-[#f8fafc] border border-slate-300 rounded-lg focus:bg-white focus:outline-none focus:border-[#0c532b] focus:ring-1 focus:ring-[#0c532b] transition"
+                  placeholder="e.g. kavin"
+                  required
+                  autoComplete="username"
+                />
+              </div>
             </div>
 
-            {error && (
-              <div className="mb-4 p-3.5 rounded-2xl bg-[#ff3b30]/10 border border-[#ff3b30]/20 text-xs text-[#ff3b30] flex items-start gap-2.5 font-medium animate-in fade-in">
-                <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-              {/* Username Input with guaranteed icon clearance */}
-              <div>
-                <label className="block text-xs font-semibold text-[#1c1c1e] mb-1.5">
-                  Username or Email ID <span className="text-[#ff3b30]">*</span>
-                </label>
-                <div className="relative flex items-center">
-                  <div className="absolute left-3.5 flex items-center pointer-events-none text-[#8e8e93]">
-                    <User size={16} />
-                  </div>
-                  <input
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    style={{ paddingLeft: '2.75rem' }}
-                    className="ios-input ios-input-icon-left w-full pr-3 py-2.5 text-xs font-medium"
-                    required
-                    autoComplete="username"
-                  />
+            {/* Password Field */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                Password <span className="text-red-500">*</span>
+              </label>
+              <div className="relative flex items-center">
+                <div className="absolute left-3.5 flex items-center pointer-events-none text-slate-400">
+                  <Lock size={15} />
                 </div>
-              </div>
-
-              {/* Password Input with guaranteed clearance & show/hide toggle */}
-              <div>
-                <label className="block text-xs font-semibold text-[#1c1c1e] mb-1.5">
-                  Password <span className="text-[#ff3b30]">*</span>
-                </label>
-                <div className="relative flex items-center">
-                  <div className="absolute left-3.5 flex items-center pointer-events-none text-[#8e8e93]">
-                    <Lock size={16} />
-                  </div>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    style={{ paddingLeft: '2.75rem', paddingRight: '2.75rem' }}
-                    className="ios-input ios-input-icon-both w-full py-2.5 text-xs font-medium"
-                    required
-                    autoComplete="current-password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 p-1 text-[#8e8e93] hover:text-[#1c1c1e] transition-colors focus:outline-none"
-                    title={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Remember Me & Forgot Password Option */}
-              <div className="flex items-center justify-between pt-1">
-                <label className="flex items-center gap-2 cursor-pointer text-[#3c3c43] font-medium select-none">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 rounded border-black/20 text-[#007aff] focus:ring-[#007aff] cursor-pointer"
-                  />
-                  <span>Remember my login</span>
-                </label>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  style={{ paddingLeft: '2.5rem', paddingRight: '2.5rem' }}
+                  className="w-full py-2.5 text-xs font-medium text-slate-800 bg-[#f8fafc] border border-slate-300 rounded-lg focus:bg-white focus:outline-none focus:border-[#0c532b] focus:ring-1 focus:ring-[#0c532b] transition"
+                  placeholder="••••••••"
+                  required
+                  autoComplete="current-password"
+                />
                 <button
                   type="button"
-                  onClick={handleOpenForgotModal}
-                  className="text-xs font-semibold text-[#007aff] hover:underline focus:outline-none"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 p-1 text-slate-400 hover:text-slate-700 transition cursor-pointer"
+                  title={showPassword ? 'Hide password' : 'Show password'}
                 >
-                  Forgot password?
+                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
+            </div>
 
-              {/* Submit Button */}
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-3 px-4 ios-btn-primary rounded-xl text-xs font-semibold disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_2px_10px_rgba(0,122,255,0.32)] active:scale-[0.99] transition-all"
-                >
-                  {loading ? (
-                    <>
-                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Verifying credentials...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Sign In to CRM</span>
-                      <ArrowRight size={14} />
-                    </>
-                  )}
-                </button>
-              </div>
+            {/* Remember Me & Forgot Password */}
+            <div className="flex items-center justify-between pt-1">
+              <label className="flex items-center gap-2 cursor-pointer text-slate-600 font-medium select-none text-xs">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-300 text-[#0c532b] focus:ring-[#0c532b] cursor-pointer accent-[#0c532b]"
+                />
+                <span>Remember Me</span>
+              </label>
+              <button
+                type="button"
+                onClick={handleOpenForgotModal}
+                className="text-xs font-semibold text-[#0c532b] hover:underline focus:outline-none cursor-pointer"
+              >
+                Forgot password?
+              </button>
+            </div>
 
-              <div className="text-center pt-2">
-                <a
-                  href="/privacy"
-                  className="text-[11px] text-[#8e8e93] hover:text-[#1c1c1e] transition underline underline-offset-2"
-                >
-                  Privacy Policy
-                </a>
-              </div>
-            </form>
-          </div>
+            {/* Submit Button */}
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-2.5 px-4 bg-[#0c532b] hover:bg-[#073f1f] text-white rounded-lg text-xs font-bold disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm transition active:scale-[0.99] cursor-pointer"
+              >
+                {loading ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Signing in...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>→ LOGIN TO DESK</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            <div className="text-center pt-2">
+              <p className="text-[11px] text-slate-400">
+                Restricted portal for SSA internal personnel only.
+              </p>
+            </div>
+          </form>
         </div>
       </div>
       {/* FORGOT PASSWORD MODAL */}
       {showForgotModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full border border-black/[0.08] p-6 relative overflow-hidden animate-in zoom-in-95 duration-200 text-xs">
-            {/* Close Button */}
-            <button
-              type="button"
-              onClick={handleCloseForgotModal}
-              className="absolute top-5 right-5 p-1.5 rounded-full text-[#8e8e93] hover:text-[#1c1c1e] hover:bg-black/5 transition-colors"
-            >
-              <X size={18} />
-            </button>
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full border border-slate-200 p-5 relative text-xs">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 mb-3">
+              <h3 className="text-sm font-semibold text-slate-900">
+                {forgotStep === 1 && 'Reset Password'}
+                {forgotStep === 2 && 'Verify Code'}
+                {forgotStep === 3 && 'Password Changed'}
+              </h3>
+              <button
+                type="button"
+                onClick={handleCloseForgotModal}
+                className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
 
             {/* Error Banner */}
             {forgotError && (
-              <div className="mb-4 p-3 rounded-xl bg-[#ff3b30]/10 border border-[#ff3b30]/20 text-xs text-[#ff3b30] flex items-start gap-2 font-medium">
-                <AlertCircle size={15} className="shrink-0 mt-0.5" />
+              <div className="mb-3 p-2.5 rounded bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2">
+                <AlertCircle size={14} className="shrink-0 mt-0.5" />
                 <span>{forgotError}</span>
               </div>
             )}
@@ -337,66 +360,40 @@ export default function Login() {
             {/* STEP 1: Enter Username or Email */}
             {forgotStep === 1 && (
               <div>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-2xl bg-[#007aff]/10 flex items-center justify-center text-[#007aff] shrink-0">
-                    <KeyRound size={20} />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold text-[#1c1c1e] tracking-tight">Forgot Password</h3>
-                    <p className="text-[11px] text-[#8e8e93]">Recover access to your account</p>
-                  </div>
-                </div>
-
-                <p className="text-xs text-[#64748b] mb-4 leading-relaxed">
-                  Enter your registered username or email address. We will send a 6-digit verification code to reset your password.
+                <p className="text-xs text-slate-600 mb-3">
+                  Enter your username or email to receive a reset code.
                 </p>
 
-                <form onSubmit={handleSendForgotOtp} className="space-y-4">
+                <form onSubmit={handleSendForgotOtp} className="space-y-3">
                   <div>
-                    <label className="block text-xs font-semibold text-[#1c1c1e] mb-1.5">
-                      Username or Email <span className="text-[#ff3b30]">*</span>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      Username or Email
                     </label>
-                    <div className="relative flex items-center">
-                      <div className="absolute left-3.5 flex items-center pointer-events-none text-[#8e8e93]">
-                        <Mail size={16} />
-                      </div>
-                      <input
-                        type="text"
-                        value={forgotEmail}
-                        onChange={(e) => setForgotEmail(e.target.value)}
-                        style={{ paddingLeft: '2.75rem' }}
-                        className="ios-input ios-input-icon-left w-full pr-3 py-2.5 text-xs font-medium"
-                        placeholder="e.g. counselor@ssacareers.com"
-                        required
-                        autoFocus
-                      />
-                    </div>
+                    <input
+                      type="text"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      className="w-full border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#0c532b]"
+                      placeholder="e.g. kavin"
+                      required
+                      autoFocus
+                    />
                   </div>
 
-                  <div className="pt-2 flex items-center gap-2">
+                  <div className="pt-2 flex items-center justify-end gap-2">
                     <button
                       type="button"
                       onClick={handleCloseForgotModal}
-                      className="w-1/3 py-2.5 px-3 rounded-xl border border-black/10 text-xs font-semibold text-[#64748b] hover:bg-black/5 transition"
+                      className="px-3 py-1.5 rounded border border-slate-300 text-xs font-medium text-slate-700 hover:bg-slate-50 transition cursor-pointer"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={forgotLoading}
-                      className="flex-1 py-2.5 px-4 ios-btn-primary rounded-xl text-xs font-semibold disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_2px_10px_rgba(0,122,255,0.32)] transition"
+                      className="px-4 py-1.5 bg-[#0c532b] hover:bg-[#073f1f] text-white rounded text-xs font-semibold disabled:opacity-50 transition cursor-pointer"
                     >
-                      {forgotLoading ? (
-                        <>
-                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          <span>Sending code…</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>Send Code</span>
-                          <ArrowRight size={14} />
-                        </>
-                      )}
+                      {forgotLoading ? 'Sending…' : 'Send Code'}
                     </button>
                   </div>
                 </form>
@@ -406,31 +403,14 @@ export default function Login() {
             {/* STEP 2: Enter 6-digit OTP and New Password */}
             {forgotStep === 2 && (
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setForgotStep(1);
-                      setForgotError('');
-                    }}
-                    className="p-1 rounded-lg text-[#8e8e93] hover:text-[#1c1c1e] hover:bg-black/5 -ml-1"
-                  >
-                    <ChevronLeft size={18} />
-                  </button>
-                  <div>
-                    <h3 className="text-base font-bold text-[#1c1c1e] tracking-tight">Enter Verification Code</h3>
-                    <p className="text-[11px] text-[#8e8e93]">Code sent to registered email</p>
-                  </div>
-                </div>
+                <p className="text-xs text-slate-600 mb-3">
+                  We sent a 6-digit code to <strong className="text-slate-800">{forgotEmail}</strong>.
+                </p>
 
-                <div className="mb-4 p-3 rounded-xl bg-blue-50/70 border border-blue-100 text-xs text-blue-900 leading-relaxed">
-                  We've sent a 6-digit code to <strong>{forgotEmail}</strong>. Code expires in 15 minutes.
-                </div>
-
-                <form onSubmit={handleFinishResetPassword} className="space-y-3.5">
+                <form onSubmit={handleFinishResetPassword} className="space-y-3">
                   <div>
-                    <label className="block text-xs font-semibold text-[#1c1c1e] mb-1.5">
-                      6-Digit OTP Code <span className="text-[#ff3b30]">*</span>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      Verification Code
                     </label>
                     <input
                       type="text"
@@ -439,7 +419,7 @@ export default function Login() {
                       maxLength={6}
                       value={forgotOtp}
                       onChange={(e) => setForgotOtp(e.target.value.replace(/\D/g, ''))}
-                      className="ios-input w-full py-2.5 text-center font-mono text-xl tracking-[8px] font-bold"
+                      className="w-full border border-slate-300 rounded py-2 text-center font-mono text-base tracking-widest font-semibold focus:outline-none focus:border-[#0c532b]"
                       placeholder="123456"
                       required
                       autoFocus
@@ -447,78 +427,68 @@ export default function Login() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-[#1c1c1e] mb-1.5">
-                      New Password <span className="text-[#ff3b30]">*</span>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      New Password
                     </label>
                     <div className="relative flex items-center">
-                      <div className="absolute left-3.5 flex items-center pointer-events-none text-[#8e8e93]">
-                        <Lock size={15} />
-                      </div>
                       <input
                         type={showForgotNewPassword ? 'text' : 'password'}
                         value={forgotNewPassword}
                         onChange={(e) => setForgotNewPassword(e.target.value)}
-                        style={{ paddingLeft: '2.5rem', paddingRight: '2.5rem' }}
-                        className="ios-input w-full py-2.5 text-xs font-medium"
+                        className="w-full border border-slate-300 rounded px-3 py-2 pr-9 text-xs text-slate-900 focus:outline-none focus:border-[#0c532b]"
                         placeholder="At least 4 characters"
                         required
                       />
                       <button
                         type="button"
                         onClick={() => setShowForgotNewPassword(!showForgotNewPassword)}
-                        className="absolute right-3 p-1 text-[#8e8e93] hover:text-[#1c1c1e]"
+                        className="absolute right-2.5 p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
                       >
-                        {showForgotNewPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                        {showForgotNewPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                       </button>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-[#1c1c1e] mb-1.5">
-                      Confirm New Password <span className="text-[#ff3b30]">*</span>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      Confirm New Password
                     </label>
-                    <div className="relative flex items-center">
-                      <div className="absolute left-3.5 flex items-center pointer-events-none text-[#8e8e93]">
-                        <Lock size={15} />
-                      </div>
-                      <input
-                        type={showForgotNewPassword ? 'text' : 'password'}
-                        value={forgotConfirmPassword}
-                        onChange={(e) => setForgotConfirmPassword(e.target.value)}
-                        style={{ paddingLeft: '2.5rem' }}
-                        className="ios-input w-full py-2.5 text-xs font-medium"
-                        placeholder="Re-enter new password"
-                        required
-                      />
-                    </div>
+                    <input
+                      type={showForgotNewPassword ? 'text' : 'password'}
+                      value={forgotConfirmPassword}
+                      onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                      className="w-full border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0c532b]"
+                      placeholder="Re-enter new password"
+                      required
+                    />
                   </div>
 
-                  <div className="flex items-center justify-between text-[11px] pt-1">
-                    <span className="text-[#8e8e93]">Didn't get the code?</span>
+                  <div className="flex items-center justify-between text-xs pt-1">
+                    <span className="text-slate-500">Didn't get the code?</span>
                     <button
                       type="button"
                       disabled={forgotCountdown > 0 || forgotLoading}
                       onClick={handleSendForgotOtp}
-                      className="font-semibold text-[#007aff] hover:underline disabled:text-[#8e8e93] disabled:no-underline"
+                      className="font-medium text-[#0c532b] hover:underline disabled:text-slate-400 disabled:no-underline cursor-pointer"
                     >
-                      {forgotCountdown > 0 ? `Resend in ${forgotCountdown}s` : 'Resend Code'}
+                      {forgotCountdown > 0 ? `Resend in ${forgotCountdown}s` : 'Resend'}
                     </button>
                   </div>
 
-                  <div className="pt-2">
+                  <div className="pt-2 flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setForgotStep(1)}
+                      className="px-3 py-1.5 rounded border border-slate-300 text-xs font-medium text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+                    >
+                      Back
+                    </button>
                     <button
                       type="submit"
                       disabled={forgotLoading}
-                      className="w-full py-2.5 px-4 ios-btn-primary rounded-xl text-xs font-semibold disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_2px_10px_rgba(0,122,255,0.32)] transition"
+                      className="px-4 py-1.5 bg-[#0c532b] hover:bg-[#073f1f] text-white rounded text-xs font-semibold disabled:opacity-50 transition cursor-pointer"
                     >
-                      {forgotLoading ? (
-                        <>
-                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          <span>Resetting password…</span>
-                        </>
-                      ) : (
-                        <span>Set New Password</span>
-                      )}
+                      {forgotLoading ? 'Saving…' : 'Save Password'}
                     </button>
                   </div>
                 </form>
@@ -527,13 +497,13 @@ export default function Login() {
 
             {/* STEP 3: Success Screen */}
             {forgotStep === 3 && (
-              <div className="text-center py-4">
-                <div className="w-14 h-14 rounded-full bg-green-100 text-green-600 flex items-center justify-center mx-auto mb-3">
-                  <CheckCircle2 size={32} />
+              <div className="text-center py-3">
+                <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-2">
+                  <CheckCircle2 size={22} />
                 </div>
-                <h3 className="text-base font-bold text-[#1c1c1e] mb-1">Password Changed Successfully!</h3>
-                <p className="text-xs text-[#64748b] max-w-xs mx-auto mb-6">
-                  Your account password has been updated. You can now log in with your new password.
+                <h4 className="text-sm font-semibold text-slate-900 mb-1">Password Changed</h4>
+                <p className="text-xs text-slate-600 mb-4">
+                  You can now sign in with your new password.
                 </p>
                 <button
                   type="button"
@@ -542,9 +512,9 @@ export default function Login() {
                     setUsername(forgotEmail);
                     setPassword('');
                   }}
-                  className="w-full py-2.5 px-4 ios-btn-primary rounded-xl text-xs font-semibold shadow-[0_2px_10px_rgba(0,122,255,0.32)]"
+                  className="w-full py-2 bg-[#0c532b] hover:bg-[#073f1f] text-white rounded text-xs font-semibold transition cursor-pointer"
                 >
-                  Sign In to CRM
+                  Back to Sign In
                 </button>
               </div>
             )}

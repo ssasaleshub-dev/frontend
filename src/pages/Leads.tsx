@@ -28,6 +28,7 @@ import {
   LayoutList,
   Table,
   Filter,
+  Bell,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import IosLeadList, { IosPlatformSquircle } from '../components/leads/IosLeadList';
@@ -2048,147 +2049,257 @@ export default function Leads() {
     return { work, study, other, ig, fb };
   }, [previewRows, excelDefaultVisaType]);
 
+  // Mobile candidate helpers
+  const CRM_PAL = [
+    ['#e6f6ea', '#1b8a3c'],
+    ['#fdf1e4', '#b86a14'],
+    ['#efecfa', '#5b47b5'],
+    ['#e7f0ff', '#0866ff'],
+    ['#fdecf2', '#c2255c'],
+  ];
+
+  const formatCrmKDate = (s?: string) => {
+    if (!s) return '—';
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return '—';
+    return d
+      .toLocaleString('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      })
+      .replace(',', ' ·')
+      .replace(/ (am|pm)/i, (m) => m.toLowerCase());
+  };
+
+  const getCandidateInitial = (name?: string): string => {
+    if (!name || !name.trim()) return 'C';
+    try {
+      const normalized = name.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').trim();
+      const match = normalized.match(/[a-zA-Z0-9]/);
+      if (match) return match[0].toUpperCase();
+      const chars = Array.from(name.trim());
+      return (chars[0] || 'C').toUpperCase();
+    } catch {
+      return 'C';
+    }
+  };
+
+  const getCandidateAvatarColor = (str: string) => {
+    const palettes = [
+      { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE' }, // Blue
+      { bg: '#F5F3FF', text: '#6D28D9', border: '#DDD6FE' }, // Violet
+      { bg: '#ECFDF5', text: '#047857', border: '#A7F3D0' }, // Emerald
+      { bg: '#FFF7ED', text: '#C2410C', border: '#FFEDD5' }, // Amber
+      { bg: '#FDF2F8', text: '#BE185D', border: '#FBCFE8' }, // Rose
+      { bg: '#F0FDFA', text: '#0F766E', border: '#99F6E4' }, // Teal
+    ];
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) hash = (hash << 5) - hash + str.charCodeAt(i);
+    return palettes[Math.abs(hash) % palettes.length];
+  };
+
+  const getStatusBadgeConfig = (status?: string) => {
+    const s = (status || 'CREATED').toUpperCase();
+    switch (s) {
+      case 'NEW':
+      case 'NEW_LEAD':
+      case 'CREATED':
+        return { label: 'New Lead', bg: '#EFF6FF', text: '#1D4ED8', dot: '#3B82F6', border: '#DBEAFE' };
+      case 'CONTACTED':
+        return { label: 'Contacted', bg: '#FEF3C7', text: '#92400E', dot: '#F59E0B', border: '#FDE68A' };
+      case 'QUALIFIED':
+        return { label: 'Qualified', bg: '#F3E8FF', text: '#6B21A8', dot: '#A855F7', border: '#E9D5FF' };
+      case 'PROPOSAL_SENT':
+        return { label: 'Docs Requested', bg: '#E0E7FF', text: '#3730A3', dot: '#6366F1', border: '#C7D2FE' };
+      case 'NEGOTIATION':
+        return { label: 'In Process', bg: '#ECFDF5', text: '#065F46', dot: '#10B981', border: '#A7F3D0' };
+      case 'CONVERTED':
+      case 'WON':
+        return { label: 'Visa Won', bg: '#DCFCE7', text: '#166534', dot: '#22C55E', border: '#BBF7D0' };
+      case 'LOST':
+        return { label: 'Closed Lost', bg: '#FEE2E2', text: '#991B1B', dot: '#EF4444', border: '#FECACA' };
+      default:
+        return { label: formatMobileStatus(status), bg: '#F1F5F9', text: '#475569', dot: '#94A3B8', border: '#E2E8F0' };
+    }
+  };
+
   return (
     <div className="space-y-4">
-      {/* ── MOBILE VIEW: Pure Meta-Style CRM Leads Experience (< 768px) ── */}
+      {/* ── MOBILE VIEW: Pure Candidates Directory (< 768px) ── */}
       <div className="block md:hidden">
-        {/* Scoped Meta CRM Mobile Stylesheet handled in crm-design-system.css */}
-        {/* Embedded SVG Symbol Defs */}
-        <svg width="0" height="0" style={{ position: 'absolute', display: 'none' }}>
-          <defs>
-            <symbol id="crm-i-ph" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z" /></symbol>
-            <symbol id="crm-i-wa" viewBox="0 0 24 24"><path d="M4 20l1.3-4.2A8 8 0 1112 20a8 8 0 01-3.8-1z" /><path d="M9 9c0 3 3 6 6 6l1-1.5-2-1-1 .7a4 4 0 01-2-2l.7-1-1-2z" /></symbol>
-            <symbol id="crm-i-se" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6" /><path d="M20 20l-4.5-4.5" /></symbol>
-            <symbol id="crm-i-fl" viewBox="0 0 24 24"><path d="M4 5h16l-6 8v6l-4-2v-4z" /></symbol>
-            <symbol id="crm-i-bl" viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0112 0v6l1.5 2h-15zM10 21h4" /></symbol>
-            <symbol id="crm-i-pl" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol>
-          </defs>
-        </svg>
-
-        <div className="crm-m" id="crmM">
+        <div className="crm-k" id="crmK">
           {/* Header Bar */}
-          <header className="bar">
-            <div className="t1">
-              <h1>Leads</h1>
+          <div className="top">
+            <div className="hd">
+              <h1>
+                Candidates<span id="tot">{deskAndPlatformScopedLeads.length}</span>
+              </h1>
+              <i></i>
               <button
-                className="ib !bg-transparent"
-                onClick={() => setShowMobileFilterDrawer((prev) => !prev)}
+                className={`ib ${visaTypeFilter !== 'ALL' || sortBy !== 'NEWEST' ? 'f' : ''}`}
+                id="bf"
                 aria-label="Filters"
-                title="Filters"
+                onClick={() => setShowMobileFilterDrawer(true)}
               >
-                <svg><use href="#crm-i-fl" /></svg>
-              </button>
-              <button
-                className="ib !bg-transparent"
-                onClick={() => navigate('/notifications')}
-                aria-label="Notifications"
-                title="Notifications"
-              >
-                <svg><use href="#crm-i-bl" /></svg>
+                <svg viewBox="0 0 24 24">
+                  <path d="M4 5h16l-6 8v6l-4-2v-5z" />
+                </svg>
+                <b></b>
               </button>
             </div>
             <div className="sr">
               <label className="sb">
-                <svg style={{ width: 18, height: 18 }}><use href="#crm-i-se" /></svg>
+                <svg viewBox="0 0 24 24">
+                  <circle cx="11" cy="11" r="6.5" />
+                  <path d="M20 20l-4.5-4.5" />
+                </svg>
                 <input
+                  id="q"
                   type="search"
+                  placeholder="Search name, phone or city"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search name, phone or city"
-                  className="!bg-transparent !border-none !shadow-none !rounded-none !p-0 !outline-none focus:!ring-0"
                 />
               </label>
             </div>
-            <div className="tabs">
+            <div className="tabs" id="tb">
               <button
-                onClick={() => setStatusFilter('ALL')}
                 className={`tab ${statusFilter === 'ALL' ? 'on' : ''}`}
+                onClick={() => setStatusFilter('ALL')}
               >
                 All<i>{deskAndPlatformScopedLeads.length}</i>
               </button>
               {mobileStages.map((s) => (
                 <button
                   key={s.value}
-                  onClick={() => setStatusFilter(s.value)}
                   className={`tab ${statusFilter === s.value ? 'on' : ''}`}
+                  onClick={() => setStatusFilter(s.value)}
                 >
                   {s.label}<i>{s.count}</i>
                 </button>
               ))}
             </div>
-          </header>
-
-          {/* Meta Count */}
-          <div className="meta">
-            {displayedMobileLeads.length} of {filteredLeads.length} leads
           </div>
 
-          {/* Lead List */}
-          <div className="list">
+          {/* Summary */}
+          <div className="sum">
+            <span id="sm">
+              Showing {displayedMobileLeads.length} of {filteredLeads.length} candidates
+            </span>
+            <button
+              id="rs"
+              style={{
+                visibility:
+                  visaTypeFilter !== 'ALL' ||
+                  sortBy !== 'NEWEST' ||
+                  statusFilter !== 'ALL' ||
+                  searchTerm.trim().length > 0
+                    ? 'visible'
+                    : 'hidden',
+              }}
+              onClick={() => {
+                setStatusFilter('ALL');
+                setVisaTypeFilter('ALL');
+                setPlatformFilter('ALL');
+                setSortBy('NEWEST');
+                setSearchTerm('');
+              }}
+            >
+              Reset filters
+            </button>
+          </div>
+
+          {/* List Rows */}
+          <div id="ls">
             {displayedMobileLeads.length === 0 ? (
-              <div className="empty">No leads found</div>
+              <div className="em">
+                <b>No candidates found</b>
+                Try a different search or reset the filters.
+              </div>
             ) : (
               displayedMobileLeads.map((lead) => {
-                const cleanPhone = (lead.phone || '').replace(/\D/g, '');
-                const initial = (lead.customerName || lead.fullName || 'C').trim().charAt(0).toUpperCase();
-                const visa = lead.visaType === 'STUDY_VISA' ? 'Study Visa' : lead.visaType === 'OTHER_VISA' ? 'Other Visa' : 'Work Visa';
-                const statusName = formatMobileStatus(lead.status);
-                const timeText = formatMobileDateTime(lead.createdAt || lead.inquiryDate);
-                const cachedBudget = localStorage.getItem(`ssa_lead_budget_${lead.id}`);
-                const bVal = (lead as any).budgetRange || (lead as any).clientBudget || cachedBudget;
-                const noteVal = bVal ? `Budget ${bVal}` : (lead.notes || '');
+                const rawPhone = (lead.phoneNumber || lead.phone || (lead as any).mobile || '').trim();
+                const cleanPhone = rawPhone.replace(/\D/g, '');
+                const waPhone = cleanPhone.startsWith('91')
+                  ? cleanPhone
+                  : cleanPhone.length === 10
+                  ? `91${cleanPhone}`
+                  : cleanPhone;
+                const displayPhone = rawPhone
+                  ? rawPhone.startsWith('+')
+                    ? rawPhone
+                    : `+${rawPhone}`
+                  : '';
+                const candidateName = (lead.customerName || lead.fullName || 'Candidate').trim();
+                const initial = getCandidateInitial(candidateName);
+                const p = CRM_PAL[(candidateName.charCodeAt(0) || 0) % CRM_PAL.length];
+
+                const isStudy = lead.visaType === 'STUDY_VISA';
+                const isOther = lead.visaType === 'OTHER_VISA';
+                const visaLabel = isStudy ? 'Study Visa' : isOther ? 'Other Visa' : 'Work Visa';
+                const statusLabel = formatMobileStatus(lead.status);
+                const city = lead.city || lead.state || 'Tamil Nadu';
+                const dateFormatted = formatCrmKDate(lead.createdAt || lead.createdTime || lead.inquiryDate);
 
                 return (
                   <div
-                    key={lead.id}
                     className="row"
+                    key={lead.id}
                     onClick={() => navigate(`/leads/${encryptLeadId(lead.id)}`)}
                   >
-                    <div className="av">{initial}</div>
-                    <div className="info">
-                      <div className="nm">
-                        {lead.customerName || lead.fullName || 'Candidate'}
-                        <span>{visa}</span>
-                      </div>
-                      <div className="ln">
-                        {lead.phone || 'No phone'} · {lead.city || lead.state || 'Town'}
-                      </div>
-                      <div className="ln">
-                        <b>{statusName}</b> · {timeText}
-                      </div>
-                      {noteVal && (
-                        <div className="ln">{noteVal}</div>
-                      )}
+                    <div className="av" style={{ background: p[0], color: p[1] }}>
+                      {initial}
                     </div>
-                    <div className="act">
-                      {cleanPhone && (
-                        <a
-                          className="w"
-                          href={`https://wa.me/${cleanPhone}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            showMobileToast(`Opening WhatsApp for ${lead.customerName || 'Lead'}…`);
-                          }}
-                          aria-label="WhatsApp"
-                        >
-                          <svg><use href="#crm-i-wa" /></svg>
-                        </a>
-                      )}
-                      {lead.phone && (
-                        <a
-                          className="c"
-                          href={`tel:${lead.phone}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            showMobileToast(`Calling ${lead.phone}…`);
-                          }}
-                          aria-label="Call"
-                        >
-                          <svg><use href="#crm-i-ph" /></svg>
-                        </a>
-                      )}
+                    <div className="tx">
+                      <div className="l1">
+                        <span className="nm">{candidateName}</span>
+                        <span className="vs">{visaLabel}</span>
+                      </div>
+                      <div className="l2">
+                        {city} · {dateFormatted}
+                      </div>
+                      <div className="l3">
+                        <span className="st">{statusLabel}</span>
+                        <span className="ph">{displayPhone}</span>
+                      </div>
+                    </div>
+                    <div className="ac">
+                      {cleanPhone ? (
+                        <>
+                          <a
+                            className="w"
+                            href={`https://wa.me/${waPhone}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label="WhatsApp"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              showMobileToast(`Opening WhatsApp for ${candidateName}…`);
+                            }}
+                          >
+                            <svg viewBox="0 0 24 24">
+                              <path d="M4 20l1.3-4.2A8 8 0 1112 20a8 8 0 01-3.8-1z" />
+                              <path d="M9 9c0 3 3 6 6 6l1-1.5-2-1-1 .7a4 4 0 01-2-2l.7-1-1-2z" />
+                            </svg>
+                          </a>
+                          <a
+                            className="c"
+                            href={`tel:${cleanPhone}`}
+                            aria-label="Call"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              showMobileToast(`Calling ${displayPhone || cleanPhone}…`);
+                            }}
+                          >
+                            <svg viewBox="0 0 24 24">
+                              <path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z" />
+                            </svg>
+                          </a>
+                        </>
+                      ) : null}
                     </div>
                   </div>
                 );
@@ -2196,136 +2307,103 @@ export default function Leads() {
             )}
           </div>
 
-          {/* See More Button */}
+          {/* Load More Button */}
           {displayedMobileLeads.length < filteredLeads.length && (
             <button
               className="more"
+              id="mr"
               onClick={() => setMobileVisibleCount((prev) => prev + 30)}
             >
-              See more
+              Load more
             </button>
           )}
 
-          {/* Mobile Filter Sheet Modal */}
-          {showMobileFilterDrawer && (
-            <div
-              className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center animate-in fade-in"
-              onClick={() => setShowMobileFilterDrawer(false)}
-            >
-              <div
-                className="bg-white rounded-t-2xl w-full max-w-[480px] p-5 space-y-4 shadow-2xl animate-in slide-in-from-bottom"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-                  <h3 className="font-bold text-base text-slate-900">Filter Leads</h3>
+          {/* Floating Action Button (New Lead) */}
+          <button
+            className="fab"
+            id="nw"
+            aria-label="New lead"
+            onClick={() => {
+              setModalTab('single');
+              setShowAddModal(true);
+            }}
+          >
+            <svg viewBox="0 0 24 24">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </button>
+
+          {/* Bottom Filter Sheet */}
+          <div
+            className={`ov ${showMobileFilterDrawer ? 'show' : ''}`}
+            id="ov"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowMobileFilterDrawer(false);
+            }}
+          >
+            <div className="sheet" id="sh">
+              <div className="gr"></div>
+              <h2>Filters</h2>
+              <h4>Visa type</h4>
+              <div className="chips">
+                {[
+                  ['ALL', 'All'],
+                  ['WORK_VISA', 'Work visa'],
+                  ['STUDY_VISA', 'Study visa'],
+                  ['OTHER_VISA', 'Other'],
+                ].map(([v, label]) => (
                   <button
-                    onClick={() => setShowMobileFilterDrawer(false)}
-                    className="text-slate-400 hover:text-slate-700 text-sm font-semibold"
+                    key={v}
+                    type="button"
+                    className={`chip ${visaTypeFilter === v ? 'on' : ''}`}
+                    onClick={() => setVisaTypeFilter(v)}
                   >
-                    Done
+                    {label}
                   </button>
-                </div>
-
-                {/* Desk filter */}
-                <div>
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Visa Desk</label>
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    {[
-                      { label: 'All Desks', value: 'ALL' },
-                      { label: 'Work Visa', value: 'WORK_VISA' },
-                      { label: 'Study Visa', value: 'STUDY_VISA' },
-                      { label: 'Other Visa', value: 'OTHER_VISA' },
-                    ].map((d) => (
-                      <button
-                        key={d.value}
-                        onClick={() => setVisaTypeFilter(d.value)}
-                        className={`py-2 px-3 rounded-lg text-xs font-semibold border text-center transition ${
-                          visaTypeFilter === d.value
-                            ? 'bg-[#0866ff] text-white border-[#0866ff]'
-                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                        }`}
-                      >
-                        {d.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Platform filter */}
-                <div>
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Inbound Source</label>
-                  <div className="grid grid-cols-3 gap-2 mt-2">
-                    {[
-                      { label: 'All Sources', value: 'ALL' },
-                      { label: 'Instagram', value: 'IG' },
-                      { label: 'Facebook', value: 'FB' },
-                      { label: 'WhatsApp', value: 'WA' },
-                      { label: 'Excel Import', value: 'EXCEL' },
-                    ].map((p) => (
-                      <button
-                        key={p.value}
-                        onClick={() => setPlatformFilter(p.value)}
-                        className={`py-2 px-2.5 rounded-lg text-xs font-semibold border text-center transition ${
-                          platformFilter === p.value
-                            ? 'bg-[#0866ff] text-white border-[#0866ff]'
-                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                        }`}
-                      >
-                        {p.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Sort Order */}
-                <div>
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Sort Order</label>
-                  <div className="grid grid-cols-3 gap-2 mt-2">
-                    {[
-                      { label: 'Newest', value: 'NEWEST' },
-                      { label: 'Oldest', value: 'OLDEST' },
-                      { label: 'Name A-Z', value: 'NAME' },
-                    ].map((s) => (
-                      <button
-                        key={s.value}
-                        onClick={() => setSortBy(s.value as any)}
-                        className={`py-2 px-2.5 rounded-lg text-xs font-semibold border text-center transition ${
-                          sortBy === s.value
-                            ? 'bg-[#0866ff] text-white border-[#0866ff]'
-                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                        }`}
-                      >
-                        {s.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Reset button */}
-                <div className="pt-2 flex justify-between items-center">
+                ))}
+              </div>
+              <h4>Sort by</h4>
+              <div className="chips">
+                {[
+                  ['NEWEST', 'Newest'],
+                  ['OLDEST', 'Oldest'],
+                  ['NAME', 'Name A–Z'],
+                ].map(([s, label]) => (
                   <button
-                    onClick={() => {
-                      setVisaTypeFilter('ALL');
-                      setPlatformFilter('ALL');
-                      setSortBy('NEWEST');
-                    }}
-                    className="text-xs font-semibold text-red-600 hover:underline"
+                    key={s}
+                    type="button"
+                    className={`chip ${sortBy === s ? 'on' : ''}`}
+                    onClick={() => setSortBy(s as any)}
                   >
-                    Reset All Filters
+                    {label}
                   </button>
-                  <button
-                    onClick={() => setShowMobileFilterDrawer(false)}
-                    className="px-5 py-2 bg-[#0866ff] text-white text-xs font-bold rounded-lg"
-                  >
-                    Apply Filters
-                  </button>
-                </div>
+                ))}
+              </div>
+              <div className="ft">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVisaTypeFilter('ALL');
+                    setSortBy('NEWEST');
+                  }}
+                >
+                  Reset
+                </button>
+                <button
+                  type="button"
+                  className="p"
+                  onClick={() => setShowMobileFilterDrawer(false)}
+                >
+                  Show results
+                </button>
               </div>
             </div>
-          )}
+          </div>
 
           {/* Toast Notification */}
-          <div className={`toast ${mobileToast ? 'show' : ''}`}>{mobileToast}</div>
+          <div className={`toast ${mobileToast ? 'show' : ''}`} id="toast">
+            {mobileToast}
+          </div>
         </div>
       </div>
 

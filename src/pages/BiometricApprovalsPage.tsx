@@ -356,25 +356,16 @@ export default function BiometricApprovalsPage() {
                         )}
                       </td>
 
-                      {/* Status Badge */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
+                      {/* Status */}
+                      <td className="py-3.5 px-4 whitespace-nowrap text-xs">
                         {isPending && (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-medium bg-amber-50 text-amber-800">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                            <span>Pending approval</span>
-                          </span>
+                          <span className="font-semibold text-amber-700">Pending approval</span>
                         )}
                         {isLocked && (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-medium bg-emerald-50 text-emerald-800">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                            <span>Locked</span>
-                          </span>
+                          <span className="font-semibold text-emerald-700">Locked</span>
                         )}
                         {isRevoked && (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600">
-                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                            <span>Revoked</span>
-                          </span>
+                          <span className="font-medium text-slate-500">Revoked</span>
                         )}
                       </td>
 

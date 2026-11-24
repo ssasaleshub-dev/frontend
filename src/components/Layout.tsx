@@ -21,6 +21,7 @@ import {
   Bell,
   Fingerprint,
   BarChart3,
+  FileBarChart2,
 } from 'lucide-react';
 import NotificationBell from './NotificationBell';
 import AppleNotificationBanner from './AppleNotificationBanner';
@@ -261,6 +262,13 @@ export default function Layout() {
     ...(isAdmin
       ? [
         {
+          id: 'reports',
+          label: 'Executive Reports',
+          icon: FileBarChart2,
+          to: '/reports',
+          exact: false,
+        },
+        {
           id: 'attendance',
           label: 'Staff Attendance',
           icon: Clock,
@@ -314,6 +322,7 @@ export default function Layout() {
     if (currentPath.startsWith('/chat')) return { title: 'Team Chat' };
     if (currentPath.startsWith('/notifications')) return { title: 'Notifications' };
     if (currentPath.startsWith('/users')) return { title: 'Team & Permissions', subtitle: 'Manage counselor assignments, roles, and access desks' };
+    if (currentPath.startsWith('/reports')) return { title: 'Executive Reports & Analytics' };
     if (currentPath.startsWith('/biometrics')) return { title: 'Biometric Approvals' };
     return { title: 'SSA CRM', subtitle: 'Work & Study Visa Consultancy' };
   };
@@ -322,11 +331,10 @@ export default function Layout() {
 
   return (
     <div
-      className={`min-h-screen ${
-        currentPath.startsWith('/notifications') || currentPath.startsWith('/chat') || currentPath.startsWith('/leads')
+      className={`min-h-screen ${currentPath.startsWith('/notifications') || currentPath.startsWith('/chat') || currentPath.startsWith('/leads') || currentPath.startsWith('/reports')
           ? 'bg-[#f4f5f7]'
           : 'bg-[#f2f2f7]'
-      } flex flex-col md:flex-row font-sans text-slate-900 antialiased selection:bg-[#007aff] selection:text-white`}
+        } flex flex-col md:flex-row font-sans text-slate-900 antialiased selection:bg-[#007aff] selection:text-white`}
     >
       {/* Apple HIG Real-Time In-App Notification Banner Popup */}
       <AppleNotificationBanner />
@@ -636,9 +644,9 @@ export default function Layout() {
                 ? 'p-0 md:p-5 lg:p-6 max-w-[1440px] pb-20 md:pb-0 bg-[#f4f5f7]'
                 : currentPath.startsWith('/leads/')
                   ? 'p-0 bg-[#f4f5f7] max-w-full pb-20 md:pb-0'
-                : currentPath.startsWith('/profile')
-                  ? 'p-0 max-w-[1440px] pb-20 md:pb-0'
-                  : 'p-3.5 sm:p-5 lg:p-6 max-w-[1440px] pb-20 md:pb-0'
+                  : currentPath.startsWith('/profile')
+                    ? 'p-0 max-w-[1440px] pb-20 md:pb-0'
+                    : 'p-3.5 sm:p-5 lg:p-6 max-w-[1440px] pb-20 md:pb-0'
             } w-full mx-auto`}
         >
           <Outlet />

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Trash2, Copy, X } from 'lucide-react';
 import chatService from '../services/api/chatService';
 import fileService from '../services/api/fileService';
 import authService from '../services/api/authService';
@@ -45,6 +46,87 @@ export default function Chat() {
     type: 'IMAGE' | 'VIDEO' | 'FILE';
     fileName?: string;
   } | null>(null);
+
+  // Context Menu & Long Press Deletion State
+  const [activeContextMenu, setActiveContextMenu] = useState<{
+    message: ChatMessage;
+    x: number;
+    y: number;
+    isMobileSheet?: boolean;
+  } | null>(null);
+  const [deletingId, setDeletingId] = useState<string | number | null>(null);
+
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const longPressTimerRef = useRef<any>(null);
+
+  const handleTouchStart = (e: React.TouchEvent, message: ChatMessage) => {
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+
+    clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = setTimeout(() => {
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        try {
+          navigator.vibrate(40);
+        } catch {}
+      }
+      setActiveContextMenu({
+        message,
+        x: touch.clientX,
+        y: touch.clientY,
+        isMobileSheet: true,
+      });
+    }, 450);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStartRef.current || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    const diffX = Math.abs(touch.clientX - touchStartRef.current.x);
+    const diffY = Math.abs(touch.clientY - touchStartRef.current.y);
+    if (diffX > 10 || diffY > 10) {
+      clearTimeout(longPressTimerRef.current);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    clearTimeout(longPressTimerRef.current);
+    touchStartRef.current = null;
+  };
+
+  const handleContextMenu = (e: React.MouseEvent, message: ChatMessage) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const menuWidth = 160;
+    const menuHeight = 90;
+    const x = Math.min(e.clientX, window.innerWidth - menuWidth - 10);
+    const y = Math.min(e.clientY, window.innerHeight - menuHeight - 10);
+    setActiveContextMenu({
+      message,
+      x: Math.max(10, x),
+      y: Math.max(10, y),
+      isMobileSheet: false,
+    });
+  };
+
+  const handleDeleteMessage = async (msg: ChatMessage) => {
+    if (!msg?.id) return;
+    const targetId = msg.id;
+    setDeletingId(targetId);
+    try {
+      // Optimistic instant removal from UI
+      setMessages((prev) => prev.filter((m) => m.id !== targetId));
+      setActiveContextMenu(null);
+
+      // Call API
+      await chatService.deleteMessage(targetId);
+    } catch (err: any) {
+      console.warn('Failed to delete message on backend:', err);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);

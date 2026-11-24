@@ -468,29 +468,16 @@ export default function AttendancePage() {
                 <div className="flex items-center gap-2.5 flex-wrap">
                   <h2 className="text-base font-bold text-slate-900">{displayName}</h2>
                   {isWorkingNow ? (
-                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-700">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      <span>On Duty</span>
-                      {liveDuration && (
-                        <span className="text-[11px] text-slate-500 pl-1 border-l border-slate-200">
-                          {liveDuration}
-                        </span>
-                      )}
+                    <span className="text-xs font-semibold text-emerald-700">
+                      On Duty {liveDuration && `• ${liveDuration}`}
                     </span>
                   ) : isCheckedOut ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                      <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                      <span>Shift Completed</span>
-                      {myTodayRecord?.totalHoursFormatted && (
-                        <span className="text-[11px] font-mono text-slate-500">
-                          ({myTodayRecord.totalHoursFormatted})
-                        </span>
-                      )}
+                    <span className="text-xs font-medium text-slate-500">
+                      Shift Completed {myTodayRecord?.totalHoursFormatted && `(${myTodayRecord.totalHoursFormatted})`}
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                      <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                      <span>Not Checked In</span>
+                    <span className="text-xs font-medium text-slate-400">
+                      Not Checked In
                     </span>
                   )}
                 </div>

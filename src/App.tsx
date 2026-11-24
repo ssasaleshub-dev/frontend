@@ -19,6 +19,7 @@ import AttendancePage from './pages/AttendancePage';
 import AttendanceApprovePage from './pages/AttendanceApprovePage';
 import StaffProfile from './pages/StaffProfile';
 import BiometricApprovalsPage from './pages/BiometricApprovalsPage';
+import ReportsPage from './pages/ReportsPage';
 import NotificationsPage from './pages/NotificationsPage';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import DataDeletion from './pages/DataDeletion';
@@ -104,6 +105,14 @@ export default function App() {
                 element={
                   <AdminRoute>
                     <Users />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="reports"
+                element={
+                  <AdminRoute>
+                    <ReportsPage />
                   </AdminRoute>
                 }
               />

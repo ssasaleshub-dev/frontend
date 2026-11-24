@@ -575,7 +575,7 @@ export default function Campaigns() {
           background:var(--bg);
           color:var(--text);
           font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-          font-size:14px;
+          font-size:13.5px;
           line-height:1.45;
           -webkit-font-smoothing:antialiased;
           -moz-osx-font-smoothing:grayscale;
@@ -728,10 +728,12 @@ export default function Campaigns() {
             display: none;
           }
           .crm-h .ov {
-            backdrop-filter: blur(4px);
-            display: flex;
+            display: none;
             align-items: center;
             justify-content: center;
+          }
+          .crm-h .ov.show {
+            display: flex;
           }
           .crm-h .sheet {
             position: relative;
@@ -857,12 +859,12 @@ export default function Campaigns() {
         </div>
 
         {/* Campaign Detail Modal / Bottom Sheet */}
-        <div
-          className={`ov ${selectedDetail ? 'show' : ''}`}
-          id="ov"
-          onClick={() => setSelectedDetail(null)}
-        >
-          {selectedDetail && (
+        {selectedDetail && (
+          <div
+            className="ov show"
+            id="ov"
+            onClick={() => setSelectedDetail(null)}
+          >
             <div
               className="sheet"
               id="sh"
@@ -922,8 +924,8 @@ export default function Campaigns() {
                 Copy campaign name
               </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Notification Toast */}
         <div className={`toast ${toastMsg ? 'show' : ''}`} id="toast">

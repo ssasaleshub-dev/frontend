@@ -126,7 +126,7 @@ export const AttendanceCard: React.FC<AttendanceCardProps> = ({
     <div className="bg-white rounded-2xl border border-black/[0.06] overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-4 pb-3">
-        <h3 className="text-[17px] font-semibold text-[#1c1c1e]">Attendance</h3>
+        <h3 className="text-[15px] font-semibold text-[#1c1c1e]">Attendance</h3>
         <span className="text-[13px] text-[#8e8e93]">
           {new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
         </span>
@@ -141,7 +141,7 @@ export const AttendanceCard: React.FC<AttendanceCardProps> = ({
                 <span className="w-2 h-2 rounded-full bg-[#34c759]" />
                 On duty
               </div>
-              <p className="mt-0.5 text-[28px] leading-8 font-semibold text-[#1c1c1e] tabular-nums tracking-tight">
+              <p className="mt-0.5 text-[24px] leading-7 font-semibold text-[#1c1c1e] tabular-nums tracking-tight">
                 {formatElapsed(todayRecord?.checkInTime, now)}
               </p>
               <p className="text-[13px] text-[#8e8e93]">Since {formatIndianTime(todayRecord?.checkInTime)}</p>
