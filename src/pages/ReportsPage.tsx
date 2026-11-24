@@ -1231,12 +1231,12 @@ export default function ReportsPage() {
                   <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-2">
                     <div className="flex items-center gap-2">
                       <Users size={17} className="text-[#0052cc]" />
-                      <h3 className="text-sm font-bold text-slate-900">Counselor Case Load & Desk Allocation</h3>
+                      <h3 className="text-sm font-bold text-slate-900">Counselor Case Load & Allocation</h3>
                     </div>
                     <span className="text-xs font-mono font-semibold text-slate-500">Capacity Load</span>
                   </div>
                   <p className="text-xs text-slate-500 mb-4">
-                    Active file distribution across counseling desks and admissions staff
+                    Active file distribution across counseling and admissions staff
                   </p>
 
                   {/* Horizontal Bar Breakdown */}

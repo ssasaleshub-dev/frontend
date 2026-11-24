@@ -85,7 +85,7 @@ export const getRoleBadgeInfo = (user: User | null | undefined): RoleBadgeInfo =
       emoji: '',
       displayText: 'Work Visa Staff',
       badgeClass: 'text-[#1c1c1e] font-medium',
-      deskTitle: 'Work Visa Desk',
+      deskTitle: 'Work Visa',
       permittedVisaType: 'WORK_VISA',
     };
   }
@@ -95,7 +95,7 @@ export const getRoleBadgeInfo = (user: User | null | undefined): RoleBadgeInfo =
       emoji: '',
       displayText: 'Study Visa Staff',
       badgeClass: 'text-[#1c1c1e] font-medium',
-      deskTitle: 'Study Visa Desk',
+      deskTitle: 'Study Visa',
       permittedVisaType: 'STUDY_VISA',
     };
   }
@@ -105,23 +105,23 @@ export const getRoleBadgeInfo = (user: User | null | undefined): RoleBadgeInfo =
       emoji: '',
       displayText: 'Domestic College Staff',
       badgeClass: 'text-[#1c1c1e] font-medium',
-      deskTitle: 'Domestic College Admission Desk',
+      deskTitle: 'Domestic College Admissions',
     };
   }
   if (isOtherVisaStaff(user)) {
     return {
-      label: 'Other Visa Desk',
+      label: 'Other Visa Staff',
       emoji: '',
-      displayText: 'Other Visa Desk',
+      displayText: 'Other Visa Staff',
       badgeClass: 'text-[#1c1c1e] font-medium',
-      deskTitle: 'Other Visa Desk',
+      deskTitle: 'Other Visa',
       permittedVisaType: 'OTHER_VISA',
     };
   }
   return {
     label: 'Counselor',
     emoji: '',
-    displayText: 'Staff Desk',
+    displayText: 'Counselor',
     badgeClass: 'text-[#1c1c1e] font-medium',
     deskTitle: 'Counselor',
   };

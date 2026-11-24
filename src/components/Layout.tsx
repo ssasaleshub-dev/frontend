@@ -325,11 +325,11 @@ export default function Layout() {
     if (currentPath.startsWith('/customers')) return { title: 'Contacts' };
     if (currentPath.startsWith('/calendar')) return { title: 'Calendar & Reminders' };
     if (currentPath.startsWith('/attendance')) return { title: 'Staff Attendance & Roster' };
-    if (currentPath.startsWith('/profile')) return { title: 'Staff Profile & Shift Desk' };
+    if (currentPath.startsWith('/profile')) return { title: 'Staff Profile' };
     if (currentPath.startsWith('/import')) return { title: 'Data Ingestion', subtitle: 'Import Meta ads export spreadsheets & raw lead data' };
     if (currentPath.startsWith('/chat')) return { title: 'Team Chat' };
     if (currentPath.startsWith('/notifications')) return { title: 'Notifications' };
-    if (currentPath.startsWith('/users')) return { title: 'Team & Permissions', subtitle: 'Manage counselor assignments, roles, and access desks' };
+    if (currentPath.startsWith('/users')) return { title: 'Team & Permissions', subtitle: 'Manage counselor assignments, roles, and access permissions' };
     if (currentPath.startsWith('/reports')) return { title: 'Executive Reports & Analytics' };
     if (currentPath.startsWith('/biometrics')) return { title: 'Biometric Approvals' };
     return { title: 'SSA SalesHub CRM', subtitle: 'Work & Study Visa Consultancy' };

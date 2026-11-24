@@ -249,7 +249,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 {metrics.studyVisaCount}
               </div>
               <div className="text-xs text-slate-400 truncate">
-                University & admissions desk
+                University & admissions
               </div>
             </div>
           </div>
@@ -349,7 +349,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               ? 'University offers & dossiers'
               : deskFilter === 'WORK_VISA'
                 ? 'Work contracts & permit filings'
-                : 'University & admissions desk'}
+                : 'University & admissions'}
           </div>
         </div>
 
@@ -913,7 +913,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
         <div className="block sm:hidden divide-y divide-slate-100">
           {recentLeads.length === 0 ? (
             <div className="py-8 text-center text-slate-400">
-              <p className="text-xs font-medium">No candidate records in this desk yet.</p>
+              <p className="text-xs font-medium">No candidate records in this category yet.</p>
             </div>
           ) : (
             recentLeads.map((lead) => {
@@ -1073,7 +1073,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               {recentLeads.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-[#8e8e93]">
-                    <p className="text-xs font-medium text-[#1c1c1e]">No candidate records in this desk yet.</p>
+                    <p className="text-xs font-medium text-[#1c1c1e]">No candidate records in this category yet.</p>
                   </td>
                 </tr>
               ) : (

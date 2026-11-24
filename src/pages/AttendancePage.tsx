@@ -363,7 +363,7 @@ export default function AttendancePage() {
       'Date',
       'Staff Name',
       'Login Handle',
-      'Assigned Desk',
+      'Assigned Department',
       'Work Mode',
       'Check In (IST)',
       'Check Out (IST)',
@@ -615,7 +615,7 @@ export default function AttendancePage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by staff name, login ID, or desk..."
+                placeholder="Search by staff name, login ID, or role..."
                 className="w-full !pl-9.5 pr-8 py-2 rounded-xl border border-slate-200 bg-slate-50/50 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#007aff]/30"
               />
               {searchQuery && (

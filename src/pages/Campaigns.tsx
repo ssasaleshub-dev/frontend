@@ -30,6 +30,7 @@ interface CampaignItem {
   ig: number;
   won: number;
   last: string;
+  latestPlatform?: 'FB' | 'IG';
   leads: Lead[];
 }
 
@@ -152,6 +153,7 @@ export default function Campaigns() {
           ig: 0,
           won: 0,
           last: '',
+          latestPlatform: 'FB',
           leads: [],
         };
         groups.set(key, item);
@@ -160,7 +162,8 @@ export default function Campaigns() {
 
       // Determine platform
       const p = (lead.platform || lead.leadSource || '').toUpperCase();
-      if (p === 'IG' || p.includes('INSTAGRAM')) {
+      const isIg = p === 'IG' || p.includes('INSTAGRAM');
+      if (isIg) {
         item.ig += 1;
       } else {
         // Facebook or default Meta lead
@@ -173,11 +176,12 @@ export default function Campaigns() {
         item.won += 1;
       }
 
-      // Last lead timestamp
+      // Last lead timestamp & latest platform
       const t = lead.createdTime || lead.createdAt || '';
       if (t) {
-        if (!item.last || new Date(t).getTime() > new Date(item.last).getTime()) {
+        if (!item.last || new Date(t).getTime() >= new Date(item.last).getTime()) {
           item.last = t;
+          item.latestPlatform = isIg ? 'IG' : 'FB';
         }
       }
     });
@@ -610,11 +614,9 @@ export default function Campaigns() {
         .crm-h .row { display:flex; gap:14px; align-items:center; width:100%; border:0; background:none; text-align:left; padding:12px 16px 12px 20px; position:relative; }
         .crm-h .row:active { background:var(--soft); }
         .crm-h .row+.row::before { content:""; position:absolute; top:0; left:78px; right:0; border-top:1px solid var(--line); }
-        .crm-h .av { position:relative; width:46px; height:46px; flex:none; }
-        .crm-h .av i { position:absolute; width:30px; height:30px; border-radius:50%; display:grid; place-items:center; background:#fff; border:1px solid #e6e8eb; box-shadow:0 1px 3px rgba(0,0,0,0.08); overflow:hidden; }
-        .crm-h .av .a { left:0; top:0; }
-        .crm-h .av .b { right:0; bottom:0; }
-        .crm-h .av.one i { left:8px; top:8px; width:30px; height:30px; }
+        .crm-h .av { width:42px; height:42px; flex:none; display:flex; align-items:center; justify-content:center; }
+        .crm-h .av i { width:36px; height:36px; border-radius:50%; display:grid; place-items:center; background:#fff; border:1px solid #e6e8eb; box-shadow:0 1px 3px rgba(0,0,0,0.08); overflow:hidden; }
+        .crm-h .av i img { width:100%; height:100%; object-fit:cover; }
         .crm-h .tx { flex:1; min-width:0; }
         .crm-h .tt { font-size:15.5px; font-weight:600; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; }
         .crm-h .sb { font-size:13px; color:var(--muted); margin-top:2px; }
@@ -805,25 +807,10 @@ export default function Campaigns() {
                     className="row"
                     onClick={() => setSelectedDetail(c)}
                   >
-                    <div className={`av ${hasBoth ? '' : 'one'}`}>
-                      {hasBoth ? (
-                        <>
-                          <i className="a" style={{ background: 'var(--fb)' }}>
-                            {FBI}
-                          </i>
-                          <i className="b" style={{ background: 'var(--ig)' }}>
-                            {IGI}
-                          </i>
-                        </>
-                      ) : isOnlyFb ? (
-                        <i className="a" style={{ background: 'var(--fb)' }}>
-                          {FBI}
-                        </i>
-                      ) : (
-                        <i className="b" style={{ background: 'var(--ig)' }}>
-                          {IGI}
-                        </i>
-                      )}
+                    <div className="av">
+                      <i>
+                        {c.latestPlatform === 'IG' ? IGI : FBI}
+                      </i>
                     </div>
 
                     <div className="tx">

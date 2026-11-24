@@ -305,7 +305,7 @@ export default function Login() {
                   </>
                 ) : (
                   <>
-                    <span>→ LOGIN TO DESK</span>
+                    <span>→ SIGN IN</span>
                   </>
                 )}
               </button>
