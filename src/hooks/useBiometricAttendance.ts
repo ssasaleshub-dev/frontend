@@ -139,19 +139,26 @@ export function useBiometricAttendance({
     setPunching(true);
     cancelledRef.current = false;
     try {
-      // Capture exact GPS location
-      const gpsLocation = await captureExactLocation().catch(() => '');
-      const noteWithGps = [gpsLocation ? `📍 ${gpsLocation}` : '', note.trim()].filter(Boolean).join(' | ');
-
       if (Capacitor.isNativePlatform()) {
-        // Show the fingerprint prompt immediately and fetch the one-time code from the server at
-        // the same time, so the network wait happens while the finger is on the sensor.
+        // 1. Show the native fingerprint prompt IMMEDIATELY with ZERO delay!
         const unlockPromise = biometricService.unlockAttendanceKey({
           userId,
           title: 'Check in',
           subtitle: 'Scan your fingerprint to record your attendance',
         });
-        unlockPromise.catch(() => {}); // handled below; avoid an unhandled rejection meanwhile
+        unlockPromise.catch(() => {}); // handled below
+
+        // 2. Fetch one-time challenge from server in parallel while user scans finger
+        // Non-blocking location capture (max 400ms or cached) so server request starts instantly
+        let gpsLocation = '';
+        try {
+          gpsLocation = await Promise.race([
+            captureExactLocation(600).catch(() => ''),
+            new Promise<string>((r) => setTimeout(() => r(''), 350)),
+          ]);
+        } catch {}
+
+        const noteWithGps = [gpsLocation ? `📍 ${gpsLocation}` : '', note.trim()].filter(Boolean).join(' | ');
 
         let challenge;
         try {
@@ -179,22 +186,54 @@ export function useBiometricAttendance({
       }
 
       // Web: approval happens on the phone
+      const gpsLocation = await captureExactLocation(1000).catch(() => '');
+      const noteWithGps = [gpsLocation ? `📍 ${gpsLocation}` : '', note.trim()].filter(Boolean).join(' | ');
       const challenge = await attendanceVerificationService.start({ source: 'WEB', workMode, note: noteWithGps });
       setPhoneApproval({ challengeId: challenge.id, expiresAt: challenge.expiresAt });
 
       const deadline = new Date(challenge.expiresAt).getTime() + 5000;
       while (!cancelledRef.current && Date.now() < deadline) {
-        await new Promise((r) => setTimeout(r, 2000));
+        await new Promise((r) => setTimeout(r, 1000));
         if (cancelledRef.current) break;
-        let status: string;
+        let verification;
         try {
-          status = (await attendanceVerificationService.get(challenge.id)).status;
+          verification = await attendanceVerificationService.get(challenge.id);
         } catch {
           continue; // transient network error: keep waiting until the deadline
         }
+        const status = verification?.status;
         if (status === 'APPROVED') {
-          const record = await attendanceService.getTodayAttendance(userId);
-          if (record) announceSuccess(record, 'Approved on your phone');
+          // Immediately close the waiting sheet so UI transitions cleanly
+          setPhoneApproval(null);
+          attendanceService.invalidateTodayCache(userId);
+
+          // Force fresh fetch from server
+          let record = await attendanceService.getTodayAttendance(userId, true);
+          if (!record?.checkInTime) {
+            // Brief 400ms pause if server DB write is completing
+            await new Promise((r) => setTimeout(r, 400));
+            record = await attendanceService.getTodayAttendance(userId, true);
+          }
+
+          // Fallback optimistic record if server response was delayed
+          if (!record || !record.checkInTime) {
+            record = {
+              userId,
+              userName: userName || userId,
+              userRole: userRole || 'STAFF',
+              attendanceDate: new Date().toLocaleDateString('en-CA'),
+              checkInTime: new Date().toISOString(),
+              workMode: workMode || 'OFFICE',
+              status: 'PRESENT',
+              totalMinutes: 0,
+              totalHoursFormatted: 'In Progress',
+              isCheckedIn: true,
+            };
+            attendanceService.saveLocalRecord(userId, record);
+          }
+
+          announceSuccess(record, 'Approved on your phone');
+          attendanceService.broadcastUpdate();
           return record;
         }
         if (status === 'REJECTED') {

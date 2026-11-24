@@ -37,8 +37,29 @@ export const authService = {
     return await axiosClient.post(API_ENDPOINTS.ACCOUNT, data);
   },
 
-  async changePassword(currentPassword: string, newPassword: string): Promise<any> {
-    return await axiosClient.post(API_ENDPOINTS.CHANGE_PASSWORD, { currentPassword, newPassword });
+  async changePassword(currentPassword: string, newPassword: string, otp?: string): Promise<any> {
+    return await axiosClient.post(API_ENDPOINTS.CHANGE_PASSWORD, {
+      currentPassword,
+      newPassword,
+      otp: otp ? otp.trim() : undefined,
+    });
+  },
+
+  async requestPasswordReset(mail: string): Promise<any> {
+    return await axiosClient.post(API_ENDPOINTS.RESET_PASSWORD_INIT, mail.trim(), {
+      headers: { 'Content-Type': 'text/plain' },
+    });
+  },
+
+  async finishPasswordReset(key: string, newPassword: string): Promise<any> {
+    return await axiosClient.post(API_ENDPOINTS.RESET_PASSWORD_FINISH, {
+      key: key.trim(),
+      newPassword,
+    });
+  },
+
+  async requestChangePasswordOtp(): Promise<any> {
+    return await axiosClient.post(API_ENDPOINTS.CHANGE_PASSWORD_INIT_OTP);
   },
 
   logout(): void {

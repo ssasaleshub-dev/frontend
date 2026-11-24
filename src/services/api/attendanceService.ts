@@ -46,6 +46,18 @@ const todayCacheMap = new Map<string, { record: StaffAttendanceRecord | null; ti
 
 export const attendanceService = {
   /**
+   * Invalidate cached today attendance record so the next read is 100% fresh from server.
+   */
+  invalidateTodayCache(userId?: string): void {
+    if (userId) {
+      todayCacheMap.delete(userId);
+      inFlightTodayMap.delete(userId);
+    } else {
+      todayCacheMap.clear();
+      inFlightTodayMap.clear();
+    }
+  },
+  /**
    * Check in (Login punch)
    */
   async checkIn(params: {

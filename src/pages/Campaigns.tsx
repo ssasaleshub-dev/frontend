@@ -564,7 +564,7 @@ export default function Campaigns() {
           --bg:#fff;
           --soft:#f4f5f7;
           --line:#e6e8eb;
-          --text:#1c1e21;
+          --text:#172B4D;
           --muted:#6b6f76;
           --faint:#9a9ea5;
           --blue:#0866ff;
@@ -574,10 +574,11 @@ export default function Campaigns() {
           color-scheme:light;
           background:var(--bg);
           color:var(--text);
-          font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-          font-size:15px;
-          line-height:1.4;
+          font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+          font-size:14px;
+          line-height:1.45;
           -webkit-font-smoothing:antialiased;
+          -moz-osx-font-smoothing:grayscale;
           max-width:480px;
           margin:0 auto;
           min-height:100vh;

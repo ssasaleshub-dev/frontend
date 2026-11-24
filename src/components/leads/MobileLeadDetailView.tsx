@@ -480,10 +480,10 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
           {attributionRows.map((row) => (
             <div className="f" key={row.label}>
               <span className="l">{row.label}</span>
-              <span className="v" style={row.idIsValue ? { fontFamily: 'ui-monospace, SFMono-Regular, monospace', fontSize: 12 } : undefined}>
+              <span className="v" style={row.idIsValue ? { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace', fontSize: 12 } : undefined}>
                 {row.value}
                 {row.metaId && !row.idIsValue && (
-                  <span style={{ display: 'block', fontFamily: 'ui-monospace, SFMono-Regular, monospace', fontSize: 11, color: '#8e8e93' }}>
+                  <span style={{ display: 'block', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace', fontSize: 11, color: '#8e8e93' }}>
                     ID {row.metaId}
                   </span>
                 )}

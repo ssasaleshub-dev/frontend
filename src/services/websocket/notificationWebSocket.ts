@@ -155,6 +155,17 @@ class NotificationWebSocket {
       for (const listener of this.notificationListeners) {
         listener(data);
       }
+
+      // 4. Live attendance sync if attendance event or notification arrived
+      if (
+        data.type === 'ATTENDANCE' ||
+        /attendance|check-in|checked in/i.test(data.title || '') ||
+        /attendance|check-in|checked in/i.test(data.description || '')
+      ) {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('ssa_attendance_updated'));
+        }
+      }
     }
   }
 

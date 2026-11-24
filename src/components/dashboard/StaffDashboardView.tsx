@@ -290,13 +290,13 @@ export const StaffDashboardView: React.FC<StaffDashboardViewProps> = ({
             : 'border-slate-200/90 hover:border-slate-300'
             }`}
         >
-          <div className="text-xs font-medium text-slate-500 truncate">
+          <div className="text-sm font-semibold text-slate-700 truncate">
             Today's Inflow
           </div>
           <div className="mt-2 text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight">
             {todayLeads.length}
           </div>
-          <div className="mt-1 text-xs text-slate-400 truncate">
+          <div className="mt-1 text-xs text-slate-500 truncate">
             Fresh candidates today
           </div>
         </div>
@@ -309,13 +309,13 @@ export const StaffDashboardView: React.FC<StaffDashboardViewProps> = ({
             : 'border-slate-200/90 hover:border-slate-300'
             }`}
         >
-          <div className="text-xs font-medium text-slate-500 truncate">
+          <div className="text-sm font-semibold text-slate-700 truncate">
             Needs First Call
           </div>
           <div className="mt-2 text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight">
             {uncontactedLeads.length}
           </div>
-          <div className="mt-1 text-xs text-slate-400 truncate">
+          <div className="mt-1 text-xs text-slate-500 truncate">
             Awaiting first contact
           </div>
         </div>
@@ -328,13 +328,13 @@ export const StaffDashboardView: React.FC<StaffDashboardViewProps> = ({
             : 'border-slate-200/90 hover:border-slate-300'
             }`}
         >
-          <div className="text-xs font-medium text-slate-500 truncate">
+          <div className="text-sm font-semibold text-slate-700 truncate">
             In Counseling
           </div>
           <div className="mt-2 text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight">
             {inCounselingLeads.length}
           </div>
-          <div className="mt-1 text-xs text-slate-400 truncate">
+          <div className="mt-1 text-xs text-slate-500 truncate">
             Qualified candidates
           </div>
         </div>
@@ -347,13 +347,13 @@ export const StaffDashboardView: React.FC<StaffDashboardViewProps> = ({
             : 'border-slate-200/90 hover:border-slate-300'
             }`}
         >
-          <div className="text-xs font-medium text-slate-500 truncate">
+          <div className="text-sm font-semibold text-slate-700 truncate">
             Visas Approved / Won
           </div>
           <div className="mt-2 text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight">
             {convertedLeads.length}
           </div>
-          <div className="mt-1 text-xs text-slate-400 truncate">
+          <div className="mt-1 text-xs text-slate-500 truncate">
             {metrics.conversionRate}% desk conversion
           </div>
         </div>
@@ -582,9 +582,9 @@ export const StaffDashboardView: React.FC<StaffDashboardViewProps> = ({
 
         {/* Workspace Leads Table (tablet & desktop) */}
         <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full text-left text-sm border-collapse">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
+              <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-700 uppercase tracking-wider">
                 <th className="py-3 px-4">Candidate Name</th>
                 <th className="py-3 px-4">Contact & Location</th>
                 <th className="py-3 px-4">Visa Program</th>

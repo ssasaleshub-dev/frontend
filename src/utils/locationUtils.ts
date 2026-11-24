@@ -12,73 +12,49 @@ export interface CapturedLocation {
 }
 
 /**
- * Captures the user's current GPS location with high accuracy.
- * Attempts quick reverse-geocoding to resolve locality / city.
- * Returns a formatted string e.g. "Namakkal, Tamil Nadu (11.21890, 78.16740)"
+ * Captures the user's current GPS location with high speed.
+ * Uses cached location and fast network positioning (maximumAge: 5 mins, timeout: 1.2s)
+ * so attendance check-in is instantaneous and never hangs.
  */
-export async function captureExactLocation(): Promise<string> {
+export async function captureExactLocation(timeoutMs = 1200): Promise<string> {
   if (typeof navigator === 'undefined' || !navigator.geolocation) {
     return '';
   }
 
   return new Promise((resolve) => {
+    let resolved = false;
+    const finish = (val: string) => {
+      if (!resolved) {
+        resolved = true;
+        resolve(val);
+      }
+    };
+
+    // Hard fallback timeout so location never delays check-in
+    const hardTimer = setTimeout(() => {
+      finish('');
+    }, timeoutMs);
+
     navigator.geolocation.getCurrentPosition(
-      async (position) => {
+      (position) => {
+        clearTimeout(hardTimer);
         const lat = position.coords.latitude;
         const lon = position.coords.longitude;
         const accuracy = Math.round(position.coords.accuracy || 0);
-
-        let placeName = '';
-        try {
-          const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), 2500);
-
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`,
-            { signal: controller.signal }
-          );
-          clearTimeout(timer);
-
-          if (res.ok) {
-            const data = await res.json();
-            const addr = data?.address || {};
-            const suburb =
-              addr.suburb ||
-              addr.neighbourhood ||
-              addr.city_district ||
-              addr.village ||
-              addr.road ||
-              '';
-            const city =
-              addr.city ||
-              addr.town ||
-              addr.county ||
-              addr.state_district ||
-              addr.state ||
-              '';
-            placeName = [suburb, city].filter(Boolean).join(', ');
-          }
-        } catch {
-          // Graceful fallback to raw coordinates
-        }
-
         const latFormatted = lat.toFixed(5);
         const lonFormatted = lon.toFixed(5);
 
-        if (placeName) {
-          resolve(`${placeName} (${latFormatted}, ${lonFormatted})`);
-        } else {
-          resolve(`${latFormatted}, ${lonFormatted} (±${accuracy}m)`);
-        }
+        finish(`${latFormatted}, ${lonFormatted} (±${accuracy}m)`);
       },
       (err) => {
-        console.warn('Attendance GPS capture error / permission denied:', err.message);
-        resolve('');
+        clearTimeout(hardTimer);
+        console.warn('Attendance GPS capture error / permission:', err.message);
+        finish('');
       },
       {
-        enableHighAccuracy: true,
-        timeout: 6000,
-        maximumAge: 30000,
+        enableHighAccuracy: false, // Fast cellular/Wi-Fi fix without hardware satellite lag
+        timeout: timeoutMs,
+        maximumAge: 300000, // 5 minutes cached fix allows instant (<10ms) response
       }
     );
   });
