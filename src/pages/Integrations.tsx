@@ -1,20 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
+  FileSpreadsheet,
   Check,
   Copy,
+  ExternalLink,
   RefreshCw,
   X,
+  Calendar,
+  Globe,
   Settings,
   AlertCircle,
   Key,
   Mail,
   Send,
   MessageCircle,
-  Video,
-  Code,
-  Globe,
-  ExternalLink,
 } from 'lucide-react';
 import integrationsService, {
   GoogleIntegrationStatus,
@@ -22,27 +22,14 @@ import integrationsService, {
   DEFAULT_GOOGLE_CLIENT_ID,
 } from '../services/api/integrationsService';
 
-interface InboundWebhookPortal {
-  id: string;
-  name: string;
-  category: 'WEBHOOK';
-  description: string;
-  endpoint: string;
-  logoLetter: string;
-  logoBg: string;
-  logoColor: string;
-  customIcon?: string;
-}
-
 export default function Integrations() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Google status & action states
+  // Google status & actions
   const [googleStatus, setGoogleStatus] = useState<GoogleIntegrationStatus>({ connected: false });
   const [loadingGoogle, setLoadingGoogle] = useState<boolean>(true);
   const [connecting, setConnecting] = useState<boolean>(false);
   const [disconnecting, setDisconnecting] = useState<boolean>(false);
-  const [creatingMeet, setCreatingMeet] = useState<boolean>(false);
 
   // Instagram status
   const [instagramStatus, setInstagramStatus] = useState<InstagramIntegrationStatus>({
@@ -51,18 +38,16 @@ export default function Integrations() {
     cachedProfilesCount: 0,
   });
 
-  // Filter tabs: ALL, GOOGLE, INSTAGRAM, WEBHOOKS
-  const [activeTab, setActiveTab] = useState<'ALL' | 'GOOGLE' | 'INSTAGRAM' | 'WEBHOOKS'>('ALL');
+  // Filter tabs: ALL, DIRECT (Gmail & Instagram DM), GOOGLE (Workspace)
+  const [activeTab, setActiveTab] = useState<'ALL' | 'DIRECT' | 'GOOGLE'>('ALL');
 
-  // Copy feedback state
+  // Copy feedback state (holds provider id)
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Modal dialog states
+  // Modals state
   const [showGoogleSetupModal, setShowGoogleSetupModal] = useState<boolean>(false);
   const [showTestEmailModal, setShowTestEmailModal] = useState<boolean>(false);
   const [showInstagramReplyModal, setShowInstagramReplyModal] = useState<boolean>(false);
-  const [showPayloadModal, setShowPayloadModal] = useState<boolean>(false);
-  const [selectedPortal, setSelectedPortal] = useState<InboundWebhookPortal | null>(null);
 
   // Form states
   const [googleClientIdInput, setGoogleClientIdInput] = useState<string>(() => {
@@ -73,21 +58,21 @@ export default function Integrations() {
     );
   });
 
-  // Test Email form
+  // Send Test Email form
   const [testEmailTo, setTestEmailTo] = useState<string>('');
-  const [testEmailSubject, setTestEmailSubject] = useState<string>('SSA SalesHub - Verification Email');
+  const [testEmailSubject, setTestEmailSubject] = useState<string>('SSA SalesHub - Test Verification Email');
   const [testEmailBody, setTestEmailBody] = useState<string>(
-    'Hello from SSA SalesHub!\n\nYour Google Workspace integration is connected and sending messages successfully.'
+    'Hello from SSA SalesHub!\n\nYour Gmail integration is connected and sending messages successfully.'
   );
   const [sendingEmail, setSendingEmail] = useState<boolean>(false);
 
-  // Instagram DM form
+  // Send Instagram DM form
   const [igRecipientId, setIgRecipientId] = useState<string>('');
   const [igMessage, setIgMessage] = useState<string>('Hello! Thanks for contacting SSA Saleshub.');
-  const [igLeadId, setIgLeadId] = useState<string>('10');
+  const [igLeadId, setIgLeadId] = useState<string>('');
   const [sendingDm, setSendingDm] = useState<boolean>(false);
 
-  // Feedback notification banner
+  // Notification feedback banner
   const [banner, setBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const fetchStatus = useCallback(async () => {
@@ -120,14 +105,14 @@ export default function Integrations() {
     if (codeParam) {
       setBanner({
         type: 'success',
-        text: 'Completing Google Workspace authorization…',
+        text: 'Exchanging authorization code with Google…',
       });
       integrationsService
         .exchangeGoogleCode(codeParam)
         .then(() => {
           setBanner({
             type: 'success',
-            text: 'Google Workspace connected successfully!',
+            text: 'Gmail account connected successfully!',
           });
           fetchStatus();
         })
@@ -135,7 +120,7 @@ export default function Integrations() {
           console.error('Code exchange failed:', err);
           setBanner({
             type: 'error',
-            text: 'Authorization code exchange failed. Please verify credentials or try again.',
+            text: 'Authorization code exchange failed. Please verify client credentials or try again.',
           });
           fetchStatus();
         })
@@ -148,7 +133,7 @@ export default function Integrations() {
     } else if (connectedParam === 'true') {
       setBanner({
         type: 'success',
-        text: 'Google Workspace connected successfully!',
+        text: 'Gmail account connected successfully!',
       });
       fetchStatus();
       searchParams.delete('google_connected');
@@ -201,14 +186,14 @@ export default function Integrations() {
 
   // Disconnect Google
   const handleDisconnectGoogle = async () => {
-    if (!window.confirm('Disconnect your Google account from SSA SalesHub?')) return;
+    if (!window.confirm('Disconnect your Google / Gmail account from SSA SalesHub?')) return;
     setDisconnecting(true);
     try {
       await integrationsService.disconnectGoogle();
       setGoogleStatus({ connected: false });
       setBanner({
         type: 'success',
-        text: 'Google account disconnected.',
+        text: 'Gmail account disconnected.',
       });
     } catch {
       setBanner({
@@ -220,35 +205,7 @@ export default function Integrations() {
     }
   };
 
-  // Quick Meet generator
-  const handleQuickMeet = async () => {
-    setCreatingMeet(true);
-    try {
-      const res = await integrationsService.createGoogleMeet('Client Consultation');
-      const meetLink = res?.meetUrl || res?.url || res?.hangoutsLink;
-      if (meetLink) {
-        await navigator.clipboard.writeText(meetLink);
-        setBanner({
-          type: 'success',
-          text: `Google Meet created and copied to clipboard: ${meetLink}`,
-        });
-      } else {
-        setBanner({
-          type: 'success',
-          text: 'Google Meet consultation event scheduled.',
-        });
-      }
-    } catch (err: any) {
-      setBanner({
-        type: 'error',
-        text: err?.response?.data?.message || err?.message || 'Failed to generate Google Meet link. Verify account permissions.',
-      });
-    } finally {
-      setCreatingMeet(false);
-    }
-  };
-
-  // Send Test Email submit
+  // Send Test Email Submit
   const handleSendTestEmail = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!testEmailTo.trim()) {
@@ -277,7 +234,7 @@ export default function Integrations() {
     }
   };
 
-  // Send Instagram DM submit
+  // Send Instagram DM Submit
   const handleSendInstagramDm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!igRecipientId.trim() || !igMessage.trim()) {
@@ -314,115 +271,30 @@ export default function Integrations() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const WEBHOOK_BASE = 'https://api.ssasaleshub.cloud/api/webhooks/inbound';
-
-  const inboundPortals: InboundWebhookPortal[] = [
-    {
-      id: 'wix',
-      name: 'Wix Contact Form',
-      category: 'WEBHOOK',
-      description: 'Capture inbound lead inquiries submitted through your Wix website.',
-      endpoint: `${WEBHOOK_BASE}/wix`,
-      logoLetter: 'WI',
-      logoBg: 'bg-slate-100',
-      logoColor: 'text-slate-800',
-    },
-    {
-      id: 'jotform',
-      name: 'Jotform',
-      category: 'WEBHOOKS' as any,
-      description: 'Capture student registrations and custom admission forms from Jotform.',
-      endpoint: `${WEBHOOK_BASE}/jotform`,
-      logoLetter: 'JO',
-      logoBg: 'bg-orange-50',
-      logoColor: 'text-orange-600',
-    },
-    {
-      id: 'google-forms',
-      name: 'Google Forms',
-      category: 'WEBHOOK',
-      description: 'Push responses from Google Forms directly into your candidate CRM pipeline.',
-      endpoint: `${WEBHOOK_BASE}/google-forms`,
-      logoLetter: 'GF',
-      logoBg: 'bg-purple-50',
-      logoColor: 'text-purple-600',
-      customIcon: '/icons/google-forms.png',
-    },
-    {
-      id: 'google-ads',
-      name: 'Google Ads Lead Form',
-      category: 'WEBHOOK',
-      description: 'Receive real-time candidate leads from Google Search and Display Lead Extensions.',
-      endpoint: `${WEBHOOK_BASE}/google-ads`,
-      logoLetter: 'GA',
-      logoBg: 'bg-blue-50',
-      logoColor: 'text-blue-600',
-    },
-    {
-      id: 'urbanpro',
-      name: 'UrbanPro',
-      category: 'WEBHOOK',
-      description: 'Automatically capture tutoring and test-prep inquiry leads from UrbanPro.',
-      endpoint: `${WEBHOOK_BASE}/urbanpro`,
-      logoLetter: 'UP',
-      logoBg: 'bg-emerald-50',
-      logoColor: 'text-emerald-700',
-    },
-    {
-      id: 'aajjo',
-      name: 'AAJJO.com',
-      category: 'WEBHOOK',
-      description: 'Receive trade RFQs and buyer candidate inquiries from aajjo.com.',
-      endpoint: `${WEBHOOK_BASE}/aajjo`,
-      logoLetter: 'AJ',
-      logoBg: 'bg-amber-50',
-      logoColor: 'text-amber-700',
-    },
-    {
-      id: 'calendly',
-      name: 'Calendly',
-      category: 'WEBHOOK',
-      description: 'Sync scheduled appointments and log consultation meetings into the CRM.',
-      endpoint: `${WEBHOOK_BASE}/calendly`,
-      logoLetter: 'CA',
-      logoBg: 'bg-sky-50',
-      logoColor: 'text-sky-600',
-    },
-  ];
-
-  const samplePayloadJson = JSON.stringify(
-    {
-      name: 'Candidate Name',
-      phone: '+91 9876543210',
-      email: 'candidate@example.com',
-      city: 'Chennai',
-      notes: 'Course Inquiry',
-    },
-    null,
-    2
-  );
-
   const connectedEmail = googleStatus.email || googleStatus.googleEmail;
 
   return (
-    <div className="max-w-6xl mx-auto py-2 space-y-5">
+    <div className="max-w-6xl mx-auto py-2 space-y-6">
       {/* ── Page Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-slate-200">
         <div>
-          <h1 className="text-lg font-semibold text-slate-900 tracking-tight">Integrations Hub</h1>
+          <h1 className="text-xl font-semibold text-slate-900 tracking-tight">Integrations Hub</h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Connect communication channels, Google Workspace, and inbound webhooks to your candidate pipeline.
+            Connect communication channels and Google Workspace to your candidate pipeline.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 text-xs text-slate-500">
+        <div className="flex items-center gap-2">
+          {/* Subtle Google Status */}
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 rounded text-xs text-slate-600">
             <span
-              className={`w-1.5 h-1.5 rounded-full ${
-                googleStatus.connected ? 'bg-emerald-600' : 'bg-slate-300'
+              className={`w-2 h-2 rounded-full ${
+                googleStatus.connected ? 'bg-emerald-600' : 'bg-slate-400'
               }`}
             />
-            <span>{googleStatus.connected ? `Google: ${connectedEmail || 'Connected'}` : 'Google: Not connected'}</span>
+            <span className="font-medium">
+              Gmail: {googleStatus.connected ? connectedEmail || 'Connected' : 'Not connected'}
+            </span>
           </div>
 
           <button
@@ -430,9 +302,9 @@ export default function Integrations() {
             onClick={fetchStatus}
             disabled={loadingGoogle}
             title="Refresh status"
-            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded transition-colors cursor-pointer"
+            className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded transition-colors cursor-pointer"
           >
-            <RefreshCw size={13} className={loadingGoogle ? 'animate-spin' : ''} />
+            <RefreshCw size={14} className={loadingGoogle ? 'animate-spin' : ''} />
           </button>
         </div>
       </div>
@@ -440,30 +312,29 @@ export default function Integrations() {
       {/* ── Status Feedback Banner ── */}
       {banner && (
         <div
-          className={`flex items-center justify-between px-3.5 py-2 rounded text-xs font-medium border ${
+          className={`flex items-center justify-between px-3.5 py-2.5 rounded-md text-xs font-medium border ${
             banner.type === 'success'
-              ? 'bg-emerald-50/90 text-emerald-900 border-emerald-200'
-              : 'bg-rose-50/90 text-rose-900 border-rose-200'
+              ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
+              : 'bg-rose-50 text-rose-900 border-rose-200'
           }`}
         >
           <span>{banner.text}</span>
           <button
             type="button"
             onClick={() => setBanner(null)}
-            className="text-slate-400 hover:text-slate-600 ml-3 cursor-pointer"
+            className="text-slate-400 hover:text-slate-700 ml-3 cursor-pointer"
           >
             <X size={14} />
           </button>
         </div>
       )}
 
-      {/* ── Simple Category Tabs ── */}
+      {/* ── Standard Horizontal Filter Tabs ── */}
       <div className="flex items-center gap-6 border-b border-slate-200 text-xs">
         {[
           { id: 'ALL', label: 'All Integrations' },
+          { id: 'DIRECT', label: 'Gmail & Instagram DM' },
           { id: 'GOOGLE', label: 'Google Workspace' },
-          { id: 'INSTAGRAM', label: 'Instagram DM' },
-          { id: 'WEBHOOKS', label: 'Inbound Webhooks' },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -480,106 +351,94 @@ export default function Integrations() {
         ))}
       </div>
 
-      {/* ── Card Grid ── */}
+      {/* ── 3-Column Responsive Clean Card Grid ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* ═════════════════════════════════════════════════════════════════════ */}
-        {/* CATEGORY 1: GOOGLE WORKSPACE CARD                                   */}
+        {/* CARD 1: GMAIL INTEGRATION CARD                                      */}
         {/* ═════════════════════════════════════════════════════════════════════ */}
-        {(activeTab === 'ALL' || activeTab === 'GOOGLE') && (
-          <div className="bg-white border border-slate-200 rounded-md p-4 flex flex-col justify-between shadow-xs">
+        {(activeTab === 'ALL' || activeTab === 'DIRECT' || activeTab === 'GOOGLE') && (
+          <div className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col justify-between shadow-sm hover:border-slate-300 transition-all">
             <div className="space-y-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2.5">
-                  {/* Google Workspace Official Multi-color Logo */}
-                  <div className="w-8 h-8 rounded bg-slate-50 flex items-center justify-center shrink-0 border border-slate-100">
+                  {/* Authentic Gmail Logo Icon */}
+                  <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
                     <svg className="w-5 h-5" viewBox="0 0 24 24">
                       <path
                         fill="#4285F4"
-                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                        d="M2.25 19.5h3.75V10.5L2.25 7.687V19.5z"
                       />
                       <path
                         fill="#34A853"
-                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                      />
-                      <path
-                        fill="#FBBC05"
-                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                        d="M18 19.5h3.75V7.687L18 10.5v9z"
                       />
                       <path
                         fill="#EA4335"
-                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                        d="M18 7.687l-6 4.5-6-4.5V4.5l6 4.5 6-4.5v3.187z"
+                      />
+                      <path
+                        fill="#FBBC04"
+                        d="M6 7.687L2.25 4.875A1.5 1.5 0 014.5 3h15a1.5 1.5 0 012.25 1.875L18 7.687l-6 4.5-6-4.5z"
                       />
                     </svg>
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-900">Google Workspace</h3>
-                    <span className="text-[11px] text-slate-400">Gmail &bull; Meet &bull; Sheets &bull; Calendar</span>
+                    <h3 className="text-sm font-semibold text-slate-900">Gmail</h3>
+                    <span className="text-[11px] text-slate-400">Direct Candidate Inbox</span>
                   </div>
                 </div>
 
-                {/* Status Badge */}
+                {/* Badge */}
                 {googleStatus.connected ? (
-                  <span className="inline-flex items-center gap-1.5 text-xs text-slate-600">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                    Connected
+                  <span
+                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60 max-w-[170px] truncate"
+                    title={`Connected as ${connectedEmail}`}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0" />
+                    <span className="truncate">Connected as {connectedEmail}</span>
                   </span>
                 ) : (
-                  <span className="text-xs text-slate-400">Not Connected</span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-500">
+                    Not Connected
+                  </span>
                 )}
               </div>
 
               <p className="text-xs text-slate-600 leading-relaxed">
-                Send candidate emails via Gmail, schedule instant Google Meet video consultations, and export CRM leads to Google Sheets.
+                Connect your Gmail account to send emails directly from your inbox, track email threads, and sync candidate communications.
               </p>
-
-              {googleStatus.connected && connectedEmail && (
-                <div className="p-2 bg-slate-50 border border-slate-100 rounded text-[11px] text-slate-600 font-mono truncate">
-                  Account: {connectedEmail}
-                </div>
-              )}
             </div>
 
-            <div className="pt-3 mt-3 border-t border-slate-100">
+            <div className="pt-4 mt-3 border-t border-slate-100">
               {googleStatus.connected ? (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={handleQuickMeet}
-                      disabled={creatingMeet}
-                      className="flex-1 h-8 px-3 text-xs font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-                    >
-                      {creatingMeet ? <RefreshCw size={12} className="animate-spin" /> : <Video size={13} />}
-                      <span>Quick Meet Link</span>
-                    </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowTestEmailModal(true)}
+                    className="flex-1 h-8 px-3 text-xs font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <Send size={12} />
+                    <span>Send Test Email</span>
+                  </button>
 
-                    <button
-                      type="button"
-                      onClick={() => setShowTestEmailModal(true)}
-                      className="h-8 px-3 text-xs font-medium rounded border border-slate-300 hover:bg-slate-50 text-slate-700 transition-colors cursor-pointer flex items-center gap-1"
-                    >
-                      <Mail size={12} />
-                      <span>Test Email</span>
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={handleDisconnectGoogle}
+                    disabled={disconnecting}
+                    title="Disconnect Gmail Account"
+                    className="h-8 px-3 text-xs font-medium rounded border border-slate-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 text-slate-700 transition-colors cursor-pointer"
+                  >
+                    {disconnecting ? 'Disconnecting…' : 'Disconnect'}
+                  </button>
 
-                  <div className="flex items-center justify-between pt-1 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setShowGoogleSetupModal(true)}
-                      className="text-slate-500 hover:text-slate-800 underline text-[11px] cursor-pointer"
-                    >
-                      OAuth Settings
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleDisconnectGoogle}
-                      disabled={disconnecting}
-                      className="text-rose-600 hover:text-rose-800 text-[11px] font-medium cursor-pointer"
-                    >
-                      {disconnecting ? 'Disconnecting…' : 'Disconnect'}
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowGoogleSetupModal(true)}
+                    title="OAuth Client Configuration"
+                    className="h-8 px-2 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded transition-colors cursor-pointer"
+                  >
+                    <Settings size={13} />
+                  </button>
                 </div>
               ) : (
                 <div className="flex items-center gap-1.5">
@@ -587,17 +446,35 @@ export default function Integrations() {
                     type="button"
                     onClick={() => handleConnectGoogle()}
                     disabled={connecting}
-                    className="flex-1 h-8 px-3 text-xs font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                    className="flex-1 h-8 px-3 text-xs font-medium rounded bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-sm"
                   >
-                    {connecting ? <RefreshCw size={12} className="animate-spin" /> : null}
-                    <span>Connect Google Workspace</span>
+                    {/* Google G logo */}
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
+                      <path
+                        fill="#ffffff"
+                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                      />
+                      <path
+                        fill="#ffffff"
+                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                      />
+                      <path
+                        fill="#ffffff"
+                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                      />
+                      <path
+                        fill="#ffffff"
+                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                      />
+                    </svg>
+                    <span>{connecting ? 'Connecting…' : 'Connect Gmail Account'}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setShowGoogleSetupModal(true)}
                     title="OAuth Client Configuration"
-                    className="h-8 px-2 border border-slate-200 hover:bg-slate-100 text-slate-500 rounded transition-colors cursor-pointer"
+                    className="h-8 px-2 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded transition-colors cursor-pointer"
                   >
                     <Settings size={13} />
                   </button>
@@ -608,23 +485,25 @@ export default function Integrations() {
         )}
 
         {/* ═════════════════════════════════════════════════════════════════════ */}
-        {/* CATEGORY 2: INSTAGRAM DIRECT MESSAGE (DM) CARD                      */}
+        {/* CARD 2: INSTAGRAM DM INTEGRATION CARD                               */}
         {/* ═════════════════════════════════════════════════════════════════════ */}
-        {(activeTab === 'ALL' || activeTab === 'INSTAGRAM') && (
-          <div className="bg-white border border-slate-200 rounded-md p-4 flex flex-col justify-between shadow-xs">
+        {(activeTab === 'ALL' || activeTab === 'DIRECT') && (
+          <div className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col justify-between shadow-sm hover:border-slate-300 transition-all">
             <div className="space-y-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 flex items-center justify-center shrink-0 text-white">
-                    <MessageCircle size={17} />
-                  </div>
+                  <img
+                    src="/icons/instagram.png"
+                    alt="Instagram DM"
+                    className="w-8 h-8 rounded-lg object-contain shrink-0"
+                  />
                   <div>
                     <h3 className="text-sm font-semibold text-slate-900">Instagram DM</h3>
-                    <span className="text-[11px] text-slate-400">Direct Message Capture &amp; Reply</span>
+                    <span className="text-[11px] text-slate-400">Direct Message Channel</span>
                   </div>
                 </div>
 
-                {/* Clean, quiet status: Plain dot + Active */}
+                {/* Clean static status indicator */}
                 <span className="inline-flex items-center gap-1.5 text-xs text-slate-600">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
                   Active
@@ -632,19 +511,15 @@ export default function Integrations() {
               </div>
 
               <p className="text-xs text-slate-600 leading-relaxed">
-                Automatically capture leads from Instagram DMs and reply directly from SSA Saleshub.
+                Automatically capture leads from Instagram Direct Messages and reply directly from SSA Saleshub.
               </p>
-
-              <div className="p-2 bg-slate-50 border border-slate-100 rounded text-[11px] text-slate-600 font-mono truncate">
-                Status: Connected &amp; Listening to messages
-              </div>
             </div>
 
-            <div className="pt-3 mt-3 border-t border-slate-100">
+            <div className="pt-4 mt-3 border-t border-slate-100 flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setShowInstagramReplyModal(true)}
-                className="w-full h-8 px-3 text-xs font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-full h-8 px-2.5 text-xs font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <MessageCircle size={13} />
                 <span>Send Outbound DM / Reply</span>
@@ -654,106 +529,117 @@ export default function Integrations() {
         )}
 
         {/* ═════════════════════════════════════════════════════════════════════ */}
-        {/* CATEGORY 3: INBOUND WEBHOOKS & PORTALS CARDS                         */}
+        {/* CARD 3: GOOGLE MEET                                                 */}
         {/* ═════════════════════════════════════════════════════════════════════ */}
-        {(activeTab === 'ALL' || activeTab === 'WEBHOOKS') &&
-          inboundPortals.map((portal) => (
-            <div
-              key={portal.id}
-              className="bg-white border border-slate-200 rounded-md p-4 flex flex-col justify-between shadow-xs"
-            >
-              <div className="space-y-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2.5">
-                    {portal.customIcon ? (
-                      <img src={portal.customIcon} alt={portal.name} className="w-8 h-8 object-contain shrink-0" />
-                    ) : (
-                      <div
-                        className={`w-8 h-8 rounded ${portal.logoBg} ${portal.logoColor} flex items-center justify-center font-bold text-xs uppercase shrink-0 border border-slate-100`}
-                      >
-                        {portal.logoLetter}
-                      </div>
-                    )}
-                    <div>
-                      <h3 className="text-sm font-semibold text-slate-900">{portal.name}</h3>
-                      <span className="text-[11px] text-slate-400">Inbound Webhook</span>
-                    </div>
+        {(activeTab === 'ALL' || activeTab === 'GOOGLE') && (
+          <div className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col justify-between shadow-sm hover:border-slate-300 transition-all">
+            <div className="space-y-3">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2.5">
+                  <img src="/icons/google-meet.png" alt="Google Meet" className="w-8 h-8 object-contain shrink-0" />
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900">Google Meet</h3>
+                    <span className="text-[11px] text-slate-400">Video Consultations</span>
                   </div>
+                </div>
 
-                  <span className="inline-flex items-center gap-1.5 text-xs text-slate-600">
+                {googleStatus.connected ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                    Live
+                    Connected
                   </span>
-                </div>
-
-                <p className="text-xs text-slate-600 leading-relaxed">{portal.description}</p>
-
-                {/* Compact URL Box */}
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between text-[11px] text-slate-500">
-                    <span>Webhook URL</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedPortal(portal);
-                        setShowPayloadModal(true);
-                      }}
-                      className="text-slate-600 hover:text-slate-900 underline cursor-pointer"
-                    >
-                      Sample Payload
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-1 p-1.5 bg-slate-50 border border-slate-200 rounded text-[11px] font-mono text-slate-700">
-                    <span className="truncate flex-1 select-all">{portal.endpoint}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(portal.id, portal.endpoint)}
-                      title="Copy URL"
-                      className="p-1 hover:bg-slate-200 rounded text-slate-600 cursor-pointer"
-                    >
-                      {copiedId === portal.id ? (
-                        <Check size={13} className="text-emerald-600" />
-                      ) : (
-                        <Copy size={13} />
-                      )}
-                    </button>
-                  </div>
-                </div>
+                ) : (
+                  <span className="text-[11px] text-slate-400">Not connected</span>
+                )}
               </div>
 
-              <div className="pt-3 mt-3 border-t border-slate-100 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleCopy(portal.id, portal.endpoint)}
-                  className="flex-1 h-8 px-3 text-xs font-medium rounded border border-slate-300 hover:bg-slate-50 text-slate-800 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  {copiedId === portal.id ? (
-                    <>
-                      <Check size={13} className="text-emerald-600" />
-                      <span>Copied</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy size={13} />
-                      <span>Copy Webhook URL</span>
-                    </>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedPortal(portal);
-                    setShowPayloadModal(true);
-                  }}
-                  title="View JSON Payload Structure"
-                  className="h-8 px-2.5 text-xs font-medium rounded border border-slate-200 hover:bg-slate-50 text-slate-600 cursor-pointer flex items-center gap-1"
-                >
-                  <Code size={13} />
-                  <span>Payload</span>
-                </button>
-              </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Automatically generate video meeting links for scheduled consultations and candidate calls.
+              </p>
             </div>
-          ))}
+
+            <div className="pt-4 mt-3 border-t border-slate-100">
+              {googleStatus.connected ? (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-mono text-[11px] text-slate-600 truncate max-w-[170px]" title={connectedEmail}>
+                    {connectedEmail || 'Connected'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleDisconnectGoogle}
+                    disabled={disconnecting}
+                    className="text-xs text-rose-600 hover:text-rose-800 font-medium cursor-pointer"
+                  >
+                    {disconnecting ? 'Disconnecting…' : 'Disconnect'}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleConnectGoogle()}
+                  disabled={connecting}
+                  className="w-full h-8 px-3 text-xs font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  {connecting ? <RefreshCw size={12} className="animate-spin" /> : null}
+                  <span>Connect Google Meet</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ═════════════════════════════════════════════════════════════════════ */}
+        {/* CARD 4: GOOGLE SHEETS                                               */}
+        {/* ═════════════════════════════════════════════════════════════════════ */}
+        {(activeTab === 'ALL' || activeTab === 'GOOGLE') && (
+          <div className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col justify-between shadow-sm hover:border-slate-300 transition-all">
+            <div className="space-y-3">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2.5">
+                  <img src="/icons/google-sheets.png" alt="Google Sheets" className="w-8 h-8 object-contain shrink-0" />
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900">Google Sheets</h3>
+                    <span className="text-[11px] text-slate-400">Spreadsheet Export</span>
+                  </div>
+                </div>
+
+                {googleStatus.connected ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                    Connected
+                  </span>
+                ) : (
+                  <span className="text-[11px] text-slate-400">Not connected</span>
+                )}
+              </div>
+
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Export candidate inquiries, customer lists, and performance reports directly to Google Sheets.
+              </p>
+            </div>
+
+            <div className="pt-4 mt-3 border-t border-slate-100">
+              {googleStatus.connected ? (
+                <a
+                  href="/leads"
+                  className="w-full h-8 px-3 text-xs font-medium rounded border border-slate-300 hover:bg-slate-50 text-slate-800 transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <FileSpreadsheet size={13} />
+                  <span>Go to Leads to Export</span>
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleConnectGoogle()}
+                  disabled={connecting}
+                  className="w-full h-8 px-3 text-xs font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <span>Connect Google Sheets</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ═════════════════════════════════════════════════════════════════════ */}
@@ -770,13 +656,13 @@ export default function Integrations() {
           >
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded bg-slate-100 text-slate-700 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center">
                   <Mail size={16} />
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-slate-900">Send Test Email</h3>
                   <span className="text-[11px] text-slate-500">
-                    From: {connectedEmail || 'Connected Google Workspace'}
+                    From: {connectedEmail || 'Connected Gmail Account'}
                   </span>
                 </div>
               </div>
@@ -855,7 +741,7 @@ export default function Integrations() {
       )}
 
       {/* ═════════════════════════════════════════════════════════════════════ */}
-      {/* DIALOG 2: INSTAGRAM DM REPLY MODAL                                   */}
+      {/* DIALOG 3: INSTAGRAM DM QUICK REPLY MODAL (InstagramReplyModal)       */}
       {/* ═════════════════════════════════════════════════════════════════════ */}
       {showInstagramReplyModal && (
         <div
@@ -868,12 +754,12 @@ export default function Integrations() {
           >
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 flex items-center justify-center text-white">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 flex items-center justify-center text-white">
                   <MessageCircle size={16} />
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900">Send Instagram Direct Message</h3>
-                  <span className="text-[11px] text-slate-500">Outbound reply directly to candidate</span>
+                  <h3 className="text-sm font-semibold text-slate-900">Reply to Instagram DM</h3>
+                  <span className="text-[11px] text-slate-500">Send outbound message directly to IG user</span>
                 </div>
               </div>
               <button
@@ -888,28 +774,31 @@ export default function Integrations() {
             <form onSubmit={handleSendInstagramDm} className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">
-                  Recipient ID (IGSID)
+                  Instagram User ID / Handle (IGSID)
                 </label>
                 <input
                   type="text"
                   required
                   value={igRecipientId}
                   onChange={(e) => setIgRecipientId(e.target.value)}
-                  placeholder="e.g. 123456789"
+                  placeholder="e.g. 17841400000000000 or username"
                   className="w-full h-8 px-2.5 text-xs font-mono border border-slate-300 rounded focus:border-slate-900 focus:outline-none"
                 />
+                <span className="text-[10px] text-slate-400 mt-0.5 block">
+                  The unique Instagram-scoped ID (IGSID) of the recipient.
+                </span>
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">
-                  Message
+                  Message Text
                 </label>
                 <textarea
                   required
                   rows={4}
                   value={igMessage}
                   onChange={(e) => setIgMessage(e.target.value)}
-                  placeholder="Type your message..."
+                  placeholder="Type your reply message..."
                   className="w-full p-2 text-xs border border-slate-300 rounded focus:border-slate-900 focus:outline-none resize-none"
                 />
               </div>
@@ -922,7 +811,7 @@ export default function Integrations() {
                   type="number"
                   value={igLeadId}
                   onChange={(e) => setIgLeadId(e.target.value)}
-                  placeholder="e.g. 10"
+                  placeholder="e.g. 42"
                   className="w-full h-8 px-2.5 text-xs font-mono border border-slate-300 rounded focus:border-slate-900 focus:outline-none"
                 />
               </div>
@@ -941,77 +830,10 @@ export default function Integrations() {
                   className="h-8 px-4 text-xs font-medium rounded bg-slate-900 hover:bg-slate-800 text-white cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                 >
                   {sendingDm ? <RefreshCw size={12} className="animate-spin" /> : <Send size={12} />}
-                  <span>{sendingDm ? 'Sending…' : 'Send DM'}</span>
+                  <span>{sendingDm ? 'Sending…' : 'Send Message'}</span>
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* ═════════════════════════════════════════════════════════════════════ */}
-      {/* DIALOG 3: SAMPLE INBOUND PAYLOAD MODAL                               */}
-      {/* ═════════════════════════════════════════════════════════════════════ */}
-      {showPayloadModal && selectedPortal && (
-        <div
-          className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
-          onClick={() => setShowPayloadModal(false)}
-        >
-          <div
-            className="bg-white rounded-lg max-w-md w-full p-5 space-y-4 border border-slate-200 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded bg-slate-100 text-slate-700 flex items-center justify-center">
-                  <Code size={16} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900">{selectedPortal.name} Payload</h3>
-                  <span className="text-[11px] text-slate-500">Inbound JSON Structure</span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowPayloadModal(false)}
-                className="text-slate-400 hover:text-slate-700 cursor-pointer"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div className="space-y-1.5">
-              <span className="text-xs font-medium text-slate-700">Webhook URL:</span>
-              <div className="p-2 bg-slate-50 border border-slate-200 rounded font-mono text-xs text-slate-800 truncate select-all">
-                {selectedPortal.endpoint}
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-slate-700">Expected JSON Schema (POST):</span>
-                <button
-                  type="button"
-                  onClick={() => handleCopy('sample-payload', samplePayloadJson)}
-                  className="text-xs text-slate-600 hover:text-slate-900 underline cursor-pointer"
-                >
-                  {copiedId === 'sample-payload' ? 'Copied!' : 'Copy JSON'}
-                </button>
-              </div>
-              <pre className="p-3 bg-slate-900 text-slate-100 rounded text-xs font-mono overflow-x-auto leading-relaxed">
-                {samplePayloadJson}
-              </pre>
-            </div>
-
-            <div className="pt-2 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setShowPayloadModal(false)}
-                className="h-8 px-4 text-xs font-medium rounded bg-slate-900 hover:bg-slate-800 text-white cursor-pointer"
-              >
-                Done
-              </button>
-            </div>
           </div>
         </div>
       )}
@@ -1035,7 +857,7 @@ export default function Integrations() {
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-slate-900">Google OAuth Configuration</h3>
-                  <span className="text-[11px] text-slate-500">Google Workspace Client Credentials</span>
+                  <span className="text-[11px] text-slate-500">Gmail, Meet & Sheets Integration</span>
                 </div>
               </div>
               <button
@@ -1047,6 +869,16 @@ export default function Integrations() {
               </button>
             </div>
 
+            <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-md text-xs text-amber-900 space-y-1">
+              <div className="flex items-center gap-1.5 font-semibold text-amber-950">
+                <AlertCircle size={14} className="shrink-0 text-amber-700" />
+                <span>Google OAuth Client ID is required</span>
+              </div>
+              <p className="text-[11px] leading-relaxed text-amber-900/90">
+                Google requires a valid Client ID to initiate authentication. Your client ID is saved below and will be used for authorization.
+              </p>
+            </div>
+
             <div className="space-y-1.5">
               <label className="block text-xs font-semibold text-slate-800">
                 Google OAuth Client ID:
@@ -1055,17 +887,17 @@ export default function Integrations() {
                 type="text"
                 value={googleClientIdInput}
                 onChange={(e) => setGoogleClientIdInput(e.target.value)}
-                placeholder="e.g. 644951238009-xxx.apps.googleusercontent.com"
+                placeholder="e.g. 1234567890-abcdefgh.apps.googleusercontent.com"
                 className="w-full h-9 px-3 text-xs font-mono border border-slate-300 rounded focus:border-slate-900 focus:outline-none"
               />
               <span className="text-[10px] text-slate-400">
-                Stored in this browser workspace for automatic authorization.
+                Stored in your browser and used automatically across this workspace.
               </span>
             </div>
 
             <div className="space-y-1">
               <span className="text-xs font-semibold text-slate-800">
-                Authorized Redirect URI (Google Cloud Console):
+                Authorized Redirect URI (In Google Cloud Console):
               </span>
               <div className="flex items-center gap-1.5 p-2 bg-slate-50 border border-slate-200 rounded font-mono text-xs text-slate-700">
                 <span className="truncate flex-1 select-all text-[11px]">
@@ -1081,6 +913,16 @@ export default function Integrations() {
                   {copiedId === 'redirect-uri' ? 'Copied' : 'Copy'}
                 </button>
               </div>
+            </div>
+
+            <div className="bg-slate-50 p-3 rounded border border-slate-100 space-y-1.5 text-xs text-slate-600">
+              <span className="font-semibold text-slate-800 block text-[11px]">Setup Checklist:</span>
+              <ol className="list-decimal list-inside space-y-1 text-[11px] leading-relaxed">
+                <li>Go to <span className="font-medium text-slate-800">Google Cloud Console &gt; APIs &amp; Services &gt; Credentials</span>.</li>
+                <li>Ensure the redirect URI above is added under <span className="font-medium text-slate-800">Authorized redirect URIs</span>.</li>
+                <li>Copy the Client ID and paste it into the field above.</li>
+                <li><span className="text-slate-500">(For backend server admin): Also set <code className="font-mono bg-slate-200/70 px-1 rounded">GOOGLE_CLIENT_ID</code> and <code className="font-mono bg-slate-200/70 px-1 rounded">GOOGLE_CLIENT_SECRET</code> in the backend server <code className="font-mono">.env</code>.</span></li>
+              </ol>
             </div>
 
             <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">

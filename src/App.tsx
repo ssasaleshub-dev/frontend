@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { AlertProvider } from './context/AlertContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -25,6 +25,7 @@ import Integrations from './pages/Integrations';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import DataDeletion from './pages/DataDeletion';
 import TermsOfService from './pages/TermsOfService';
+import LandingPage from './pages/public/LandingPage';
 import pushNotificationService from './services/pushNotificationService';
 import { useAuth } from './context/AuthContext';
 import { isAdmin as checkIsAdmin } from './utils/rbac';
@@ -34,6 +35,21 @@ function AttendanceRoute() {
   const { user, loading } = useAuth();
   if (loading) return null;
   return checkIsAdmin(user) ? <AttendancePage /> : <Navigate to="/profile" replace />;
+}
+
+/** Public Landing Page at `/` for unauthenticated visitors (Google verification compliance), CRM Layout when signed in. */
+function RootShell() {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  if (loading) return null;
+  if (!user && location.pathname === '/') {
+    return <LandingPage />;
+  }
+  return (
+    <ProtectedRoute>
+      <Layout />
+    </ProtectedRoute>
+  );
 }
 
 function PushNotificationListener() {
@@ -75,11 +91,7 @@ export default function App() {
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route
               path="/"
-              element={
-                <ProtectedRoute>
-                  <Layout />
-                </ProtectedRoute>
-              }
+              element={<RootShell />}
             >
               <Route index element={<Dashboard />} />
               <Route path="leads" element={<Leads />} />
