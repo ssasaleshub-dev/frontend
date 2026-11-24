@@ -3,18 +3,19 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Video,
   FileSpreadsheet,
-  HardDrive,
   Check,
   Copy,
   ExternalLink,
   RefreshCw,
   X,
-  CreditCard,
   FileText,
   Calendar,
   Globe,
+  Settings,
+  AlertCircle,
+  Key,
 } from 'lucide-react';
-import integrationsService, { GoogleIntegrationStatus } from '../services/api/integrationsService';
+import integrationsService, { GoogleIntegrationStatus, DEFAULT_GOOGLE_CLIENT_ID } from '../services/api/integrationsService';
 
 interface WebhookInfo {
   id: string;
@@ -33,8 +34,18 @@ export default function Integrations() {
   const [connecting, setConnecting] = useState<boolean>(false);
   const [disconnecting, setDisconnecting] = useState<boolean>(false);
 
+  // Google OAuth Client ID setup modal
+  const [showGoogleSetupModal, setShowGoogleSetupModal] = useState<boolean>(false);
+  const [googleClientIdInput, setGoogleClientIdInput] = useState<string>(() => {
+    return (
+      localStorage.getItem('ssa_google_client_id') ||
+      ((import.meta.env.VITE_GOOGLE_CLIENT_ID as string) || '') ||
+      DEFAULT_GOOGLE_CLIENT_ID
+    );
+  });
+
   // Filter tabs
-  const [activeTab, setActiveTab] = useState<'ALL' | 'GOOGLE' | 'WEBHOOKS' | 'PAYMENTS'>('ALL');
+  const [activeTab, setActiveTab] = useState<'ALL' | 'GOOGLE' | 'WEBHOOKS'>('ALL');
 
   // Copy feedback state (holds provider id)
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -84,12 +95,18 @@ export default function Integrations() {
   }, [fetchStatus, searchParams, setSearchParams]);
 
   // Connect Google
-  const handleConnectGoogle = async () => {
+  const handleConnectGoogle = async (customClientId?: string) => {
     setConnecting(true);
     try {
-      const url = await integrationsService.getGoogleAuthUrl();
-      if (url) {
-        window.location.href = url;
+      const result = await integrationsService.getGoogleAuthUrl(customClientId);
+      if (!result.hasClientId) {
+        // Intercept missing client_id before redirecting to prevent Google 400 error!
+        setShowGoogleSetupModal(true);
+        setConnecting(false);
+        return;
+      }
+      if (result.url) {
+        window.location.href = result.url;
       }
     } catch (err: any) {
       setBanner({
@@ -98,6 +115,17 @@ export default function Integrations() {
       });
       setConnecting(false);
     }
+  };
+
+  const handleSaveAndConnectGoogle = () => {
+    const trimmed = googleClientIdInput.trim();
+    if (!trimmed) {
+      alert('Please enter your Google OAuth Client ID.');
+      return;
+    }
+    localStorage.setItem('ssa_google_client_id', trimmed);
+    setShowGoogleSetupModal(false);
+    handleConnectGoogle(trimmed);
   };
 
   // Disconnect Google
@@ -295,9 +323,7 @@ export default function Integrations() {
             <div className="space-y-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center">
-                    <Video size={16} />
-                  </div>
+                  <img src="/icons/google-meet.png" alt="Google Meet" className="w-7 h-7 object-contain shrink-0" />
                   <div>
                     <h3 className="text-sm font-semibold text-slate-900">Google Meet</h3>
                     <span className="text-[11px] text-slate-400">Video Consultations</span>
@@ -335,15 +361,25 @@ export default function Integrations() {
                   </button>
                 </div>
               ) : (
-                <button
-                  type="button"
-                  onClick={handleConnectGoogle}
-                  disabled={connecting}
-                  className="w-full h-8 px-3 text-xs font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  {connecting ? <RefreshCw size={12} className="animate-spin" /> : null}
-                  <span>Connect Google Meet</span>
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleConnectGoogle()}
+                    disabled={connecting}
+                    className="flex-1 h-8 px-3 text-xs font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    {connecting ? <RefreshCw size={12} className="animate-spin" /> : null}
+                    <span>Connect Google Meet</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowGoogleSetupModal(true)}
+                    title="Google OAuth Client ID Configuration"
+                    className="h-8 px-2 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded transition-colors cursor-pointer"
+                  >
+                    <Settings size={13} />
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -355,9 +391,7 @@ export default function Integrations() {
             <div className="space-y-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center">
-                    <FileSpreadsheet size={16} />
-                  </div>
+                  <img src="/icons/google-sheets.png" alt="Google Sheets" className="w-7 h-7 object-contain shrink-0" />
                   <div>
                     <h3 className="text-sm font-semibold text-slate-900">Google Sheets</h3>
                     <span className="text-[11px] text-slate-400">Spreadsheet Export</span>
@@ -389,14 +423,24 @@ export default function Integrations() {
                   <span>Go to Leads to Export</span>
                 </a>
               ) : (
-                <button
-                  type="button"
-                  onClick={handleConnectGoogle}
-                  disabled={connecting}
-                  className="w-full h-8 px-3 text-xs font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  <span>Connect Google Sheets</span>
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleConnectGoogle()}
+                    disabled={connecting}
+                    className="flex-1 h-8 px-3 text-xs font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <span>Connect Google Sheets</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowGoogleSetupModal(true)}
+                    title="Google OAuth Client ID Configuration"
+                    className="h-8 px-2 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded transition-colors cursor-pointer"
+                  >
+                    <Settings size={13} />
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -408,9 +452,7 @@ export default function Integrations() {
             <div className="space-y-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-md bg-slate-200/80 text-slate-600 flex items-center justify-center">
-                    <HardDrive size={16} />
-                  </div>
+                  <img src="/icons/google-drive.png" alt="Google Drive" className="w-7 h-7 object-contain shrink-0" />
                   <div>
                     <h3 className="text-sm font-semibold text-slate-700">Google Drive</h3>
                     <span className="text-[11px] text-slate-400">Document Storage</span>
@@ -442,9 +484,13 @@ export default function Integrations() {
               <div className="space-y-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs uppercase">
-                      {hook.id === 'google-forms' ? 'GF' : hook.id.slice(0, 2)}
-                    </div>
+                    {hook.id === 'google-forms' ? (
+                      <img src="/icons/google-forms.png" alt="Google Forms" className="w-7 h-7 object-contain shrink-0" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs uppercase">
+                        {hook.id.slice(0, 2)}
+                      </div>
+                    )}
                     <div>
                       <h3 className="text-sm font-semibold text-slate-900">{hook.title}</h3>
                       <span className="text-[11px] text-slate-400">Inbound Webhook</span>
@@ -630,6 +676,112 @@ export default function Integrations() {
                 className="h-8 px-4 text-xs font-medium rounded bg-slate-900 hover:bg-slate-800 text-white"
               >
                 Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Google Workspace OAuth Setup Modal ── */}
+      {showGoogleSetupModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
+          onClick={() => setShowGoogleSetupModal(false)}
+        >
+          <div
+            className="bg-white rounded-lg max-w-lg w-full p-5 space-y-4 border border-slate-200 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-700">
+                  <Key size={16} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900">Google OAuth Configuration</h3>
+                  <span className="text-[11px] text-slate-500">Google Meet & Sheets Integration</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowGoogleSetupModal(false)}
+                className="text-slate-400 hover:text-slate-700 cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-md text-xs text-amber-900 space-y-1">
+              <div className="flex items-center gap-1.5 font-semibold text-amber-950">
+                <AlertCircle size={14} className="shrink-0 text-amber-700" />
+                <span>Google OAuth Client ID is required</span>
+              </div>
+              <p className="text-[11px] leading-relaxed text-amber-900/90">
+                The backend server currently returned an empty Client ID (<code className="font-mono bg-amber-100 px-1 py-0.5 rounded">client_id=&</code>). Google requires a valid Client ID to initiate authentication.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-800">
+                Google OAuth Client ID:
+              </label>
+              <input
+                type="text"
+                value={googleClientIdInput}
+                onChange={(e) => setGoogleClientIdInput(e.target.value)}
+                placeholder="e.g. 1234567890-abcdefgh.apps.googleusercontent.com"
+                className="w-full h-9 px-3 text-xs font-mono border border-slate-300 rounded focus:border-slate-900 focus:outline-none"
+              />
+              <span className="text-[10px] text-slate-400">
+                This will be stored in your browser session for this workspace.
+              </span>
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-xs font-semibold text-slate-800">
+                Authorized Redirect URI (In Google Cloud Console):
+              </span>
+              <div className="flex items-center gap-1.5 p-2 bg-slate-50 border border-slate-200 rounded font-mono text-xs text-slate-700">
+                <span className="truncate flex-1 select-all text-[11px]">
+                  https://ssasaleshub.cloud/api/integrations/google/callback
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleCopy('redirect-uri', 'https://ssasaleshub.cloud/api/integrations/google/callback')
+                  }
+                  className="px-2 py-0.5 text-[11px] font-medium border border-slate-300 rounded bg-white hover:bg-slate-50 text-slate-700 cursor-pointer"
+                >
+                  {copiedId === 'redirect-uri' ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 p-3 rounded border border-slate-100 space-y-1.5 text-xs text-slate-600">
+              <span className="font-semibold text-slate-800 block text-[11px]">How to configure:</span>
+              <ol className="list-decimal list-inside space-y-1 text-[11px] leading-relaxed">
+                <li>Go to <span className="font-medium text-slate-800">Google Cloud Console &gt; APIs &amp; Services &gt; Credentials</span>.</li>
+                <li>Ensure the redirect URI above is added under <span className="font-medium text-slate-800">Authorized redirect URIs</span>.</li>
+                <li>Copy the Client ID and paste it into the field above.</li>
+                <li><span className="text-slate-500">(For backend server admin): Set <code className="font-mono bg-slate-200/70 px-1 rounded">GOOGLE_CLIENT_ID</code> and <code className="font-mono bg-slate-200/70 px-1 rounded">GOOGLE_CLIENT_SECRET</code> in the backend server <code className="font-mono">.env</code>.</span></li>
+              </ol>
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowGoogleSetupModal(false)}
+                className="h-8 px-3 text-xs font-medium rounded border border-slate-300 text-slate-700 hover:bg-slate-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveAndConnectGoogle}
+                disabled={!googleClientIdInput.trim()}
+                className="h-8 px-4 text-xs font-medium rounded bg-slate-900 hover:bg-slate-800 text-white disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1.5"
+              >
+                <span>Save &amp; Connect Google</span>
               </button>
             </div>
           </div>
