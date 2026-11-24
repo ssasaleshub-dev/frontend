@@ -2149,6 +2149,19 @@ export default function Leads() {
                 </svg>
                 <b></b>
               </button>
+              <button
+                type="button"
+                className="ib"
+                id="nwHead"
+                aria-label="New candidate"
+                onClick={() => {
+                  setModalTab('single');
+                  setShowAddModal(true);
+                }}
+                style={{ marginLeft: 4 }}
+              >
+                <img src="/icons/plus-fab.png" alt="Add lead" className="w-[30px] h-[30px] rounded-full object-contain" />
+              </button>
             </div>
             <div className="sr">
               <label className="sb">
@@ -2268,32 +2281,17 @@ export default function Leads() {
                     </div>
                     <div className="ac">
                       {cleanPhone ? (
-                        <>
-                          <a
-                            className="w"
-                            href={`https://wa.me/${waPhone}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            aria-label="WhatsApp"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              showMobileToast(`Opening WhatsApp for ${candidateName}…`);
-                            }}
-                          >
-                            <img src="/icons/whatsapp.png" alt="WhatsApp" className="w-[22px] h-[22px] object-contain" />
-                          </a>
-                          <a
-                            className="c"
-                            href={`tel:${cleanPhone}`}
-                            aria-label="Call"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              showMobileToast(`Calling ${displayPhone || cleanPhone}…`);
-                            }}
-                          >
-                            <img src="/icons/phone.png" alt="Call" className="w-[22px] h-[22px] object-contain" />
-                          </a>
-                        </>
+                        <a
+                          className="c"
+                          href={`tel:${cleanPhone}`}
+                          aria-label="Call"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            showMobileToast(`Calling ${displayPhone || cleanPhone}…`);
+                          }}
+                        >
+                          <img src="/icons/phone.png" alt="Call" className="w-[24px] h-[24px] object-contain" />
+                        </a>
                       ) : null}
                     </div>
                   </div>
@@ -2312,20 +2310,6 @@ export default function Leads() {
               Load more
             </button>
           )}
-
-          {/* Floating Action Button (New Lead) */}
-          <button
-            className="fab"
-            id="nw"
-            aria-label="New lead"
-            onClick={() => {
-              setModalTab('single');
-              setShowAddModal(true);
-            }}
-            style={{ padding: 0, overflow: 'hidden', background: 'none', border: 0 }}
-          >
-            <img src="/icons/plus-fab.png" alt="Add lead" className="w-full h-full object-cover" />
-          </button>
 
           {/* Bottom Filter Sheet */}
           <div

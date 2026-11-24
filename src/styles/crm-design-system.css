@@ -381,7 +381,7 @@
 .crm-k .em { text-align: center; color: var(--muted); padding: 56px 24px; }
 .crm-k .em b { display: block; color: var(--text); font-size: 16px; margin-bottom: 4px; }
 .crm-k .more { display: block; width: calc(100% - 40px); margin: 16px 20px 0; height: 44px; border: 1px solid var(--line); border-radius: 10px; background: #fff; font-weight: 600; color: var(--blue); }
-.crm-k .fab { position: fixed; right: max(16px, calc(50% - 224px)); bottom: calc(var(--nav-h) + 16px); width: 54px; height: 54px; border-radius: 50%; border: 0; background: var(--blue); color: #fff; display: grid; place-items: center; box-shadow: 0 3px 10px rgba(8, 102, 255, .4); z-index: 6; }
+.crm-k .fab { display: none !important; }
 .crm-k .fab svg { width: 26px; height: 26px; stroke-width: 2.2; }
 .crm-k .ov { position: fixed; inset: 0; background: rgba(0, 0, 0, .4); display: none; z-index: 50; }
 .crm-k .ov.show { display: block; }
