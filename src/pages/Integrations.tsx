@@ -298,7 +298,6 @@ export default function Integrations() {
           { id: 'ALL', label: 'All' },
           { id: 'GOOGLE', label: 'Google Workspace' },
           { id: 'WEBHOOKS', label: 'Inbound Webhooks' },
-          { id: 'PAYMENTS', label: 'Payments' },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -446,34 +445,6 @@ export default function Integrations() {
           </div>
         )}
 
-        {/* CARD 3: Google Drive (Coming Soon) */}
-        {(activeTab === 'ALL' || activeTab === 'GOOGLE') && (
-          <div className="bg-slate-50/70 border border-slate-200 rounded-lg p-4 flex flex-col justify-between">
-            <div className="space-y-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2.5">
-                  <img src="/icons/google-drive.png" alt="Google Drive" className="w-7 h-7 object-contain shrink-0" />
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-700">Google Drive</h3>
-                    <span className="text-[11px] text-slate-400">Document Storage</span>
-                  </div>
-                </div>
-                <span className="text-[11px] font-medium text-slate-500 bg-slate-200/70 px-2 py-0.5 rounded">
-                  Coming soon
-                </span>
-              </div>
-
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Export candidate documents, call recordings, and CRM backups to Drive folders.
-              </p>
-            </div>
-
-            <div className="pt-4 mt-3 border-t border-slate-200/70">
-              <span className="text-[11px] text-slate-400 block text-center">In development</span>
-            </div>
-          </div>
-        )}
-
         {/* INBOUND WEBHOOK CARDS */}
         {(activeTab === 'ALL' || activeTab === 'WEBHOOKS') &&
           webhooks.map((hook) => (
@@ -564,65 +535,6 @@ export default function Integrations() {
               </div>
             </div>
           ))}
-
-        {/* PAYMENTS CARDS (Coming Soon) */}
-        {(activeTab === 'ALL' || activeTab === 'PAYMENTS') && (
-          <>
-            <div className="bg-slate-50/70 border border-slate-200 rounded-lg p-4 flex flex-col justify-between">
-              <div className="space-y-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-md bg-slate-200/80 text-slate-600 flex items-center justify-center">
-                      <CreditCard size={16} />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-semibold text-slate-700">Razorpay</h3>
-                      <span className="text-[11px] text-slate-400">Payment Gateway</span>
-                    </div>
-                  </div>
-                  <span className="text-[11px] font-medium text-slate-500 bg-slate-200/70 px-2 py-0.5 rounded">
-                    Coming soon
-                  </span>
-                </div>
-
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  Generate consultation fee payment links and update lead status upon confirmation.
-                </p>
-              </div>
-
-              <div className="pt-4 mt-3 border-t border-slate-200/70">
-                <span className="text-[11px] text-slate-400 block text-center">In development</span>
-              </div>
-            </div>
-
-            <div className="bg-slate-50/70 border border-slate-200 rounded-lg p-4 flex flex-col justify-between">
-              <div className="space-y-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-md bg-slate-200/80 text-slate-600 flex items-center justify-center">
-                      <CreditCard size={16} />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-semibold text-slate-700">Cashfree</h3>
-                      <span className="text-[11px] text-slate-400">Payment Gateway</span>
-                    </div>
-                  </div>
-                  <span className="text-[11px] font-medium text-slate-500 bg-slate-200/70 px-2 py-0.5 rounded">
-                    Coming soon
-                  </span>
-                </div>
-
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  Collect student application fees and recurring installment payments.
-                </p>
-              </div>
-
-              <div className="pt-4 mt-3 border-t border-slate-200/70">
-                <span className="text-[11px] text-slate-400 block text-center">In development</span>
-              </div>
-            </div>
-          </>
-        )}
       </div>
 
       {/* ── Simple Setup Guide Modal ── */}
