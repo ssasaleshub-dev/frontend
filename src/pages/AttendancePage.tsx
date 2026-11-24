@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useAlert } from '../context/AlertContext';
+import { SkeletonBlock, SkeletonCircle } from '../components/common/SkeletonLoader';
 import { isAdmin as checkIsAdmin, getDisplayName, getRoleBadgeInfo } from '../utils/rbac';
 import attendanceService, {
   StaffAttendanceRecord,
@@ -186,7 +187,11 @@ export default function AttendancePage() {
     };
 
     window.addEventListener('ssa_attendance_updated', handleUpdate);
-    return () => window.removeEventListener('ssa_attendance_updated', handleUpdate);
+    window.addEventListener('app:pull-to-refresh', handleUpdate);
+    return () => {
+      window.removeEventListener('ssa_attendance_updated', handleUpdate);
+      window.removeEventListener('app:pull-to-refresh', handleUpdate);
+    };
   }, [currentUserId, isAdmin, dateRange, staffFilter]);
 
   // Live timer for personal shift
@@ -727,12 +732,19 @@ export default function AttendancePage() {
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
               {loadingRoster ? (
-                <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400">
-                    <Loader2 size={22} className="animate-spin mx-auto text-[#007aff] mb-2" />
-                    Loading attendance records...
-                  </td>
-                </tr>
+                Array.from({ length: 6 }).map((_, i) => (
+                  <tr key={i} className="animate-fadeIn">
+                    <td className="py-3.5 px-4"><SkeletonBlock className="w-24 h-4 rounded" /></td>
+                    <td className="py-3.5 px-4"><SkeletonBlock className="w-28 h-4 rounded" /></td>
+                    <td className="py-3.5 px-4"><SkeletonBlock className="w-20 h-5 rounded-md" /></td>
+                    <td className="py-3.5 px-4"><SkeletonBlock className="w-16 h-4 rounded" /></td>
+                    <td className="py-3.5 px-4"><SkeletonBlock className="w-16 h-4 rounded" /></td>
+                    <td className="py-3.5 px-4"><SkeletonBlock className="w-14 h-4 rounded" /></td>
+                    <td className="py-3.5 px-4"><SkeletonBlock className="w-20 h-5 rounded-full" /></td>
+                    <td className="py-3.5 px-4"><SkeletonBlock className="w-24 h-5 rounded-full" /></td>
+                    <td className="py-3.5 px-4"><SkeletonBlock className="w-32 h-4 rounded" /></td>
+                  </tr>
+                ))
               ) : filteredRoster.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="py-12 text-center text-slate-400">

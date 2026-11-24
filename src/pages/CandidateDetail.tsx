@@ -35,6 +35,7 @@ import {
   BrandReminderIcon,
 } from '../components/icons/BrandIcons';
 import crmService, { readLeadPreferenceField } from '../services/api/crmService';
+import { CandidateDetailSkeleton } from '../components/common/SkeletonLoader';
 import { parseRemarks, buildRemarkEntry, joinRemarks, sanitizeRemarkText, type RemarkEntry } from '../utils/remarks';
 import adminService from '../services/api/adminService';
 import leadActivityService from '../services/api/leadActivityService';
@@ -276,6 +277,9 @@ export default function CandidateDetail() {
 
   useEffect(() => {
     fetchCandidate();
+    const handleRefresh = () => fetchCandidate();
+    window.addEventListener('app:pull-to-refresh', handleRefresh);
+    return () => window.removeEventListener('app:pull-to-refresh', handleRefresh);
   }, [fetchCandidate]);
 
   useEffect(() => {
@@ -948,12 +952,7 @@ export default function CandidateDetail() {
   };
 
   if (loading) {
-    return (
-      <div className="py-20 flex flex-col items-center justify-center gap-3 text-slate-500">
-        <RefreshCw size={22} className="animate-spin text-slate-800" />
-        <p className="text-xs font-medium">Loading candidate dossier...</p>
-      </div>
-    );
+    return <CandidateDetailSkeleton />;
   }
 
   if (error || !lead) {

@@ -21,6 +21,7 @@ import {
   Table,
 } from 'lucide-react';
 import { crmService } from '../services/api/crmService';
+import { ReportsSkeleton } from '../components/common/SkeletonLoader';
 import type { Lead } from '../types';
 import { formatIndianTime } from '../utils/dateTimeUtils';
 import { encryptLeadId } from '../utils/leadIdCrypto';
@@ -91,6 +92,13 @@ export default function ReportsPage() {
 
   useEffect(() => {
     fetchData();
+    const handleUpdate = () => fetchData();
+    window.addEventListener('crm-data-updated', handleUpdate);
+    window.addEventListener('app:pull-to-refresh', handleUpdate);
+    return () => {
+      window.removeEventListener('crm-data-updated', handleUpdate);
+      window.removeEventListener('app:pull-to-refresh', handleUpdate);
+    };
   }, [fetchData]);
 
   // Date Range Boundaries based on selected timeframe
@@ -522,6 +530,16 @@ export default function ReportsPage() {
       svgWonPathD: wonPath,
     };
   }, [points, chartHeight, paddingBottom]);
+
+  if (loading && leads.length === 0) {
+    return (
+      <div className="w-full min-h-screen bg-[#f4f5f7] pb-16 text-[#172b4d]">
+        <div className="max-w-[1720px] mx-auto px-4 sm:px-8 pt-4">
+          <ReportsSkeleton />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full min-h-screen bg-[#f4f5f7] pb-16 text-[#172b4d]">

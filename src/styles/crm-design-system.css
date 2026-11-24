@@ -1493,3 +1493,55 @@ aside nav {
 .crm-l .sh button.o.on i { border: 6px solid var(--blue); }
 .crm-l .toast { position: fixed; left: 50%; bottom: calc(var(--nav-h) + 90px); transform: translateX(-50%); background: #242526; color: #fff; padding: 9px 16px; border-radius: 8px; font-size: 14px; opacity: 0; pointer-events: none; transition: .2s; z-index: 60; white-space: nowrap; }
 .crm-l .toast.show { opacity: 1; }
+
+
+/* ==========================================================================
+   Skeleton Shimmer Animations & Universal Loading State UI
+   ========================================================================== */
+@keyframes crm-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.crm-skeleton {
+  background: linear-gradient(90deg, #f0f2f5 25%, #e4e6eb 37%, #f0f2f5 63%);
+  background-size: 300% 100%;
+  animation: crm-shimmer 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  display: inline-block;
+  border-radius: 6px;
+}
+
+.crm-skeleton-dark {
+  background: linear-gradient(90deg, #e4e6eb 25%, #d8dadf 37%, #e4e6eb 63%);
+  background-size: 300% 100%;
+  animation: crm-shimmer 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  display: inline-block;
+  border-radius: 6px;
+}
+
+.crm-skeleton-circle {
+  border-radius: 50% !important;
+}
+
+/* Pull to Refresh Indicator */
+.ptr-indicator {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #029757;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16), 0 1px 4px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.15s ease-out;
+}

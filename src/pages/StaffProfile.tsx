@@ -114,6 +114,7 @@ export default function StaffProfile() {
 
     const handleUpdate = () => loadAttendance(true);
     window.addEventListener('ssa_attendance_updated', handleUpdate);
+    window.addEventListener('app:pull-to-refresh', handleUpdate);
 
     // Live background sync: check every 3s if not yet checked in, so phone approval updates immediately
     const liveTimer = setInterval(() => {
@@ -139,6 +140,7 @@ export default function StaffProfile() {
 
     return () => {
       window.removeEventListener('ssa_attendance_updated', handleUpdate);
+      window.removeEventListener('app:pull-to-refresh', handleUpdate);
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('focus', handleVisibility);
       clearInterval(liveTimer);

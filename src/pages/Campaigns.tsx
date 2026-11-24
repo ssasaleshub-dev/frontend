@@ -10,6 +10,7 @@ import {
   Search,
 } from 'lucide-react';
 import crmService from '../services/api/crmService';
+import { CampaignsSkeleton } from '../components/common/SkeletonLoader';
 import { useAuth } from '../context/AuthContext';
 import { Lead } from '../types';
 import {
@@ -112,7 +113,11 @@ export default function Campaigns() {
     }
     const handleUpdate = () => fetchLeads();
     window.addEventListener('crm-data-updated', handleUpdate);
-    return () => window.removeEventListener('crm-data-updated', handleUpdate);
+    window.addEventListener('app:pull-to-refresh', handleUpdate);
+    return () => {
+      window.removeEventListener('crm-data-updated', handleUpdate);
+      window.removeEventListener('app:pull-to-refresh', handleUpdate);
+    };
   }, [fetchLeads]);
 
   useEffect(() => {
@@ -288,12 +293,7 @@ export default function Campaigns() {
   };
 
   if (loading && rawLeads.length === 0) {
-    return (
-      <div className="py-20 flex flex-col items-center justify-center gap-3 text-slate-500">
-        <RefreshCw size={22} className="animate-spin text-slate-800" />
-        <p className="text-xs font-medium">Loading campaigns...</p>
-      </div>
-    );
+    return <CampaignsSkeleton />;
   }
 
   if (error && rawLeads.length === 0) {

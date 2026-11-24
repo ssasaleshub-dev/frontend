@@ -22,12 +22,14 @@ import {
   Fingerprint,
   BarChart3,
   FileBarChart2,
+  Blocks,
 } from 'lucide-react';
 import NotificationBell from './NotificationBell';
 import AppleNotificationBanner from './AppleNotificationBanner';
 import { ButtonSpinner } from './common/SmallLoader';
 import notificationWebSocket from '../services/websocket/notificationWebSocket';
 import teamChatWebSocket from '../services/websocket/teamChatWebSocket';
+import PullToRefresh from './common/PullToRefresh';
 import notificationBannerService from '../services/banner/notificationBannerService';
 import playIPhoneNotificationSound from '../utils/appleSound';
 import { useAuth } from '../context/AuthContext';
@@ -259,6 +261,13 @@ export default function Layout() {
       to: '/profile',
       exact: false,
     },
+    {
+      id: 'integrations',
+      label: 'Integrations',
+      icon: Blocks,
+      to: '/integrations',
+      exact: false,
+    },
     ...(isAdmin
       ? [
         {
@@ -332,6 +341,7 @@ export default function Layout() {
     if (currentPath.startsWith('/users')) return { title: 'Team & Permissions', subtitle: 'Manage counselor assignments, roles, and access permissions' };
     if (currentPath.startsWith('/reports')) return { title: 'Executive Reports & Analytics' };
     if (currentPath.startsWith('/biometrics')) return { title: 'Biometric Approvals' };
+    if (currentPath.startsWith('/integrations')) return { title: 'Integrations Hub', subtitle: 'Google Workspace, Inbound Webhooks & Connectors' };
     return { title: 'SSA SalesHub CRM', subtitle: 'Work & Study Visa Consultancy' };
   };
 
@@ -657,7 +667,9 @@ export default function Layout() {
                     : 'p-3.5 sm:p-5 lg:p-6 max-w-[1440px] pb-20 md:pb-0'
             } w-full mx-auto`}
         >
-          <Outlet />
+          <PullToRefresh>
+            <Outlet />
+          </PullToRefresh>
         </main>
       </div>
 

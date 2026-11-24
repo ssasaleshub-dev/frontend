@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import IosLeadList, { IosPlatformSquircle } from '../components/leads/IosLeadList';
+import { LeadsMobileSkeleton, LeadsTableSkeleton, SkeletonBlock, SkeletonCircle } from '../components/common/SkeletonLoader';
 import crmService, { readLeadPreferenceField } from '../services/api/crmService';
 import adminService from '../services/api/adminService';
 import {
@@ -769,7 +770,11 @@ export default function Leads() {
 
     const handleUpdate = () => fetchLeads();
     window.addEventListener('crm-data-updated', handleUpdate);
-    return () => window.removeEventListener('crm-data-updated', handleUpdate);
+    window.addEventListener('app:pull-to-refresh', handleUpdate);
+    return () => {
+      window.removeEventListener('crm-data-updated', handleUpdate);
+      window.removeEventListener('app:pull-to-refresh', handleUpdate);
+    };
   }, [fetchLeads]);
 
   // Handle URL query lead inspect
@@ -2214,7 +2219,9 @@ export default function Leads() {
 
           {/* List Rows */}
           <div id="ls">
-            {displayedMobileLeads.length === 0 ? (
+            {loading && leads.length === 0 ? (
+              <LeadsMobileSkeleton count={8} />
+            ) : displayedMobileLeads.length === 0 ? (
               <div className="em">
                 <b>No candidates found</b>
                 Try a different search or reset the filters.
@@ -2924,7 +2931,21 @@ export default function Leads() {
                   )}
                 </thead>
                 <tbody className="divide-y divide-black/[0.04]">
-                  {paginatedLeads.length === 0 ? (
+                  {loading && leads.length === 0 ? (
+                    Array.from({ length: 8 }).map((_, i) => (
+                      <tr key={i} className="animate-fadeIn">
+                        <td className="px-4 py-3.5"><SkeletonBlock className="w-4 h-4 rounded" /></td>
+                        <td className="px-4 py-3.5"><SkeletonCircle size={32} /></td>
+                        <td className="px-4 py-3.5"><SkeletonBlock className="w-32 h-4 rounded" /></td>
+                        <td className="px-4 py-3.5"><SkeletonBlock className="w-24 h-4 rounded" /></td>
+                        <td className="px-4 py-3.5"><SkeletonBlock className="w-20 h-5 rounded-full" /></td>
+                        <td className="px-4 py-3.5"><SkeletonBlock className="w-24 h-5 rounded-md" /></td>
+                        <td className="px-4 py-3.5"><SkeletonBlock className="w-20 h-4 rounded" /></td>
+                        <td className="px-4 py-3.5"><SkeletonBlock className="w-16 h-4 rounded" /></td>
+                        <td className="px-4 py-3.5 text-right"><SkeletonBlock className="w-14 h-7 rounded-md" /></td>
+                      </tr>
+                    ))
+                  ) : paginatedLeads.length === 0 ? (
                     <tr>
                       <td colSpan={13} className="py-12 text-center text-[#8e8e93]">
                         {loading ? (

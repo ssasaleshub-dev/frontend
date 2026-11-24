@@ -21,6 +21,7 @@ import StaffProfile from './pages/StaffProfile';
 import BiometricApprovalsPage from './pages/BiometricApprovalsPage';
 import ReportsPage from './pages/ReportsPage';
 import NotificationsPage from './pages/NotificationsPage';
+import Integrations from './pages/Integrations';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import DataDeletion from './pages/DataDeletion';
 import TermsOfService from './pages/TermsOfService';
@@ -100,6 +101,7 @@ export default function App() {
               <Route path="profile" element={<StaffProfile />} />
               <Route path="chat" element={<Chat />} />
               <Route path="notifications" element={<NotificationsPage />} />
+              <Route path="integrations" element={<Integrations />} />
               <Route
                 path="users"
                 element={

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import crmService from '../services/api/crmService';
 import { formatIndianDate, formatIndianTime } from '../utils/dateTimeUtils';
+import { SkeletonBlock, SkeletonCircle } from '../components/common/SkeletonLoader';
 import { useAlert } from '../context/AlertContext';
 import type { Customer } from '../types';
 
@@ -161,6 +162,10 @@ export default function Customers() {
       const hasCached = loadFromCache();
       fetchInitialCustomers(hasCached);
     }
+
+    const handleRefresh = () => fetchInitialCustomers(false);
+    window.addEventListener('app:pull-to-refresh', handleRefresh);
+    return () => window.removeEventListener('app:pull-to-refresh', handleRefresh);
   }, [fetchInitialCustomers]);
 
   // Infinite Scroll IntersectionObserver on bottom sentinel
@@ -338,21 +343,25 @@ export default function Customers() {
 
         {/* Mobile View: Zero Side-Scroll iOS Grouped List (md:hidden) */}
         <div className="md:hidden divide-y divide-black/[0.06]">
-          {filteredCustomers.length === 0 ? (
-            <div className="py-12 px-4 text-center text-[#8e8e93]">
-              {loading ? (
-                <span className="flex items-center justify-center gap-2 text-xs">
-                  <RefreshCw size={16} className="animate-spin text-[#007aff]" />
-                  Loading contacts...
-                </span>
-              ) : (
-                <div>
-                  <p className="text-[#1c1c1e] font-semibold text-sm">No contacts found</p>
-                  <p className="text-[#8e8e93] text-xs mt-1">
-                    Click "New Contact" to register contacts or import leads.
-                  </p>
+          {loading && customers.length === 0 ? (
+            <div className="p-4 space-y-3">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="p-3 bg-slate-50/60 rounded-xl space-y-2 border border-slate-100">
+                  <div className="flex justify-between items-center">
+                    <SkeletonBlock className="w-32 h-4 rounded" />
+                    <SkeletonBlock className="w-16 h-4 rounded" />
+                  </div>
+                  <SkeletonBlock className="w-44 h-3.5 rounded" />
+                  <SkeletonBlock className="w-24 h-3 rounded" />
                 </div>
-              )}
+              ))}
+            </div>
+          ) : filteredCustomers.length === 0 ? (
+            <div className="py-12 px-4 text-center text-[#8e8e93]">
+              <p className="text-[#1c1c1e] font-semibold text-sm">No contacts found</p>
+              <p className="text-[#8e8e93] text-xs mt-1">
+                Click "New Contact" to register contacts or import leads.
+              </p>
             </div>
           ) : (
             filteredCustomers.map((cust) => (
@@ -463,19 +472,20 @@ export default function Customers() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredCustomers.length === 0 ? (
+              {loading && customers.length === 0 ? (
+                Array.from({ length: 6 }).map((_, i) => (
+                  <tr key={i} className="animate-fadeIn">
+                    <td className="py-3.5 px-4"><SkeletonBlock className="w-32 h-4 rounded" /></td>
+                    <td className="py-3.5 px-4"><SkeletonBlock className="w-28 h-4 rounded" /></td>
+                    <td className="py-3.5 px-4"><SkeletonBlock className="w-24 h-4 rounded" /></td>
+                    <td className="py-3.5 px-4"><SkeletonBlock className="w-28 h-4 rounded" /></td>
+                    <td className="py-3.5 px-4 text-right"><SkeletonBlock className="w-16 h-6 rounded" /></td>
+                  </tr>
+                ))
+              ) : filteredCustomers.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-12 text-center text-slate-400">
-                    {loading ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <RefreshCw size={16} className="animate-spin text-slate-600" />
-                        Loading customers...
-                      </span>
-                    ) : (
-                      <div>
-                        <p className="text-slate-600 font-semibold text-sm">No customers found</p>
-                      </div>
-                    )}
+                    <p className="text-slate-600 font-semibold text-sm">No customers found</p>
                   </td>
                 </tr>
               ) : (

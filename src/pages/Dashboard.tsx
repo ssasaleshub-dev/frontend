@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import AdminDashboardView from '../components/dashboard/AdminDashboardView';
 import StaffDashboardView from '../components/dashboard/StaffDashboardView';
+import { DashboardSkeleton } from '../components/common/SkeletonLoader';
 import crmService from '../services/api/crmService';
 import { formatIndianDate, formatIndianTime } from '../utils/dateTimeUtils';
 import {
@@ -124,7 +125,11 @@ export default function Dashboard() {
 
     const handleUpdate = () => loadDashboardData();
     window.addEventListener('crm-data-updated', handleUpdate);
-    return () => window.removeEventListener('crm-data-updated', handleUpdate);
+    window.addEventListener('app:pull-to-refresh', handleUpdate);
+    return () => {
+      window.removeEventListener('crm-data-updated', handleUpdate);
+      window.removeEventListener('app:pull-to-refresh', handleUpdate);
+    };
   }, [loadDashboardData]);
 
   // 1. Scope leads by logged-in user role
@@ -445,8 +450,10 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ── Role-Specific High-Productivity Views ── */}
-      {isAdmin ? (
+      {/* ── Role-Specific High-Productivity Views or Skeleton Loader ── */}
+      {loading && allLeads.length === 0 ? (
+        <DashboardSkeleton />
+      ) : isAdmin ? (
         <AdminDashboardView
           currentUser={currentUser}
           allLeads={allLeads}
