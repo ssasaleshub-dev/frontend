@@ -61,6 +61,14 @@ export const integrationsService = {
   },
 
   /**
+   * Instantly generate and schedule a Google Meet consultation link
+   */
+  async createGoogleMeet(title: string = 'Client Consultation'): Promise<{ meetUrl?: string; eventId?: string; url?: string; hangoutsLink?: string }> {
+    const res = await axiosClient.post('/api/integrations/google/meet', { title });
+    return res;
+  },
+
+  /**
    * Send test email using connected Gmail account
    */
   async sendTestEmail(payload: SendTestEmailPayload): Promise<any> {
