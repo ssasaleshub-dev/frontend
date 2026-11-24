@@ -102,6 +102,8 @@ export default function App() {
               <Route path="chat" element={<Chat />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="integrations" element={<Integrations />} />
+              <Route path="integrations/callback" element={<Integrations />} />
+              <Route path="integrations/google/callback" element={<Integrations />} />
               <Route
                 path="users"
                 element={

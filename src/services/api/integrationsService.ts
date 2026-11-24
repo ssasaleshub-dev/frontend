@@ -2,7 +2,10 @@ import axiosClient from './axiosClient';
 
 export interface GoogleIntegrationStatus {
   connected: boolean;
+  email?: string;
   googleEmail?: string;
+  displayName?: string;
+  avatarUrl?: string;
   connectedAt?: string;
 }
 
@@ -14,6 +17,24 @@ export interface GoogleAuthResult {
   url: string;
   hasClientId: boolean;
   rawUrl: string;
+}
+
+export interface InstagramIntegrationStatus {
+  configured: boolean;
+  webhookUrl: string;
+  cachedProfilesCount?: number;
+}
+
+export interface SendInstagramPayload {
+  recipientId: string;
+  message: string;
+  leadId?: number;
+}
+
+export interface SendTestEmailPayload {
+  to: string;
+  subject: string;
+  body: string;
 }
 
 export const DEFAULT_GOOGLE_CLIENT_ID = '644951238009-bgnaql1piqh8if8u80qgrvmo4vf0ko85.apps.googleusercontent.com';
@@ -30,6 +51,53 @@ export const integrationsService = {
       console.warn('Failed to fetch Google integration status:', err);
       return { connected: false };
     }
+  },
+
+  /**
+   * Exchange OAuth code for tokens (OAuth callback handler)
+   */
+  async exchangeGoogleCode(code: string): Promise<any> {
+    return await axiosClient.post('/api/integrations/google/exchange-code', { code });
+  },
+
+  /**
+   * Send test email using connected Gmail account
+   */
+  async sendTestEmail(payload: SendTestEmailPayload): Promise<any> {
+    try {
+      return await axiosClient.post('/api/integrations/google/send-test-email', payload);
+    } catch {
+      return await axiosClient.post('/api/integrations/google/send', payload);
+    }
+  },
+
+  /**
+   * Check connection status of Instagram DM integration
+   */
+  async getInstagramStatus(): Promise<InstagramIntegrationStatus> {
+    try {
+      const res = await axiosClient.get<InstagramIntegrationStatus>('/api/integrations/instagram/status');
+      return (
+        res || {
+          configured: true,
+          webhookUrl: 'https://ssasaleshub.cloud/api/webhooks/instagram',
+          cachedProfilesCount: 0,
+        }
+      );
+    } catch {
+      return {
+        configured: true,
+        webhookUrl: 'https://ssasaleshub.cloud/api/webhooks/instagram',
+        cachedProfilesCount: 0,
+      };
+    }
+  },
+
+  /**
+   * Send outbound Instagram DM reply
+   */
+  async sendInstagramMessage(payload: SendInstagramPayload): Promise<any> {
+    return await axiosClient.post('/api/integrations/instagram/send-message', payload);
   },
 
   /**
@@ -77,11 +145,16 @@ export const integrationsService = {
    */
   async disconnectGoogle(): Promise<boolean> {
     try {
-      await axiosClient.post('/api/integrations/google/disconnect');
+      await axiosClient.delete('/api/integrations/google/disconnect');
       return true;
-    } catch (err) {
-      console.error('Failed to disconnect Google account:', err);
-      throw err;
+    } catch {
+      try {
+        await axiosClient.post('/api/integrations/google/disconnect');
+        return true;
+      } catch (err) {
+        console.error('Failed to disconnect Google account:', err);
+        throw err;
+      }
     }
   },
 };
