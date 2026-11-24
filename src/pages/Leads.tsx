@@ -2484,7 +2484,7 @@ export default function Leads() {
                 ? 'bg-blue-50 border-blue-300 text-blue-700'
                 : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
             }`}
-            title="Filter by Desk, Source, or Sort"
+            title="Filter by Program, Source, or Sort"
           >
             <Filter size={13} />
             <span className="hidden xs:inline">Filters</span>
@@ -2588,7 +2588,7 @@ export default function Leads() {
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  All Desks
+                  All Programs
                 </button>
                 <button
                   onClick={() => handleVisaTabChange('WORK_VISA')}
@@ -4091,9 +4091,9 @@ export default function Leads() {
                             className="zoho-select w-full cursor-pointer"
                           >
                             <option value="AUTO">Auto-detect from Campaign & AdSet</option>
-                            <option value="WORK_VISA">Force Work Visa Desk</option>
-                            <option value="STUDY_VISA">Force Study Visa Desk</option>
-                            <option value="OTHER_VISA">Force Other Visa Desk</option>
+                            <option value="WORK_VISA">Force Work Visa</option>
+                            <option value="STUDY_VISA">Force Study Visa</option>
+                            <option value="OTHER_VISA">Force Other Visa</option>
                           </select>
                         </div>
 

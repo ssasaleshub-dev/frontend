@@ -299,7 +299,7 @@ export default function ReportsPage() {
   const counselorBreakdown = useMemo(() => {
     const map = new Map<string, number>();
     filteredLeads.forEach((l) => {
-      const counselor = l.assignedTo?.trim() || 'Work Visa Desk / Pool';
+      const counselor = l.assignedTo?.trim() || 'Work Visa / Pool';
       map.set(counselor, (map.get(counselor) || 0) + 1);
     });
     const total = Math.max(1, filteredLeads.length);

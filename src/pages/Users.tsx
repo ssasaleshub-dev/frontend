@@ -401,7 +401,7 @@ export default function Users() {
         <div className="ios-card ios-card-hover p-4 flex flex-col justify-between">
           <h5 className="text-xs font-semibold text-black uppercase tracking-wider">Study Visa Staff</h5>
           <p className="text-2xl font-bold tracking-tight text-black mt-2">{stats.studyVisa}</p>
-          <p className="text-xs font-semibold text-black mt-0.5">University desks</p>
+          <p className="text-xs font-semibold text-black mt-0.5">University admissions</p>
         </div>
 
         {/* Domestic College Admission Staff */}

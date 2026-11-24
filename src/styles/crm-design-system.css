@@ -335,7 +335,7 @@
   max-width: 480px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(var(--nav-h) + 90px);
+  padding-bottom: calc(var(--nav-h) + 140px);
 }
 .crm-k * { box-sizing: border-box; }
 .crm-k button { font: inherit; cursor: pointer; color: inherit; }

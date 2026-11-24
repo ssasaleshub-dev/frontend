@@ -102,7 +102,7 @@ export const USER_ROLES = {
 } as const;
 
 export const USER_ROLE_CONFIG = [
-  { value: 'ROLE_ADMIN', label: 'Admin', desc: 'Super Administrator with global access across all desks and user management' },
+  { value: 'ROLE_ADMIN', label: 'Admin', desc: 'Super Administrator with global access across all departments and user management' },
   { value: 'ROLE_WORK_VISA', label: 'Work Visa Staff', desc: 'Handles international employment & work permit inquiries' },
   { value: 'ROLE_STUDY_VISA', label: 'Study Visa Staff', desc: 'Handles university admissions & study permits' },
   { value: 'ROLE_DOMESTIC_COLLEGE_ADMISSION', label: 'Domestic College Admission Staff', desc: 'Handles domestic college and university admissions' },

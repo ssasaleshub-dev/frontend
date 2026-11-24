@@ -582,7 +582,7 @@ export default function StaffProfile() {
 
               <div className="f">
                 <label>Assigned department</label>
-                <span>{badgeInfo.deskTitle || (isAdmin ? 'Super Administrator' : 'Staff Desk')}</span>
+                <span>{badgeInfo.deskTitle || (isAdmin ? 'Super Administrator' : 'Staff Counselor')}</span>
               </div>
             </div>
 

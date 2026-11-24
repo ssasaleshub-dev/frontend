@@ -164,7 +164,7 @@ export default function CandidateDetail() {
       if (candidateData) {
         // Enforce role-based access for non-admin counselors
         if (!isAdmin && filterLeadsByUserRole([candidateData], currentUser).length === 0) {
-          throw new Error(`Access restricted: Candidate belongs to a different visa desk outside your assigned scope.`);
+          throw new Error(`Access restricted: Candidate belongs to a different category outside your assigned scope.`);
         }
 
         const cachedClosing = localStorage.getItem(`ssa_lead_closing_date_${candidateData.id}`);
