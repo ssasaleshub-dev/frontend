@@ -205,7 +205,6 @@ export default function Integrations() {
       } catch {
         // Clipboard permission optional
       }
-      setBanner({ type: 'success', text: `Google Meet link created: ${url}` });
     } catch (err: any) {
       setBanner({
         type: 'error',
@@ -441,10 +440,8 @@ export default function Integrations() {
       {/* ── Status Feedback Banner ── */}
       {banner && (
         <div
-          className={`flex items-center justify-between px-3.5 py-2.5 rounded-md text-xs font-medium border ${
-            banner.type === 'success'
-              ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
-              : 'bg-rose-50 text-rose-900 border-rose-200'
+          className={`flex items-center justify-between px-4 py-2.5 rounded-md text-[13px] bg-white border border-slate-200 border-l-4 text-slate-800 ${
+            banner.type === 'success' ? 'border-l-emerald-600' : 'border-l-rose-600'
           }`}
         >
           <span>{banner.text}</span>
