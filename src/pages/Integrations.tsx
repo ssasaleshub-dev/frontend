@@ -326,14 +326,14 @@ export default function Integrations() {
 
   // Disconnect Google
   const handleDisconnectGoogle = async () => {
-    if (!window.confirm('Disconnect your Google / Gmail account from SSA SalesHub?')) return;
     setDisconnecting(true);
     try {
       await integrationsService.disconnectGoogle();
       setGoogleStatus({ connected: false });
+      setGeneratedMeetUrl(null);
       setBanner({
         type: 'success',
-        text: 'Gmail account disconnected.',
+        text: 'Google account disconnected.',
       });
     } catch {
       setBanner({

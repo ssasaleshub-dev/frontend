@@ -206,18 +206,8 @@ export const integrationsService = {
    * Disconnect Google account
    */
   async disconnectGoogle(): Promise<boolean> {
-    try {
-      await axiosClient.delete('/api/integrations/google/disconnect');
-      return true;
-    } catch {
-      try {
-        await axiosClient.post('/api/integrations/google/disconnect');
-        return true;
-      } catch (err) {
-        console.error('Failed to disconnect Google account:', err);
-        throw err;
-      }
-    }
+    await axiosClient.post('/api/integrations/google/disconnect');
+    return true;
   },
 };
 
