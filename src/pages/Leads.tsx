@@ -2219,7 +2219,7 @@ export default function Leads() {
 
           {/* List Rows */}
           <div id="ls">
-            {loading && leads.length === 0 ? (
+            {loading && rawLeads.length === 0 ? (
               <LeadsMobileSkeleton count={8} />
             ) : displayedMobileLeads.length === 0 ? (
               <div className="em">
@@ -2931,7 +2931,7 @@ export default function Leads() {
                   )}
                 </thead>
                 <tbody className="divide-y divide-black/[0.04]">
-                  {loading && leads.length === 0 ? (
+                  {loading && rawLeads.length === 0 ? (
                     Array.from({ length: 8 }).map((_, i) => (
                       <tr key={i} className="animate-fadeIn">
                         <td className="px-4 py-3.5"><SkeletonBlock className="w-4 h-4 rounded" /></td>
