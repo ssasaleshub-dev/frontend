@@ -515,13 +515,11 @@ export default function Integrations() {
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2.5">
                   {/* Gmail Logo Icon */}
-                  <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
-                    <img
-                      src="/icons/gmail-classic.png"
-                      alt="Gmail"
-                      className="w-5 h-5 object-contain"
-                    />
-                  </div>
+                  <img
+                    src="/icons/gmail-classic.png"
+                    alt="Gmail"
+                    className="w-8 h-8 object-contain shrink-0"
+                  />
                   <div>
                     <h3 className="text-[15px] font-semibold text-slate-900">Gmail</h3>
                     <span className="text-xs text-slate-400">Direct Candidate Inbox</span>
