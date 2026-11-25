@@ -91,14 +91,10 @@ export const integrationsService = {
   },
 
   /**
-   * Send test email using connected Gmail account
+   * Send email using connected Gmail account
    */
   async sendTestEmail(payload: SendTestEmailPayload): Promise<any> {
-    try {
-      return await axiosClient.post('/api/integrations/google/send-test-email', payload);
-    } catch {
-      return await axiosClient.post('/api/integrations/google/send', payload);
-    }
+    return await axiosClient.post('/api/integrations/google/send', payload);
   },
 
   /**
