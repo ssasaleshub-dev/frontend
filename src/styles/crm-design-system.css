@@ -190,8 +190,12 @@
     height: 100%;
     min-height: 0;
     overflow-y: auto;
-    padding-right: 6px;
     padding-bottom: 16px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .crm-page .grid > main::-webkit-scrollbar {
+    display: none;
   }
   .crm-page .side {
     position: static;
@@ -199,6 +203,11 @@
     max-height: 100%;
     overflow-y: auto;
     flex-shrink: 0;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .crm-page .side::-webkit-scrollbar {
+    display: none;
   }
   .crm-page .grid > aside:last-child {
     position: static;
@@ -206,6 +215,11 @@
     max-height: 100%;
     overflow-y: auto;
     flex-shrink: 0;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .crm-page .grid > aside:last-child::-webkit-scrollbar {
+    display: none;
   }
 }
 .crm-page .side { padding: 8px 0; }

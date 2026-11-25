@@ -141,7 +141,7 @@ export default function CandidateDetail() {
     Array<{ id: string; from: string; to: string; subject: string; body: string; sentAt: string }>
   >(() => {
     try {
-      const raw = id ? localStorage.getItem(`ssa_lead_emails_${id}`) : null;
+      const raw = resolvedLeadId ? localStorage.getItem(`ssa_lead_emails_${resolvedLeadId}`) : null;
       return raw ? JSON.parse(raw) : [];
     } catch {
       return [];
@@ -161,7 +161,7 @@ export default function CandidateDetail() {
     Array<{ id: string; name: string; docType: string; url: string; uploadedAt: string; size?: number }>
   >(() => {
     try {
-      const raw = id ? localStorage.getItem(`ssa_lead_docs_${id}`) : null;
+      const raw = resolvedLeadId ? localStorage.getItem(`ssa_lead_docs_${resolvedLeadId}`) : null;
       return raw ? JSON.parse(raw) : [];
     } catch {
       return [];
@@ -261,7 +261,7 @@ export default function CandidateDetail() {
       };
       setSentEmails((prev) => {
         const next = [newEmailEntry, ...prev];
-        if (id) localStorage.setItem(`ssa_lead_emails_${id}`, JSON.stringify(next));
+        if (resolvedLeadId) localStorage.setItem(`ssa_lead_emails_${resolvedLeadId}`, JSON.stringify(next));
         return next;
       });
       if (lead?.id) {
@@ -301,7 +301,7 @@ export default function CandidateDetail() {
       };
       setCandidateDocs((prev) => {
         const next = [newDoc, ...prev];
-        if (id) localStorage.setItem(`ssa_lead_docs_${id}`, JSON.stringify(next));
+        if (resolvedLeadId) localStorage.setItem(`ssa_lead_docs_${resolvedLeadId}`, JSON.stringify(next));
         return next;
       });
       leadActivityService.logActivity(lead.id, {
@@ -326,7 +326,7 @@ export default function CandidateDetail() {
     if (!window.confirm('Remove this document from the candidate dossier?')) return;
     setCandidateDocs((prev) => {
       const next = prev.filter((d) => d.id !== docId);
-      if (id) localStorage.setItem(`ssa_lead_docs_${id}`, JSON.stringify(next));
+      if (resolvedLeadId) localStorage.setItem(`ssa_lead_docs_${resolvedLeadId}`, JSON.stringify(next));
       return next;
     });
   };
