@@ -32,7 +32,7 @@ async function handleApiRequest(request, env) {
   const init = {
     method: request.method,
     headers,
-    redirect: 'follow',
+    redirect: 'manual',
   }
 
   if (!['GET', 'HEAD'].includes(request.method)) {
