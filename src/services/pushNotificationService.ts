@@ -192,8 +192,8 @@ class PushNotificationService {
           id: 'fcm_default_channel',
           name: 'SSA CRM Alerts',
           description: 'General notifications and lead/reminder alerts for SSA CRM',
-          importance: 5, // High importance (heads-up notification)
-          visibility: 1,
+          importance: 5 as const, // High importance (heads-up notification)
+          visibility: 1 as const,
           sound: 'default',
           vibration: true,
           lights: true,

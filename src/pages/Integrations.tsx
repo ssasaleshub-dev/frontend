@@ -342,7 +342,7 @@ export default function Integrations() {
       setGoogleStatus({ connected: false });
       setGeneratedMeetUrl(null);
       setSheetsList([]);
-      setSelectedSheet(null);
+      setSelectedSheetId('');
       setSheetPreview(null);
       setBanner({
         type: 'success',

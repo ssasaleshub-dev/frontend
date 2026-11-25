@@ -171,7 +171,9 @@ export default function Dashboard() {
 
     const wonCount = (statusCounts.CONVERTED || 0) + (statusCounts.WON || 0);
     const inProcessCount = (statusCounts.NEGOTIATION || 0) + (statusCounts.PROPOSAL_SENT || 0);
-    const contactedOrQualified = (statusCounts.CONTACTED || 0) + (statusCounts.QUALIFIED || 0);
+    const contactedCount = statusCounts.CONTACTED || 0;
+    const qualifiedCount = statusCounts.QUALIFIED || 0;
+    const contactedOrQualified = contactedCount + qualifiedCount;
     const conversionRate = total > 0 ? Math.round((wonCount / total) * 100) : 0;
 
     // Education distribution
@@ -199,6 +201,8 @@ export default function Dashboard() {
       statusCounts,
       wonCount,
       inProcessCount,
+      contactedCount,
+      qualifiedCount,
       contactedOrQualified,
       conversionRate,
       educationCounts,

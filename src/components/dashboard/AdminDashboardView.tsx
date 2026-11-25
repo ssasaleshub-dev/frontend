@@ -32,8 +32,14 @@ export interface AdminDashboardViewProps {
     qualifiedCount: number;
     studyVisaCount: number;
     workVisaCount: number;
+    otherVisaCount: number;
+    igCount: number;
+    fbCount: number;
+    waCount: number;
     conversionRate: number;
     statusCounts: Record<string, number>;
+    educationCounts: Record<string, number>;
+    ageCounts: Record<string, number>;
   };
   deskFilter: 'ALL' | 'WORK_VISA' | 'STUDY_VISA' | 'OTHER_VISA';
   handleDeskChange: (desk: 'ALL' | 'WORK_VISA' | 'STUDY_VISA' | 'OTHER_VISA') => void;
@@ -97,9 +103,9 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   renderVisaBadge,
 }) => {
   // Mobile accordion state for Recent Candidate Inquiries
-  const [expandedLeadId, setExpandedLeadId] = useState<number | null>(null);
+  const [expandedLeadId, setExpandedLeadId] = useState<string | number | null>(null);
 
-  const toggleExpandLead = (leadId: number) => {
+  const toggleExpandLead = (leadId: string | number) => {
     setExpandedLeadId((prev) => (prev === leadId ? null : leadId));
   };
 

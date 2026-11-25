@@ -2,7 +2,7 @@ import axiosClient from './axiosClient';
 
 export type EventType = 'REMINDER' | 'EVENT' | 'CALL' | 'INTERVIEW' | 'FOLLOWUP' | 'HOLIDAY';
 export type EventPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-export type NotificationType = 'REMINDER' | 'LEAD_ASSIGNED' | 'STATUS_CHANGE' | 'SYSTEM';
+export type NotificationType = 'REMINDER' | 'LEAD_ASSIGNED' | 'STATUS_CHANGE' | 'SYSTEM' | 'CALL' | string;
 
 export interface CalendarEventDTO {
   id: string;
@@ -29,9 +29,10 @@ export interface NotificationDTO {
   message: string;
   type: NotificationType;
   referenceId?: string;
-  referenceType?: 'EVENT' | 'LEAD';
+  referenceType?: 'EVENT' | 'LEAD' | string;
   isRead: boolean;
   createdAt: string;
+  readAt?: string;
   scheduledFor?: string;
   isServerBacked?: boolean;
 }

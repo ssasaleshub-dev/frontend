@@ -116,7 +116,7 @@ export default function CandidateDetail() {
   const [submittingNote, setSubmittingNote] = useState<boolean>(false);
   const [newNote, setNewNote] = useState<string>('');
   const [notesHistory, setNotesHistory] = useState<RemarkEntry[]>([]);
-  const [activeSection, setActiveSection] = useState<'info' | 'payments' | 'eligibility' | 'form' | 'attribution' | 'notes'>('info');
+  const [activeSection, setActiveSection] = useState<'info' | 'payments' | 'eligibility' | 'form' | 'attribution' | 'notes' | 'activity' | 'emails' | 'documents' | 'lead-info'>('info');
   const [copiedMetaId, setCopiedMetaId] = useState<string | null>(null);
 
   // Client Budget & Payment State
@@ -2270,7 +2270,7 @@ export default function CandidateDetail() {
                           <span className="font-semibold text-slate-900">
                             {act.userName || 'System'}
                           </span>
-                          <span className="text-slate-500">{formatDate(act.createdAt)}</span>
+                          <span className="text-slate-500">{formatDate(act.createdAt || act.timestamp)}</span>
                         </div>
                         <div className="text-[13px] font-semibold text-slate-900">{act.title}</div>
                         {act.description && (

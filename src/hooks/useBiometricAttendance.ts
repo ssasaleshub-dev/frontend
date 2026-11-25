@@ -44,6 +44,7 @@ export interface UseBiometricAttendanceReturn {
 export function useBiometricAttendance({
   userId,
   userName,
+  userRole,
   workMode = 'OFFICE',
   note = '',
   onSuccess,

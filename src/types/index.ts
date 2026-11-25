@@ -128,5 +128,6 @@ export interface LeadActivity {
   oldValue?: string;
   newValue?: string;
   timestamp: string;
+  createdAt?: string;
   metadata?: Record<string, any>;
 }
