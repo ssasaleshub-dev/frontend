@@ -24,9 +24,11 @@ import integrationsService, {
   DEFAULT_GOOGLE_CLIENT_ID,
 } from '../services/api/integrationsService';
 import { SkeletonBlock } from '../components/common/SkeletonLoader';
+import { useAlert } from '../context/AlertContext';
 
 export default function Integrations() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { showConfirm, showAlert } = useAlert();
 
   // Google status & actions
   const [googleStatus, setGoogleStatus] = useState<GoogleIntegrationStatus>({ connected: false });
@@ -326,21 +328,37 @@ export default function Integrations() {
 
   // Disconnect Google
   const handleDisconnectGoogle = async () => {
-    if (!window.confirm('Disconnect your Google / Gmail account from SSA SalesHub?')) return;
+    const confirmed = await showConfirm({
+      title: 'Disconnect Google / Gmail',
+      message: 'Disconnect your Google / Gmail account from SSA SalesHub?',
+      confirmText: 'Disconnect',
+      cancelText: 'Cancel',
+      isDestructive: true,
+    });
+    if (!confirmed) return;
     setDisconnecting(true);
     try {
       await integrationsService.disconnectGoogle();
       setGoogleStatus({ connected: false });
       setGeneratedMeetUrl(null);
+      setSheetsList([]);
+      setSelectedSheet(null);
+      setSheetPreview(null);
       setBanner({
         type: 'success',
         text: 'Google account disconnected.',
       });
-    } catch {
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.errorMessage ||
+        err?.response?.data?.message ||
+        err?.message ||
+        'Failed to disconnect account. Please try again.';
       setBanner({
         type: 'error',
-        text: 'Failed to disconnect account. Please try again.',
+        text: msg,
       });
+      showAlert({ title: 'Disconnect Failed', message: msg });
     } finally {
       setDisconnecting(false);
     }
