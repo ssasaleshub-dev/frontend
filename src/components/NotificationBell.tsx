@@ -12,7 +12,7 @@ import playIPhoneNotificationSound from '../utils/appleSound';
 import reminderNotificationService, {
   NotificationItem,
 } from '../services/reminderNotificationService';
-import { encryptLeadId } from '../utils/leadIdCrypto';
+import { resolveNotificationTarget } from '../utils/notificationNavigation';
 import { formatIndianTime, formatIndianDate, cleanNotificationMessage, cleanNotificationTitle } from '../utils/dateTimeUtils';
 
 export default function NotificationBell() {
@@ -186,10 +186,11 @@ export default function NotificationBell() {
       await reminderNotificationService.markAsRead(item.id);
     }
     setIsOpen(false);
-    if (item.referenceType === 'LEAD' && item.referenceId) {
-      navigate(`/leads/${encryptLeadId(item.referenceId)}`);
-    } else if (item.type === 'REMINDER' || item.referenceType === 'EVENT') {
-      navigate('/calendar');
+    const target = resolveNotificationTarget(item);
+    if (target) {
+      navigate(target.path, {
+        state: { fromNotification: true, searchName: target.searchName },
+      });
     }
   };
 

@@ -14,6 +14,7 @@ import notificationApiService, {
 import pushNotificationService from './pushNotificationService';
 import notificationBannerService from './banner/notificationBannerService';
 import { format12HourTime, IST_TIMEZONE, cleanNotificationMessage } from '../utils/dateTimeUtils';
+import { resolveNotificationTarget } from '../utils/notificationNavigation';
 
 export type { CalendarEventDTO as CalendarEvent, NotificationDTO as NotificationItem, EventType, EventPriority, NotificationType };
 
@@ -376,51 +377,69 @@ class ReminderNotificationService {
       return true;
     }
 
-    // 2. If both have different persistent server UUIDs, they are definitely distinct notifications!
-    if (a.id && b.id && String(a.id) !== String(b.id)) {
-      const isAClientTemp = String(a.id).startsWith('ws-') || String(a.id).startsWith('loc-') || String(a.id).startsWith('notif_');
-      const isBClientTemp = String(b.id).startsWith('ws-') || String(b.id).startsWith('loc-') || String(b.id).startsWith('notif_');
-      if (!isAClientTemp && !isBClientTemp) {
+    const typeA = (a.type || '').toUpperCase();
+    const typeB = (b.type || '').toUpperCase();
+
+    // 2. CHAT messages must NEVER be collapsed by sender title; only match by exact ID or matching referenceId.
+    if (typeA === 'CHAT' || typeB === 'CHAT') {
+      return Boolean(
+        a.referenceId &&
+        b.referenceId &&
+        String(a.referenceId) === String(b.referenceId) &&
+        typeA === typeB
+      );
+    }
+
+    // Extract effective referenceId (handles `lead-123` / `evt-abc` local IDs if referenceId is omitted)
+    const getEffectiveRefId = (n: Partial<NotificationDTO>): string => {
+      if (n.referenceId !== undefined && n.referenceId !== null && String(n.referenceId).trim() !== '') {
+        return String(n.referenceId).trim();
+      }
+      const idStr = n.id ? String(n.id) : '';
+      if (idStr.startsWith('lead-')) return idStr.slice(5);
+      if (idStr.startsWith('evt-')) return idStr.slice(4);
+      return '';
+    };
+
+    const refIdA = getEffectiveRefId(a);
+    const refIdB = getEffectiveRefId(b);
+    const refTypeA = (a.referenceType || '').toUpperCase();
+    const refTypeB = (b.referenceType || '').toUpperCase();
+
+    // 3. Different referenceIds (e.g. lead A vs lead B) -> NEVER the same!
+    if (refIdA && refIdB && refIdA !== refIdB) {
+      return false;
+    }
+
+    // 4. Same referenceId match (collapses server + local + duplicate server records for the same lead/event)
+    if (refIdA && refIdB && refIdA === refIdB) {
+      if (refTypeA && refTypeB && refTypeA !== refTypeB) {
         return false;
       }
-    }
-
-    // 3. Different referenceIds (e.g. message 1 vs message 2, lead A vs lead B) -> NEVER the same!
-    if (a.referenceId && b.referenceId && String(a.referenceId) !== String(b.referenceId)) {
-      return false;
-    }
-
-    // 4. Same reference match (e.g. matching local placeholder with server-backed notification for same chat message or lead)
-    if (
-      a.referenceType &&
-      b.referenceType &&
-      a.referenceId &&
-      b.referenceId &&
-      a.referenceType.toUpperCase() === b.referenceType.toUpperCase() &&
-      String(a.referenceId) === String(b.referenceId)
-    ) {
       return true;
     }
 
-    // Cross-match if referenceId matches
-    if (a.referenceId && b.referenceId && String(a.referenceId) === String(b.referenceId)) {
-      return true;
-    }
-
-    // 5. CHAT messages must NEVER be collapsed by sender title! Every message is distinct.
-    const isAChat = (a.type || '').toUpperCase() === 'CHAT';
-    const isBChat = (b.type || '').toUpperCase() === 'CHAT';
-    if (isAChat || isBChat) {
-      return false;
-    }
-
-    // 6. Reminder title & date match (collapses duplicate cards with same title on the exact same reminder date)
-    const isAReminder = (a.type || '').toUpperCase() === 'REMINDER';
-    const isBReminder = (b.type || '').toUpperCase() === 'REMINDER';
-    if (isAReminder && isBReminder) {
+    // 5. Reminder title & date match (collapses duplicate cards with same title on the exact same reminder date)
+    if (typeA === 'REMINDER' && typeB === 'REMINDER') {
       const keyA = this.getReminderTitleDateKey(a);
       const keyB = this.getReminderTitleDateKey(b);
       if (keyA && keyB && keyA === keyB) {
+        return true;
+      }
+    }
+
+    // 6. Content + date match for non-chat notifications (collapses duplicate server/push deliveries with different IDs)
+    const normTitle = (t?: string) => (t || '').replace(/^🔔\s*/, '').trim().toLowerCase();
+    const normMsg = (m?: string, t?: string) => cleanNotificationMessage(m || '', t || '').trim().toLowerCase();
+    const titleA = normTitle(a.title);
+    const titleB = normTitle(b.title);
+    const msgA = normMsg(a.message, a.title);
+    const msgB = normMsg(b.message, b.title);
+
+    if (titleA && titleB && titleA === titleB && msgA === msgB) {
+      const dateA = (a.scheduledFor || a.createdAt || '').substring(0, 10);
+      const dateB = (b.scheduledFor || b.createdAt || '').substring(0, 10);
+      if (!dateA || !dateB || dateA === dateB) {
         return true;
       }
     }
@@ -516,7 +535,10 @@ class ReminderNotificationService {
             if (existingIdx === -1) {
               deduplicatedList.push(sNotif);
             } else {
-              deduplicatedList[existingIdx] = sNotif;
+              deduplicatedList[existingIdx] = {
+                ...sNotif,
+                isRead: deduplicatedList[existingIdx].isRead || sNotif.isRead,
+              };
             }
           }
 
@@ -810,7 +832,9 @@ class ReminderNotificationService {
           type: (newItem.type as any) || 'REMINDER',
           timestamp: 'now',
           durationMs: 5000,
-          url: newItem.referenceType === 'LEAD' && newItem.referenceId ? `/leads/${newItem.referenceId}` : '/calendar',
+          referenceId: newItem.referenceId,
+          referenceType: newItem.referenceType,
+          url: resolveNotificationTarget(newItem)?.path || '/calendar',
         });
       } catch (bannerErr) {
         console.warn('Banner show error:', bannerErr);

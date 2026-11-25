@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   ChevronLeft,
   ChevronDown,
@@ -68,8 +68,15 @@ import { encryptLeadId, decryptLeadId, formatMaskedLeadRef } from '../utils/lead
 export default function CandidateDetail() {
   const { id: rawParamId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user: currentUser } = useAuth();
   const { showAlert, showConfirm } = useAlert();
+
+  const navState = (location.state as { fromNotification?: boolean; searchName?: string } | null) || null;
+  const fromNotification = Boolean(navState?.fromNotification);
+  const notificationFallbackPath = navState?.searchName
+    ? `/leads?search=${encodeURIComponent(navState.searchName)}`
+    : '/leads';
 
   const resolvedLeadId = decryptLeadId(rawParamId);
 
@@ -264,6 +271,10 @@ export default function CandidateDetail() {
   const fetchCandidate = useCallback(async () => {
     const targetId = resolvedLeadId;
     if (!targetId) {
+      if (fromNotification) {
+        navigate(notificationFallbackPath, { replace: true });
+        return;
+      }
       setError('Invalid or expired candidate link.');
       setLoading(false);
       return;
@@ -405,11 +416,15 @@ export default function CandidateDetail() {
         (err?.message && err.message.toLowerCase().includes('cloudflare'))
       );
       setIsServerDown(serverDown);
+      if (!serverDown && fromNotification) {
+        navigate(notificationFallbackPath, { replace: true });
+        return;
+      }
       setError(serverDown ? 'Server is down. Please contact support team.' : err?.message || 'Failed to load candidate dossier.');
     } finally {
       setLoading(false);
     }
-  }, [resolvedLeadId, isAdmin, currentUser]);
+  }, [resolvedLeadId, isAdmin, currentUser, fromNotification, notificationFallbackPath, navigate]);
 
   useEffect(() => {
     fetchCandidate();

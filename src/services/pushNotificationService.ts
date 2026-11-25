@@ -14,7 +14,7 @@ import {
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
 import axiosClient from './api/axiosClient';
-import { encryptLeadId } from '../utils/leadIdCrypto';
+import { resolveNotificationTarget } from '../utils/notificationNavigation';
 
 const FCM_TOKEN_STORAGE_KEY = 'ssa_fcm_token';
 const VAPID_KEY = 'BDrOMLhjXKW08RO8-cYa5EH3aQM4SFLvDYL1HAyRiiuz4iBUaofBBU7hPIdYfokjvgMAuMsjh0HcxVF8_w_bISI';
@@ -130,27 +130,25 @@ class PushNotificationService {
             .catch(() => {});
 
           // Dispatch route navigation event for React Router
-          if (data.type === 'CHAT' || data.route === '/chat') {
-            window.dispatchEvent(
-              new CustomEvent('ssa_navigate_to', { detail: { path: '/chat' } })
-            );
-          } else if (data.leadId) {
-            window.dispatchEvent(
-              new CustomEvent('ssa_navigate_to', { detail: { path: `/leads/${encryptLeadId(data.leadId)}` } })
-            );
-          } else if (data.eventId) {
-            window.dispatchEvent(
-              new CustomEvent('ssa_navigate_to', { detail: { path: '/calendar' } })
-            );
-          } else if (data.route) {
-            window.dispatchEvent(
-              new CustomEvent('ssa_navigate_to', { detail: { path: data.route } })
-            );
-          } else {
-            window.dispatchEvent(
-              new CustomEvent('ssa_navigate_to', { detail: { path: '/notifications' } })
-            );
-          }
+          const target = resolveNotificationTarget({
+            type: data.type,
+            referenceType: data.referenceType,
+            referenceId: data.referenceId,
+            leadId: data.leadId,
+            eventId: data.eventId,
+            route: data.route,
+            url: data.url,
+            title: notification?.title || data.title,
+            message: notification?.body || data.body || data.message,
+          });
+          window.dispatchEvent(
+            new CustomEvent('ssa_navigate_to', {
+              detail: {
+                path: target?.path || '/notifications',
+                state: { fromNotification: true, searchName: target?.searchName },
+              },
+            })
+          );
         }
       );
 
@@ -538,8 +536,25 @@ class PushNotificationService {
         desktopNotif.onclick = () => {
           window.focus();
           desktopNotif.close();
-          const targetPath = data.type === 'CHAT' || data.route === '/chat' ? '/chat' : data.route || '/notifications';
-          window.dispatchEvent(new CustomEvent('ssa_navigate_to', { detail: { path: targetPath } }));
+          const target = resolveNotificationTarget({
+            type: data.type,
+            referenceType: data.referenceType,
+            referenceId: data.referenceId,
+            leadId: data.leadId,
+            eventId: data.eventId,
+            route: data.route,
+            url: data.url,
+            title,
+            message: body,
+          });
+          window.dispatchEvent(
+            new CustomEvent('ssa_navigate_to', {
+              detail: {
+                path: target?.path || '/notifications',
+                state: { fromNotification: true, searchName: target?.searchName },
+              },
+            })
+          );
         };
       } catch (e) {
         console.warn('[PushNotifications] Browser Notification API warning:', e);

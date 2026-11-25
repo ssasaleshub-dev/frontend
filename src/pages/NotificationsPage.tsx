@@ -4,7 +4,7 @@ import reminderNotificationService, {
   NotificationItem,
 } from '../services/reminderNotificationService';
 import pushNotificationService from '../services/pushNotificationService';
-import { encryptLeadId } from '../utils/leadIdCrypto';
+import { resolveNotificationTarget } from '../utils/notificationNavigation';
 import {
   formatIndianTime,
   formatIndianDate,
@@ -137,12 +137,11 @@ export default function NotificationsPage() {
       await reminderNotificationService.markAsRead(item.id);
     }
 
-    if ((item.referenceType === 'LEAD' || (item.type as string) === 'NEW_LEAD') && item.referenceId) {
-      navigate(`/leads/${encryptLeadId(item.referenceId)}`);
-    } else if (item.type === 'REMINDER' || item.referenceType === 'EVENT') {
-      navigate('/calendar');
-    } else if (item.referenceId) {
-      navigate(`/leads/${encryptLeadId(item.referenceId)}`);
+    const target = resolveNotificationTarget(item);
+    if (target) {
+      navigate(target.path, {
+        state: { fromNotification: true, searchName: target.searchName },
+      });
     }
   };
 

@@ -5,6 +5,7 @@ import { X } from 'lucide-react';
 import notificationBannerService, { AppleBannerPayload } from '../services/banner/notificationBannerService';
 import brandLogo from '../assets/brand-logo.jpg';
 import { cleanNotificationMessage, cleanNotificationTitle } from '../utils/dateTimeUtils';
+import { resolveNotificationTarget } from '../utils/notificationNavigation';
 
 /**
  * Apple iOS In-App Notification Banner Popup
@@ -45,8 +46,13 @@ export default function AppleNotificationBanner() {
   const handleClick = () => {
     if (banner.onClick) {
       banner.onClick();
-    } else if (banner.url) {
-      navigate(banner.url);
+    } else {
+      const target = resolveNotificationTarget(banner);
+      if (target) {
+        navigate(target.path, {
+          state: { fromNotification: true, searchName: target.searchName },
+        });
+      }
     }
     notificationBannerService.dismiss();
   };

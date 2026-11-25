@@ -45,8 +45,9 @@ function PushNotificationListener() {
 
     const handleNavigate = (event: any) => {
       const path = event.detail?.path;
+      const state = event.detail?.state;
       if (path) {
-        navigate(path);
+        navigate(path, state ? { state } : undefined);
       }
     };
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Search,
   RefreshCw,
@@ -313,6 +313,7 @@ const TableSelectFilterCell: React.FC<{
 export default function Leads() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user: currentUser } = useAuth();
   const { showAlert, showConfirm } = useAlert();
 
@@ -339,7 +340,7 @@ export default function Leads() {
   const hasLoadedRef = useRef<boolean>(false);
 
   // Filters & Search: Default visaTypeFilter according to role
-  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState<string>(searchParams.get('search') || '');
   const [statusFilter, setStatusFilter] = useState<string>(searchParams.get('status') || 'ALL');
   const [platformFilter, setPlatformFilter] = useState<string>('ALL');
   const [visaTypeFilter, setVisaTypeFilter] = useState<string>(() => {
@@ -669,6 +670,11 @@ export default function Leads() {
     const idParam = searchParams.get('id');
     if (idParam) {
       navigate(`/leads/${encryptLeadId(idParam)}`, { replace: true });
+      return;
+    }
+    const searchParam = searchParams.get('search');
+    if (searchParam !== null) {
+      setSearchTerm(searchParam);
     }
   }, [searchParams, navigate]);
 
@@ -790,6 +796,27 @@ export default function Leads() {
   const roleScopedLeads = useMemo(() => {
     return filterLeadsByUserRole(rawLeads, currentUser);
   }, [rawLeads, currentUser]);
+
+  // Auto-open lead profile page when navigated from a single-lead notification without numeric ID
+  const handledNotifSearchRef = useRef<string | null>(null);
+  useEffect(() => {
+    const navState = (location.state as { fromNotification?: boolean; searchName?: string } | null) || null;
+    const targetName = navState?.fromNotification ? navState.searchName?.trim() : undefined;
+    if (!targetName || roleScopedLeads.length === 0) return;
+    if (handledNotifSearchRef.current === `${location.key}:${targetName}`) return;
+
+    const lower = targetName.toLowerCase();
+    const getName = (l: Lead) => (l.customerName || l.fullName || '').trim().toLowerCase();
+    const match =
+      roleScopedLeads.find((l) => getName(l) === lower) ||
+      roleScopedLeads.find((l) => getName(l).startsWith(lower)) ||
+      roleScopedLeads.find((l) => getName(l).includes(lower));
+
+    handledNotifSearchRef.current = `${location.key}:${targetName}`;
+    if (match?.id) {
+      navigate(`/leads/${encryptLeadId(match.id)}`, { replace: true });
+    }
+  }, [location.key, location.state, roleScopedLeads, navigate]);
 
   // 2. Desk & Platform Scoping: Used for Status Tabs counts and preserving counselor-assigned candidates
   const deskAndPlatformScopedLeads = useMemo(() => {
