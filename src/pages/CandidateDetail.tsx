@@ -125,14 +125,15 @@ export default function CandidateDetail() {
   const [leadReminders, setLeadReminders] = useState<CalendarEventDTO[]>([]);
   const [creatingMeet, setCreatingMeet] = useState<boolean>(false);
 
-  // Direct Email & Instagram DM Modals
-  const [showEmailModal, setShowEmailModal] = useState<boolean>(false);
+  // Direct Email (Inline Composer) & Instagram DM Modal
+  const [showEmailComposer, setShowEmailComposer] = useState<boolean>(false);
   const [connectedGoogleEmail, setConnectedGoogleEmail] = useState<string>('');
   const [emailTo, setEmailTo] = useState<string>('');
   const [emailSubject, setEmailSubject] = useState<string>('');
   const [emailBody, setEmailBody] = useState<string>('');
   const [sendingEmail, setSendingEmail] = useState<boolean>(false);
   const [openingEmail, setOpeningEmail] = useState<boolean>(false);
+  const [sentEmailsCount, setSentEmailsCount] = useState<number>(0);
 
   const [showInstagramModal, setShowInstagramModal] = useState<boolean>(false);
   const [igRecipientId, setIgRecipientId] = useState<string>('');
@@ -195,7 +196,8 @@ export default function CandidateDetail() {
       setEmailTo(lead?.email || '');
       setEmailSubject(`Regarding your inquiry - SSA SalesHub`);
       setEmailBody(`Hi ${candidateName},\n\n`);
-      setShowEmailModal(true);
+      setActiveSection('emails');
+      setShowEmailComposer(true);
     } catch (err: any) {
       showAlert({
         title: 'Gmail',
@@ -216,7 +218,9 @@ export default function CandidateDetail() {
         subject: emailSubject.trim(),
         body: emailBody,
       });
-      setShowEmailModal(false);
+      setSentEmailsCount((c) => c + 1);
+      setShowEmailComposer(false);
+      setActiveSection('lead-info');
       showAlert({ title: 'Email Sent', message: `Email sent to ${emailTo.trim()}.` });
     } catch (err: any) {
       showAlert({
@@ -1231,17 +1235,20 @@ export default function CandidateDetail() {
   const closingInfo = getClosingDateInfo(lead.createdTime || (lead as any).createdAt || (lead as any).createdDate);
 
   const scrollToSection = (id: string, sectionKey: any) => {
+    setShowEmailComposer(false);
     setActiveSection(sectionKey);
-    const el = document.getElementById(id);
-    if (el) {
-      const topOffset = 230; // offset below sticky candidate card header
-      const elementPosition = el.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - topOffset;
-      window.scrollTo({
-        top: Math.max(0, offsetPosition),
-        behavior: 'smooth',
-      });
-    }
+    requestAnimationFrame(() => {
+      const el = document.getElementById(id);
+      if (el) {
+        const topOffset = 230; // offset below sticky candidate card header
+        const elementPosition = el.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - topOffset;
+        window.scrollTo({
+          top: Math.max(0, offsetPosition),
+          behavior: 'smooth',
+        });
+      }
+    });
   };
 
   const STAGES = [
@@ -1505,13 +1512,11 @@ export default function CandidateDetail() {
               <small>{activities.length}</small>
             </a>
             <a
-              onClick={() => {
-                if (lead.email) window.location.href = `mailto:${lead.email}`;
-                else showAlert({ title: 'Email', message: 'No email address registered for this candidate.' });
-              }}
+              className={activeSection === 'emails' ? 'on' : ''}
+              onClick={handleOpenEmailComposer}
             >
               <span>Emails</span>
-              <small>{lead.email ? '1' : '0'}</small>
+              <small>{sentEmailsCount}</small>
             </a>
             <a
               onClick={() => {
@@ -1523,8 +1528,82 @@ export default function CandidateDetail() {
             </a>
           </aside>
 
-          {/* Center Main: Lead Info, Payment Settlement, Eligibility */}
+          {/* Center Main: Inline Email Composer or Lead Info, Payment Settlement, Eligibility */}
           <main>
+            {showEmailComposer ? (
+              <section className="card sec" id="emails-section">
+                <form onSubmit={handleSendCandidateEmail} className="divide-y divide-slate-200">
+                  <div className="px-5 py-3 flex items-center gap-4">
+                    <span className="w-16 shrink-0 text-[13px] text-slate-400 font-medium">From</span>
+                    <span className="text-[13px] font-semibold text-slate-900 truncate">
+                      {connectedGoogleEmail || 'Connected Gmail'}
+                    </span>
+                  </div>
+
+                  <div className="px-5 py-2.5 flex items-center gap-4">
+                    <label htmlFor="cand-email-to" className="w-16 shrink-0 text-[13px] text-slate-400 font-medium">
+                      To
+                    </label>
+                    <input
+                      id="cand-email-to"
+                      type="email"
+                      required
+                      value={emailTo}
+                      onChange={(e) => setEmailTo(e.target.value)}
+                      placeholder="candidate@example.com"
+                      className="flex-1 h-9 px-3 text-[13px] text-slate-900 border border-slate-200 rounded-md focus:border-blue-500 focus:outline-none bg-white"
+                    />
+                  </div>
+
+                  <div className="px-5 py-2.5 flex items-center gap-4">
+                    <label htmlFor="cand-email-subject" className="w-16 shrink-0 text-[13px] text-slate-400 font-medium">
+                      Subject
+                    </label>
+                    <input
+                      id="cand-email-subject"
+                      type="text"
+                      required
+                      value={emailSubject}
+                      onChange={(e) => setEmailSubject(e.target.value)}
+                      placeholder="Subject"
+                      className="flex-1 h-9 px-3 text-[13px] text-slate-900 border border-slate-200 rounded-md focus:border-blue-500 focus:outline-none bg-white"
+                    />
+                  </div>
+
+                  <div className="p-5">
+                    <textarea
+                      required
+                      rows={8}
+                      value={emailBody}
+                      onChange={(e) => setEmailBody(e.target.value)}
+                      placeholder="Write your message..."
+                      className="w-full p-3 text-[13px] text-slate-800 leading-relaxed border border-slate-200 rounded-md focus:border-blue-500 focus:outline-none resize-y bg-white"
+                    />
+                  </div>
+
+                  <div className="px-5 py-3.5 flex items-center justify-between bg-slate-50/50">
+                    <button
+                      type="submit"
+                      disabled={sendingEmail}
+                      className="btn p"
+                    >
+                      {sendingEmail ? 'Sending…' : 'Send Email'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowEmailComposer(false);
+                        setActiveSection('lead-info');
+                      }}
+                      className="btn"
+                    >
+                      Discard
+                    </button>
+                  </div>
+                </form>
+              </section>
+            ) : (
+              <>
             {/* Section 1: Lead Information */}
             <section className="card sec" id="lead-info">
               <h3>
@@ -1863,6 +1942,8 @@ export default function CandidateDetail() {
                 </div>
               </div>
             </section>
+              </>
+            )}
           </main>
 
           {/* Right Aside: Notes & WhatsApp Shortcuts */}
@@ -2235,99 +2316,6 @@ export default function CandidateDetail() {
           candidateName={lead.customerName}
           leadId={lead.id}
         />
-      )}
-
-      {/* Direct Email Compose Modal */}
-      {showEmailModal && (
-        <div
-          className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
-          onClick={() => setShowEmailModal(false)}
-        >
-          <div
-            className="bg-white rounded-xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="bg-[#f2f6fc] px-4 py-3 flex items-center justify-between border-b border-slate-200/70">
-              <h3 className="text-[13px] font-semibold text-slate-800">New Message</h3>
-              <button
-                type="button"
-                onClick={() => setShowEmailModal(false)}
-                className="text-slate-500 hover:text-slate-800 cursor-pointer p-0.5 rounded"
-                aria-label="Close"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSendCandidateEmail}>
-              {connectedGoogleEmail && (
-                <div className="px-4 py-2.5 flex items-center border-b border-slate-100">
-                  <span className="w-16 shrink-0 text-[13px] text-slate-400">From</span>
-                  <span className="text-[13px] text-slate-700 truncate">{connectedGoogleEmail}</span>
-                </div>
-              )}
-
-              <div className="px-4 py-2.5 flex items-center border-b border-slate-100">
-                <label htmlFor="cand-email-to" className="w-16 shrink-0 text-[13px] text-slate-400">
-                  To
-                </label>
-                <input
-                  id="cand-email-to"
-                  type="email"
-                  required
-                  value={emailTo}
-                  onChange={(e) => setEmailTo(e.target.value)}
-                  placeholder="candidate@example.com"
-                  className="flex-1 text-[13px] text-slate-900 placeholder:text-slate-400 focus:outline-none bg-transparent"
-                />
-              </div>
-
-              <div className="px-4 py-2.5 flex items-center border-b border-slate-100">
-                <label htmlFor="cand-email-subject" className="w-16 shrink-0 text-[13px] text-slate-400">
-                  Subject
-                </label>
-                <input
-                  id="cand-email-subject"
-                  type="text"
-                  required
-                  value={emailSubject}
-                  onChange={(e) => setEmailSubject(e.target.value)}
-                  placeholder="Subject"
-                  className="flex-1 text-[13px] text-slate-900 placeholder:text-slate-400 focus:outline-none bg-transparent"
-                />
-              </div>
-
-              <div className="px-4 py-3">
-                <textarea
-                  required
-                  rows={7}
-                  value={emailBody}
-                  onChange={(e) => setEmailBody(e.target.value)}
-                  placeholder="Write your message..."
-                  className="w-full text-[13px] text-slate-800 leading-relaxed placeholder:text-slate-400 focus:outline-none resize-none bg-transparent"
-                />
-              </div>
-
-              <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between">
-                <button
-                  type="submit"
-                  disabled={sendingEmail}
-                  className="h-9 px-5 text-[13px] font-medium rounded-full bg-[#0b57d0] hover:bg-[#0842a0] text-white cursor-pointer flex items-center gap-2 disabled:opacity-50 transition-colors"
-                >
-                  {sendingEmail ? <RefreshCw size={13} className="animate-spin" /> : null}
-                  <span>{sendingEmail ? 'Sending…' : 'Send'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowEmailModal(false)}
-                  className="px-2 py-1 text-[13px] text-slate-500 hover:text-slate-800 cursor-pointer"
-                >
-                  Discard
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
       )}
 
       {/* Direct Instagram DM Modal */}

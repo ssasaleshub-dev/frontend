@@ -358,7 +358,7 @@ export const CandidateDetailSkeleton: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
           {[1, 2, 3, 4, 5, 6].map((idx) => (
-            <div key={idx} className="p-3 bg-slate-50/70 rounded-xl space-y-1.5 border border-black/[0.03]">
+            <div key={idx} className="p-3.5 bg-slate-50/70 rounded-xl space-y-2 border border-black/[0.04]">
               <SkeletonBlock className="w-24 h-3 rounded" />
               <SkeletonBlock className="w-40 h-4 rounded" />
             </div>
