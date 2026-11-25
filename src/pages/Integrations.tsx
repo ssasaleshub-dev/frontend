@@ -117,8 +117,8 @@ export default function Integrations() {
     } catch (err: any) {
       setSheetsError(
         err?.response?.data?.error ||
-          err?.message ||
-          'Unable to load your Google Sheets. Ensure the backend Sheets endpoint is enabled.'
+        err?.message ||
+        'Unable to load your Google Sheets. Ensure the backend Sheets endpoint is enabled.'
       );
     } finally {
       setLoadingSheets(false);
@@ -326,6 +326,7 @@ export default function Integrations() {
 
   // Disconnect Google
   const handleDisconnectGoogle = async () => {
+    if (!window.confirm('Disconnect your Google / Gmail account from SSA SalesHub?')) return;
     setDisconnecting(true);
     try {
       await integrationsService.disconnectGoogle();
@@ -440,9 +441,8 @@ export default function Integrations() {
       {/* ── Status Feedback Banner ── */}
       {banner && (
         <div
-          className={`flex items-center justify-between px-4 py-2.5 rounded-md text-[13px] bg-white border border-slate-200 border-l-4 text-slate-800 ${
-            banner.type === 'success' ? 'border-l-emerald-600' : 'border-l-rose-600'
-          }`}
+          className={`flex items-center justify-between px-4 py-2.5 rounded-md text-[13px] bg-white border border-slate-200 border-l-4 text-slate-800 ${banner.type === 'success' ? 'border-l-emerald-600' : 'border-l-rose-600'
+            }`}
         >
           <span>{banner.text}</span>
           <button
@@ -466,11 +466,10 @@ export default function Integrations() {
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id as any)}
-            className={`pb-2.5 -mb-px font-medium transition-colors cursor-pointer ${
-              activeTab === tab.id
-                ? 'border-b-2 border-slate-900 text-slate-900 font-semibold'
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
+            className={`pb-2.5 -mb-px font-medium transition-colors cursor-pointer ${activeTab === tab.id
+              ? 'border-b-2 border-slate-900 text-slate-900 font-semibold'
+              : 'text-slate-500 hover:text-slate-800'
+              }`}
           >
             {tab.label}
           </button>
@@ -552,359 +551,359 @@ export default function Integrations() {
               )}
             </div>
 
-            <div className="pt-4 mt-3 border-t border-slate-100">
-              {googleStatus.connected ? (
+              <div className="pt-4 mt-3 border-t border-slate-100">
+                {googleStatus.connected ? (
+                  <button
+                    type="button"
+                    onClick={handleDisconnectGoogle}
+                    disabled={disconnecting}
+                    title="Disconnect Gmail Account"
+                    className="w-full h-9 px-3 text-[13px] font-medium rounded border border-slate-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 text-slate-700 transition-colors cursor-pointer"
+                  >
+                    {disconnecting ? 'Disconnecting…' : 'Disconnect'}
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleConnectGoogle()}
+                      disabled={connecting}
+                      className="flex-1 h-9 px-3 text-[13px] font-medium rounded bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-sm"
+                    >
+                      {/* Google G logo */}
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
+                        <path
+                          fill="#ffffff"
+                          d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                        />
+                        <path
+                          fill="#ffffff"
+                          d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                        />
+                        <path
+                          fill="#ffffff"
+                          d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                        />
+                        <path
+                          fill="#ffffff"
+                          d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                        />
+                      </svg>
+                      <span>{connecting ? 'Connecting…' : 'Connect Gmail Account'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowGoogleSetupModal(true)}
+                      title="OAuth Client Configuration"
+                      className="h-9 px-2.5 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded transition-colors cursor-pointer"
+                    >
+                      <Settings size={14} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ═════════════════════════════════════════════════════════════════════ */}
+          {/* CARD 2: INSTAGRAM DM INTEGRATION CARD                               */}
+          {/* ═════════════════════════════════════════════════════════════════════ */}
+          {(activeTab === 'ALL' || activeTab === 'DIRECT') && (
+            <div className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col justify-between shadow-sm hover:border-slate-300 transition-all">
+              <div className="space-y-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <img
+                      src="/icons/instagram.png"
+                      alt="Instagram DM"
+                      className="w-8 h-8 rounded-lg object-contain shrink-0"
+                    />
+                    <div>
+                      <h3 className="text-[15px] font-semibold text-slate-900">Instagram DM</h3>
+                      <span className="text-xs text-slate-400">Direct Message Channel</span>
+                    </div>
+                  </div>
+
+                  {/* Clean static status indicator */}
+                  <span className="inline-flex items-center gap-1.5 text-xs text-slate-600">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                    Active
+                  </span>
+                </div>
+
+                <p className="text-[13px] text-slate-600 leading-relaxed">
+                  Automatically capture leads from Instagram Direct Messages and reply directly from SSA Saleshub.
+                </p>
+              </div>
+
+              <div className="pt-4 mt-3 border-t border-slate-100 flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={handleDisconnectGoogle}
-                  disabled={disconnecting}
-                  title="Disconnect Gmail Account"
-                  className="w-full h-9 px-3 text-[13px] font-medium rounded border border-slate-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 text-slate-700 transition-colors cursor-pointer"
+                  onClick={() => setShowInstagramReplyModal(true)}
+                  className="w-full h-9 px-3 text-[13px] font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  {disconnecting ? 'Disconnecting…' : 'Disconnect'}
+                  <MessageCircle size={14} />
+                  <span>Send Outbound DM / Reply</span>
                 </button>
-              ) : (
-                <div className="flex items-center gap-1.5">
+              </div>
+            </div>
+          )}
+
+          {/* ═════════════════════════════════════════════════════════════════════ */}
+          {/* CARD 3: GOOGLE MEET                                                 */}
+          {/* ═════════════════════════════════════════════════════════════════════ */}
+          {(activeTab === 'ALL' || activeTab === 'GOOGLE') && (
+            <div className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col justify-between shadow-sm hover:border-slate-300 transition-all">
+              <div className="space-y-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <img src="/icons/google-meet.png" alt="Google Meet" className="w-8 h-8 object-contain shrink-0" />
+                    <div>
+                      <h3 className="text-[15px] font-semibold text-slate-900">Google Meet</h3>
+                      <span className="text-xs text-slate-400">Video Consultations</span>
+                    </div>
+                  </div>
+
+                  {googleStatus.connected ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                      Connected
+                    </span>
+                  ) : (
+                    <span className="text-xs text-slate-400">Not connected</span>
+                  )}
+                </div>
+
+                <p className="text-[13px] text-slate-600 leading-relaxed">
+                  Automatically generate video meeting links for scheduled consultations and candidate calls.
+                </p>
+              </div>
+
+              <div className="pt-4 mt-3 border-t border-slate-100 space-y-2.5">
+                {googleStatus.connected ? (
+                  <>
+                    {generatedMeetUrl && (
+                      <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded bg-slate-50 border border-slate-200 text-xs">
+                        <a
+                          href={generatedMeetUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline truncate font-mono"
+                          title={generatedMeetUrl}
+                        >
+                          {generatedMeetUrl}
+                        </a>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await navigator.clipboard.writeText(generatedMeetUrl);
+                            setCopiedMeet(true);
+                            setTimeout(() => setCopiedMeet(false), 2000);
+                          }}
+                          className="text-slate-500 hover:text-slate-900 shrink-0 cursor-pointer"
+                          title="Copy link"
+                        >
+                          {copiedMeet ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                        </button>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleCreateMeetLink}
+                        disabled={creatingMeet}
+                        className="flex-1 h-9 px-3 text-[13px] font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+                      >
+                        {creatingMeet ? <RefreshCw size={13} className="animate-spin" /> : null}
+                        <span>{creatingMeet ? 'Creating…' : 'Create Meet Link'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDisconnectGoogle}
+                        disabled={disconnecting}
+                        className="h-9 px-3 text-[13px] font-medium rounded border border-slate-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 text-slate-700 transition-colors cursor-pointer"
+                      >
+                        {disconnecting ? 'Disconnecting…' : 'Disconnect'}
+                      </button>
+                    </div>
+                  </>
+                ) : (
                   <button
                     type="button"
                     onClick={() => handleConnectGoogle()}
                     disabled={connecting}
-                    className="flex-1 h-9 px-3 text-[13px] font-medium rounded bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-sm"
+                    className="w-full h-9 px-3 text-[13px] font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                   >
-                    {/* Google G logo */}
-                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
-                      <path
-                        fill="#ffffff"
-                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                      />
-                      <path
-                        fill="#ffffff"
-                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                      />
-                      <path
-                        fill="#ffffff"
-                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                      />
-                      <path
-                        fill="#ffffff"
-                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                      />
-                    </svg>
-                    <span>{connecting ? 'Connecting…' : 'Connect Gmail Account'}</span>
+                    {connecting ? <RefreshCw size={13} className="animate-spin" /> : null}
+                    <span>Connect Google Meet</span>
                   </button>
+                )}
+              </div>
+            </div>
+          )}
 
+          {/* ═════════════════════════════════════════════════════════════════════ */}
+          {/* CARD 4: GOOGLE SHEETS                                               */}
+          {/* ═════════════════════════════════════════════════════════════════════ */}
+          {(activeTab === 'ALL' || activeTab === 'GOOGLE') && (
+            <div className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col justify-between shadow-sm hover:border-slate-300 transition-all">
+              <div className="space-y-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <img src="/icons/google-sheets.png" alt="Google Sheets" className="w-8 h-8 object-contain shrink-0" />
+                    <div>
+                      <h3 className="text-[15px] font-semibold text-slate-900">Google Sheets</h3>
+                      <span className="text-xs text-slate-400">Spreadsheet Import</span>
+                    </div>
+                  </div>
+
+                  {googleStatus.connected ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                      Connected
+                    </span>
+                  ) : (
+                    <span className="text-xs text-slate-400">Not connected</span>
+                  )}
+                </div>
+
+                <p className="text-[13px] text-slate-600 leading-relaxed">
+                  Import candidate inquiries and lead lists from Google Sheets directly into your CRM pipeline.
+                </p>
+              </div>
+
+              <div className="pt-4 mt-3 border-t border-slate-100">
+                {googleStatus.connected ? (
                   <button
                     type="button"
-                    onClick={() => setShowGoogleSetupModal(true)}
-                    title="OAuth Client Configuration"
-                    className="h-9 px-2.5 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded transition-colors cursor-pointer"
+                    onClick={handleOpenSheetsModal}
+                    className="w-full h-9 px-3 text-[13px] font-medium rounded border border-slate-300 hover:bg-slate-50 text-slate-800 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    <Settings size={14} />
+                    <FileSpreadsheet size={14} />
+                    <span>Import from Google Sheets</span>
                   </button>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ═════════════════════════════════════════════════════════════════════ */}
-        {/* CARD 2: INSTAGRAM DM INTEGRATION CARD                               */}
-        {/* ═════════════════════════════════════════════════════════════════════ */}
-        {(activeTab === 'ALL' || activeTab === 'DIRECT') && (
-          <div className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col justify-between shadow-sm hover:border-slate-300 transition-all">
-            <div className="space-y-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2.5">
-                  <img
-                    src="/icons/instagram.png"
-                    alt="Instagram DM"
-                    className="w-8 h-8 rounded-lg object-contain shrink-0"
-                  />
-                  <div>
-                    <h3 className="text-[15px] font-semibold text-slate-900">Instagram DM</h3>
-                    <span className="text-xs text-slate-400">Direct Message Channel</span>
-                  </div>
-                </div>
-
-                {/* Clean static status indicator */}
-                <span className="inline-flex items-center gap-1.5 text-xs text-slate-600">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                  Active
-                </span>
-              </div>
-
-              <p className="text-[13px] text-slate-600 leading-relaxed">
-                Automatically capture leads from Instagram Direct Messages and reply directly from SSA Saleshub.
-              </p>
-            </div>
-
-            <div className="pt-4 mt-3 border-t border-slate-100 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setShowInstagramReplyModal(true)}
-                className="w-full h-9 px-3 text-[13px] font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <MessageCircle size={14} />
-                <span>Send Outbound DM / Reply</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ═════════════════════════════════════════════════════════════════════ */}
-        {/* CARD 3: GOOGLE MEET                                                 */}
-        {/* ═════════════════════════════════════════════════════════════════════ */}
-        {(activeTab === 'ALL' || activeTab === 'GOOGLE') && (
-          <div className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col justify-between shadow-sm hover:border-slate-300 transition-all">
-            <div className="space-y-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2.5">
-                  <img src="/icons/google-meet.png" alt="Google Meet" className="w-8 h-8 object-contain shrink-0" />
-                  <div>
-                    <h3 className="text-[15px] font-semibold text-slate-900">Google Meet</h3>
-                    <span className="text-xs text-slate-400">Video Consultations</span>
-                  </div>
-                </div>
-
-                {googleStatus.connected ? (
-                  <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                    Connected
-                  </span>
                 ) : (
-                  <span className="text-xs text-slate-400">Not connected</span>
+                  <button
+                    type="button"
+                    onClick={() => handleConnectGoogle()}
+                    disabled={connecting}
+                    className="w-full h-9 px-3 text-[13px] font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <span>Connect Google Sheets</span>
+                  </button>
                 )}
               </div>
-
-              <p className="text-[13px] text-slate-600 leading-relaxed">
-                Automatically generate video meeting links for scheduled consultations and candidate calls.
-              </p>
             </div>
+          )}
 
-            <div className="pt-4 mt-3 border-t border-slate-100 space-y-2.5">
-              {googleStatus.connected ? (
-                <>
-                  {generatedMeetUrl && (
-                    <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded bg-slate-50 border border-slate-200 text-xs">
-                      <a
-                        href={generatedMeetUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline truncate font-mono"
-                        title={generatedMeetUrl}
-                      >
-                        {generatedMeetUrl}
-                      </a>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          await navigator.clipboard.writeText(generatedMeetUrl);
-                          setCopiedMeet(true);
-                          setTimeout(() => setCopiedMeet(false), 2000);
-                        }}
-                        className="text-slate-500 hover:text-slate-900 shrink-0 cursor-pointer"
-                        title="Copy link"
-                      >
-                        {copiedMeet ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
-                      </button>
+          {/* ═════════════════════════════════════════════════════════════════════ */}
+          {/* CARD 5: GOOGLE CALENDAR                                             */}
+          {/* ═════════════════════════════════════════════════════════════════════ */}
+          {(activeTab === 'ALL' || activeTab === 'GOOGLE') && (
+            <div className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col justify-between shadow-sm hover:border-slate-300 transition-all">
+              <div className="space-y-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <img src="/icons/google-calendar.png" alt="Google Calendar" className="w-8 h-8 object-contain shrink-0" />
+                    <div>
+                      <h3 className="text-[15px] font-semibold text-slate-900">Google Calendar</h3>
+                      <span className="text-xs text-slate-400">Consultations &amp; Reminders</span>
                     </div>
+                  </div>
+
+                  {googleStatus.connected ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                      Connected
+                    </span>
+                  ) : (
+                    <span className="text-xs text-slate-400">Not connected</span>
                   )}
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={handleCreateMeetLink}
-                      disabled={creatingMeet}
-                      className="flex-1 h-9 px-3 text-[13px] font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
-                    >
-                      {creatingMeet ? <RefreshCw size={13} className="animate-spin" /> : null}
-                      <span>{creatingMeet ? 'Creating…' : 'Create Meet Link'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleDisconnectGoogle}
-                      disabled={disconnecting}
-                      className="h-9 px-3 text-[13px] font-medium rounded border border-slate-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 text-slate-700 transition-colors cursor-pointer"
-                    >
-                      {disconnecting ? 'Disconnecting…' : 'Disconnect'}
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => handleConnectGoogle()}
-                  disabled={connecting}
-                  className="w-full h-9 px-3 text-[13px] font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  {connecting ? <RefreshCw size={13} className="animate-spin" /> : null}
-                  <span>Connect Google Meet</span>
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ═════════════════════════════════════════════════════════════════════ */}
-        {/* CARD 4: GOOGLE SHEETS                                               */}
-        {/* ═════════════════════════════════════════════════════════════════════ */}
-        {(activeTab === 'ALL' || activeTab === 'GOOGLE') && (
-          <div className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col justify-between shadow-sm hover:border-slate-300 transition-all">
-            <div className="space-y-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2.5">
-                  <img src="/icons/google-sheets.png" alt="Google Sheets" className="w-8 h-8 object-contain shrink-0" />
-                  <div>
-                    <h3 className="text-[15px] font-semibold text-slate-900">Google Sheets</h3>
-                    <span className="text-xs text-slate-400">Spreadsheet Import</span>
-                  </div>
                 </div>
 
-                {googleStatus.connected ? (
-                  <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                    Connected
-                  </span>
-                ) : (
-                  <span className="text-xs text-slate-400">Not connected</span>
-                )}
+                <p className="text-[13px] text-slate-600 leading-relaxed">
+                  Schedule candidate consultations and sync follow-up reminders directly with your Google Calendar.
+                </p>
               </div>
 
-              <p className="text-[13px] text-slate-600 leading-relaxed">
-                Import candidate inquiries and lead lists from Google Sheets directly into your CRM pipeline.
-              </p>
+              <div className="pt-4 mt-3 border-t border-slate-100">
+                {googleStatus.connected ? (
+                  <a
+                    href="/calendar"
+                    className="w-full h-9 px-3 text-[13px] font-medium rounded border border-slate-300 hover:bg-slate-50 text-slate-800 transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <Calendar size={14} />
+                    <span>Open Calendar</span>
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleConnectGoogle()}
+                    disabled={connecting}
+                    className="w-full h-9 px-3 text-[13px] font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <span>Connect Google Calendar</span>
+                  </button>
+                )}
+              </div>
             </div>
+          )}
 
-            <div className="pt-4 mt-3 border-t border-slate-100">
-              {googleStatus.connected ? (
-                <button
-                  type="button"
-                  onClick={handleOpenSheetsModal}
-                  className="w-full h-9 px-3 text-[13px] font-medium rounded border border-slate-300 hover:bg-slate-50 text-slate-800 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <FileSpreadsheet size={14} />
-                  <span>Import from Google Sheets</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => handleConnectGoogle()}
-                  disabled={connecting}
-                  className="w-full h-9 px-3 text-[13px] font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  <span>Connect Google Sheets</span>
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ═════════════════════════════════════════════════════════════════════ */}
-        {/* CARD 5: GOOGLE CALENDAR                                             */}
-        {/* ═════════════════════════════════════════════════════════════════════ */}
-        {(activeTab === 'ALL' || activeTab === 'GOOGLE') && (
-          <div className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col justify-between shadow-sm hover:border-slate-300 transition-all">
-            <div className="space-y-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2.5">
-                  <img src="/icons/google-calendar.png" alt="Google Calendar" className="w-8 h-8 object-contain shrink-0" />
-                  <div>
-                    <h3 className="text-[15px] font-semibold text-slate-900">Google Calendar</h3>
-                    <span className="text-xs text-slate-400">Consultations &amp; Reminders</span>
+          {/* ═════════════════════════════════════════════════════════════════════ */}
+          {/* CARD 6: GOOGLE DRIVE                                                */}
+          {/* ═════════════════════════════════════════════════════════════════════ */}
+          {(activeTab === 'ALL' || activeTab === 'GOOGLE') && (
+            <div className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col justify-between shadow-sm hover:border-slate-300 transition-all">
+              <div className="space-y-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <img src="/icons/google-drive.png" alt="Google Drive" className="w-8 h-8 object-contain shrink-0" />
+                    <div>
+                      <h3 className="text-[15px] font-semibold text-slate-900">Google Drive</h3>
+                      <span className="text-xs text-slate-400">Spreadsheet Source</span>
+                    </div>
                   </div>
+
+                  {googleStatus.connected ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                      Connected
+                    </span>
+                  ) : (
+                    <span className="text-xs text-slate-400">Not connected</span>
+                  )}
                 </div>
 
-                {googleStatus.connected ? (
-                  <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                    Connected
-                  </span>
-                ) : (
-                  <span className="text-xs text-slate-400">Not connected</span>
-                )}
+                <p className="text-[13px] text-slate-600 leading-relaxed">
+                  Browse your Google Drive spreadsheets to verify and import lead lists into your CRM pipeline.
+                </p>
               </div>
 
-              <p className="text-[13px] text-slate-600 leading-relaxed">
-                Schedule candidate consultations and sync follow-up reminders directly with your Google Calendar.
-              </p>
-            </div>
-
-            <div className="pt-4 mt-3 border-t border-slate-100">
-              {googleStatus.connected ? (
-                <a
-                  href="/calendar"
-                  className="w-full h-9 px-3 text-[13px] font-medium rounded border border-slate-300 hover:bg-slate-50 text-slate-800 transition-colors flex items-center justify-center gap-1.5"
-                >
-                  <Calendar size={14} />
-                  <span>Open Calendar</span>
-                </a>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => handleConnectGoogle()}
-                  disabled={connecting}
-                  className="w-full h-9 px-3 text-[13px] font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  <span>Connect Google Calendar</span>
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ═════════════════════════════════════════════════════════════════════ */}
-        {/* CARD 6: GOOGLE DRIVE                                                */}
-        {/* ═════════════════════════════════════════════════════════════════════ */}
-        {(activeTab === 'ALL' || activeTab === 'GOOGLE') && (
-          <div className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col justify-between shadow-sm hover:border-slate-300 transition-all">
-            <div className="space-y-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2.5">
-                  <img src="/icons/google-drive.png" alt="Google Drive" className="w-8 h-8 object-contain shrink-0" />
-                  <div>
-                    <h3 className="text-[15px] font-semibold text-slate-900">Google Drive</h3>
-                    <span className="text-xs text-slate-400">Spreadsheet Source</span>
-                  </div>
-                </div>
-
+              <div className="pt-4 mt-3 border-t border-slate-100">
                 {googleStatus.connected ? (
-                  <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                    Connected
-                  </span>
+                  <button
+                    type="button"
+                    onClick={handleOpenSheetsModal}
+                    className="w-full h-9 px-3 text-[13px] font-medium rounded border border-slate-300 hover:bg-slate-50 text-slate-800 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <FileSpreadsheet size={14} />
+                    <span>Browse Sheets in Drive</span>
+                  </button>
                 ) : (
-                  <span className="text-xs text-slate-400">Not connected</span>
+                  <button
+                    type="button"
+                    onClick={() => handleConnectGoogle()}
+                    disabled={connecting}
+                    className="w-full h-9 px-3 text-[13px] font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <span>Connect Google Drive</span>
+                  </button>
                 )}
               </div>
-
-              <p className="text-[13px] text-slate-600 leading-relaxed">
-                Browse your Google Drive spreadsheets to verify and import lead lists into your CRM pipeline.
-              </p>
             </div>
-
-            <div className="pt-4 mt-3 border-t border-slate-100">
-              {googleStatus.connected ? (
-                <button
-                  type="button"
-                  onClick={handleOpenSheetsModal}
-                  className="w-full h-9 px-3 text-[13px] font-medium rounded border border-slate-300 hover:bg-slate-50 text-slate-800 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <FileSpreadsheet size={14} />
-                  <span>Browse Sheets in Drive</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => handleConnectGoogle()}
-                  disabled={connecting}
-                  className="w-full h-9 px-3 text-[13px] font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  <span>Connect Google Drive</span>
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
       )}
 
       {/* ═════════════════════════════════════════════════════════════════════ */}
@@ -1223,7 +1222,7 @@ export default function Integrations() {
           onClick={() => setShowSheetsModal(false)}
         >
           <div
-            className="bg-white rounded-lg max-w-2xl w-full border border-slate-200 shadow-xl overflow-hidden"
+            className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-slate-200 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="px-5 py-3.5 flex items-center justify-between border-b border-slate-200">
@@ -1265,8 +1264,8 @@ export default function Integrations() {
                       {loadingSheets
                         ? 'Loading your sheets…'
                         : sheetsList.length === 0
-                        ? 'No Google Sheets found in Drive'
-                        : 'Select a Google Sheet'}
+                          ? 'No Google Sheets found in Drive'
+                          : 'Select a Google Sheet'}
                     </option>
                     {sheetsList.map((sheet) => (
                       <option key={sheet.id} value={sheet.id}>
