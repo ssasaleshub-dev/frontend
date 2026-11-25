@@ -1436,6 +1436,23 @@ export default function CandidateDetail() {
           assigningStaff={assigningStaff}
           onUpdateBudget={handleUpdateBudget}
           navigate={navigate}
+          sentEmails={sentEmails}
+          candidateDocs={candidateDocs}
+          onUploadDoc={handleUploadCandidateDoc}
+          onDeleteDoc={handleDeleteCandidateDoc}
+          onPreviewDoc={(doc) => setSelectedPreviewDoc(doc)}
+          emailTo={emailTo}
+          setEmailTo={setEmailTo}
+          emailSubject={emailSubject}
+          setEmailSubject={setEmailSubject}
+          emailBody={emailBody}
+          setEmailBody={setEmailBody}
+          sendingEmail={sendingEmail}
+          connectedGoogleEmail={connectedGoogleEmail}
+          handleSendCandidateEmail={handleSendCandidateEmail}
+          docTypeInput={docTypeInput}
+          setDocTypeInput={setDocTypeInput}
+          uploadingDoc={uploadingDoc}
         />
       </div>
 

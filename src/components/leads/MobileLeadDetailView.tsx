@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { parseFormResponses, humanizeAnswer, getAttributionRows, getOriginLabel } from '../../utils/metaLead';
 import { NavigateFunction } from 'react-router-dom';
 import { Lead, LeadActivity } from '../../types';
 import { formatIndianDate, formatIndianDateTime } from '../../utils/dateTimeUtils';
 import { formatCurrencyDisplay, isAcademicScore, formatAcademicScore } from '../../utils/formatUtils';
+import { Search, X, FileText, Upload, Eye, Trash2 } from 'lucide-react';
 
 export interface MobileLeadDetailViewProps {
   lead: Lead;
@@ -36,6 +37,23 @@ export interface MobileLeadDetailViewProps {
   assigningStaff: boolean;
   onUpdateBudget: (newBudget: string) => Promise<void>;
   navigate: NavigateFunction;
+  sentEmails?: Array<{ id: string; from: string; to: string; subject: string; body: string; sentAt: string }>;
+  candidateDocs?: Array<{ id: string; name: string; docType: string; url: string; uploadedAt: string; size?: number }>;
+  onUploadDoc?: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
+  onDeleteDoc?: (docId: string) => void;
+  onPreviewDoc?: (doc: { id: string; name: string; docType: string; url: string; uploadedAt: string; size?: number }) => void;
+  emailTo?: string;
+  setEmailTo?: (val: string) => void;
+  emailSubject?: string;
+  setEmailSubject?: (val: string) => void;
+  emailBody?: string;
+  setEmailBody?: (val: string) => void;
+  sendingEmail?: boolean;
+  connectedGoogleEmail?: string;
+  handleSendCandidateEmail?: (e: React.FormEvent) => Promise<void>;
+  docTypeInput?: string;
+  setDocTypeInput?: (val: string) => void;
+  uploadingDoc?: boolean;
 }
 
 export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
@@ -65,8 +83,28 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
   assigningStaff,
   onUpdateBudget,
   navigate,
+  sentEmails = [],
+  candidateDocs = [],
+  onUploadDoc,
+  onDeleteDoc,
+  onPreviewDoc,
+  emailTo = '',
+  setEmailTo,
+  emailSubject = '',
+  setEmailSubject,
+  emailBody = '',
+  setEmailBody,
+  sendingEmail = false,
+  connectedGoogleEmail = '',
+  handleSendCandidateEmail,
+  docTypeInput = 'Passport / ID',
+  setDocTypeInput,
+  uploadingDoc = false,
 }) => {
-  const [activeTab, setActiveTab] = useState<'ov' | 'pay' | 'fm' | 'nt' | 'ac'>('ov');
+  const [activeTab, setActiveTab] = useState<'ov' | 'pay' | 'fm' | 'nt' | 'ac' | 'em' | 'doc'>('ov');
+  const [activityFilter, setActivityFilter] = useState<string>('ALL');
+  const [activitySearch, setActivitySearch] = useState<string>('');
+  const docFileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Everything Meta sent for this lead
   const formResponses = parseFormResponses((lead as any).metaFormResponses);
@@ -244,14 +282,28 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
           className={`tab ${activeTab === 'nt' ? 'on' : ''}`}
           onClick={() => setActiveTab('nt')}
         >
-          Notes
+          Notes<i>{notesHistory.length}</i>
         </button>
         <button
           type="button"
           className={`tab ${activeTab === 'ac' ? 'on' : ''}`}
           onClick={() => setActiveTab('ac')}
         >
-          Activity
+          Activity Logs<i>{activities.length}</i>
+        </button>
+        <button
+          type="button"
+          className={`tab ${activeTab === 'em' ? 'on' : ''}`}
+          onClick={() => setActiveTab('em')}
+        >
+          Emails<i>{sentEmails.length}</i>
+        </button>
+        <button
+          type="button"
+          className={`tab ${activeTab === 'doc' ? 'on' : ''}`}
+          onClick={() => setActiveTab('doc')}
+        >
+          Documents<i>{candidateDocs.length}</i>
         </button>
       </div>
 
@@ -546,30 +598,358 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
       {/* Pane: Activity */}
       <div className={`pane ${activeTab === 'ac' ? 'on' : ''}`} id="p-ac">
         <section className="card">
-          <h3>Activity log</h3>
-          {activities.length === 0 ? (
-            <div className="f">
-              <span className="v">Lead created from Meta Lead Ads</span>
-              <span className="l" style={{ width: 'auto' }}>
-                {inquiriesDate}
-              </span>
+          <h3>
+            <span>Activity Logs</span>
+            <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500 }}>{activities.length}</span>
+          </h3>
+
+          {/* Search & Filter Controls */}
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ position: 'relative' }}>
+              <Search size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
+              <input
+                type="text"
+                value={activitySearch}
+                onChange={(e) => setActivitySearch(e.target.value)}
+                placeholder="Search activity logs..."
+                style={{ width: '100%', height: 36, paddingLeft: 34, paddingRight: 32, fontSize: 13, border: '1px solid var(--line)', borderRadius: 8, outline: 'none' }}
+              />
+              {activitySearch && (
+                <button
+                  type="button"
+                  onClick={() => setActivitySearch('')}
+                  style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', border: 0, background: 'none', color: '#94a3b8', cursor: 'pointer', padding: 4 }}
+                >
+                  <X size={13} />
+                </button>
+              )}
             </div>
-          ) : (
-            activities.map((act) => (
-              <div key={act.id} className="f">
-                <div className="v" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <span style={{ fontWeight: 600 }}>{act.title}</span>
+            <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 2 }}>
+              {[
+                { id: 'ALL', label: 'All Events' },
+                { id: 'STATUS_CHANGE', label: 'Stage Updates' },
+                { id: 'DATA_MODIFY', label: 'Dossier Edits' },
+                { id: 'REMARKS_ADDED', label: 'Counselor Notes' },
+                { id: 'OUTREACH', label: 'Outreach' },
+              ].map((f) => {
+                const active = activityFilter === f.id;
+                return (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setActivityFilter(f.id)}
+                    style={{
+                      flex: 'none',
+                      padding: '5px 11px',
+                      borderRadius: 6,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      border: '1px solid',
+                      borderColor: active ? 'var(--blue)' : 'var(--line)',
+                      background: active ? 'var(--blue)' : 'var(--card)',
+                      color: active ? '#fff' : 'var(--text)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {f.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Activities List */}
+          {(() => {
+            const filteredActivities = activities.filter((act) => {
+              if (activityFilter !== 'ALL' && act.actionType !== activityFilter) return false;
+              if (!activitySearch.trim()) return true;
+              const q = activitySearch.toLowerCase();
+              return (
+                act.userName?.toLowerCase().includes(q) ||
+                act.title?.toLowerCase().includes(q) ||
+                act.description?.toLowerCase().includes(q) ||
+                act.fieldChanged?.toLowerCase().includes(q)
+              );
+            });
+
+            if (filteredActivities.length === 0) {
+              return (
+                <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
+                  No matching activity logs found.
+                </div>
+              );
+            }
+
+            return filteredActivities.map((act) => (
+              <div key={act.id} className="f" style={{ alignItems: 'flex-start' }}>
+                <div className="v" style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--blue)' }}>
+                      {act.userName || 'System'}
+                    </span>
+                    <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400 }}>
+                      {formatDate(act.timestamp || (act as any).createdAt)}
+                    </span>
+                  </div>
+                  <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{act.title}</span>
                   {act.description && (
-                    <span style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 400 }}>
+                    <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 400, lineHeight: 1.4 }}>
                       {act.description}
                     </span>
                   )}
                 </div>
-                <span className="l" style={{ width: 'auto', fontSize: '11px', textAlign: 'right' }}>
-                  {formatDate(act.timestamp)}
-                </span>
               </div>
-            ))
+            ));
+          })()}
+        </section>
+      </div>
+
+      {/* Pane: Emails */}
+      <div className={`pane ${activeTab === 'em' ? 'on' : ''}`} id="p-em">
+        {/* Email Composer */}
+        <section className="card">
+          <h3>
+            <span>Compose Email</span>
+            {connectedGoogleEmail && (
+              <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {connectedGoogleEmail}
+              </span>
+            )}
+          </h3>
+          <form
+            onSubmit={async (e) => {
+              if (handleSendCandidateEmail) {
+                await handleSendCandidateEmail(e);
+                showToast('Email sent');
+              }
+            }}
+          >
+            <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4, fontWeight: 500 }}>
+                  To
+                </label>
+                <input
+                  type="email"
+                  value={emailTo}
+                  onChange={(e) => setEmailTo && setEmailTo(e.target.value)}
+                  placeholder="candidate@example.com"
+                  required
+                  style={{ width: '100%', height: 38, padding: '0 10px', fontSize: 13, border: '1px solid var(--line)', borderRadius: 8, outline: 'none' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4, fontWeight: 500 }}>
+                  Subject
+                </label>
+                <input
+                  type="text"
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject && setEmailSubject(e.target.value)}
+                  placeholder="Subject"
+                  required
+                  style={{ width: '100%', height: 38, padding: '0 10px', fontSize: 13, border: '1px solid var(--line)', borderRadius: 8, outline: 'none' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4, fontWeight: 500 }}>
+                  Message
+                </label>
+                <textarea
+                  value={emailBody}
+                  onChange={(e) => setEmailBody && setEmailBody(e.target.value)}
+                  placeholder="Write your email message..."
+                  rows={4}
+                  style={{ width: '100%', padding: '10px', fontSize: 13, border: '1px solid var(--line)', borderRadius: 8, outline: 'none', resize: 'vertical' }}
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, paddingTop: 4 }}>
+                <button
+                  type="submit"
+                  disabled={sendingEmail || !emailTo.trim()}
+                  className="btn p"
+                >
+                  {sendingEmail ? 'Sending…' : 'Send Email'}
+                </button>
+              </div>
+            </div>
+          </form>
+        </section>
+
+        {/* Sent Emails History */}
+        <section className="card">
+          <h3>
+            <span>Sent Emails</span>
+            <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500 }}>{sentEmails.length}</span>
+          </h3>
+          {sentEmails.length === 0 ? (
+            <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
+              No emails sent yet for this candidate.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {sentEmails.map((em) => (
+                <div key={em.id} style={{ padding: '12px 16px', borderBottom: '1px solid var(--line)', borderLeft: '3px solid var(--blue)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                    <b style={{ fontSize: 13, color: 'var(--text)' }}>{em.subject}</b>
+                    <small style={{ fontSize: 11, color: 'var(--muted)', flexShrink: 0 }}>{formatDate(em.sentAt)}</small>
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>To: {em.to}</div>
+                  <p style={{ margin: '6px 0 0', fontSize: 12.5, color: 'var(--text)', whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>
+                    {em.body}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+
+      {/* Pane: Documents */}
+      <div className={`pane ${activeTab === 'doc' ? 'on' : ''}`} id="p-doc">
+        {/* Upload Card */}
+        <section className="card">
+          <h3>Upload Document</h3>
+          <input
+            ref={docFileInputRef}
+            type="file"
+            style={{ display: 'none' }}
+            onChange={async (e) => {
+              if (onUploadDoc) {
+                await onUploadDoc(e);
+                showToast('Document uploaded');
+              }
+            }}
+          />
+          <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4, fontWeight: 500 }}>
+                Document Type
+              </label>
+              <input
+                type="text"
+                value={docTypeInput}
+                onChange={(e) => setDocTypeInput && setDocTypeInput(e.target.value)}
+                placeholder="Passport / ID"
+                style={{ width: '100%', height: 38, padding: '0 10px', fontSize: 13, border: '1px solid var(--line)', borderRadius: 8, outline: 'none' }}
+              />
+            </div>
+            <button
+              type="button"
+              disabled={uploadingDoc}
+              onClick={() => docFileInputRef.current?.click()}
+              className="btn p"
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, height: 40 }}
+            >
+              <Upload size={15} />
+              <span>{uploadingDoc ? 'Uploading…' : 'Upload Document'}</span>
+            </button>
+          </div>
+        </section>
+
+        {/* Uploaded Documents List */}
+        <section className="card">
+          <h3>
+            <span>Documents</span>
+            <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500 }}>{candidateDocs.length}</span>
+          </h3>
+          {candidateDocs.length === 0 ? (
+            <div style={{ padding: '36px 16px', textAlign: 'center' }}>
+              <div style={{ width: 44, height: 44, borderRadius: 22, background: '#f1f3f6', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px' }}>
+                <FileText size={22} />
+              </div>
+              <h4 style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
+                No Documents Uploaded
+              </h4>
+              <p style={{ margin: 0, fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.4, maxWidth: 320, marginLeft: 'auto', marginRight: 'auto' }}>
+                Upload passports, resumes, academic transcripts, or visa documents for this candidate.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {candidateDocs.map((doc) => (
+                <div
+                  key={doc.id}
+                  style={{
+                    padding: '12px 14px',
+                    borderBottom: '1px solid var(--line)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 10,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 8,
+                        background: '#f1f5f9',
+                        color: '#475569',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <FileText size={18} />
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 600,
+                          color: 'var(--text)',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {doc.name}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                        {doc.docType} · {formatDate(doc.uploadedAt)}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                    <button
+                      type="button"
+                      onClick={() => onPreviewDoc && onPreviewDoc(doc)}
+                      className="btn"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        padding: '6px 10px',
+                        fontSize: 12,
+                        cursor: 'pointer',
+                      }}
+                      title="Preview document securely inside application"
+                    >
+                      <Eye size={13} />
+                      <span>View</span>
+                    </button>
+                    {onDeleteDoc && (
+                      <button
+                        type="button"
+                        onClick={() => onDeleteDoc(doc.id)}
+                        className="btn"
+                        style={{
+                          padding: '6px 8px',
+                          color: 'var(--red)',
+                          cursor: 'pointer',
+                        }}
+                        title="Delete document"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </section>
       </div>
