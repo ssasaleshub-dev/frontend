@@ -278,25 +278,13 @@ export default function Integrations() {
       {/* ── Page Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-slate-200">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900 tracking-tight">Integrations Hub</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">Integrations Hub</h1>
+          <p className="text-sm text-slate-500 mt-0.5">
             Connect communication channels and Google Workspace to your candidate pipeline.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Subtle Google Status */}
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 rounded text-xs text-slate-600">
-            <span
-              className={`w-2 h-2 rounded-full ${
-                googleStatus.connected ? 'bg-emerald-600' : 'bg-slate-400'
-              }`}
-            />
-            <span className="font-medium">
-              Gmail: {googleStatus.connected ? connectedEmail || 'Connected' : 'Not connected'}
-            </span>
-          </div>
-
           <button
             type="button"
             onClick={fetchStatus}
@@ -330,7 +318,7 @@ export default function Integrations() {
       )}
 
       {/* ── Standard Horizontal Filter Tabs ── */}
-      <div className="flex items-center gap-6 border-b border-slate-200 text-xs">
+      <div className="flex items-center gap-6 border-b border-slate-200 text-[13px]">
         {[
           { id: 'ALL', label: 'All Integrations' },
           { id: 'DIRECT', label: 'Gmail & Instagram DM' },
@@ -361,50 +349,37 @@ export default function Integrations() {
             <div className="space-y-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2.5">
-                  {/* Authentic Gmail Logo Icon */}
+                  {/* Gmail Logo Icon */}
                   <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
-                    <svg className="w-5 h-5" viewBox="0 0 24 24">
-                      <path
-                        fill="#4285F4"
-                        d="M2.25 19.5h3.75V10.5L2.25 7.687V19.5z"
-                      />
-                      <path
-                        fill="#34A853"
-                        d="M18 19.5h3.75V7.687L18 10.5v9z"
-                      />
-                      <path
-                        fill="#EA4335"
-                        d="M18 7.687l-6 4.5-6-4.5V4.5l6 4.5 6-4.5v3.187z"
-                      />
-                      <path
-                        fill="#FBBC04"
-                        d="M6 7.687L2.25 4.875A1.5 1.5 0 014.5 3h15a1.5 1.5 0 012.25 1.875L18 7.687l-6 4.5-6-4.5z"
-                      />
-                    </svg>
+                    <img
+                      src="/icons/gmail-classic.png"
+                      alt="Gmail"
+                      className="w-5 h-5 object-contain"
+                    />
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-900">Gmail</h3>
-                    <span className="text-[11px] text-slate-400">Direct Candidate Inbox</span>
+                    <h3 className="text-[15px] font-semibold text-slate-900">Gmail</h3>
+                    <span className="text-xs text-slate-400">Direct Candidate Inbox</span>
                   </div>
                 </div>
 
                 {/* Badge */}
                 {googleStatus.connected ? (
                   <span
-                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60 max-w-[170px] truncate"
+                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60 max-w-[170px] truncate"
                     title={`Connected as ${connectedEmail}`}
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0" />
                     <span className="truncate">Connected as {connectedEmail}</span>
                   </span>
                 ) : (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-500">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500">
                     Not Connected
                   </span>
                 )}
               </div>
 
-              <p className="text-xs text-slate-600 leading-relaxed">
+              <p className="text-[13px] text-slate-600 leading-relaxed">
                 Connect your Gmail account to send emails directly from your inbox, track email threads, and sync candidate communications.
               </p>
             </div>
@@ -415,9 +390,9 @@ export default function Integrations() {
                   <button
                     type="button"
                     onClick={() => setShowTestEmailModal(true)}
-                    className="flex-1 h-8 px-3 text-xs font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                    className="flex-1 h-9 px-3 text-[13px] font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                   >
-                    <Send size={12} />
+                    <Send size={13} />
                     <span>Send Test Email</span>
                   </button>
 
@@ -426,7 +401,7 @@ export default function Integrations() {
                     onClick={handleDisconnectGoogle}
                     disabled={disconnecting}
                     title="Disconnect Gmail Account"
-                    className="h-8 px-3 text-xs font-medium rounded border border-slate-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 text-slate-700 transition-colors cursor-pointer"
+                    className="h-9 px-3 text-[13px] font-medium rounded border border-slate-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 text-slate-700 transition-colors cursor-pointer"
                   >
                     {disconnecting ? 'Disconnecting…' : 'Disconnect'}
                   </button>
@@ -435,9 +410,9 @@ export default function Integrations() {
                     type="button"
                     onClick={() => setShowGoogleSetupModal(true)}
                     title="OAuth Client Configuration"
-                    className="h-8 px-2 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded transition-colors cursor-pointer"
+                    className="h-9 px-2.5 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded transition-colors cursor-pointer"
                   >
-                    <Settings size={13} />
+                    <Settings size={14} />
                   </button>
                 </div>
               ) : (
@@ -446,7 +421,7 @@ export default function Integrations() {
                     type="button"
                     onClick={() => handleConnectGoogle()}
                     disabled={connecting}
-                    className="flex-1 h-8 px-3 text-xs font-medium rounded bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-sm"
+                    className="flex-1 h-9 px-3 text-[13px] font-medium rounded bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-sm"
                   >
                     {/* Google G logo */}
                     <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
@@ -474,9 +449,9 @@ export default function Integrations() {
                     type="button"
                     onClick={() => setShowGoogleSetupModal(true)}
                     title="OAuth Client Configuration"
-                    className="h-8 px-2 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded transition-colors cursor-pointer"
+                    className="h-9 px-2.5 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded transition-colors cursor-pointer"
                   >
-                    <Settings size={13} />
+                    <Settings size={14} />
                   </button>
                 </div>
               )}
@@ -498,8 +473,8 @@ export default function Integrations() {
                     className="w-8 h-8 rounded-lg object-contain shrink-0"
                   />
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-900">Instagram DM</h3>
-                    <span className="text-[11px] text-slate-400">Direct Message Channel</span>
+                    <h3 className="text-[15px] font-semibold text-slate-900">Instagram DM</h3>
+                    <span className="text-xs text-slate-400">Direct Message Channel</span>
                   </div>
                 </div>
 
@@ -510,7 +485,7 @@ export default function Integrations() {
                 </span>
               </div>
 
-              <p className="text-xs text-slate-600 leading-relaxed">
+              <p className="text-[13px] text-slate-600 leading-relaxed">
                 Automatically capture leads from Instagram Direct Messages and reply directly from SSA Saleshub.
               </p>
             </div>
@@ -519,9 +494,9 @@ export default function Integrations() {
               <button
                 type="button"
                 onClick={() => setShowInstagramReplyModal(true)}
-                className="w-full h-8 px-2.5 text-xs font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-full h-9 px-3 text-[13px] font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <MessageCircle size={13} />
+                <MessageCircle size={14} />
                 <span>Send Outbound DM / Reply</span>
               </button>
             </div>
@@ -538,37 +513,37 @@ export default function Integrations() {
                 <div className="flex items-center gap-2.5">
                   <img src="/icons/google-meet.png" alt="Google Meet" className="w-8 h-8 object-contain shrink-0" />
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-900">Google Meet</h3>
-                    <span className="text-[11px] text-slate-400">Video Consultations</span>
+                    <h3 className="text-[15px] font-semibold text-slate-900">Google Meet</h3>
+                    <span className="text-xs text-slate-400">Video Consultations</span>
                   </div>
                 </div>
 
                 {googleStatus.connected ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700">
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
                     Connected
                   </span>
                 ) : (
-                  <span className="text-[11px] text-slate-400">Not connected</span>
+                  <span className="text-xs text-slate-400">Not connected</span>
                 )}
               </div>
 
-              <p className="text-xs text-slate-600 leading-relaxed">
+              <p className="text-[13px] text-slate-600 leading-relaxed">
                 Automatically generate video meeting links for scheduled consultations and candidate calls.
               </p>
             </div>
 
             <div className="pt-4 mt-3 border-t border-slate-100">
               {googleStatus.connected ? (
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-mono text-[11px] text-slate-600 truncate max-w-[170px]" title={connectedEmail}>
+                <div className="flex items-center justify-between text-[13px]">
+                  <span className="font-mono text-xs text-slate-600 truncate max-w-[170px]" title={connectedEmail}>
                     {connectedEmail || 'Connected'}
                   </span>
                   <button
                     type="button"
                     onClick={handleDisconnectGoogle}
                     disabled={disconnecting}
-                    className="text-xs text-rose-600 hover:text-rose-800 font-medium cursor-pointer"
+                    className="text-[13px] text-rose-600 hover:text-rose-800 font-medium cursor-pointer"
                   >
                     {disconnecting ? 'Disconnecting…' : 'Disconnect'}
                   </button>
@@ -578,9 +553,9 @@ export default function Integrations() {
                   type="button"
                   onClick={() => handleConnectGoogle()}
                   disabled={connecting}
-                  className="w-full h-8 px-3 text-xs font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                  className="w-full h-9 px-3 text-[13px] font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  {connecting ? <RefreshCw size={12} className="animate-spin" /> : null}
+                  {connecting ? <RefreshCw size={13} className="animate-spin" /> : null}
                   <span>Connect Google Meet</span>
                 </button>
               )}
@@ -598,22 +573,22 @@ export default function Integrations() {
                 <div className="flex items-center gap-2.5">
                   <img src="/icons/google-sheets.png" alt="Google Sheets" className="w-8 h-8 object-contain shrink-0" />
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-900">Google Sheets</h3>
-                    <span className="text-[11px] text-slate-400">Spreadsheet Export</span>
+                    <h3 className="text-[15px] font-semibold text-slate-900">Google Sheets</h3>
+                    <span className="text-xs text-slate-400">Spreadsheet Export</span>
                   </div>
                 </div>
 
                 {googleStatus.connected ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700">
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
                     Connected
                   </span>
                 ) : (
-                  <span className="text-[11px] text-slate-400">Not connected</span>
+                  <span className="text-xs text-slate-400">Not connected</span>
                 )}
               </div>
 
-              <p className="text-xs text-slate-600 leading-relaxed">
+              <p className="text-[13px] text-slate-600 leading-relaxed">
                 Export candidate inquiries, customer lists, and performance reports directly to Google Sheets.
               </p>
             </div>
@@ -622,9 +597,9 @@ export default function Integrations() {
               {googleStatus.connected ? (
                 <a
                   href="/leads"
-                  className="w-full h-8 px-3 text-xs font-medium rounded border border-slate-300 hover:bg-slate-50 text-slate-800 transition-colors flex items-center justify-center gap-1.5"
+                  className="w-full h-9 px-3 text-[13px] font-medium rounded border border-slate-300 hover:bg-slate-50 text-slate-800 transition-colors flex items-center justify-center gap-1.5"
                 >
-                  <FileSpreadsheet size={13} />
+                  <FileSpreadsheet size={14} />
                   <span>Go to Leads to Export</span>
                 </a>
               ) : (
@@ -632,7 +607,7 @@ export default function Integrations() {
                   type="button"
                   onClick={() => handleConnectGoogle()}
                   disabled={connecting}
-                  className="w-full h-8 px-3 text-xs font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                  className="w-full h-9 px-3 text-[13px] font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <span>Connect Google Sheets</span>
                 </button>
