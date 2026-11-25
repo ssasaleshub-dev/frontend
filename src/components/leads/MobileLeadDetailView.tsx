@@ -956,11 +956,11 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
 
       {/* Fixed Bottom Action Bar */}
       <nav className="acts" aria-label="Quick actions">
-        <a className="call" id="ca" href={`tel:${cleanPhone}`}>
+        <a className="call" id="ca" href={`tel:${cleanPhone}`} title="Call candidate">
           <svg viewBox="0 0 24 24">
             <path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z" />
           </svg>
-          Call
+          <span>Call</span>
         </a>
         <a
           className="wa"
@@ -968,20 +968,43 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
           href={`https://wa.me/${cleanPhone}`}
           target="_blank"
           rel="noopener noreferrer"
+          title="WhatsApp candidate"
         >
           <svg viewBox="0 0 24 24">
             <path d="M4 20l1.3-4.2A8 8 0 1112 20a8 8 0 01-3.8-1z" />
             <path d="M9 9c0 3 3 6 6 6l1-1.5-2-1-1 .7a4 4 0 01-2-2l.7-1-1-2z" />
           </svg>
-          WhatsApp
+          <span>WhatsApp</span>
         </a>
         <button
           type="button"
           id="em"
+          className="em-btn"
           onClick={onOpenEmail}
+          title="Send Email"
         >
-          <img src="/icons/gmail-classic.png" alt="" style={{ width: '16px', height: '16px', objectFit: 'contain' }} />
-          Email
+          <img src="/icons/gmail-classic.png" alt="" />
+          <span>Email</span>
+        </button>
+        <button
+          type="button"
+          id="ig"
+          className="ig-btn"
+          onClick={onOpenInstagram}
+          title="Instagram DM"
+        >
+          <img src="/icons/instagram.png" alt="" />
+          <span>Instagram</span>
+        </button>
+        <button
+          type="button"
+          id="meet"
+          className="meet-btn"
+          onClick={onCreateGoogleMeet}
+          title="Google Meet"
+        >
+          <img src="/icons/google-meet.png" alt="" />
+          <span>Meet</span>
         </button>
       </nav>
 
