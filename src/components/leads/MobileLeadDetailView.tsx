@@ -170,6 +170,21 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
     }
   };
 
+  // Switch to Emails tab and scroll smoothly
+  const handleNavigateToEmails = () => {
+    setActiveTab('em');
+    setTimeout(() => {
+      const tabEl = document.getElementById('tab-btn-em');
+      if (tabEl) {
+        tabEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
+      const paneEl = document.getElementById('p-em');
+      if (paneEl) {
+        paneEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 50);
+  };
+
   return (
     <div className="crm-l" id="crmL">
       {/* Top Bar */}
@@ -293,6 +308,7 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
         </button>
         <button
           type="button"
+          id="tab-btn-em"
           className={`tab ${activeTab === 'em' ? 'on' : ''}`}
           onClick={() => setActiveTab('em')}
         >
@@ -1010,8 +1026,8 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
           type="button"
           id="em"
           className="em-btn"
-          onClick={onOpenEmail}
-          title="Send Email"
+          onClick={handleNavigateToEmails}
+          title="Go to Emails"
         >
           <img src="/icons/gmail-classic.png" alt="" />
           <span>Email</span>
@@ -1095,11 +1111,11 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
             style={{ paddingLeft: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}
             onClick={() => {
               setShowMoreSheet(false);
-              onOpenEmail();
+              handleNavigateToEmails();
             }}
           >
             <img src="/icons/gmail-classic.png" alt="" style={{ width: '16px', height: '16px', objectFit: 'contain' }} />
-            <span>Send Email (Gmail)</span>
+            <span>Emails</span>
           </button>
           <button
             type="button"
