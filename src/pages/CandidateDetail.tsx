@@ -29,6 +29,8 @@ import {
   Upload,
   Search,
   ExternalLink,
+  Eye,
+  Download,
 } from 'lucide-react';
 import {
   BrandActivityIcon,
@@ -167,6 +169,14 @@ export default function CandidateDetail() {
       return [];
     }
   });
+  const [selectedPreviewDoc, setSelectedPreviewDoc] = useState<{
+    id: string;
+    name: string;
+    docType: string;
+    url: string;
+    uploadedAt: string;
+    size?: number;
+  } | null>(null);
 
   const [showInstagramModal, setShowInstagramModal] = useState<boolean>(false);
   const [igRecipientId, setIgRecipientId] = useState<string>('');
@@ -1922,19 +1932,19 @@ export default function CandidateDetail() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          <a
-                            href={doc.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="btn inline-flex items-center gap-1"
+                          <button
+                            type="button"
+                            onClick={() => setSelectedPreviewDoc(doc)}
+                            className="btn inline-flex items-center gap-1 cursor-pointer"
+                            title="Preview document securely inside application"
                           >
-                            <ExternalLink size={12} />
+                            <Eye size={12} />
                             <span>View</span>
-                          </a>
+                          </button>
                           <button
                             type="button"
                             onClick={() => handleDeleteCandidateDoc(doc.id)}
-                            className="btn text-rose-600"
+                            className="btn text-rose-600 cursor-pointer"
                             title="Delete document"
                           >
                             <Trash2 size={13} />
@@ -2748,6 +2758,73 @@ export default function CandidateDetail() {
             leadActivityService.getActivities(targetId).then(setActivities).catch(() => { });
           }}
         />
+      )}
+
+      {/* Secure In-App Document Preview Modal */}
+      {selectedPreviewDoc && (
+        <div
+          className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150"
+          onClick={() => setSelectedPreviewDoc(null)}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-4xl w-full border border-slate-200 shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="bg-[#f8f9fa] px-5 py-3.5 flex items-center justify-between border-b border-slate-200">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-700 flex items-center justify-center shrink-0">
+                  <FileText size={17} />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold text-slate-900 truncate">
+                    {selectedPreviewDoc.name}
+                  </h3>
+                  <div className="text-[11px] text-slate-500">
+                    {selectedPreviewDoc.docType} · Uploaded {formatDate(selectedPreviewDoc.uploadedAt)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <a
+                  href={selectedPreviewDoc.url}
+                  download={selectedPreviewDoc.name}
+                  className="h-8 px-3 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+                  title="Download copy"
+                >
+                  <Download size={13} />
+                  <span>Download</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPreviewDoc(null)}
+                  className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-200/60 flex items-center justify-center cursor-pointer transition-colors"
+                  aria-label="Close preview"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* In-App Document Viewer Body */}
+            <div className="h-[70vh] w-full bg-slate-100 flex items-center justify-center overflow-auto p-4">
+              {/\.(jpg|jpeg|png|webp|gif|svg)$/i.test(selectedPreviewDoc.name || selectedPreviewDoc.url) ? (
+                <img
+                  src={selectedPreviewDoc.url}
+                  alt={selectedPreviewDoc.name}
+                  className="max-h-full max-w-full object-contain rounded-lg shadow-sm bg-white"
+                />
+              ) : (
+                <iframe
+                  src={selectedPreviewDoc.url}
+                  title={selectedPreviewDoc.name}
+                  className="w-full h-full border-0 rounded-lg bg-white shadow-sm"
+                />
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
