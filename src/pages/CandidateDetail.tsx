@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import DotsLoader from '../components/common/DotsLoader';
 import {
   ChevronLeft,
   ChevronDown,
@@ -18,6 +19,10 @@ import {
   Copy,
   Check,
   X,
+  Calendar,
+  Sparkles,
+  PhoneCall,
+  FileCheck,
   RefreshCw,
   Globe,
   ShieldCheck,
@@ -31,6 +36,8 @@ import {
   ExternalLink,
   Eye,
   Download,
+  AlertTriangle,
+  GitMerge,
 } from 'lucide-react';
 import {
   BrandActivityIcon,
@@ -49,6 +56,7 @@ import fileService from '../services/api/fileService';
 import notificationApiService, { CalendarEventDTO } from '../services/api/notificationService';
 import CandidateActivityLogsModal from '../components/CandidateActivityLogsModal';
 import LeadReminderModal from '../components/LeadReminderModal';
+import TimePicker12Hour from '../components/TimePicker12Hour';
 import MobileLeadDetailView from '../components/leads/MobileLeadDetailView';
 import { useAlert } from '../context/AlertContext';
 import {
@@ -67,7 +75,7 @@ import { isAdmin as checkIsAdmin } from '../utils/rbac';
 import { useAuth } from '../context/AuthContext';
 import { formatIndianDateTime, formatIndianDate } from '../utils/dateTimeUtils';
 import { formatCurrencyDisplay, getLeadSourceLabel, isAcademicScore, formatAcademicScore } from '../utils/formatUtils';
-import { parseFormResponses, humanizeAnswer, getAttributionRows, getOriginLabel } from '../utils/metaLead';
+import { parseFormResponses, humanizeAnswer, getAttributionRows, getOriginLabel, getInstagramDmRecipientId } from '../utils/metaLead';
 import { Lead, LeadActivity } from '../types';
 import { encryptLeadId, decryptLeadId, formatMaskedLeadRef } from '../utils/leadIdCrypto';
 
@@ -131,6 +139,17 @@ export default function CandidateDetail() {
   const [leadReminders, setLeadReminders] = useState<CalendarEventDTO[]>([]);
   const [creatingMeet, setCreatingMeet] = useState<boolean>(false);
 
+  // Google Meet Scheduling & Confirmation Modal State
+  const [showMeetScheduleModal, setShowMeetScheduleModal] = useState<boolean>(false);
+  const [meetTitle, setMeetTitle] = useState<string>('');
+  const [meetDate, setMeetDate] = useState<string>('');
+  const [meetTime, setMeetTime] = useState<string>('10:00');
+  const [meetDuration, setMeetDuration] = useState<number>(30);
+  const [meetSendWhatsApp, setMeetSendWhatsApp] = useState<boolean>(true);
+  const [meetSendEmail, setMeetSendEmail] = useState<boolean>(true);
+  const [meetCustomNotes, setMeetCustomNotes] = useState<string>('');
+  const [schedulingMeet, setSchedulingMeet] = useState<boolean>(false);
+
   // Related List inline views: 'notes' | 'activity' | 'emails' | 'documents' | null
   const [activeRelatedView, setActiveRelatedView] = useState<'notes' | 'activity' | 'emails' | 'documents' | null>(null);
   const [connectedGoogleEmail, setConnectedGoogleEmail] = useState<string>('');
@@ -183,47 +202,139 @@ export default function CandidateDetail() {
   const [igMessage, setIgMessage] = useState<string>('');
   const [sendingIg, setSendingIg] = useState<boolean>(false);
 
+  // Duplicate Lead Detection & Merge Tool
+  const [duplicateLeads, setDuplicateLeads] = useState<Lead[]>([]);
+  const [showMergeModal, setShowMergeModal] = useState<boolean>(false);
+  const [mergingLead, setMergingLead] = useState<boolean>(false);
+  const [selectedMergeDupId, setSelectedMergeDupId] = useState<string | number | null>(null);
+
+  // Post-Call Outcome / Disposition State (Legacy CRM Standard)
+  const [showCallOutcomeModal, setShowCallOutcomeModal] = useState<boolean>(false);
+  const [callOutcome, setCallOutcome] = useState<string>('CONNECTED');
+  const [callNotes, setCallNotes] = useState<string>('');
+  const [callCallbackDate, setCallCallbackDate] = useState<string>('');
+  const [callCallbackTime, setCallCallbackTime] = useState<string>('10:00');
+  const [savingCallOutcome, setSavingCallOutcome] = useState<boolean>(false);
+
+  const handleInitiateCall = () => {
+    if (!lead?.phoneNumber) {
+      showAlert({ title: 'Call', message: 'No phone number available for this candidate.' });
+      return;
+    }
+    window.location.href = `tel:${lead.phoneNumber}`;
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    setCallCallbackDate(tomorrow.toISOString().split('T')[0]);
+    setCallOutcome('CONNECTED');
+    setCallNotes('');
+    setShowCallOutcomeModal(true);
+  };
+
+  const handleSaveCallOutcome = async () => {
+    if (!lead) return;
+    setSavingCallOutcome(true);
+    try {
+      let outcomeLabel = 'Connected & Spoke with Candidate';
+      let nextStatus = lead.status;
+
+      if (callOutcome === 'CONNECTED') {
+        outcomeLabel = 'Connected & Qualified';
+        if (lead.status === 'CREATED') nextStatus = 'CONTACTED';
+      } else if (callOutcome === 'INTERESTED') {
+        outcomeLabel = 'Highly Interested Candidate';
+        nextStatus = 'QUALIFIED';
+      } else if (callOutcome === 'NO_ANSWER') {
+        outcomeLabel = 'Ringing / No Answer';
+        if (lead.status === 'CREATED') nextStatus = 'CONTACTED';
+      } else if (callOutcome === 'BUSY') {
+        outcomeLabel = 'Busy / Declined';
+      } else if (callOutcome === 'CALLBACK') {
+        outcomeLabel = `Callback Requested for ${callCallbackDate} at ${callCallbackTime}`;
+      } else if (callOutcome === 'NOT_INTERESTED') {
+        outcomeLabel = 'Not Interested / Lost';
+        nextStatus = 'LOST';
+      }
+
+      const noteEntry = `[Call Outcome: ${outcomeLabel}]${callNotes.trim() ? ` ${callNotes.trim()}` : ''}`;
+      const updatedNotes = lead.notes ? `${lead.notes}\n${noteEntry}` : noteEntry;
+
+      if (nextStatus && nextStatus !== lead.status) {
+        await crmService.updateLeadStatus(lead.id, nextStatus, updatedNotes);
+        setLead((prev) => (prev ? { ...prev, status: nextStatus, notes: updatedNotes } : prev));
+      } else {
+        await crmService.patchLead(lead.id, { notes: updatedNotes }).catch(() => {});
+        setLead((prev) => (prev ? { ...prev, notes: updatedNotes } : prev));
+      }
+
+      leadActivityService.logActivity(lead.id, {
+        userName: currentUser?.login || currentUser?.firstName || 'Counselor',
+        userRole: currentUser?.authorities?.[0],
+        actionType: 'OUTREACH',
+        title: `Call Logged: ${outcomeLabel}`,
+        description: callNotes.trim() || `Recorded outcome for call to ${lead.phoneNumber}`,
+      });
+
+      if (callOutcome === 'CALLBACK' && callCallbackDate) {
+        try {
+          await notificationApiService.createEvent({
+            title: `Callback with ${lead.customerName || 'Candidate'}`,
+            eventDate: callCallbackDate,
+            eventTime: callCallbackTime || '10:00',
+            eventType: 'CALL',
+            priority: 'HIGH',
+            description: callNotes || 'Scheduled from call disposition popup',
+            candidateId: lead.id,
+          });
+        } catch {}
+      }
+
+      setShowCallOutcomeModal(false);
+      window.dispatchEvent(new CustomEvent('crm-data-updated'));
+      showAlert({ title: 'Call Logged', message: `Outcome "${outcomeLabel}" recorded successfully.` });
+    } catch (err: any) {
+      showAlert({ title: 'Error', message: err?.message || 'Failed to save call outcome.' });
+    } finally {
+      setSavingCallOutcome(false);
+    }
+  };
+
   const connectGoogleDirectly = async () => {
     const authRes = await integrationsService.getGoogleAuthUrl();
     window.location.href = authRes.url;
   };
 
-  const handleCreateGoogleMeet = async () => {
+  const getMeetRemainingTime = (dateStr: string, timeStr: string) => {
+    if (!dateStr || !timeStr) return null;
+    const target = new Date(`${dateStr}T${timeStr}`);
+    if (isNaN(target.getTime())) return null;
+    const diffMs = target.getTime() - Date.now();
+    if (diffMs <= 0) return { isPast: true, text: 'Scheduled for earlier or past time' };
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    if (hours === 0) return { isPast: false, text: `${mins} min remaining` };
+    return { isPast: false, text: `${hours} hour${hours > 1 ? 's' : ''} ${mins} min remaining` };
+  };
+
+  const handleCreateGoogleMeet = () => {
     if (!lead) return;
-    setCreatingMeet(true);
-    try {
-      const candidateName = lead.customerName || lead.fullName || 'Candidate';
-      const res = await integrationsService.createGoogleMeet(`Consultation - ${candidateName}`, {
-        description: `Candidate consultation with ${candidateName}${lead.phoneNumber ? ` (${lead.phoneNumber})` : ''}`,
-      });
-      const url = res?.meetUrl || res?.url || res?.hangoutsLink;
-      if (!url) throw new Error('No Meet link returned');
-      try {
-        await navigator.clipboard.writeText(url);
-      } catch {
-        // Ignore clipboard errors
-      }
-      window.open(url, '_blank', 'noopener,noreferrer');
-      showAlert({
-        title: 'Google Meet Created',
-        message: `Link copied to clipboard:\n${url}`,
-      });
-    } catch (err: any) {
-      if (err?.response?.status === 412) {
-        try {
-          await connectGoogleDirectly();
-          return;
-        } catch {
-          // Fall through to alert
-        }
-      }
-      showAlert({
-        title: 'Google Meet',
-        message: err?.response?.data?.error || err?.message || 'Failed to create Google Meet link.',
-      });
-    } finally {
-      setCreatingMeet(false);
-    }
+    const candidateName = lead.customerName || lead.fullName || 'Candidate';
+    setMeetTitle(`Follow-up with ${candidateName}`);
+
+    // Default to today
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
+    setMeetDate(dateStr);
+
+    // Next round hour
+    now.setHours(now.getHours() + 1);
+    const hh = String(now.getHours()).padStart(2, '0');
+    setMeetTime(`${hh}:00`);
+
+    setMeetDuration(30);
+    setMeetSendWhatsApp(!!lead.phoneNumber);
+    setMeetSendEmail(!!lead.email);
+    setMeetCustomNotes('');
+    setShowMeetScheduleModal(true);
   };
 
   const handleOpenEmailComposer = async () => {
@@ -343,8 +454,7 @@ export default function CandidateDetail() {
 
   const handleOpenInstagramComposer = () => {
     const candidateName = lead?.customerName || lead?.fullName || 'there';
-    const prefillId =
-      lead?.platform?.toUpperCase() === 'INSTAGRAM' && lead?.externalId ? String(lead.externalId) : '';
+    const prefillId = getInstagramDmRecipientId(lead);
     setIgRecipientId(prefillId);
     setIgMessage(`Hi ${candidateName}, thanks for reaching out to SSA SalesHub!`);
     setShowInstagramModal(true);
@@ -355,17 +465,21 @@ export default function CandidateDetail() {
     if (!igRecipientId.trim() || !igMessage.trim()) return;
     setSendingIg(true);
     try {
-      await integrationsService.sendInstagramMessage({
+      const res = await integrationsService.sendInstagramMessage({
         recipientId: igRecipientId.trim(),
         message: igMessage.trim(),
         leadId: lead?.id ? Number(lead.id) : undefined,
       });
+      // API may return 200 with success:false — treat that as failure
+      if (res && res.success === false) {
+        throw new Error(res.errorMessage || 'Failed to send Instagram DM.');
+      }
       setShowInstagramModal(false);
       showAlert({ title: 'Instagram DM Sent', message: 'Direct message delivered.' });
     } catch (err: any) {
       showAlert({
         title: 'Instagram DM Failed',
-        message: err?.response?.data?.error || err?.message || 'Failed to send Instagram DM.',
+        message: err?.response?.data?.errorMessage || err?.response?.data?.error || err?.message || 'Failed to send Instagram DM.',
       });
     } finally {
       setSendingIg(false);
@@ -1168,6 +1282,28 @@ export default function CandidateDetail() {
     );
   };
 
+  const cleanCandidateName = (name?: string) => {
+    if (!name) return 'Candidate';
+    const trimmed = name.trim();
+    const parts = trimmed.split(/\s+/);
+    if (parts.length === 2 && parts[0].toLowerCase() === parts[1].toLowerCase()) {
+      return parts[0];
+    }
+    return trimmed;
+  };
+
+  const handleOpenWhatsAppModal = () => {
+    if (!lead) return;
+    const cName = cleanCandidateName(lead.customerName || lead.fullName);
+    const visa = lead.visaType === 'WORK_VISA' ? 'Work Visa' : lead.visaType === 'STUDY_VISA' ? 'Study Visa' : 'visa';
+    if (!customWhatsAppMsg || !customWhatsAppMsg.trim()) {
+      setCustomWhatsAppMsg(
+        `Hello ${cName}, greetings from SSA SalesHub! We received your inquiry regarding our international ${visa} programs. Are you available for a brief discussion regarding eligibility and visa requirements?`
+      );
+    }
+    setShowWhatsAppTemplateModal(true);
+  };
+
   const openWhatsAppWithText = (text: string) => {
     if (!lead?.phoneNumber) return;
     const cleanNum = lead.phoneNumber.replace(/\D/g, '');
@@ -1184,6 +1320,205 @@ export default function CandidateDetail() {
         }"`,
       metadata: { text, phoneNumber: lead.phoneNumber },
     });
+  };
+
+  // Check for duplicate leads sharing phone or email
+  useEffect(() => {
+    if (!lead) return;
+    const curPhone = (lead.phoneNumber || '').replace(/\D/g, '');
+    const curEmail = (lead.email || '').trim().toLowerCase();
+    if (curPhone.length < 7 && !curEmail) {
+      setDuplicateLeads([]);
+      return;
+    }
+
+    crmService
+      .getDetailedLeads()
+      .then((all) => {
+        if (Array.isArray(all)) {
+          const matches = all.filter((o) => {
+            if (String(o.id) === String(lead.id)) return false;
+            const oPhone = (o.phoneNumber || '').replace(/\D/g, '');
+            const oEmail = (o.email || '').trim().toLowerCase();
+            const pMatch =
+              curPhone.length >= 7 &&
+              oPhone.length >= 7 &&
+              (oPhone.endsWith(curPhone.slice(-10)) || curPhone.endsWith(oPhone.slice(-10)));
+            const eMatch = Boolean(curEmail && oEmail && oEmail === curEmail);
+            return pMatch || eMatch;
+          });
+          setDuplicateLeads(matches);
+          if (matches.length > 0) {
+            setSelectedMergeDupId(matches[0].id);
+          }
+        }
+      })
+      .catch(() => {});
+  }, [lead?.id, lead?.phoneNumber, lead?.email]);
+
+  const handleMergeDuplicate = async (dupLead: Lead) => {
+    if (!lead || !dupLead) return;
+    setMergingLead(true);
+    try {
+      // 1. Combine notes if duplicate has any notes
+      let combinedNotes = lead.notes || '';
+      if (dupLead.notes && dupLead.notes.trim()) {
+        const dupStamp = dupLead.createdTime ? new Date(dupLead.createdTime).toLocaleDateString() : 'Previous Record';
+        combinedNotes = `${combinedNotes ? combinedNotes + '\n\n' : ''}--- Merged Notes from Duplicate Record #${dupLead.id} (${dupStamp}) ---\n${dupLead.notes}`;
+        await crmService.patchLead(lead.id, { notes: combinedNotes }).catch(() => {});
+        setLead((prev) => (prev ? { ...prev, notes: combinedNotes } : prev));
+      }
+
+      // 2. Transfer missing data if primary lead was missing email or location
+      const updatesToPatch: any = {};
+      if (!lead.email && dupLead.email) updatesToPatch.email = dupLead.email;
+      if (!lead.city && dupLead.city) updatesToPatch.city = dupLead.city;
+      if (Object.keys(updatesToPatch).length > 0) {
+        await crmService.patchLead(lead.id, updatesToPatch).catch(() => {});
+        setLead((prev) => (prev ? { ...prev, ...updatesToPatch } : prev));
+      }
+
+      // 3. Log merge activity
+      leadActivityService.logActivity(lead.id, {
+        userName: currentUser?.login || currentUser?.firstName || 'Counselor',
+        userRole: currentUser?.authorities?.[0],
+        actionType: 'DATA_MODIFY',
+        title: 'Duplicate Candidate Merged',
+        description: `Merged duplicate record #${dupLead.id} (${dupLead.customerName || 'Candidate'}) into this primary profile.`,
+      });
+
+      // 4. Delete the duplicate lead record
+      await crmService.deleteLead(dupLead.id);
+
+      // 5. Update local state & notify listeners
+      setDuplicateLeads((prev) => prev.filter((d) => String(d.id) !== String(dupLead.id)));
+      setShowMergeModal(false);
+      window.dispatchEvent(new CustomEvent('crm-data-updated'));
+
+      showAlert({
+        title: 'Merge Successful',
+        message: `Candidate record #${dupLead.id} was merged and consolidated into this profile.`,
+      });
+    } catch (err: any) {
+      showAlert({
+        title: 'Merge Failed',
+        message: err?.message || 'Could not merge duplicate records.',
+      });
+    } finally {
+      setMergingLead(false);
+    }
+  };
+
+  const handleConfirmAndSendMeet = async () => {
+    if (!lead) return;
+    setSchedulingMeet(true);
+    try {
+      const candidateName = lead.customerName || lead.fullName || 'Candidate';
+      const startDate = meetDate && meetTime ? new Date(`${meetDate}T${meetTime}`) : new Date(Date.now() + 3600000);
+      const endDate = new Date(startDate.getTime() + (meetDuration || 30) * 60000);
+
+      const res = await integrationsService.createGoogleMeet(meetTitle || `Consultation - ${candidateName}`, {
+        description: `Candidate consultation with ${candidateName}${lead.phoneNumber ? ` (${lead.phoneNumber})` : ''}${meetCustomNotes ? `\n\nNotes: ${meetCustomNotes}` : ''}`,
+        startTime: startDate.toISOString(),
+        endTime: endDate.toISOString(),
+      });
+
+      const meetUrl = res?.meetUrl || res?.url || res?.hangoutsLink;
+      if (!meetUrl) throw new Error('No Google Meet link returned');
+
+      try {
+        await navigator.clipboard.writeText(meetUrl);
+      } catch {
+        // Ignore clipboard errors
+      }
+
+      const formattedDateStr = startDate.toLocaleString('en-IN', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      });
+
+      const messageText = `Hi ${candidateName}, your Google Meet consultation with SSA SalesHub has been scheduled for ${formattedDateStr}.\n\n🔗 Meeting Link: ${meetUrl}\n\nPlease join 5 minutes prior to the scheduled time.\n- SSA SalesHub`;
+
+      const dispatchChannels: string[] = [];
+
+      // 1. Dispatch via WhatsApp if selected
+      if (meetSendWhatsApp && lead.phoneNumber) {
+        openWhatsAppWithText(messageText);
+        dispatchChannels.push('WhatsApp');
+      }
+
+      // 2. Dispatch via Email if selected
+      if (meetSendEmail && lead.email) {
+        try {
+          await integrationsService.sendTestEmail({
+            to: lead.email.trim(),
+            subject: `Google Meet Scheduled: ${meetTitle || `Consultation with SSA SalesHub`}`,
+            body: messageText,
+          });
+
+          const newEmailEntry = {
+            id: String(Date.now()),
+            from: connectedGoogleEmail || 'Connected Gmail',
+            to: lead.email.trim(),
+            subject: `Google Meet Scheduled: ${meetTitle || `Consultation with SSA SalesHub`}`,
+            body: messageText,
+            sentAt: new Date().toISOString(),
+          };
+          setSentEmails((prev) => {
+            const next = [newEmailEntry, ...prev];
+            if (resolvedLeadId) {
+              localStorage.setItem(`ssa_lead_emails_${resolvedLeadId}`, JSON.stringify(next));
+            }
+            return next;
+          });
+          dispatchChannels.push('Email');
+
+          leadActivityService.logActivity(lead.id, {
+            userName: currentUser?.login || currentUser?.firstName || 'Counselor',
+            userRole: currentUser?.authorities?.[0],
+            actionType: 'OUTREACH',
+            title: 'Google Meet Link Sent via Email',
+            description: `Sent Google Meet link to ${lead.email}: ${meetUrl}`,
+            metadata: { meetUrl, scheduledAt: startDate.toISOString(), email: lead.email },
+          });
+        } catch (emailErr) {
+          console.error('Failed to send meet link via email:', emailErr);
+        }
+      }
+
+      // Log general schedule event
+      leadActivityService.logActivity(lead.id, {
+        userName: currentUser?.login || currentUser?.firstName || 'Counselor',
+        userRole: currentUser?.authorities?.[0],
+        actionType: 'OUTREACH',
+        title: 'Google Meet Consultation Scheduled',
+        description: `Scheduled consultation for ${formattedDateStr} (${meetDuration} mins). Link: ${meetUrl}`,
+        metadata: { meetUrl, scheduledAt: startDate.toISOString(), durationMinutes: meetDuration },
+      });
+
+      setShowMeetScheduleModal(false);
+
+      const channelsMsg = dispatchChannels.length > 0 ? ` and dispatched via ${dispatchChannels.join(' & ')}` : '';
+      showAlert({
+        title: 'Google Meet Scheduled',
+        message: `Meeting created for ${formattedDateStr}${channelsMsg}!\n\nLink copied to clipboard:\n${meetUrl}`,
+      });
+    } catch (err: any) {
+      if (err?.response?.status === 412) {
+        try {
+          await connectGoogleDirectly();
+          return;
+        } catch {
+          // Fall through
+        }
+      }
+      showAlert({
+        title: 'Google Meet',
+        message: err?.response?.data?.error || err?.response?.data?.message || err?.message || 'Failed to create Google Meet link.',
+      });
+    } finally {
+      setSchedulingMeet(false);
+    }
   };
 
   const getWhatsAppTemplates = () => {
@@ -1409,6 +1744,30 @@ export default function CandidateDetail() {
     <>
       {/* Mobile Screen Lead Detail Layout (< 768px) */}
       <div className="block md:hidden">
+        {/* Duplicate Lead Detection Alert Banner (Mobile) */}
+        {duplicateLeads.length > 0 && (
+          <div className="mx-3 mt-2 p-2.5 bg-amber-500/[0.08] border border-amber-500/25 rounded-xl flex items-center justify-between gap-2.5 animate-in fade-in">
+            <div className="flex items-center gap-2 min-w-0">
+              <AlertTriangle size={15} className="text-amber-600 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-amber-950 truncate">
+                  {duplicateLeads.length} Duplicate Record{duplicateLeads.length > 1 ? 's' : ''} Found
+                </p>
+                <p className="text-[10px] text-amber-800 truncate">
+                  {duplicateLeads[0].customerName || 'Candidate'}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowMergeModal(true)}
+              className="px-2.5 py-1 bg-amber-600 active:scale-95 text-white rounded-lg text-[11px] font-semibold shrink-0 flex items-center gap-1 cursor-pointer"
+            >
+              <GitMerge size={11} />
+              <span>Merge</span>
+            </button>
+          </div>
+        )}
         <MobileLeadDetailView
           lead={lead}
           notesHistory={notesHistory}
@@ -1465,6 +1824,33 @@ export default function CandidateDetail() {
             ‹ Back to Leads
           </a>
 
+          {/* Duplicate Lead Detection Alert Banner (Desktop) */}
+          {duplicateLeads.length > 0 && (
+            <div className="mb-3 p-3 bg-amber-500/[0.08] border border-amber-500/25 rounded-2xl flex items-center justify-between gap-3 animate-in fade-in">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 flex items-center justify-center shrink-0">
+                  <AlertTriangle size={16} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-amber-950 truncate">
+                    {duplicateLeads.length} Duplicate Candidate Record{duplicateLeads.length > 1 ? 's' : ''} Detected
+                  </p>
+                  <p className="text-[11px] text-amber-800 truncate">
+                    Matching contact ({lead.phoneNumber || lead.email}) found for: {duplicateLeads.map((d) => d.customerName || d.fullName).join(', ')}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowMergeModal(true)}
+                className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-xl text-xs font-semibold shrink-0 shadow-2xs transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <GitMerge size={13} />
+                <span>Review & Merge</span>
+              </button>
+            </div>
+          )}
+
           {/* Top Header Card */}
           <section className="card">
             <div className="head">
@@ -1486,7 +1872,7 @@ export default function CandidateDetail() {
                 <button
                   type="button"
                   className="btn g"
-                  onClick={() => setShowWhatsAppTemplateModal(true)}
+                  onClick={handleOpenWhatsAppModal}
                 >
                   WhatsApp
                 </button>
@@ -1509,14 +1895,16 @@ export default function CandidateDetail() {
                   <img src="/icons/gmail-classic.png" alt="" className="w-3.5 h-3.5 object-contain shrink-0" />
                   <span>{openingEmail ? 'Connecting…' : 'Send Email'}</span>
                 </button>
-                <button
-                  type="button"
-                  className="btn inline-flex items-center gap-1.5"
-                  onClick={handleOpenInstagramComposer}
-                >
-                  <img src="/icons/instagram.png" alt="" className="w-3.5 h-3.5 object-contain shrink-0" />
-                  <span>Instagram</span>
-                </button>
+                {Boolean(getInstagramDmRecipientId(lead)) && (
+                  <button
+                    type="button"
+                    className="btn inline-flex items-center gap-1.5"
+                    onClick={handleOpenInstagramComposer}
+                  >
+                    <img src="/icons/instagram.png" alt="" className="w-3.5 h-3.5 object-contain shrink-0" />
+                    <span>Instagram</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   className="btn"
@@ -1921,10 +2309,22 @@ export default function CandidateDetail() {
                     onClick={() => docFileInputRef.current?.click()}
                     className="btn p inline-flex items-center gap-1.5"
                   >
-                    <Upload size={14} />
-                    <span>{uploadingDoc ? 'Uploading…' : 'Upload Document'}</span>
+                    {uploadingDoc ? (
+                      <DotsLoader size="xs" label="Uploading…" />
+                    ) : (
+                      <>
+                        <Upload size={14} />
+                        <span>Upload Document</span>
+                      </>
+                    )}
                   </button>
                 </div>
+
+                {uploadingDoc && (
+                  <div className="px-6 py-4 bg-slate-50/70 border-b border-slate-100 flex items-center justify-center">
+                    <DotsLoader size="sm" label="Uploading document..." />
+                  </div>
+                )}
 
                 {candidateDocs.length === 0 ? (
                   <div className="py-12 px-6 text-center space-y-1.5">
@@ -2625,57 +3025,313 @@ export default function CandidateDetail() {
         </div>
       )}
 
-      {/* WhatsApp Template Customization Modal (Apple HIG Glass Sheet UI) */}
-      {showWhatsAppTemplateModal && (
-        <div className="ios-modal-backdrop animate-in fade-in duration-200">
-          <div className="ios-material-thick rounded-3xl border border-black/[0.08] shadow-2xl max-w-md w-full p-6 animate-in zoom-in-95 text-xs">
-            <div className="ios-sheet-grabber mb-3" />
-            <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
-              <h3 className="text-sm font-semibold text-[#1c1c1e] flex items-center gap-1.5">
-                <MessageCircle size={15} className="text-[#34c759]" />
-                <span>Personalize WhatsApp Message</span>
-              </h3>
+      {/* WhatsApp Message Modal — Simple Form Style */}
+      {showWhatsAppTemplateModal && lead && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div
+            className="bg-white border border-slate-200 rounded shadow-lg w-full max-w-lg"
+            role="dialog"
+            aria-modal="true"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <img src="/icons/whatsapp.png" alt="WhatsApp" className="w-4 h-4 object-contain" />
+                <h3 className="text-sm font-semibold text-slate-900">Send WhatsApp Message</h3>
+              </div>
               <button
+                type="button"
                 onClick={() => setShowWhatsAppTemplateModal(false)}
-                className="w-7 h-7 rounded-full bg-black/[0.05] text-[#8e8e93] hover:text-[#1c1c1e] hover:bg-black/[0.1] flex items-center justify-center transition-colors"
-              >
-                <X size={15} />
-              </button>
+                className="text-slate-400 hover:text-slate-600 text-lg leading-none cursor-pointer"
+              >×</button>
             </div>
 
-            <div className="mt-4 space-y-3">
-              <p className="text-slate-500 text-[11px]">
-                Review or edit the message to be sent to{' '}
-                <strong className="text-slate-900">{lead.customerName}</strong> ({lead.phoneNumber}):
-              </p>
+            <div className="p-4 space-y-3">
+              {/* To row */}
+              <div className="flex items-center border-b border-slate-100 pb-2">
+                <span className="text-xs text-slate-500 w-16 shrink-0">To</span>
+                <span className="text-xs text-slate-800 font-medium">
+                  {cleanCandidateName(lead.customerName || lead.fullName)} • {lead.phoneNumber || 'No phone'}
+                </span>
+              </div>
 
-              <textarea
-                value={customWhatsAppMsg}
-                onChange={(e) => setCustomWhatsAppMsg(e.target.value)}
-                rows={4}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:bg-white focus:ring-1 focus:ring-slate-400"
-              />
+              {/* Quick Templates */}
+              <div>
+                <span className="text-xs text-slate-500 block mb-1.5">Quick Templates</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    {
+                      label: 'Initial Consultation',
+                      text: `Hello ${cleanCandidateName(lead.customerName || lead.fullName)}, greetings from SSA SalesHub! We received your inquiry regarding our international ${
+                        lead.visaType === 'WORK_VISA' ? 'Work Visa' : lead.visaType === 'STUDY_VISA' ? 'Study Visa' : 'visa'
+                      } programs. Are you available for a brief discussion regarding eligibility and visa requirements?`,
+                    },
+                    {
+                      label: 'Doc Request',
+                      text: `Dear ${cleanCandidateName(lead.customerName || lead.fullName)}, following our counseling discussion regarding your ${
+                        lead.visaType === 'WORK_VISA' ? 'Work Visa' : lead.visaType === 'STUDY_VISA' ? 'Study Visa' : 'visa'
+                      } application, please share your updated resume/CV, highest educational certificates, and passport copy so our team can evaluate your profile.`,
+                    },
+                    {
+                      label: 'Follow-up Call',
+                      text: `Hi ${cleanCandidateName(lead.customerName || lead.fullName)}, this is from SSA SalesHub following up on your consultation. Please let us know when is a convenient time to speak.`,
+                    },
+                    {
+                      label: 'Fee Confirmation',
+                      text: `Hello ${cleanCandidateName(lead.customerName || lead.fullName)}, this is a gentle reminder regarding the processing fee and enrollment advance for your ${
+                        lead.visaType === 'WORK_VISA' ? 'Work Visa' : lead.visaType === 'STUDY_VISA' ? 'Study Visa' : 'visa'
+                      } application. Please let us know once transferred so we can proceed with your dossier.`,
+                    },
+                  ].map((tpl) => (
+                    <button
+                      key={tpl.label}
+                      type="button"
+                      onClick={() => setCustomWhatsAppMsg(tpl.text)}
+                      className="px-2.5 py-1 text-xs border border-slate-300 rounded bg-white hover:bg-slate-50 text-slate-700 cursor-pointer"
+                    >
+                      {tpl.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowWhatsAppTemplateModal(false)}
-                  className="px-3.5 py-1.5 rounded-xl font-medium text-slate-600 hover:bg-slate-100 border border-slate-300"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => openWhatsAppWithText(customWhatsAppMsg)}
-                  className="px-4 py-1.5 rounded-xl font-semibold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 shadow-xs"
-                >
-                  <Send size={12} />
-                  <span>Open WhatsApp</span>
-                </button>
+              {/* Message Text */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs text-slate-700 font-medium">Message Text <span className="text-red-500">*</span></label>
+                  <span className="text-[11px] text-slate-400">{customWhatsAppMsg.length} characters</span>
+                </div>
+                <textarea
+                  value={customWhatsAppMsg}
+                  onChange={(e) => setCustomWhatsAppMsg(e.target.value)}
+                  rows={5}
+                  placeholder="Type your WhatsApp message..."
+                  className="w-full px-2.5 py-2 bg-white border border-slate-300 rounded text-xs text-slate-800 resize-none focus:outline-none focus:border-slate-400"
+                />
+              </div>
+
+              {/* Footer buttons */}
+              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                <span className="text-[11px] text-slate-400">Dispatches via WhatsApp Web / App</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowWhatsAppTemplateModal(false)}
+                    className="px-3 py-1.5 text-xs border border-slate-300 rounded text-slate-700 hover:bg-slate-50 cursor-pointer"
+                  >Cancel</button>
+                  <button
+                    type="button"
+                    onClick={() => openWhatsAppWithText(customWhatsAppMsg)}
+                    disabled={!customWhatsAppMsg.trim()}
+                    className="px-3 py-1.5 text-xs bg-green-600 hover:bg-green-700 text-white rounded font-medium disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Send size={12} />
+                    Open WhatsApp & Send
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* Apple HIG Merge Duplicate Candidates Modal */}
+      {showMergeModal && lead && duplicateLeads.length > 0 && (() => {
+        const activeDup = duplicateLeads.find((d) => String(d.id) === String(selectedMergeDupId)) || duplicateLeads[0];
+        return (
+          <div className="ios-modal-backdrop animate-in fade-in duration-200">
+            <div
+              className="w-full max-w-2xl ios-material-thick rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.25)] border border-black/[0.08] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 my-auto"
+              role="dialog"
+              aria-modal="true"
+            >
+              {/* Grabber handle */}
+              <div className="pt-3 pb-1">
+                <div className="ios-sheet-grabber" />
+              </div>
+
+              {/* Modal Header */}
+              <div className="px-6 py-4 flex items-center justify-between border-b border-black/[0.06]">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                    <GitMerge size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-semibold text-[#1c1c1e] leading-tight tracking-tight">
+                      Merge Duplicate Candidates
+                    </h3>
+                    <p className="text-[12px] text-[#8e8e93] mt-0.5">
+                      Consolidate candidate records sharing contact ({lead.phoneNumber || lead.email})
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowMergeModal(false)}
+                  className="w-8 h-8 rounded-full bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#8e8e93] hover:text-[#1c1c1e] flex items-center justify-center transition-colors cursor-pointer"
+                  title="Close dialog"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+                {/* Duplicate Switcher if multiple duplicates */}
+                {duplicateLeads.length > 1 && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-[#1c1c1e]">
+                      Select Duplicate Record to Merge:
+                    </label>
+                    <select
+                      value={selectedMergeDupId || activeDup.id}
+                      onChange={(e) => setSelectedMergeDupId(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-800"
+                    >
+                      {duplicateLeads.map((dup) => (
+                        <option key={dup.id} value={dup.id}>
+                          #{dup.id} - {dup.customerName || dup.fullName} ({dup.phoneNumber || dup.email})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Side-by-Side Comparison */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  {/* Primary Record (Will Be Kept) */}
+                  <div className="p-4 rounded-2xl bg-white border-2 border-[#007aff]/30 shadow-xs space-y-2.5">
+                    <div className="flex items-center justify-between pb-2 border-b border-black/[0.06]">
+                      <span className="font-bold text-[#007aff] uppercase tracking-wider text-[10px]">
+                        Primary Record (Keep)
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full bg-[#007aff]/10 text-[#007aff] font-semibold text-[10px]">
+                        Lead #{lead.id}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-[11px] text-[#8e8e93] block">Candidate Name</span>
+                      <p className="font-semibold text-[#1c1c1e] text-[13px]">{lead.customerName || lead.fullName || 'Candidate'}</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <span className="text-[11px] text-[#8e8e93] block">Phone</span>
+                        <p className="font-medium text-[#1c1c1e]">{lead.phoneNumber || '—'}</p>
+                      </div>
+                      <div>
+                        <span className="text-[11px] text-[#8e8e93] block">Email</span>
+                        <p className="font-medium text-[#1c1c1e] truncate">{lead.email || '—'}</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <span className="text-[11px] text-[#8e8e93] block">Program</span>
+                        <p className="font-medium text-[#1c1c1e]">{lead.visaType || 'Work Visa'}</p>
+                      </div>
+                      <div>
+                        <span className="text-[11px] text-[#8e8e93] block">Status</span>
+                        <p className="font-medium text-[#1c1c1e]">{lead.status || 'Created'}</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="text-[11px] text-[#8e8e93] block">Notes & Remarks</span>
+                      <p className="text-[11px] text-[#515154] line-clamp-3 bg-black/[0.02] p-2 rounded-lg mt-0.5">
+                        {lead.notes || 'No notes on primary record'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Duplicate Record (Will Be Merged & Removed) */}
+                  <div className="p-4 rounded-2xl bg-[#fff9f2] border border-amber-300 shadow-xs space-y-2.5">
+                    <div className="flex items-center justify-between pb-2 border-b border-amber-200">
+                      <span className="font-bold text-amber-700 uppercase tracking-wider text-[10px]">
+                        Duplicate Record (To Merge)
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-semibold text-[10px]">
+                        Lead #{activeDup.id}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-[11px] text-amber-700 block">Candidate Name</span>
+                      <p className="font-semibold text-amber-950 text-[13px]">{activeDup.customerName || activeDup.fullName || 'Candidate'}</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <span className="text-[11px] text-amber-700 block">Phone</span>
+                        <p className="font-medium text-amber-950">{activeDup.phoneNumber || '—'}</p>
+                      </div>
+                      <div>
+                        <span className="text-[11px] text-amber-700 block">Email</span>
+                        <p className="font-medium text-amber-950 truncate">{activeDup.email || '—'}</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <span className="text-[11px] text-amber-700 block">Program</span>
+                        <p className="font-medium text-amber-950">{activeDup.visaType || 'Work Visa'}</p>
+                      </div>
+                      <div>
+                        <span className="text-[11px] text-amber-700 block">Status</span>
+                        <p className="font-medium text-amber-950">{activeDup.status || 'Created'}</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="text-[11px] text-amber-700 block">Notes & Remarks</span>
+                      <p className="text-[11px] text-amber-900 line-clamp-3 bg-amber-100/50 p-2 rounded-lg mt-0.5">
+                        {activeDup.notes || 'No notes on duplicate record'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Merge Action Plan Summary */}
+                <div className="p-3 bg-black/[0.03] rounded-2xl space-y-1.5 text-xs text-[#515154]">
+                  <p className="font-semibold text-[#1c1c1e] text-[12px]">What will happen when you merge:</p>
+                  <ul className="space-y-1 text-[11px] list-disc list-inside">
+                    <li>All counselor remarks & notes from Duplicate #{activeDup.id} will be appended into this profile.</li>
+                    <li>Any missing contact details (email or city) will be carried over to this record.</li>
+                    <li>A merge audit log will be written to this candidate's activity history.</li>
+                    <li>The duplicate record #{activeDup.id} will be safely deleted to avoid duplicate counts.</li>
+                  </ul>
+                </div>
+
+                {/* Primary Action Button */}
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    disabled={mergingLead}
+                    onClick={() => handleMergeDuplicate(activeDup)}
+                    className="w-full py-3 bg-[#007aff] hover:bg-[#0062cc] active:scale-[0.99] text-white font-semibold rounded-2xl text-xs shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    <GitMerge size={15} />
+                    <span>{mergingLead ? 'Merging Records...' : `Confirm & Merge Lead #${activeDup.id} into Primary`}</span>
+                  </button>
+                </div>
+
+                {/* Footer Bar */}
+                <div className="flex items-center justify-between pt-3 border-t border-black/[0.06] text-xs text-[#8e8e93]">
+                  <span>Action cannot be undone</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowMergeModal(false)}
+                    className="px-4 py-1.5 rounded-xl bg-black/[0.06] hover:bg-black/[0.1] text-xs font-semibold text-[#1c1c1e] transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Candidate Activity & Audit Logs Modal */}
       {lead && (
@@ -2688,70 +3344,99 @@ export default function CandidateDetail() {
         />
       )}
 
-      {/* Direct Instagram DM Modal */}
+      {/* Instagram DM Modal — Legacy CRM Style */}
       {showInstagramModal && (
-        <div
-          className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
-          onClick={() => setShowInstagramModal(false)}
-        >
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div
-            className="bg-white rounded-xl max-w-md w-full border border-slate-200 shadow-2xl overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
+            className="bg-white border border-slate-200 rounded shadow-lg w-full max-w-md"
+            role="dialog"
+            aria-modal="true"
           >
-            <div className="bg-slate-50 px-4 py-3 flex items-center justify-between border-b border-slate-200/70">
-              <h3 className="text-[13px] font-semibold text-slate-800">Instagram Direct Message</h3>
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <img src="/icons/instagram.png" alt="Instagram" className="w-4 h-4 object-contain" />
+                <h3 className="text-sm font-semibold text-slate-900">Instagram Direct Message</h3>
+              </div>
               <button
                 type="button"
                 onClick={() => setShowInstagramModal(false)}
-                className="text-slate-500 hover:text-slate-800 cursor-pointer p-0.5 rounded"
-                aria-label="Close"
-              >
-                <X size={16} />
-              </button>
+                className="text-slate-400 hover:text-slate-600 text-lg leading-none cursor-pointer"
+                title="Close"
+              >×</button>
             </div>
 
-            <form onSubmit={handleSendInstagramDm}>
-              <div className="px-4 py-2.5 flex items-center border-b border-slate-100">
-                <label htmlFor="cand-ig-id" className="w-24 shrink-0 text-[13px] text-slate-400">
-                  IG User ID
+            <form onSubmit={handleSendInstagramDm} className="p-4 space-y-3">
+              {/* Candidate context */}
+              <p className="text-xs text-slate-500">
+                Sending to: <strong className="text-slate-800">{lead?.customerName || lead?.fullName || 'Candidate'}</strong>
+                {lead?.platform && (
+                  <span className="ml-2 text-slate-400">• Source: {lead.platform}</span>
+                )}
+              </p>
+
+              {/* IG User ID */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  IG User ID <span className="text-red-500">*</span>
                 </label>
                 <input
-                  id="cand-ig-id"
                   type="text"
                   required
                   value={igRecipientId}
                   onChange={(e) => setIgRecipientId(e.target.value)}
                   placeholder="Instagram-scoped user ID"
-                  className="flex-1 text-[13px] text-slate-900 placeholder:text-slate-400 focus:outline-none bg-transparent font-mono"
+                  className="w-full text-xs border border-slate-300 rounded px-2.5 py-1.5 font-mono focus:outline-none focus:border-blue-500"
                 />
+
               </div>
 
-              <div className="px-4 py-3">
+              {/* Quick templates */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Quick Templates</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { label: 'Intro', text: `Hi ${lead?.customerName || 'there'}, thanks for reaching out to SSA SalesHub! How can we assist you today?` },
+                    { label: 'Free Consult', text: `Hi ${lead?.customerName || 'there'}, we'd love to offer you a free counseling session for your visa options. When are you free?` },
+                    { label: 'Doc Follow-up', text: `Hi ${lead?.customerName || 'there'}, following up on your application. Let us know if you need help with your documents.` },
+                  ].map((p, i) => (
+                    <button key={i} type="button"
+                      onClick={() => setIgMessage(p.text)}
+                      className="px-2 py-1 text-xs border border-slate-300 rounded bg-slate-50 hover:bg-slate-100 text-slate-700 cursor-pointer"
+                    >{p.label}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Message */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Message <span className="text-red-500">*</span>
+                </label>
                 <textarea
                   required
-                  rows={5}
+                  rows={4}
                   value={igMessage}
                   onChange={(e) => setIgMessage(e.target.value)}
-                  placeholder="Write your Instagram message..."
-                  className="w-full text-[13px] text-slate-800 leading-relaxed placeholder:text-slate-400 focus:outline-none resize-none bg-transparent"
+                  placeholder="Write your Instagram direct message..."
+                  className="w-full text-xs border border-slate-300 rounded px-2.5 py-1.5 resize-none focus:outline-none focus:border-blue-500"
                 />
               </div>
 
-              <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between">
-                <button
-                  type="submit"
-                  disabled={sendingIg}
-                  className="h-9 px-5 text-[13px] font-medium rounded-full bg-slate-900 hover:bg-slate-800 text-white cursor-pointer flex items-center gap-2 disabled:opacity-50 transition-colors"
-                >
-                  {sendingIg ? <RefreshCw size={13} className="animate-spin" /> : null}
-                  <span>{sendingIg ? 'Sending…' : 'Send DM'}</span>
-                </button>
+              {/* Footer */}
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowInstagramModal(false)}
-                  className="px-2 py-1 text-[13px] text-slate-500 hover:text-slate-800 cursor-pointer"
+                  className="px-4 py-1.5 text-xs border border-slate-300 rounded text-slate-700 hover:bg-slate-50 cursor-pointer"
+                >Cancel</button>
+                <button
+                  type="submit"
+                  disabled={sendingIg || !igRecipientId.trim() || !igMessage.trim()}
+                  className="px-4 py-1.5 text-xs bg-slate-800 hover:bg-slate-900 text-white rounded font-medium disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
                 >
-                  Cancel
+                  <img src="/icons/instagram.png" alt="" className="w-3 h-3 object-contain brightness-0 invert" />
+                  {sendingIg ? 'Sending...' : 'Send DM'}
                 </button>
               </div>
             </form>
@@ -2775,6 +3460,348 @@ export default function CandidateDetail() {
             leadActivityService.getActivities(targetId).then(setActivities).catch(() => { });
           }}
         />
+      )}
+
+      {/* Schedule & Confirm Google Meet Modal (Apple HIG Frosted Sheet UI) */}
+      {showMeetScheduleModal && lead && (
+        <div className="ios-modal-backdrop animate-in fade-in duration-200">
+          <div
+            className="w-full max-w-xl max-h-[92vh] ios-material-thick rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.25)] border border-black/[0.08] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+            role="dialog"
+            aria-modal="true"
+          >
+            {/* Apple iOS Frosted Header */}
+            <div className="px-6 pt-3 pb-4 border-b border-black/[0.06] bg-white flex flex-col sticky top-0 z-10">
+              <div className="ios-sheet-grabber mb-2" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-black/[0.04] text-[#1c1c1e] flex items-center justify-center shadow-xs">
+                    <img src="/icons/google-meet.png" alt="Google Meet" className="w-5 h-5 object-contain" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-semibold text-[#1c1c1e] tracking-tight">
+                      Schedule Google Meet
+                    </h2>
+                    <p className="text-xs text-[#8e8e93] font-medium mt-0.5">
+                      {lead.customerName || lead.fullName || 'Candidate'} • Ref {formatMaskedLeadRef(lead.id)}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowMeetScheduleModal(false)}
+                  className="w-8 h-8 rounded-full bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#8e8e93] hover:text-[#1c1c1e] flex items-center justify-center transition-colors cursor-pointer"
+                  title="Close modal"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Segmented Top Bar */}
+            <div className="px-6 pt-3 pb-2 bg-[#f8f9fa] border-b border-black/[0.05] flex items-center justify-between gap-3">
+              <div className="inline-flex p-1 bg-black/[0.05] rounded-xl">
+                <div className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-white text-[#1c1c1e] shadow-xs">
+                  + Schedule Meet
+                </div>
+              </div>
+
+              <span className="text-[11px] text-[#8e8e93] font-medium hidden sm:inline">
+                In-App + Automated Link Dispatch
+              </span>
+            </div>
+
+            {/* Content Body */}
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
+              {/* Quick Presets */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-[#1c1c1e] flex items-center gap-1.5">
+                  <Sparkles size={13} className="text-[#ff9500]" />
+                  <span>Quick Presets</span>
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    {
+                      label: 'Follow-up Call',
+                      title: `Follow-up call with ${lead.customerName || lead.fullName || 'Candidate'}`,
+                      duration: 30,
+                      icon: <PhoneCall size={13} />,
+                    },
+                    {
+                      label: 'Doc Verification',
+                      title: `Verify academic & visa docs for ${lead.customerName || lead.fullName || 'Candidate'}`,
+                      duration: 30,
+                      icon: <FileCheck size={13} />,
+                    },
+                    {
+                      label: 'Counseling Session',
+                      title: `Admission counseling session with ${lead.customerName || lead.fullName || 'Candidate'}`,
+                      duration: 45,
+                      icon: <GraduationCap size={13} />,
+                    },
+                    {
+                      label: 'Fee Confirmation',
+                      title: `Confirm visa processing fee receipt for ${lead.customerName || lead.fullName || 'Candidate'}`,
+                      duration: 30,
+                      icon: <CreditCard size={13} />,
+                    },
+                  ].map((preset, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setMeetTitle(preset.title);
+                        setMeetDuration(preset.duration);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#1c1c1e] rounded-xl text-xs font-medium transition-all active:scale-95 cursor-pointer"
+                    >
+                      {preset.icon}
+                      <span>{preset.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Title Input */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-[#1c1c1e]">
+                  Meeting Title / Task <span className="text-[#ff3b30]">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={meetTitle}
+                  onChange={(e) => setMeetTitle(e.target.value)}
+                  required
+                  placeholder={`Consultation - ${lead.customerName || lead.fullName || 'Candidate'}`}
+                  className="w-full px-3 py-2 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-xs text-slate-800 shadow-2xs transition-all"
+                />
+              </div>
+
+              {/* Date & Time Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Date Picker */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-[#1c1c1e] flex items-center gap-1.5">
+                      <Calendar size={13} className="text-[#007aff]" />
+                      <span>Date</span>
+                    </label>
+                    {/* Quick Date Pills */}
+                    <div className="flex items-center gap-1 text-[10px]">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const d = new Date();
+                          setMeetDate(d.toISOString().split('T')[0]);
+                        }}
+                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43] cursor-pointer"
+                      >
+                        Today
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const d = new Date();
+                          d.setDate(d.getDate() + 1);
+                          setMeetDate(d.toISOString().split('T')[0]);
+                        }}
+                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43] cursor-pointer"
+                      >
+                        Tomorrow
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const d = new Date();
+                          d.setDate(d.getDate() + 2);
+                          setMeetDate(d.toISOString().split('T')[0]);
+                        }}
+                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43] cursor-pointer"
+                      >
+                        +2d
+                      </button>
+                    </div>
+                  </div>
+                  <input
+                    type="date"
+                    value={meetDate}
+                    onChange={(e) => setMeetDate(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-xs text-slate-800 shadow-2xs transition-all"
+                  />
+                </div>
+
+                {/* Time Picker */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-[#1c1c1e] flex items-center gap-1.5">
+                      <Clock size={13} className="text-[#007aff]" />
+                      <span>Time</span>
+                    </label>
+                    {/* Quick Time Pills */}
+                    <div className="flex items-center gap-1 text-[10px]">
+                      <button
+                        type="button"
+                        onClick={() => setMeetTime('10:00')}
+                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43] cursor-pointer"
+                      >
+                        10 AM
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMeetTime('14:30')}
+                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43] cursor-pointer"
+                      >
+                        2:30 PM
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMeetTime('17:00')}
+                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43] cursor-pointer"
+                      >
+                        5 PM
+                      </button>
+                    </div>
+                  </div>
+                  <TimePicker12Hour
+                    value={meetTime}
+                    onChange={setMeetTime}
+                    className="bg-white border-black/[0.1] px-3.5 py-1.5 text-xs rounded-xl"
+                  />
+                </div>
+              </div>
+
+              {/* Live Remaining Time Preview */}
+              {(() => {
+                const liveRem = getMeetRemainingTime(meetDate, meetTime);
+                if (!liveRem) return null;
+                return (
+                  <div
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-[11px] font-medium transition-all ${
+                      liveRem.isPast
+                        ? 'bg-amber-500/10 border-amber-500/20 text-amber-900'
+                        : 'bg-[#007aff]/[0.08] border-[#007aff]/20 text-[#007aff]'
+                    }`}
+                  >
+                    <Clock size={13} className="shrink-0" />
+                    <span>{liveRem.text}</span>
+                  </div>
+                );
+              })()}
+
+              {/* Duration & Dispatch Channels Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Meeting Duration */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-[#1c1c1e]">
+                    Meeting Duration
+                  </label>
+                  <select
+                    value={meetDuration}
+                    onChange={(e) => setMeetDuration(Number(e.target.value))}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-xs text-slate-700 shadow-2xs transition-all cursor-pointer"
+                  >
+                    <option value={15}>15 minutes</option>
+                    <option value={30}>30 minutes (Standard)</option>
+                    <option value={45}>45 minutes</option>
+                    <option value={60}>60 minutes (1 hour)</option>
+                  </select>
+                </div>
+
+                {/* Dispatch Channels */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-[#1c1c1e]">
+                    Auto-Dispatch Link To
+                  </label>
+                  <div className="grid grid-cols-2 gap-2 pt-0.5">
+                    <label
+                      className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl border text-xs font-semibold cursor-pointer transition-all ${
+                        meetSendWhatsApp
+                          ? 'bg-[#25D366]/10 border-[#25D366]/40 text-[#128C7E]'
+                          : 'bg-black/[0.02] border-black/[0.08] text-[#8e8e93] hover:bg-black/[0.04]'
+                      } ${!lead.phoneNumber ? 'opacity-40 cursor-not-allowed' : ''}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={meetSendWhatsApp}
+                        disabled={!lead.phoneNumber}
+                        onChange={(e) => setMeetSendWhatsApp(e.target.checked)}
+                        className="hidden"
+                      />
+                      <span>WhatsApp</span>
+                    </label>
+                    <label
+                      className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl border text-xs font-semibold cursor-pointer transition-all ${
+                        meetSendEmail
+                          ? 'bg-[#ea4335]/10 border-[#ea4335]/40 text-[#c5221f]'
+                          : 'bg-black/[0.02] border-black/[0.08] text-[#8e8e93] hover:bg-black/[0.04]'
+                      } ${!lead.email ? 'opacity-40 cursor-not-allowed' : ''}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={meetSendEmail}
+                        disabled={!lead.email}
+                        onChange={(e) => setMeetSendEmail(e.target.checked)}
+                        className="hidden"
+                      />
+                      <span>Email</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Counselor Notes / Agenda */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-[#1c1c1e]">
+                  Counselor Notes / Agenda (Optional)
+                </label>
+                <textarea
+                  rows={2}
+                  value={meetCustomNotes}
+                  onChange={(e) => setMeetCustomNotes(e.target.value)}
+                  placeholder="Add meeting agenda or notes..."
+                  className="w-full px-3.5 py-2 bg-white border border-black/[0.1] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] transition-all resize-none"
+                />
+              </div>
+
+              {/* Submit Action Button */}
+              <div className="pt-2">
+                <button
+                  type="button"
+                  disabled={schedulingMeet || !meetTitle.trim() || (!meetSendWhatsApp && !meetSendEmail && !lead.phoneNumber && !lead.email)}
+                  onClick={handleConfirmAndSendMeet}
+                  className="w-full py-3 bg-[#007aff] hover:bg-[#0062cc] active:scale-[0.99] text-white font-semibold rounded-2xl text-xs shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {schedulingMeet ? (
+                    <RefreshCw size={14} className="animate-spin" />
+                  ) : (
+                    <img src="/icons/google-meet.png" alt="" className="w-4 h-4 object-contain brightness-0 invert" />
+                  )}
+                  <span>{schedulingMeet ? 'Scheduling & Dispatching Link...' : 'Schedule & Send Link'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-3.5 bg-white border-t border-black/[0.06] flex items-center justify-between text-xs text-[#8e8e93]">
+              <span className="text-[11px]">
+                {meetSendWhatsApp && lead.phoneNumber
+                  ? `WhatsApp to ${lead.phoneNumber}`
+                  : meetSendEmail && lead.email
+                  ? `Email to ${lead.email}`
+                  : 'Manual dispatch'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowMeetScheduleModal(false)}
+                className="px-5 py-2 bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#1c1c1e] font-semibold rounded-xl transition-all cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Secure In-App Document Preview Modal */}

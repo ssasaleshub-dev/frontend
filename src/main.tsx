@@ -63,5 +63,6 @@ if (container) {
       <App />
     </RootErrorBoundary>
   )
+  ;(window as any).__ssaAppMounted?.()
 }
 

@@ -4,7 +4,11 @@ import { Capacitor } from '@capacitor/core';
 import {
   Check,
   Trash2,
-  ExternalLink,
+  ChevronRight,
+  Phone,
+  UserPlus,
+  Bell,
+  Award,
 } from 'lucide-react';
 import { AppleBellIcon } from './icons/BrandIcons';
 import { useAlert } from '../context/AlertContext';
@@ -294,29 +298,15 @@ export default function NotificationBell() {
                 )}
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
-                {unreadCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={handleMarkAllRead}
-                    className="text-[12px] font-medium text-[#0071e3] hover:text-[#0077ED] transition-opacity active:opacity-60 cursor-pointer shrink-0"
-                  >
-                    Mark All Read
-                  </button>
-                )}
-
+              {unreadCount > 0 && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsOpen(false);
-                    navigate('/notifications');
-                  }}
-                  title="Open Notifications Page"
-                  className="p-1 rounded-md text-[#86868b] hover:text-[#0071e3] hover:bg-black/[0.05] transition-colors cursor-pointer shrink-0"
+                  onClick={handleMarkAllRead}
+                  className="text-[12px] font-medium text-[#0071e3] hover:underline transition-all cursor-pointer shrink-0"
                 >
-                  <ExternalLink size={13} />
+                  Mark all as read
                 </button>
-              </div>
+              )}
             </div>
 
             {/* Apple HIG Segmented Control: [ All | Unread ] */}
@@ -348,9 +338,9 @@ export default function NotificationBell() {
 
           {/* Notification Permission Request Card (Apple HIG Managing Notifications) - Web Desktop Only */}
           {!hasPermission && !isNative && !isMobileScreen && (
-            <div className="mx-3.5 mt-2.5 p-3 bg-gradient-to-r from-[#0071e3]/[0.06] to-transparent border border-[#0071e3]/15 rounded-[16px] flex items-center justify-between gap-3">
+            <div className="mx-3 mt-2 p-2.5 bg-[#f2f2f7] border border-black/[0.06] rounded-xl flex items-center justify-between gap-2.5">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-7 h-7 rounded-full bg-[#0071e3]/15 text-[#0071e3] flex items-center justify-center shrink-0">
+                <div className="w-7 h-7 rounded-lg bg-white shadow-2xs text-[#0071e3] flex items-center justify-center shrink-0">
                   <AppleBellIcon size={14} strokeWidth={2.2} />
                 </div>
                 <div className="min-w-0">
@@ -365,7 +355,7 @@ export default function NotificationBell() {
               <button
                 type="button"
                 onClick={handleRequestPermission}
-                className="px-3.5 py-1.5 bg-[#0071e3] hover:bg-[#0077ED] active:scale-95 text-white font-medium rounded-full text-[11px] shrink-0 shadow-xs transition-all cursor-pointer"
+                className="px-3 py-1 bg-[#0071e3] hover:bg-[#0077ED] active:scale-95 text-white font-medium rounded-lg text-[11px] shrink-0 shadow-2xs transition-all cursor-pointer"
               >
                 Allow
               </button>
@@ -373,7 +363,7 @@ export default function NotificationBell() {
           )}
 
           {/* Notifications Grouped Scroll Stream */}
-          <div className="overflow-y-auto flex-1 p-3 space-y-3">
+          <div className="overflow-y-auto flex-1 p-2 space-y-3">
             {groupedNotifications.length === 0 ? (
               /* Apple iOS Clean Empty State */
               <div className="py-12 px-6 text-center">
@@ -386,97 +376,140 @@ export default function NotificationBell() {
               </div>
             ) : (
               groupedNotifications.map((group) => (
-                <div key={group.label} className="space-y-1.5">
+                <div key={group.label} className="space-y-1">
                   {/* Apple HIG Section Header (Grouped by Date) */}
-                  <div className="px-1 text-[11px] font-semibold uppercase tracking-wider text-[#86868b]">
+                  <div className="px-2 pt-1 text-[11px] font-semibold uppercase tracking-wider text-[#86868b]">
                     {group.label}
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     {group.items.map((item) => (
                       <div
                         key={item.id}
                         onClick={() => handleNotificationClick(item)}
-                        className={`p-3 rounded-[18px] transition-all cursor-pointer group border flex flex-col gap-1.5 relative ${
+                        className={`p-2.5 rounded-xl transition-all cursor-pointer group flex items-start gap-2.5 relative border ${
                           item.isRead
-                            ? 'bg-white/70 hover:bg-white border-black/[0.04] shadow-2xs'
-                            : 'bg-white hover:bg-white border-[#0071e3]/20 shadow-xs ring-1 ring-[#0071e3]/10'
+                            ? 'bg-transparent hover:bg-black/[0.03] border-transparent'
+                            : 'bg-[#0071e3]/[0.04] hover:bg-[#0071e3]/[0.07] border-[#0071e3]/10'
                         }`}
                       >
-                        {/* Top Row: Category Label + Timestamp (Zero Blue Dot) */}
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#86868b] truncate">
-                              {item.type === 'CALL'
-                                ? 'Candidate Callback'
-                                : item.type === 'REMINDER'
-                                ? 'Reminder'
-                                : item.type === 'LEAD_ASSIGNED'
-                                ? 'Lead Assignment'
-                                : item.type && item.type.startsWith('CLOSING_MILESTONE_')
-                                ? 'Milestone'
-                                : 'SSA Sales Hub'}
-                            </span>
-
-                            <span className="text-[10px] text-[#86868b]">•</span>
-
-                            <span className="text-[10px] text-[#86868b] shrink-0 font-normal">
-                              {formatTimestamp(item.createdAt)}
-                            </span>
-                          </div>
-
-                          {/* Desktop Hover Quick Actions (Zero Dot) */}
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
-                              {!item.isRead && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => handleMarkAsRead(item.id, e)}
-                                  title="Mark as read"
-                                  className="w-5 h-5 rounded-full flex items-center justify-center text-[#86868b] hover:text-[#0071e3] hover:bg-black/[0.05] transition-colors"
-                                >
-                                  <Check size={12} strokeWidth={2.5} />
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                onClick={(e) => handleDelete(item.id, e)}
-                                title="Dismiss notification"
-                                className="w-5 h-5 rounded-full flex items-center justify-center text-[#86868b] hover:text-[#ff3b30] hover:bg-black/[0.05] transition-colors"
-                              >
-                                <Trash2 size={11} />
-                              </button>
-                            </div>
-                          </div>
+                        {/* Squircle Category Icon on the Left */}
+                        <div
+                          className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                            item.type === 'CALL'
+                              ? 'bg-amber-500/10 text-amber-600'
+                              : item.type === 'REMINDER'
+                              ? 'bg-purple-500/10 text-purple-600'
+                              : item.type && item.type.startsWith('CLOSING_MILESTONE_')
+                              ? 'bg-emerald-500/10 text-emerald-600'
+                              : 'bg-blue-500/10 text-[#0071e3]'
+                          }`}
+                        >
+                          {item.type === 'CALL' ? (
+                            <Phone size={14} />
+                          ) : item.type === 'REMINDER' ? (
+                            <Bell size={14} />
+                          ) : item.type && item.type.startsWith('CLOSING_MILESTONE_') ? (
+                            <Award size={14} />
+                          ) : (
+                            <UserPlus size={14} />
+                          )}
                         </div>
 
-                        {/* Body Content - Only user entered data */}
-                        {(() => {
-                          const cleanTitle = cleanNotificationTitle(item.title);
-                          const displayMessage = cleanNotificationMessage(item.message, cleanTitle);
-                          return (
-                            <div className="pr-1 mt-1">
-                              <p
-                                className={`text-[13px] leading-snug truncate ${
-                                  item.isRead ? 'font-medium text-[#1d1d1f]' : 'font-semibold text-[#1d1d1f]'
-                                }`}
-                              >
-                                {cleanTitle}
-                              </p>
-                              {displayMessage && (
-                                <p className="text-[12px] text-[#515154] leading-relaxed line-clamp-2 mt-0.5 font-normal">
-                                  {displayMessage}
-                                </p>
-                              )}
+                        {/* Content Area */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1.5">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="text-[11px] font-semibold text-[#1d1d1f] truncate">
+                                {item.type === 'CALL'
+                                  ? 'Candidate Callback'
+                                  : item.type === 'REMINDER'
+                                  ? 'Reminder'
+                                  : item.type === 'LEAD_ASSIGNED'
+                                  ? 'Lead Assignment'
+                                  : item.type && item.type.startsWith('CLOSING_MILESTONE_')
+                                  ? 'Milestone'
+                                  : 'SSA Sales Hub'}
+                              </span>
+
+                              <span className="text-[11px] text-[#8e8e93]">•</span>
+
+                              <span className="text-[11px] text-[#8e8e93] shrink-0 font-normal">
+                                {formatTimestamp(item.createdAt)}
+                              </span>
                             </div>
-                          );
-                        })()}
+
+                            {/* Unread Indicator & Hover Quick Actions */}
+                            <div className="flex items-center gap-1 shrink-0">
+                              {!item.isRead && (
+                                <span className="w-2 h-2 rounded-full bg-[#0071e3] shrink-0 group-hover:hidden" />
+                              )}
+                              <div className="hidden group-hover:flex items-center gap-1 transition-opacity">
+                                {!item.isRead && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleMarkAsRead(item.id, e)}
+                                    title="Mark as read"
+                                    className="w-5 h-5 rounded-full flex items-center justify-center text-[#86868b] hover:text-[#0071e3] hover:bg-black/[0.05] transition-colors"
+                                  >
+                                    <Check size={12} strokeWidth={2.5} />
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleDelete(item.id, e)}
+                                  title="Dismiss notification"
+                                  className="w-5 h-5 rounded-full flex items-center justify-center text-[#86868b] hover:text-[#ff3b30] hover:bg-black/[0.05] transition-colors"
+                                >
+                                  <Trash2 size={11} />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Body Content */}
+                          {(() => {
+                            const cleanTitle = cleanNotificationTitle(item.title);
+                            const displayMessage = cleanNotificationMessage(item.message, cleanTitle);
+                            return (
+                              <div className="mt-0.5">
+                                <p
+                                  className={`text-[12.5px] leading-snug truncate ${
+                                    item.isRead ? 'font-normal text-[#1d1d1f]' : 'font-semibold text-[#1d1d1f]'
+                                  }`}
+                                >
+                                  {cleanTitle}
+                                </p>
+                                {displayMessage && (
+                                  <p className="text-[11.5px] text-[#8e8e93] leading-relaxed line-clamp-2 mt-0.5 font-normal">
+                                    {displayMessage}
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
               ))
             )}
+          </div>
+
+          {/* Apple HIG Popover Footer: Link to Full Notification Center */}
+          <div className="p-2.5 border-t border-black/[0.06] bg-[#fbfbfd] text-center">
+            <button
+              type="button"
+              onClick={() => {
+                setIsOpen(false);
+                navigate('/notifications');
+              }}
+              className="text-[12px] font-medium text-[#0071e3] hover:text-[#0051a8] inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <span>View all in Notification Center</span>
+              <ChevronRight size={13} />
+            </button>
           </div>
         </div>
       )}

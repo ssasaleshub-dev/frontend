@@ -1,10 +1,11 @@
 import React, { useState, useRef } from 'react';
-import { parseFormResponses, humanizeAnswer, getAttributionRows, getOriginLabel } from '../../utils/metaLead';
+import { parseFormResponses, humanizeAnswer, getAttributionRows, getOriginLabel, getInstagramDmRecipientId } from '../../utils/metaLead';
 import { NavigateFunction } from 'react-router-dom';
 import { Lead, LeadActivity } from '../../types';
 import { formatIndianDate, formatIndianDateTime } from '../../utils/dateTimeUtils';
 import { formatCurrencyDisplay, isAcademicScore, formatAcademicScore } from '../../utils/formatUtils';
 import { Search, X, FileText, Upload, Eye, Trash2 } from 'lucide-react';
+import DotsLoader from '../common/DotsLoader';
 
 export interface MobileLeadDetailViewProps {
   lead: Lead;
@@ -892,10 +893,22 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
                 cursor: 'pointer',
               }}
             >
-              <Upload size={14} />
-              <span>{uploadingDoc ? 'Uploading…' : 'Upload Document'}</span>
+              {uploadingDoc ? (
+                <DotsLoader size="xs" label="Uploading…" />
+              ) : (
+                <>
+                  <Upload size={14} />
+                  <span>Upload Document</span>
+                </>
+              )}
             </button>
           </div>
+
+          {uploadingDoc && (
+            <div style={{ padding: '14px 16px', display: 'flex', justifyContent: 'center', borderBottom: '1px solid var(--border, #e2e8f0)' }}>
+              <DotsLoader size="sm" label="Uploading document..." />
+            </div>
+          )}
 
           {/* Document Content Area */}
           {candidateDocs.length === 0 ? (
@@ -1032,16 +1045,18 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
           <img src="/icons/gmail-classic.png" alt="" />
           <span>Email</span>
         </button>
-        <button
-          type="button"
-          id="ig"
-          className="ig-btn"
-          onClick={onOpenInstagram}
-          title="Instagram DM"
-        >
-          <img src="/icons/instagram.png" alt="" />
-          <span>Instagram</span>
-        </button>
+        {Boolean(getInstagramDmRecipientId(lead)) && (
+          <button
+            type="button"
+            id="ig"
+            className="ig-btn"
+            onClick={onOpenInstagram}
+            title="Instagram DM"
+          >
+            <img src="/icons/instagram.png" alt="" />
+            <span>Instagram</span>
+          </button>
+        )}
         <button
           type="button"
           id="meet"

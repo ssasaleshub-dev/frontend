@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
+import DotsLoader from '../components/common/DotsLoader';
 import {
   Search,
   RefreshCw,
@@ -29,6 +30,12 @@ import {
   Table,
   Filter,
   Bell,
+  UserPlus,
+  Clock,
+  Calendar,
+  Sparkles,
+  Mail,
+  AlertTriangle,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import IosLeadList, { IosPlatformSquircle } from '../components/leads/IosLeadList';
@@ -733,6 +740,24 @@ export default function Leads() {
     visaType: defaultVisaType,
   });
 
+  // Real-time Duplicate Lead Detection for Candidate Intake
+  const duplicateCandidate = useMemo(() => {
+    const rawPhone = (newLeadForm.phoneNumber || '').replace(/\D/g, '');
+    const rawEmail = (newLeadForm.email || '').trim().toLowerCase();
+    if (rawPhone.length < 7 && !rawEmail) return null;
+
+    return rawLeads.find((l) => {
+      const lPhone = (l.phoneNumber || l.phone || (l as any).mobile || '').replace(/\D/g, '');
+      const lEmail = (l.email || '').trim().toLowerCase();
+      const phoneMatch =
+        rawPhone.length >= 7 &&
+        lPhone.length >= 7 &&
+        (lPhone.endsWith(rawPhone.slice(-10)) || rawPhone.endsWith(lPhone.slice(-10)));
+      const emailMatch = Boolean(rawEmail && lEmail && lEmail === rawEmail);
+      return phoneMatch || emailMatch;
+    });
+  }, [newLeadForm.phoneNumber, newLeadForm.email, rawLeads]);
+
   const [submitting, setSubmitting] = useState<boolean>(false);
 
   const fetchLeads = useCallback(async (typeParam?: string) => {
@@ -1214,6 +1239,14 @@ export default function Leads() {
 
   const handleCreateLead = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (duplicateCandidate) {
+      const cName = duplicateCandidate.customerName || duplicateCandidate.fullName || 'Candidate';
+      const cContact = duplicateCandidate.phoneNumber || duplicateCandidate.email || '';
+      const proceed = window.confirm(
+        `Duplicate Warning:\n\nA candidate named "${cName}" (${cContact}) is already registered in the CRM.\n\nClick OK to create a separate duplicate record, or Cancel to go back.`
+      );
+      if (!proceed) return;
+    }
     setSubmitting(true);
     try {
       const newCustomer = await crmService.createCustomer({
@@ -2980,9 +3013,8 @@ export default function Leads() {
                     <tr>
                       <td colSpan={13} className="py-12 text-center text-[#8e8e93]">
                         {loading ? (
-                          <span className="flex items-center justify-center gap-2">
-                            <RefreshCw size={15} className="animate-spin text-[#1c1c1e]" />
-                            Loading candidates...
+                          <span className="flex items-center justify-center">
+                            <DotsLoader size="md" label="Loading candidates..." />
                           </span>
                         ) : (
                           <div className="space-y-2">
@@ -3695,71 +3727,68 @@ export default function Leads() {
         </div>
       )}
 
-      {/* Quick Status Update Modal (Apple HIG Glass Sheet UI) */}
+      {/* Quick Status Update Modal (Apple HIG Legacy Standard) */}
       {statusModalLead && (
         <div className="ios-modal-backdrop">
-          <div className="ios-modal-card max-w-lg animate-in zoom-in-95">
-            <div className="ios-sheet-grabber" />
+          <div className="ios-material-thick rounded-3xl border border-black/[0.08] shadow-2xl max-w-lg w-full my-auto transition-all duration-150 overflow-hidden flex flex-col">
+            {/* Grabber handle */}
+            <div className="pt-3 pb-1">
+              <div className="ios-sheet-grabber" />
+            </div>
+
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
-              <h3 className="text-base font-semibold text-[#1c1c1e] tracking-tight">
-                Update Stage
-              </h3>
+            <div className="px-6 py-4 flex items-center justify-between border-b border-black/[0.06]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-black/[0.04] text-[#1c1c1e] flex items-center justify-center shrink-0">
+                  <RefreshCw size={18} className="text-[#007aff]" />
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-[#1c1c1e] leading-tight tracking-tight">
+                    Update Pipeline Stage
+                  </h3>
+                  <p className="text-[12px] text-[#8e8e93] mt-0.5 truncate max-w-[280px]">
+                    {statusModalLead.customerName || 'Candidate'} • Current: {LEAD_STATUSES[statusModalLead.status]?.label || statusModalLead.status}
+                  </p>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => setStatusModalLead(null)}
-                className="w-7 h-7 rounded-full bg-black/[0.05] text-[#8e8e93] hover:text-[#1c1c1e] hover:bg-black/[0.1] flex items-center justify-center transition-colors"
-                aria-label="Close"
+                className="w-8 h-8 rounded-full bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#8e8e93] hover:text-[#1c1c1e] flex items-center justify-center transition-colors cursor-pointer"
+                title="Close dialog"
               >
                 <X size={15} />
               </button>
             </div>
 
-            <div className="text-xs font-semibold text-slate-500 mt-3 mb-4">
-              Candidate Information
-            </div>
-
-            <form onSubmit={handleUpdateStatus} className="text-xs">
-              {/* Candidate Name */}
-              <div className="zoho-form-row">
-                <label className="zoho-form-label" title="Name of the Candidate">
-                  Name of the Can...
-                </label>
-                <div className="flex-1">
-                  <input
-                    type="text"
-                    disabled
-                    value={statusModalLead.customerName || 'Candidate'}
-                    className="ios-input w-full font-medium text-slate-800 opacity-90 cursor-not-allowed"
-                  />
+            {/* Modal Body */}
+            <div className="p-6">
+              <form onSubmit={handleUpdateStatus} className="space-y-4">
+                {/* Candidate Summary Card */}
+                <div className="grid grid-cols-2 gap-3 p-3.5 bg-black/[0.02] border border-black/[0.06] rounded-2xl">
+                  <div>
+                    <span className="text-[11px] font-semibold text-[#8e8e93] uppercase tracking-wider block">Candidate Name</span>
+                    <span className="text-xs font-semibold text-[#1c1c1e] truncate block mt-0.5">
+                      {statusModalLead.customerName || 'Candidate'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[11px] font-semibold text-[#8e8e93] uppercase tracking-wider block">Current Status</span>
+                    <span className="text-xs font-semibold text-[#007aff] truncate block mt-0.5">
+                      {LEAD_STATUSES[statusModalLead.status]?.label || statusModalLead.status}
+                    </span>
+                  </div>
                 </div>
-              </div>
 
-              {/* Current Stage */}
-              <div className="zoho-form-row">
-                <label className="zoho-form-label" title="Current Stage">
-                  Current Stage
-                </label>
-                <div className="flex-1">
-                  <input
-                    type="text"
-                    disabled
-                    value={statusModalLead.status}
-                    className="ios-input w-full text-slate-700 opacity-90 cursor-not-allowed font-medium"
-                  />
-                </div>
-              </div>
-
-              {/* Transition Status */}
-              <div className="zoho-form-row">
-                <label className="zoho-form-label" title="Transition Status">
-                  New Stage
-                </label>
-                <div className="flex-1">
+                {/* Transition Status */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-[#1c1c1e] block">
+                    New Pipeline Stage <span className="text-[#ff3b30]">*</span>
+                  </label>
                   <select
                     value={statusForm.status}
                     onChange={(e) => setStatusForm({ ...statusForm, status: e.target.value })}
-                    className="zoho-select zoho-input-required font-medium"
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 hover:border-slate-400 focus:border-[#007aff] focus:ring-2 focus:ring-[#007aff]/15 rounded-xl text-xs text-[#1c1c1e] font-medium outline-none transition-all cursor-pointer"
                   >
                     {LEAD_STATUS_LIST.map((st) => (
                       <option key={st.value} value={st.value}>
@@ -3768,48 +3797,57 @@ export default function Leads() {
                     ))}
                   </select>
                 </div>
-              </div>
 
-              {/* Counselor Notes */}
-              <div className="zoho-form-row items-start">
-                <label className="zoho-form-label pt-2" title="Counselor Notes">
-                  Transition Notes
-                </label>
-                <div className="flex-1">
+                {/* Counselor Notes */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-[#1c1c1e] block">
+                    Counselor Notes / Action Items (Optional)
+                  </label>
                   <textarea
                     value={statusForm.notes}
                     onChange={(e) => setStatusForm({ ...statusForm, notes: e.target.value })}
                     rows={3}
-                    className="ios-input w-full resize-none"
-                  ></textarea>
+                    placeholder="Add context, remarks, or next steps for this stage transition..."
+                    className="w-full px-3.5 py-2 bg-white border border-slate-300 hover:border-slate-400 focus:border-[#007aff] focus:ring-2 focus:ring-[#007aff]/15 rounded-xl text-xs text-[#1c1c1e] placeholder:text-[#8e8e93] outline-none transition-all resize-none"
+                  />
                 </div>
-              </div>
 
-              {/* Date & Time of Status Update (Compound Input matching screenshot) */}
-              <div className="zoho-form-row">
-                <label className="zoho-form-label" title="Date and Time">
-                  Date and Time of ...
-                </label>
-                <div className="flex-1 flex rounded-md overflow-hidden border border-[#d0dcf0] bg-[#edf2f9]">
-                  <div className="flex-1 px-3 py-2 border-r border-[#d0dcf0] text-xs text-slate-800 bg-[#edf2f9]">
-                    {formatIndianDate(new Date())}
+                {/* Date & Time of Status Update */}
+                <div className="flex items-center justify-between px-3.5 py-2.5 bg-black/[0.02] border border-black/[0.06] rounded-xl text-xs text-[#8e8e93]">
+                  <div className="flex items-center gap-1.5 font-medium text-[#1c1c1e]">
+                    <Calendar size={13} className="text-[#007aff]" />
+                    <span>{formatIndianDate(new Date())}</span>
                   </div>
-                  <div className="w-28 px-3 py-2 text-xs text-slate-800 bg-[#edf2f9] text-center font-medium">
-                    {formatIndianTime(new Date())}
+                  <div className="flex items-center gap-1 font-medium">
+                    <Clock size={13} />
+                    <span>{formatIndianTime(new Date())}</span>
                   </div>
                 </div>
-              </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-slate-100">
+                {/* Primary Action Button */}
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    className="w-full py-3 bg-[#007aff] hover:bg-[#0062cc] active:scale-[0.99] text-white font-semibold rounded-2xl text-xs shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <CheckCircle2 size={15} />
+                    <span>Update Pipeline Stage</span>
+                  </button>
+                </div>
+              </form>
+
+              {/* Action Confirmation Footer */}
+              <div className="flex items-center justify-between pt-4 mt-4 border-t border-black/[0.06] text-xs text-[#8e8e93]">
+                <span>Status syncs across all counselor views</span>
                 <button
-                  type="submit"
-                  className="zoho-btn-done"
+                  type="button"
+                  onClick={() => setStatusModalLead(null)}
+                  className="px-4 py-1.5 rounded-xl bg-black/[0.06] hover:bg-black/[0.1] text-xs font-semibold text-[#1c1c1e] transition-colors cursor-pointer"
                 >
-                  Done
+                  Cancel
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
@@ -3829,16 +3867,21 @@ export default function Leads() {
             </div>
 
             {/* Modal Header */}
-            <div className="px-6 py-3 border-b border-black/[0.06] flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-semibold text-[#1c1c1e] leading-tight tracking-tight">
-                  {modalTab === 'manual' ? 'Candidate Intake' : 'Import Leads from Spreadsheet'}
-                </h3>
-                <p className="text-[12px] text-[#8e8e93] mt-0.5">
-                  {modalTab === 'manual'
-                    ? 'Record individual candidate lead information'
-                    : 'Ingest and map Meta Ads Manager lead spreadsheets'}
-                </p>
+            <div className="px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-black/[0.04] text-[#1c1c1e] flex items-center justify-center shrink-0">
+                  <UserPlus size={20} className="text-[#007aff]" />
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-[#1c1c1e] leading-tight tracking-tight">
+                    {modalTab === 'manual' ? 'Candidate Intake' : 'Import Leads from Spreadsheet'}
+                  </h3>
+                  <p className="text-[12px] text-[#8e8e93] mt-0.5">
+                    {modalTab === 'manual'
+                      ? 'Record individual candidate lead information'
+                      : 'Ingest and map Meta Ads Manager lead spreadsheets'}
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
@@ -3851,7 +3894,7 @@ export default function Leads() {
                     navigate('/leads', { replace: true });
                   }
                 }}
-                className="w-7 h-7 rounded-full bg-black/[0.05] text-[#8e8e93] hover:text-[#1c1c1e] hover:bg-black/[0.1] flex items-center justify-center transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-full bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#8e8e93] hover:text-[#1c1c1e] flex items-center justify-center transition-colors cursor-pointer"
                 title="Close dialog"
               >
                 <X size={15} />
@@ -3859,7 +3902,7 @@ export default function Leads() {
             </div>
 
             {/* Apple Segmented Tabs */}
-            <div className="px-6 py-2.5 border-b border-black/[0.06] bg-black/[0.02]">
+            <div className="px-6 pb-3">
               <div className="ios-segmented">
                 <button
                   type="button"
@@ -3876,7 +3919,7 @@ export default function Leads() {
                   onClick={() => {
                     setModalTab('excel');
                   }}
-                  className={`ios-segmented-btn flex items-center gap-1.5 ${modalTab === 'excel' ? 'active' : ''}`}
+                  className={`ios-segmented-btn flex items-center justify-center gap-1.5 ${modalTab === 'excel' ? 'active' : ''}`}
                 >
                   <FileSpreadsheet size={13} />
                   <span>Import from Spreadsheet</span>
@@ -3884,106 +3927,173 @@ export default function Leads() {
               </div>
             </div>
 
-            {/* TAB 1: Manual Single Candidate Intake Form (Zoho CRM Modal & Field UI) */}
+            {/* TAB 1: Manual Single Candidate Intake Form (Legacy CRM / Apple HIG Design Standard) */}
             {modalTab === 'manual' && (
-              <div className="p-6">
-                <form onSubmit={handleCreateLead} className="text-xs">
-                  {/* Section Subheading matching screenshot */}
-                  <div className="text-xs font-semibold text-slate-500 mb-4 px-1">
-                    Candidate Information
-                  </div>
-
-                  {/* Name of the Candidate (Required: Red Left Accent Bar) */}
-                  <div className="zoho-form-row">
-                    <label className="zoho-form-label" title="Name of the Candidate">
-                      Name of the Can...
+              <div className="p-6 pt-2">
+                <form onSubmit={handleCreateLead} className="space-y-4">
+                  {/* Quick Presets matching LeadReminderModal / Apple HIG */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-[#1c1c1e] flex items-center gap-1.5">
+                      <Sparkles size={13} className="text-[#ff9500]" />
+                      <span>Quick Presets</span>
                     </label>
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        required
-                        value={newLeadForm.customerName}
-                        onChange={(e) => setNewLeadForm({ ...newLeadForm, customerName: e.target.value })}
-                        className="ios-input ios-input-required w-full font-medium"
-                      />
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { label: 'Work Visa', visa: 'WORK_VISA', icon: <Briefcase size={12} /> },
+                        { label: 'Study Visa', visa: 'STUDY_VISA', icon: <GraduationCap size={12} /> },
+                        { label: 'Other / Tourist', visa: 'OTHER_VISA', icon: <Globe size={12} /> },
+                      ].map((preset) => (
+                        <button
+                          key={preset.visa}
+                          type="button"
+                          onClick={() => setNewLeadForm({ ...newLeadForm, visaType: preset.visa })}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all active:scale-95 cursor-pointer ${
+                            newLeadForm.visaType === preset.visa
+                              ? 'bg-[#007aff] text-white shadow-xs'
+                              : 'bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#1c1c1e]'
+                          }`}
+                        >
+                          {preset.icon}
+                          <span>{preset.label}</span>
+                        </button>
+                      ))}
                     </div>
                   </div>
 
-                  {/* Customer Email */}
-                  <div className="zoho-form-row">
-                    <label className="zoho-form-label" title="Customer Email">
-                      Customer Email
+                  {/* Candidate Full Name */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-[#1c1c1e]">
+                      Candidate Full Name <span className="text-[#ff3b30]">*</span>
                     </label>
-                    <div className="flex-1">
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Premkanth"
+                      value={newLeadForm.customerName}
+                      onChange={(e) => setNewLeadForm({ ...newLeadForm, customerName: e.target.value })}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-xs text-slate-800 shadow-2xs transition-all"
+                    />
+                  </div>
+
+                  {/* Contact Fields Row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Customer Email */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-[#1c1c1e] flex items-center gap-1.5">
+                        <Mail size={13} className="text-[#007aff]" />
+                        <span>Customer Email</span>
+                      </label>
                       <input
                         type="email"
+                        placeholder="candidate@example.com"
                         value={newLeadForm.email}
                         onChange={(e) => setNewLeadForm({ ...newLeadForm, email: e.target.value })}
-                        className="ios-input w-full"
+                        className="w-full px-3 py-2 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-xs text-slate-800 shadow-2xs transition-all"
                       />
                     </div>
-                  </div>
 
-                  {/* Phone Number (Required: Red Left Accent Bar) */}
-                  <div className="zoho-form-row">
-                    <label className="zoho-form-label" title="Phone Number">
-                      Phone Number
-                    </label>
-                    <div className="flex-1">
+                    {/* Phone Number */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-[#1c1c1e] flex items-center gap-1.5">
+                        <Phone size={13} className="text-[#007aff]" />
+                        <span>Phone Number <span className="text-[#ff3b30]">*</span></span>
+                      </label>
                       <input
                         type="tel"
                         required
+                        placeholder="+91 98765 43210"
                         value={newLeadForm.phoneNumber}
                         onChange={(e) => setNewLeadForm({ ...newLeadForm, phoneNumber: e.target.value })}
-                        className="ios-input ios-input-required w-full font-medium"
+                        className="w-full px-3 py-2 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-xs text-slate-800 shadow-2xs transition-all"
                       />
                     </div>
                   </div>
 
-                  {/* Visa Program / Product (Dropdown matching screenshot) */}
-                  <div className="zoho-form-row">
-                    <label className="zoho-form-label" title="Visa Program">
-                      Visa Program
-                    </label>
-                    <div className="flex-1">
+                  {/* Duplicate Candidate Warning Banner */}
+                  {duplicateCandidate && (
+                    <div className="p-3 bg-amber-500/[0.08] border border-amber-500/20 rounded-2xl flex items-start gap-2.5 text-xs text-amber-950 animate-in fade-in">
+                      <AlertTriangle size={15} className="text-amber-600 shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-amber-950">
+                          Duplicate Candidate Detected
+                        </p>
+                        <p className="text-[11px] text-amber-800 mt-0.5">
+                          <strong>{duplicateCandidate.customerName || duplicateCandidate.fullName}</strong> ({duplicateCandidate.phoneNumber || duplicateCandidate.email}) is already in your CRM.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowAddModal(false);
+                            navigate(`/leads/${duplicateCandidate.id}`);
+                          }}
+                          className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-amber-900 hover:text-amber-950 underline cursor-pointer"
+                        >
+                          <span>View Existing Candidate Record →</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Visa Program & Intake Timestamp */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Visa Program */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-[#1c1c1e]">
+                        Visa Program <span className="text-[#ff3b30]">*</span>
+                      </label>
                       <select
                         value={newLeadForm.visaType}
                         onChange={(e) => setNewLeadForm({ ...newLeadForm, visaType: e.target.value })}
-                        className="zoho-select font-medium"
+                        className="w-full px-3 py-2 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-xs text-slate-800 shadow-2xs transition-all cursor-pointer font-medium"
                       >
                         <option value="WORK_VISA">Work Visa</option>
                         <option value="STUDY_VISA">Study Visa</option>
                         <option value="OTHER_VISA">Other Visa / Tourist</option>
                       </select>
                     </div>
-                  </div>
 
-                  {/* Date and Time of Intake (Compound Field matching screenshot) */}
-                  <div className="zoho-form-row">
-                    <label className="zoho-form-label" title="Date and Time of Intake">
-                      Date and Time of ...
-                    </label>
-                    <div className="flex-1 flex rounded overflow-hidden border border-[#d0dcf0] bg-[#edf2f9]">
-                      <div className="flex-1 px-3 py-2 border-r border-[#d0dcf0] text-xs text-slate-800 bg-[#edf2f9]">
-                        {formatIndianDate(new Date())}
-                      </div>
-                      <div className="w-28 px-3 py-2 text-xs text-slate-800 bg-[#edf2f9] text-center font-medium">
-                        {formatIndianTime(new Date())}
+                    {/* Date and Time of Intake */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-[#1c1c1e] flex items-center gap-1.5">
+                        <Clock size={13} className="text-[#007aff]" />
+                        <span>Intake Timestamp</span>
+                      </label>
+                      <div className="h-[34px] px-3 flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 text-xs text-slate-700">
+                        <span className="font-medium">{formatIndianDate(new Date())}</span>
+                        <span className="text-slate-400 font-normal">{formatIndianTime(new Date())}</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Action Confirmation Footer */}
-                  <div className="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-slate-200">
+                  {/* Submit Button */}
+                  <div className="pt-2">
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="zoho-btn-done"
+                      className="w-full py-3 bg-[#007aff] hover:bg-[#0062cc] active:scale-[0.99] text-white font-semibold rounded-2xl text-xs shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                     >
-                      {submitting ? 'Saving...' : 'Done'}
+                      <UserPlus size={14} />
+                      <span>{submitting ? 'Creating Candidate...' : 'Create Candidate Lead'}</span>
                     </button>
                   </div>
                 </form>
+
+                {/* Footer bar matching LeadReminderModal / legacy UI */}
+                <div className="flex items-center justify-between pt-4 mt-4 border-t border-black/[0.06] text-xs text-[#8e8e93]">
+                  <span>Organic Candidate Lead</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddModal(false);
+                      if (searchParams.get('action') === 'create' || searchParams.get('action') === 'import') {
+                        navigate('/leads', { replace: true });
+                      }
+                    }}
+                    className="px-4 py-1.5 rounded-xl bg-black/[0.06] hover:bg-black/[0.1] text-xs font-semibold text-[#1c1c1e] transition-colors cursor-pointer"
+                  >
+                    Done
+                  </button>
+                </div>
               </div>
             )}
 
@@ -4333,10 +4443,7 @@ export default function Leads() {
                           className="zoho-btn-primary"
                         >
                           {importLoading ? (
-                            <>
-                              <RefreshCw size={13} className="animate-spin" />
-                              <span>Importing...</span>
-                            </>
+                            <DotsLoader size="xs" label="Importing..." />
                           ) : duplicateStats.allDuplicates && skipDuplicates ? (
                             <>
                               <CheckCircle2 size={14} />

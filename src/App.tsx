@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-route
 import { AuthProvider } from './context/AuthContext';
 import { AlertProvider } from './context/AlertContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
+import AppPageLoader from './components/common/AppPageLoader';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import AdminRoute from './components/common/AdminRoute';
@@ -32,7 +33,7 @@ import { isAdmin as checkIsAdmin } from './utils/rbac';
 /** The attendance roster is for admins; staff have their attendance on the Profile page. */
 function AttendanceRoute() {
   const { user, loading } = useAuth();
-  if (loading) return null;
+  if (loading) return <AppPageLoader message="Loading..." />;
   return checkIsAdmin(user) ? <AttendancePage /> : <Navigate to="/profile" replace />;
 }
 

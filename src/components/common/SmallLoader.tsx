@@ -1,5 +1,6 @@
 import React from 'react';
-import { Loader2, RefreshCw, UploadCloud, CheckCircle2 } from 'lucide-react';
+import { UploadCloud, CheckCircle2 } from 'lucide-react';
+import DotsLoader from './DotsLoader';
 
 export type SmallLoaderSize = 'xs' | 'sm' | 'md' | 'lg';
 export type SmallLoaderColor = 'primary' | 'white' | 'slate' | 'emerald' | 'amber' | 'blue';
@@ -39,34 +40,10 @@ const COLOR_MAP: Record<SmallLoaderColor, { strokeColor: string; text: string }>
 };
 
 /**
- * Authentic Google Material circular spinner
+ * Common 4-dot bouncing loader graphic
  */
-export const SpinnerGraphic: React.FC<{ size: SmallLoaderSize; color: SmallLoaderColor }> = ({ size, color }) => {
-  const { px } = SIZE_MAP[size];
-  const { strokeColor } = COLOR_MAP[color];
-
-  return (
-    <div
-      style={{ width: px, height: px }}
-      className="relative inline-flex items-center justify-center shrink-0"
-    >
-      <svg
-        className="w-full h-full animate-[gSpin_2s_linear_infinite]"
-        viewBox="0 0 50 50"
-      >
-        <circle
-          cx="25"
-          cy="25"
-          r="20"
-          fill="none"
-          stroke={strokeColor}
-          strokeWidth="4"
-          strokeLinecap="round"
-          className="animate-[gDash_1.5s_ease-in-out_infinite]"
-        />
-      </svg>
-    </div>
-  );
+export const SpinnerGraphic: React.FC<{ size: SmallLoaderSize; color: SmallLoaderColor }> = ({ size }) => {
+  return <DotsLoader size={size} />;
 };
 
 /**

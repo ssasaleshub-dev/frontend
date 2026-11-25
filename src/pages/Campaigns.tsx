@@ -8,6 +8,8 @@ import {
   RefreshCw,
   X,
   Search,
+  Clock,
+  Copy,
 } from 'lucide-react';
 import crmService from '../services/api/crmService';
 import { CampaignsSkeleton } from '../components/common/SkeletonLoader';
@@ -841,71 +843,156 @@ export default function Campaigns() {
           )}
         </div>
 
-        {/* Campaign Detail Modal / Bottom Sheet */}
+        {/* Campaign Detail Modal (Apple HIG Frosted Sheet UI) */}
         {selectedDetail && (
           <div
-            className="ov show"
-            id="ov"
+            className="ios-modal-backdrop animate-in fade-in duration-200"
             onClick={() => setSelectedDetail(null)}
           >
             <div
-              className="sheet"
-              id="sh"
+              className="w-full max-w-lg max-h-[92vh] ios-material-thick rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.25)] border border-black/[0.08] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+              role="dialog"
+              aria-modal="true"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="gr"></div>
-              <div className="sh1">
-                <h2>{selectedDetail.name}</h2>
-                {selectedDetail.note && <p>{selectedDetail.note}</p>}
-              </div>
-              <div className="big">
-                {tot(selectedDetail)}
-                <span>candidates</span>
-              </div>
-              <div className="kv">
-                <div>
-                  <img src="/icons/facebook.png" alt="Facebook" className="w-[18px] h-[18px] rounded-full object-cover shrink-0" />
-                  <span>Facebook</span>
-                  <b>{selectedDetail.fb}</b>
-                  <em>{pc(selectedDetail.fb, tot(selectedDetail))}%</em>
-                </div>
-                <div>
-                  <img src="/icons/instagram.png" alt="Instagram" className="w-[18px] h-[18px] rounded-full object-cover shrink-0" />
-                  <span>Instagram</span>
-                  <b>{selectedDetail.ig}</b>
-                  <em>{pc(selectedDetail.ig, tot(selectedDetail))}%</em>
-                </div>
-                <div>
-                  <i style={{ background: 'var(--green)' }}></i>
-                  <span>Won / enrolled</span>
-                  <b>{selectedDetail.won}</b>
-                  <em>{pc(selectedDetail.won, tot(selectedDetail))}%</em>
-                </div>
-                <div>
-                  <i style={{ background: '#c9ccd1' }}></i>
-                  <span>Share of all leads</span>
-                  <b>{tot(selectedDetail)}</b>
-                  <em>{pc(tot(selectedDetail), T)}%</em>
-                </div>
-                <div>
-                  <span>Last lead</span>
-                  <b>{fmt(selectedDetail.last)}</b>
+              {/* Apple iOS Frosted Header */}
+              <div className="px-6 pt-3 pb-4 border-b border-black/[0.06] bg-white flex flex-col sticky top-0 z-10">
+                <div className="ios-sheet-grabber mb-2" />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-2xl bg-black/[0.04] text-[#1c1c1e] flex items-center justify-center shadow-xs shrink-0">
+                      {selectedDetail.latestPlatform === 'IG' ? (
+                        <img src="/icons/instagram.png" alt="Instagram" className="w-5 h-5 object-contain" />
+                      ) : (
+                        <img src="/icons/facebook.png" alt="Facebook" className="w-5 h-5 object-contain" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <h2 className="text-base font-semibold text-[#1c1c1e] tracking-tight truncate">
+                        {selectedDetail.name}
+                      </h2>
+                      <p className="text-xs text-[#8e8e93] font-medium mt-0.5 truncate">
+                        {selectedDetail.note || 'Meta Campaign Lead Attribution'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDetail(null)}
+                    className="w-8 h-8 rounded-full bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#8e8e93] hover:text-[#1c1c1e] flex items-center justify-center transition-colors cursor-pointer shrink-0 ml-3"
+                    title="Close"
+                  >
+                    <X size={16} />
+                  </button>
                 </div>
               </div>
-              <button
-                type="button"
-                className="go"
-                onClick={() => openCampaign(selectedDetail.key)}
-              >
-                View {tot(selectedDetail)} candidates
-              </button>
-              <button
-                type="button"
-                className="lk"
-                onClick={() => copyCampaignName(selectedDetail.name)}
-              >
-                Copy campaign name
-              </button>
+
+              {/* Segmented Top Bar */}
+              <div className="px-6 pt-3 pb-2 bg-[#f8f9fa] border-b border-black/[0.05] flex items-center justify-between gap-3">
+                <div className="inline-flex p-1 bg-black/[0.05] rounded-xl">
+                  <div className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-white text-[#1c1c1e] shadow-xs">
+                    Campaign Analytics
+                  </div>
+                </div>
+
+                <span className="text-[11px] text-[#8e8e93] font-medium">
+                  Meta Ads Lead Distribution
+                </span>
+              </div>
+
+              {/* Content Body */}
+              <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
+                {/* Total Candidates Highlight */}
+                <div className="p-4 rounded-2xl bg-black/[0.03] border border-black/[0.06] flex items-center justify-between">
+                  <div>
+                    <div className="text-3xl font-extrabold text-[#1c1c1e] tracking-tight">
+                      {tot(selectedDetail)}
+                    </div>
+                    <div className="text-xs text-[#8e8e93] font-medium mt-0.5">Total Inquired Candidates</div>
+                  </div>
+                  <div className="text-right">
+                    <span className="inline-block text-xs px-2.5 py-1 rounded-full font-semibold bg-[#007aff]/10 text-[#007aff] border border-[#007aff]/20">
+                      {pc(tot(selectedDetail), T)}% of all leads
+                    </span>
+                    <div className="text-[11px] text-[#8e8e93] mt-1 font-medium">
+                      Last: {fmt(selectedDetail.last)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Platform & Status Breakdown Card */}
+                <div className="bg-[#f8f9fa] border border-black/[0.06] rounded-2xl divide-y divide-black/[0.05] overflow-hidden">
+                  <div className="flex items-center gap-3 px-4 py-3 text-xs">
+                    <img src="/icons/facebook.png" alt="Facebook" className="w-5 h-5 rounded-full object-cover shrink-0" />
+                    <span className="flex-1 font-medium text-[#1c1c1e]">Facebook</span>
+                    <b className="font-semibold text-[#1c1c1e]">{selectedDetail.fb}</b>
+                    <span className="text-[#8e8e93] text-[11px] min-w-9 text-right font-medium">{pc(selectedDetail.fb, tot(selectedDetail))}%</span>
+                  </div>
+                  <div className="flex items-center gap-3 px-4 py-3 text-xs">
+                    <img src="/icons/instagram.png" alt="Instagram" className="w-5 h-5 rounded-full object-cover shrink-0" />
+                    <span className="flex-1 font-medium text-[#1c1c1e]">Instagram</span>
+                    <b className="font-semibold text-[#1c1c1e]">{selectedDetail.ig}</b>
+                    <span className="text-[#8e8e93] text-[11px] min-w-9 text-right font-medium">{pc(selectedDetail.ig, tot(selectedDetail))}%</span>
+                  </div>
+                  <div className="flex items-center gap-3 px-4 py-3 text-xs">
+                    <div className="w-5 h-5 rounded-full bg-[#34c759]/15 text-[#34c759] flex items-center justify-center shrink-0">
+                      <span className="w-2 h-2 rounded-full bg-[#34c759]" />
+                    </div>
+                    <span className="flex-1 font-medium text-[#1c1c1e]">Won / Enrolled</span>
+                    <b className="font-semibold text-[#1c1c1e]">{selectedDetail.won}</b>
+                    <span className="text-[#8e8e93] text-[11px] min-w-9 text-right font-medium">{pc(selectedDetail.won, tot(selectedDetail))}%</span>
+                  </div>
+                  <div className="flex items-center gap-3 px-4 py-3 text-xs">
+                    <div className="w-5 h-5 rounded-full bg-slate-200/80 text-slate-500 flex items-center justify-center shrink-0">
+                      <span className="w-2 h-2 rounded-full bg-slate-400" />
+                    </div>
+                    <span className="flex-1 font-medium text-[#1c1c1e]">Share of all leads</span>
+                    <b className="font-semibold text-[#1c1c1e]">{tot(selectedDetail)}</b>
+                    <span className="text-[#8e8e93] text-[11px] min-w-9 text-right font-medium">{pc(tot(selectedDetail), T)}%</span>
+                  </div>
+                  <div className="flex items-center gap-3 px-4 py-3 text-xs">
+                    <div className="w-5 h-5 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center shrink-0">
+                      <Clock size={12} />
+                    </div>
+                    <span className="flex-1 font-medium text-[#1c1c1e]">Last lead activity</span>
+                    <b className="font-semibold text-[#1c1c1e]">{fmt(selectedDetail.last)}</b>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="space-y-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => openCampaign(selectedDetail.key)}
+                    className="w-full py-3 bg-[#007aff] hover:bg-[#0062cc] active:scale-[0.99] text-white font-semibold rounded-2xl text-xs shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <span>View {tot(selectedDetail)} Candidates</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => copyCampaignName(selectedDetail.name)}
+                    className="w-full py-2.5 bg-[#f2f2f7] hover:bg-[#e5e5ea] active:scale-[0.99] text-[#1c1c1e] font-semibold rounded-2xl text-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Copy size={13} className="text-[#8e8e93]" />
+                    <span>Copy Campaign Name</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-3.5 bg-white border-t border-black/[0.06] flex items-center justify-between text-xs text-[#8e8e93]">
+                <span className="text-[11px]">
+                  {selectedDetail.leads.length} candidates in this campaign
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedDetail(null)}
+                  className="px-5 py-2 bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#1c1c1e] font-semibold rounded-xl transition-all cursor-pointer"
+                >
+                  Done
+                </button>
+              </div>
             </div>
           </div>
         )}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, LogOut, Eye, EyeOff } from 'lucide-react';
+import { LogOut, Eye, EyeOff } from 'lucide-react';
+import DotsLoader from '../components/common/DotsLoader';
 import { useAuth } from '../context/AuthContext';
 import { useAlert } from '../context/AlertContext';
 import { getDisplayName, getRoleBadgeInfo, isAdmin as checkIsAdmin } from '../utils/rbac';
@@ -430,7 +431,7 @@ export default function StaffProfile() {
           <div className="avw">
             <div className="av" id="av">
               {avatarUploading ? (
-                <Loader2 size={32} className="animate-spin text-white" />
+                <DotsLoader size="sm" />
               ) : user?.imageUrl ? (
                 <img src={user.imageUrl} alt={displayName} />
               ) : (

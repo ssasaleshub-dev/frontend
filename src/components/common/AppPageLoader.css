@@ -1,0 +1,258 @@
+.ssa-loader-root {
+  --ssa-loader-bg: #ffffff;
+  --ssa-loader-size: min(160px, 41.8vw);
+  background: var(--ssa-loader-bg);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-sizing: border-box;
+}
+
+.ssa-loader-logo {
+  position: relative;
+  width: var(--ssa-loader-size);
+  height: var(--ssa-loader-size);
+  border-radius: 22.4%;
+  overflow: hidden;
+  box-shadow: 0 12px 30px rgba(2, 110, 62, 0.22);
+}
+
+.ssa-loader-logo.out {
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.ssa-loader-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.ssa-loader-tile {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.ssa-loader-p {
+  position: absolute;
+  opacity: 0;
+  transform-origin: var(--o, 50% 100%);
+}
+
+.ssa-loader-sheen {
+  position: absolute;
+  inset: 0;
+  transform: translateX(-120%);
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.34) 50%,
+    transparent 60%
+  );
+}
+
+.ssa-loader-ring {
+  position: absolute;
+  left: 27.7%;
+  top: 51.8%;
+  width: 12%;
+  height: 12%;
+  margin: -6% 0 0 -6%;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  opacity: 0;
+}
+
+/* tile: starts as a small circle, springs into the rounded square */
+.ssa-loader-play {
+  animation: ssa-pop 0.95s cubic-bezier(0.34, 1.35, 0.64, 1) both;
+}
+.ssa-loader-play .ssa-fan {
+  animation: ssa-fan 0.7s cubic-bezier(0.34, 1.45, 0.64, 1) var(--d) both;
+}
+.ssa-loader-play .ssa-fan2 {
+  animation: ssa-fan2 0.7s cubic-bezier(0.34, 1.45, 0.64, 1) var(--d) both;
+}
+.ssa-loader-play .ssa-rise {
+  animation: ssa-rise 0.8s cubic-bezier(0.22, 0.9, 0.28, 1.08) var(--d) both;
+}
+.ssa-loader-play .ssa-leap {
+  animation: ssa-leap 0.85s cubic-bezier(0.3, 0.6, 0.3, 1) var(--d) both;
+}
+.ssa-loader-play .ssa-leaph {
+  animation: ssa-leaph 0.95s cubic-bezier(0.3, 0.6, 0.3, 1) var(--d) both;
+}
+.ssa-loader-play .ssa-loader-ring {
+  animation: ssa-ring 0.7s ease-out 2.35s both;
+}
+.ssa-loader-play .ssa-loader-sheen {
+  animation: ssa-sheen 0.9s ease-in-out 2.7s both;
+}
+
+@keyframes ssa-pop {
+  from {
+    transform: scale(0.22) rotate(-14deg);
+    border-radius: 50%;
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  to {
+    transform: none;
+    border-radius: 22.4%;
+    opacity: 1;
+  }
+}
+
+@keyframes ssa-fan {
+  from {
+    opacity: 0;
+    transform: rotate(-24deg) scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ssa-fan2 {
+  from {
+    opacity: 0;
+    transform: scaleX(0.2) scaleY(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ssa-rise {
+  from {
+    opacity: 0;
+    clip-path: inset(100% 0 0 0);
+    transform: translateY(32%) scaleY(1.18);
+  }
+  20% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(-4% -4% -4% -4%);
+    transform: none;
+  }
+}
+
+@keyframes ssa-leap {
+  0% {
+    opacity: 0;
+    transform: translate(
+      calc(var(--ssa-loader-size) * -0.06),
+      calc(var(--ssa-loader-size) * 0.12)
+    ) scale(0.6);
+  }
+  25% {
+    opacity: 1;
+  }
+  55% {
+    transform: translate(
+      calc(var(--ssa-loader-size) * -0.02),
+      calc(var(--ssa-loader-size) * -0.1)
+    ) scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ssa-leaph {
+  0% {
+    opacity: 0;
+    transform: translate(
+      calc(var(--ssa-loader-size) * -0.06),
+      calc(var(--ssa-loader-size) * 0.12)
+    ) scale(0.6);
+  }
+  25% {
+    opacity: 1;
+  }
+  50% {
+    transform: translate(
+      calc(var(--ssa-loader-size) * -0.01),
+      calc(var(--ssa-loader-size) * -0.16)
+    ) scale(1.1);
+  }
+  75% {
+    transform: translate(0, calc(var(--ssa-loader-size) * 0.006)) scale(1.2, 0.8);
+  }
+  88% {
+    transform: translate(0, calc(var(--ssa-loader-size) * -0.02)) scale(1);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ssa-ring {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.4);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(4.2);
+  }
+}
+
+@keyframes ssa-sheen {
+  to {
+    transform: translateX(120%);
+  }
+}
+
+/* four dots, bottom of screen */
+.ssa-loader-dots {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 9vh);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  height: 34px;
+}
+
+.ssa-loader-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--c);
+  animation: ssa-hop 1.3s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  animation-delay: calc(var(--i) * 0.15s);
+}
+
+@keyframes ssa-hop {
+  0%,
+  55%,
+  100% {
+    transform: translateY(0);
+  }
+  27% {
+    transform: translateY(-15px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ssa-loader-p {
+    opacity: 1 !important;
+    animation: none !important;
+  }
+  .ssa-loader-dot,
+  .ssa-loader-play {
+    animation: none !important;
+  }
+}

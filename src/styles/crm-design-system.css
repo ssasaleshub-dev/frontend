@@ -394,7 +394,7 @@
 .crm-k .ib.f b { display: block; }
 .crm-k .sr { padding: 4px 20px 8px; }
 .crm-k .sb { display: flex; align-items: center; gap: 8px; background: var(--soft); border-radius: 10px; padding: 0 12px; color: var(--muted); }
-.crm-k .sb:focus-within { box-shadow: 0 0 0 2px var(--blue) inset; background: #fff; }
+.crm-k .sb:focus-within { box-shadow: 0 0 0 1.5px rgba(0, 122, 255, 0.45); background: #fff; }
 .crm-k .sb svg { width: 18px; height: 18px; }
 .crm-k .sb input,
 .crm-k .sb input:hover,

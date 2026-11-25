@@ -8,6 +8,12 @@ import {
   Clock,
   CheckCircle2,
   Circle,
+  Check,
+  Sparkles,
+  PhoneCall,
+  FileCheck,
+  GraduationCap,
+  CreditCard,
   Trash2,
   AlertCircle,
   Phone,
@@ -61,224 +67,114 @@ function formatEventDateBadge(dateStr: string): string {
   });
 }
 
-interface SwipeableAgendaItemProps {
+interface AppleAgendaItemProps {
   evt: CalendarEvent;
   showDateBadge?: boolean;
   onToggleComplete: (id: string, e?: any) => void;
   onDelete: (id: string, e?: any) => void;
 }
 
-function SwipeableAgendaItem({ evt, showDateBadge, onToggleComplete, onDelete }: SwipeableAgendaItemProps) {
-  const [offsetX, setOffsetX] = useState(0);
-  const [isSwiped, setIsSwiped] = useState(false);
-  const startXRef = useRef(0);
-  const startYRef = useRef(0);
-  const isDraggingRef = useRef(false);
-  const isHorizontalSwipeRef = useRef(false);
-
-  const handleTouchStart = (e: React.TouchEvent | React.MouseEvent) => {
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    startXRef.current = clientX;
-    startYRef.current = clientY;
-    isDraggingRef.current = true;
-    isHorizontalSwipeRef.current = false;
-  };
-
-  const handleTouchMove = (e: React.TouchEvent | React.MouseEvent) => {
-    if (!isDraggingRef.current) return;
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    const deltaX = clientX - startXRef.current;
-    const deltaY = clientY - startYRef.current;
-
-    // Detect horizontal swipe vs vertical scroll
-    if (!isHorizontalSwipeRef.current) {
-      if (Math.abs(deltaY) > Math.abs(deltaX)) {
-        isDraggingRef.current = false;
-        return;
-      }
-      if (Math.abs(deltaX) > 6) {
-        isHorizontalSwipeRef.current = true;
-      }
-    }
-
-    if (isHorizontalSwipeRef.current) {
-      const baseOffset = isSwiped ? (offsetX > 0 ? 80 : -80) : 0;
-      const raw = baseOffset + deltaX;
-      // Damped clamp between -130 and 130
-      const clamped = Math.max(-130, Math.min(130, raw));
-      setOffsetX(clamped);
-    }
-  };
-
-  const handleTouchEnd = () => {
-    if (!isDraggingRef.current) return;
-    isDraggingRef.current = false;
-
-    // Fast full swipe (> 110px) directly prompts/triggers delete
-    if (Math.abs(offsetX) > 110) {
-      onDelete(evt.id);
-      setOffsetX(0);
-      setIsSwiped(false);
-      return;
-    }
-
-    // Reveal threshold: 40px
-    if (offsetX > 40) {
-      // Swiped right -> reveal left delete button
-      setOffsetX(80);
-      setIsSwiped(true);
-    } else if (offsetX < -40) {
-      // Swiped left -> reveal right delete button
-      setOffsetX(-80);
-      setIsSwiped(true);
-    } else {
-      // Snap back closed
-      setOffsetX(0);
-      setIsSwiped(false);
-    }
-  };
-
-  const handleCardClick = () => {
-    if (isSwiped) {
-      setOffsetX(0);
-      setIsSwiped(false);
-    }
-  };
-
+function AppleAgendaItem({ evt, showDateBadge, onToggleComplete, onDelete }: AppleAgendaItemProps) {
   return (
-    <div className="relative overflow-hidden rounded-[16px] select-none group">
-      {/* Background Swipe Actions: Apple Red Delete Buttons */}
-      <div
-        className={`absolute inset-0 bg-[#ff3b30] flex items-center ${
-          offsetX > 0 ? 'justify-start pl-4' : 'justify-end pr-4'
-        }`}
-      >
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(evt.id, e);
-          }}
-          className="flex items-center gap-1.5 text-white font-semibold text-[13px] px-2 py-1.5 rounded-xl active:scale-90 transition-transform cursor-pointer"
-          title="Delete Reminder"
-        >
-          <Trash2 size={16} strokeWidth={2.4} />
-          <span>Delete</span>
-        </button>
-      </div>
-
-      {/* Foreground Sliding Card */}
-      <div
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onMouseDown={handleTouchStart}
-        onMouseMove={handleTouchMove}
-        onMouseUp={handleTouchEnd}
-        onClick={handleCardClick}
-        style={{
-          transform: `translateX(${offsetX}px)`,
-          transition: isDraggingRef.current ? 'none' : 'transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
+    <div
+      className={`p-3.5 rounded-2xl border transition-all flex items-start justify-between gap-3 ${
+        evt.isCompleted
+          ? 'bg-slate-50 border-black/[0.04] opacity-75'
+          : 'bg-[#f8f9fa] border-black/[0.06] hover:bg-white hover:border-black/[0.12] shadow-2xs'
+      }`}
+    >
+      {/* Checkbox */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleComplete(evt.id, e);
         }}
-        className={`relative z-10 p-3 rounded-[16px] border transition-colors flex items-start gap-2.5 cursor-grab active:cursor-grabbing ${
+        className={`mt-0.5 w-5 h-5 rounded-lg border flex items-center justify-center transition-all cursor-pointer ${
           evt.isCompleted
-            ? 'bg-[#fbfbfd] border-black/[0.04] text-[#86868b]'
-            : 'bg-white border-black/[0.06] shadow-2xs hover:shadow-xs'
+            ? 'bg-[#34c759] border-[#34c759] text-white'
+            : 'border-black/[0.2] hover:border-[#007aff]'
         }`}
+        title={evt.isCompleted ? 'Mark incomplete' : 'Mark completed'}
       >
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleComplete(evt.id, e);
-          }}
-          className="mt-0.5 text-[#86868b] hover:text-[#34c759] transition-colors shrink-0 cursor-pointer"
-        >
-          {evt.isCompleted ? (
-            <CheckCircle2 size={16} className="text-[#34c759]" strokeWidth={2.2} />
-          ) : (
-            <Circle size={16} strokeWidth={1.8} />
-          )}
-        </button>
+        {evt.isCompleted && <Check size={12} strokeWidth={3} />}
+      </button>
 
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-1">
-            <p className={`text-[13px] font-medium truncate ${evt.isCompleted ? 'line-through text-[#86868b]' : 'text-[#1d1d1f]'}`}>
-              {evt.title}
-            </p>
-            <div className="text-right shrink-0">
-              <span className="text-[10px] font-mono text-[#86868b] block">
-                {evt.eventTime ? format12HourTime(evt.eventTime) : 'All Day'}
-              </span>
-              {showDateBadge && (
-                <span className="text-[9px] text-[#8e8e93] block font-medium">
-                  {formatEventDateBadge(evt.eventDate)}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {evt.description && (
-            <p className="text-[11px] text-[#515154] mt-0.5 leading-relaxed font-normal">
-              {evt.description}
-            </p>
-          )}
-
-          {evt.candidateName && (
-            <div className="flex items-center gap-1 mt-1 text-[11px] text-[#0071e3] font-medium">
-              <User size={11} strokeWidth={2} />
-              <span>Candidate: {evt.candidateName}</span>
-            </div>
-          )}
-
-          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-            <span className="px-2 py-0.2 bg-black/[0.04] text-[#515154] rounded-full text-[9px] font-medium uppercase">
-              {evt.eventType}
+      {/* Reminder Details */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p
+            className={`text-xs font-semibold truncate ${
+              evt.isCompleted ? 'line-through text-[#8e8e93]' : 'text-[#1c1c1e]'
+            }`}
+          >
+            {evt.title}
+          </p>
+          {evt.priority === 'HIGH' || evt.priority === 'URGENT' ? (
+            <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-black/[0.04] text-[#ff3b30] border border-black/[0.06]">
+              {evt.priority}
             </span>
-            {evt.priority === 'HIGH' || evt.priority === 'URGENT' ? (
-              <span className="px-2 py-0.2 bg-[#ff3b30]/10 text-[#ff3b30] rounded-full text-[9px] font-semibold uppercase">
-                {evt.priority}
-              </span>
-            ) : null}
-            {evt.isCompleted ? (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#34c759]/10 text-[#34c759] rounded-full text-[9px] font-medium">
-                Completed
-              </span>
-            ) : (() => {
-              const rem = getRemainingTimeInfo(evt.eventDate, evt.eventTime);
-              if (!rem) return null;
-              if (rem.isPast) {
-                return (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-black/[0.04] text-[#8e8e93] rounded-full text-[9px] font-medium">
-                    Past
-                  </span>
-                );
-              }
-              return (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#0071e3]/10 text-[#0071e3] rounded-full text-[10px] font-medium">
-                  <Clock size={10} />
-                  {rem.text}
-                </span>
-              );
-            })()}
-          </div>
+          ) : null}
         </div>
 
-        {/* Desktop Quick Delete Button (revealed on hover) */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(evt.id, e);
-          }}
-          className="opacity-0 group-hover:opacity-100 p-1 text-[#86868b] hover:text-[#ff3b30] rounded-full transition-all shrink-0 cursor-pointer"
-          title="Delete reminder"
-        >
-          <Trash2 size={13} />
-        </button>
+        {evt.description && (
+          <p className="text-[11px] text-[#8e8e93] mt-0.5 leading-relaxed line-clamp-2">
+            {evt.description}
+          </p>
+        )}
+
+        {/* Date, Time, Candidate & Countdown */}
+        <div className="flex items-center gap-2 mt-1 text-[11px] text-[#8e8e93] flex-wrap">
+          {showDateBadge && (
+            <span className="flex items-center gap-1 font-medium">
+              <CalendarIcon size={11} />
+              {formatEventDateBadge(evt.eventDate)}
+            </span>
+          )}
+          {evt.eventTime && (
+            <span className="flex items-center gap-1 font-medium">
+              <Clock size={11} />
+              {format12HourTime(evt.eventTime)}
+            </span>
+          )}
+          {!evt.isCompleted && (() => {
+            const rem = getRemainingTimeInfo(evt.eventDate, evt.eventTime);
+            if (!rem) return null;
+            if (rem.isPast) {
+              return (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-black/[0.04] text-[#8e8e93]">
+                  Past
+                </span>
+              );
+            }
+            return (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#007aff]/10 text-[#007aff] border border-[#007aff]/20">
+                <Clock size={10} />
+                {rem.text}
+              </span>
+            );
+          })()}
+          {evt.candidateName && (
+            <span className="flex items-center gap-1 font-medium text-[#1c1c1e]">
+              <User size={11} className="text-[#8e8e93]" />
+              {evt.candidateName}
+            </span>
+          )}
+        </div>
       </div>
+
+      {/* Delete Action Button */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(evt.id, e);
+        }}
+        className="w-7 h-7 rounded-lg text-[#8e8e93] hover:text-[#ff3b30] hover:bg-black/[0.04] flex items-center justify-center transition-colors cursor-pointer shrink-0"
+        title="Delete reminder"
+      >
+        <Trash2 size={13} />
+      </button>
     </div>
   );
 }
@@ -433,7 +329,7 @@ export default function CalendarPage() {
     return eventsByDate[selectedDateStr] || [];
   }, [eventsByDate, selectedDateStr]);
 
-  const [historyTab, setHistoryTab] = useState<'ALL' | 'SELECTED' | 'COMPLETED'>('ALL');
+  const [historyTab, setHistoryTab] = useState<'ALL' | 'TODAY' | 'SELECTED' | 'COMPLETED'>('ALL');
 
   // User configured reminders history (sorted with most recent dates first, and chronological within each date)
   const allUserReminders = useMemo(() => {
@@ -462,7 +358,16 @@ export default function CalendarPage() {
     });
   }, [selectedDateStr]);
 
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const todayEvents = useMemo(() => {
+    return eventsByDate[todayStr] || [];
+  }, [eventsByDate, todayStr]);
+
   const displayEvents = useMemo(() => {
+    if (historyTab === 'TODAY') {
+      return todayEvents;
+    }
     if (historyTab === 'SELECTED') {
       return selectedDateEvents;
     }
@@ -470,7 +375,7 @@ export default function CalendarPage() {
       return completedEvents;
     }
     return allUserReminders;
-  }, [historyTab, selectedDateEvents, completedEvents, allUserReminders]);
+  }, [historyTab, todayEvents, selectedDateEvents, completedEvents, allUserReminders]);
 
   const selectedDateDisplay = useMemo(() => {
     if (!selectedDateStr) return '';
@@ -565,20 +470,44 @@ export default function CalendarPage() {
     await reminderNotificationService.toggleEventComplete(id);
   };
 
-  const todayStr = new Date().toISOString().split('T')[0];
-
   return (
-    <div className="space-y-5 max-w-7xl mx-auto pb-12 font-sf-display">
+    <div className="space-y-4 max-w-[1600px] mx-auto pb-12 font-sf-display px-2 sm:px-4">
+      {/* Top CRM Control & Header Bar */}
+      <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-black/[0.04] text-[#1c1c1e] flex items-center justify-center shadow-xs shrink-0">
+            <BrandReminderIcon size={20} />
+          </div>
+          <div>
+            <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">Calendar & Reminders</h1>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Schedule follow-ups, counseling sessions, and track scheduled candidate tasks
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => handleOpenModal()}
+            className="px-4 py-2 bg-[#007aff] hover:bg-[#0062cc] active:scale-[0.99] text-white font-semibold rounded-xl text-xs shadow-xs hover:shadow-md transition-all flex items-center gap-2 cursor-pointer"
+          >
+            <Plus size={15} />
+            <span>New Reminder</span>
+          </button>
+        </div>
+      </div>
+
       {/* Main Grid: 7 Cols Calendar + 5 Cols Sidebar Agenda */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Apple HIG Inline Calendar Card (7 Cols) */}
-        <div className="lg:col-span-7 bg-white rounded-[24px] border border-black/[0.06] shadow-[0_2px_8px_rgba(0,0,0,0.03)] p-5 sm:p-6 flex flex-col justify-between">
+        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 sm:p-6 flex flex-col justify-between">
           <div>
             {/* Apple HIG Month & Navigation Header */}
-            <div className="flex items-center justify-between pb-3 mb-2">
+            <div className="flex items-center justify-between pb-3 mb-2 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <h2 className="text-[18px] sm:text-[20px] font-semibold text-[#1d1d1f] tracking-tight">
-                  {MONTH_NAMES[month]} <span className="text-[#86868b] font-normal">{year}</span>
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                  {MONTH_NAMES[month]} <span className="text-slate-400 font-normal">{year}</span>
                 </h2>
               </div>
 
@@ -586,14 +515,14 @@ export default function CalendarPage() {
                 <button
                   type="button"
                   onClick={goToToday}
-                  className="px-3 py-1 bg-black/[0.05] hover:bg-black/[0.08] text-[#1d1d1f] rounded-full text-[11px] font-medium transition-all active:scale-95 cursor-pointer mr-1"
+                  className="px-3 py-1 bg-black/[0.04] hover:bg-black/[0.08] text-slate-800 rounded-lg text-xs font-semibold transition-all active:scale-95 cursor-pointer mr-1"
                 >
                   Today
                 </button>
                 <button
                   type="button"
                   onClick={prevMonth}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-[#0071e3] hover:bg-[#0071e3]/10 active:scale-95 transition-all cursor-pointer"
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 hover:bg-slate-100 active:scale-95 transition-all cursor-pointer"
                   title="Previous Month"
                   aria-label="Previous Month"
                 >
@@ -602,7 +531,7 @@ export default function CalendarPage() {
                 <button
                   type="button"
                   onClick={nextMonth}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-[#0071e3] hover:bg-[#0071e3]/10 active:scale-95 transition-all cursor-pointer"
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 hover:bg-slate-100 active:scale-95 transition-all cursor-pointer"
                   title="Next Month"
                   aria-label="Next Month"
                 >
@@ -612,19 +541,19 @@ export default function CalendarPage() {
             </div>
 
             {/* Apple HIG Weekday Names Header */}
-            <div className="grid grid-cols-7 text-center pb-2.5 border-b border-black/[0.04]">
+            <div className="grid grid-cols-7 text-center pb-2.5 border-b border-slate-100">
               {WEEKDAYS.map((day) => (
                 <div
                   key={day}
-                  className="text-[11px] font-semibold tracking-wider text-[#86868b] uppercase"
+                  className="text-[11px] font-bold tracking-wider text-slate-400 uppercase"
                 >
                   {day}
                 </div>
               ))}
             </div>
 
-            {/* Apple HIG Date Grid Matrix (No chunky badges - Pure Apple Dots) */}
-            <div className="grid grid-cols-7 gap-y-1 sm:gap-y-1.5 py-3">
+            {/* Apple HIG Date Grid Matrix */}
+            <div className="grid grid-cols-7 gap-1 sm:gap-1.5 py-3">
               {allCalendarDays.map((day) => {
                 const isToday = day.dateStr === todayStr;
                 const isSelected = day.dateStr === selectedDateStr;
@@ -635,39 +564,36 @@ export default function CalendarPage() {
                     key={day.dateStr}
                     type="button"
                     onClick={() => handleSelectDate(day.dateStr, day.targetYear, day.targetMonth)}
-                    className="relative flex flex-col items-center justify-center py-1 sm:py-1.5 rounded-[14px] transition-all group hover:bg-black/[0.03] active:scale-95 focus:outline-none cursor-pointer"
+                    className={`relative flex flex-col items-center justify-center py-2 sm:py-3 rounded-xl transition-all group focus:outline-none cursor-pointer ${
+                      isSelected
+                        ? 'bg-[#007aff] text-white shadow-xs'
+                        : isToday
+                        ? 'bg-[#007aff]/10 text-[#007aff] font-bold border border-[#007aff]/30'
+                        : day.isCurrentMonth
+                        ? 'hover:bg-slate-50 text-slate-800'
+                        : 'text-slate-300 hover:bg-slate-50/50'
+                    }`}
                   >
-                    {/* Apple Circular Date Indicator */}
-                    <div
-                      className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-[15px] transition-all ${
-                        isSelected
-                          ? 'bg-[#0071e3] text-white font-semibold shadow-xs scale-105'
-                          : isToday
-                          ? 'text-[#0071e3] font-bold bg-[#0071e3]/10'
-                          : day.isCurrentMonth
-                          ? 'text-[#1d1d1f] font-normal group-hover:text-black'
-                          : 'text-[#86868b]/35 font-normal'
-                      }`}
-                    >
+                    <span className={`text-[13px] sm:text-[14px] leading-tight ${isSelected || isToday ? 'font-bold' : 'font-medium'}`}>
                       {day.dayNum}
-                    </div>
+                    </span>
 
-                    {/* Apple Dot Indicators (Subtle HIG markers beneath date) */}
-                    <div className="h-2 flex items-center justify-center gap-1 mt-0.5">
-                      {/* Event / Reminder Dots */}
+                    {/* Dot Indicators */}
+                    <div className="h-2 flex items-center justify-center gap-1 mt-1">
                       {dayEvents.slice(0, 3).map((evt) => (
                         <span
                           key={evt.id}
                           className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                            evt.isCompleted
-                              ? 'bg-[#8e8e93]/40'
+                            isSelected
+                              ? 'bg-white'
+                              : evt.isCompleted
+                              ? 'bg-slate-300'
                               : evt.priority === 'HIGH' || evt.priority === 'URGENT'
                               ? 'bg-[#ff3b30]'
                               : evt.eventType === 'CALL'
                               ? 'bg-[#34c759]'
-                              : 'bg-[#0071e3]'
+                              : 'bg-[#007aff]'
                           }`}
-                          title={`${evt.title} (${evt.eventTime ? format12HourTime(evt.eventTime) : 'Anytime'})`}
                         />
                       ))}
                     </div>
@@ -677,54 +603,91 @@ export default function CalendarPage() {
             </div>
           </div>
 
-
+          {/* Calendar Bottom Legend */}
+          <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 flex-wrap gap-2">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#34c759]" /> Call
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#007aff]" /> Follow-up / Task
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#ff3b30]" /> High Priority
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-slate-300" /> Completed
+              </span>
+            </div>
+            <span className="text-slate-400 font-medium">Click any date to view agenda</span>
+          </div>
         </div>
 
         {/* Right Sidebar: Selected Day Agenda & Reminders (5 Cols) */}
         <div className="lg:col-span-5 space-y-4">
-          {/* Selected Date Dossier / Configured Reminders History */}
-          <div className="bg-white rounded-[22px] border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-4 space-y-3.5">
-            <div className="flex items-center justify-between pb-2.5 border-b border-black/[0.04]">
-              <div>
-                <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#86868b]">
-                  {historyTab === 'SELECTED' ? 'Daily Agenda' : 'Reminders History'}
-                </h3>
-                <p className="text-[15px] font-semibold text-[#1d1d1f] mt-0.5">
-                  {historyTab === 'SELECTED'
-                    ? selectedDateDisplay
-                    : historyTab === 'COMPLETED'
-                    ? 'Completed Reminders'
-                    : 'Configured Reminders'}
-                </p>
+          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 space-y-4 flex flex-col">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-black/[0.04] text-[#1c1c1e] flex items-center justify-center">
+                  <BrandReminderIcon size={16} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+                    {historyTab === 'SELECTED'
+                      ? 'Daily Agenda'
+                      : historyTab === 'TODAY'
+                      ? "Today's Agenda"
+                      : historyTab === 'COMPLETED'
+                      ? 'Completed Reminders'
+                      : 'All Reminders'}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    {historyTab === 'SELECTED' ? selectedDateDisplay : `${displayEvents.length} scheduled items`}
+                  </p>
+                </div>
               </div>
 
-              {/* Total count badge (replacing old + Add button) */}
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-black/[0.04] rounded-full text-[12px] font-medium text-[#1d1d1f]">
-                <Clock size={12} className="text-[#0071e3]" />
-                <span>{displayEvents.length} {displayEvents.length === 1 ? 'Reminder' : 'Reminders'}</span>
-              </div>
+              <button
+                type="button"
+                onClick={() => handleOpenModal()}
+                className="px-2.5 py-1 bg-[#007aff]/10 hover:bg-[#007aff]/15 text-[#007aff] font-semibold rounded-lg text-xs transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                <Plus size={13} />
+                <span>Add</span>
+              </button>
             </div>
 
-            {/* iOS Segmented View Switcher */}
-            <div className="flex p-0.5 bg-black/[0.04] rounded-full text-[12px] font-medium">
+            {/* Segmented View Switcher */}
+            <div className="flex p-1 bg-black/[0.04] rounded-xl text-xs font-medium">
               <button
                 type="button"
                 onClick={() => setHistoryTab('ALL')}
-                className={`flex-1 py-1.5 px-2.5 rounded-full text-center transition-all cursor-pointer ${
+                className={`flex-1 py-1 px-2 rounded-lg text-center transition-all cursor-pointer ${
                   historyTab === 'ALL'
-                    ? 'bg-white text-[#1d1d1f] shadow-2xs font-semibold'
-                    : 'text-[#86868b] hover:text-[#1d1d1f]'
+                    ? 'bg-white text-slate-900 shadow-2xs font-semibold'
+                    : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
-                All History ({events.length})
+                All ({events.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setHistoryTab('TODAY')}
+                className={`flex-1 py-1 px-2 rounded-lg text-center transition-all cursor-pointer ${
+                  historyTab === 'TODAY'
+                    ? 'bg-white text-slate-900 shadow-2xs font-semibold'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                Today ({todayEvents.length})
               </button>
               <button
                 type="button"
                 onClick={() => setHistoryTab('SELECTED')}
-                className={`flex-1 py-1.5 px-2.5 rounded-full text-center transition-all cursor-pointer ${
+                className={`flex-1 py-1 px-2 rounded-lg text-center transition-all cursor-pointer ${
                   historyTab === 'SELECTED'
-                    ? 'bg-white text-[#1d1d1f] shadow-2xs font-semibold'
-                    : 'text-[#86868b] hover:text-[#1d1d1f]'
+                    ? 'bg-white text-slate-900 shadow-2xs font-semibold'
+                    : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 {selectedDateShort} ({selectedDateEvents.length})
@@ -732,30 +695,42 @@ export default function CalendarPage() {
               <button
                 type="button"
                 onClick={() => setHistoryTab('COMPLETED')}
-                className={`flex-1 py-1.5 px-2.5 rounded-full text-center transition-all cursor-pointer ${
+                className={`flex-1 py-1 px-2 rounded-lg text-center transition-all cursor-pointer ${
                   historyTab === 'COMPLETED'
-                    ? 'bg-white text-[#1d1d1f] shadow-2xs font-semibold'
-                    : 'text-[#86868b] hover:text-[#1d1d1f]'
+                    ? 'bg-white text-slate-900 shadow-2xs font-semibold'
+                    : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
-                Completed ({completedEvents.length})
+                Done ({completedEvents.length})
               </button>
             </div>
 
-            {/* Reminders List for Selected View */}
-            <div className="space-y-2 max-h-[540px] overflow-y-auto pr-0.5">
+            {/* Reminders List */}
+            <div className="space-y-2.5 max-h-[560px] overflow-y-auto pr-0.5">
               {displayEvents.length === 0 ? (
-                <div className="py-8 text-center text-[#86868b]">
-                  <div className="w-10 h-10 rounded-full bg-black/[0.03] flex items-center justify-center mx-auto mb-2 text-[#86868b]">
+                <div className="py-12 text-center text-slate-400 space-y-2">
+                  <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
                     <CalendarCheck size={18} strokeWidth={1.8} />
                   </div>
-                  <p className="text-[13px] font-medium text-[#1d1d1f]">
-                    {historyTab === 'COMPLETED' ? 'No completed reminders' : 'No configured reminders'}
+                  <p className="text-xs font-semibold text-slate-700">
+                    {historyTab === 'COMPLETED' ? 'No completed reminders' : 'No reminders scheduled'}
                   </p>
+                  <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
+                    Stay on top of candidate follow-ups and scheduled counseling appointments.
+                  </p>
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenModal()}
+                      className="px-3.5 py-1.5 bg-[#007aff] text-white rounded-xl text-xs font-semibold cursor-pointer"
+                    >
+                      + Create Reminder
+                    </button>
+                  </div>
                 </div>
               ) : (
                 displayEvents.map((evt) => (
-                  <SwipeableAgendaItem
+                  <AppleAgendaItem
                     key={evt.id}
                     evt={evt}
                     showDateBadge={historyTab !== 'SELECTED'}
@@ -766,88 +741,181 @@ export default function CalendarPage() {
               )}
             </div>
           </div>
-
-
         </div>
       </div>
 
-      {/* New Reminder / Event Modal (Apple HIG Glass Sheet UI) */}
+      {/* New Reminder / Event Modal (Apple HIG Frosted Sheet UI) */}
       {isModalOpen && (
-        <div className="ios-modal-backdrop animate-in fade-in">
-          <div className="ios-material-thick rounded-[28px] shadow-2xl border border-black/[0.08] max-w-md w-full !p-0 overflow-hidden animate-in zoom-in-95 duration-150">
-            <div className="pt-3 pb-1">
-              <div className="ios-sheet-grabber" />
-            </div>
-            <div className="px-5 py-3 border-b border-black/[0.04] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-full bg-[#0071e3]/10 text-[#0071e3] flex items-center justify-center">
-                  <BrandReminderIcon size={14} strokeWidth={2} />
+        <div className="ios-modal-backdrop animate-in fade-in duration-200">
+          <div
+            className="w-full max-w-xl max-h-[92vh] ios-material-thick rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.25)] border border-black/[0.08] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+            role="dialog"
+            aria-modal="true"
+          >
+            {/* Apple iOS Frosted Header */}
+            <div className="px-6 pt-3 pb-4 border-b border-black/[0.06] bg-white flex flex-col sticky top-0 z-10">
+              <div className="ios-sheet-grabber mb-2" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-black/[0.04] text-[#1c1c1e] flex items-center justify-center shadow-xs">
+                    <BrandReminderIcon size={18} />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-semibold text-[#1c1c1e] tracking-tight">
+                      Schedule Reminder
+                    </h2>
+                    <p className="text-xs text-[#8e8e93] font-medium mt-0.5">
+                      In-App + Android Push Alert System
+                    </p>
+                  </div>
                 </div>
-                <h3 className="text-[15px] font-semibold text-[#1d1d1f] tracking-tight">
-                  New Reminder
-                </h3>
+
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="w-8 h-8 rounded-full bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#8e8e93] hover:text-[#1c1c1e] flex items-center justify-center transition-colors cursor-pointer"
+                  title="Close modal"
+                >
+                  <X size={16} />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="w-7 h-7 rounded-full bg-black/[0.05] hover:bg-black/[0.1] flex items-center justify-center text-[#86868b] hover:text-[#1d1d1f] transition-colors"
-              >
-                <X size={14} strokeWidth={2.5} />
-              </button>
             </div>
 
-            <form onSubmit={handleSaveEvent} className="p-5 space-y-4">
-              <div>
-                <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1">
-                  Reminder Title *
+            {/* Segmented Top Bar */}
+            <div className="px-6 pt-3 pb-2 bg-[#f8f9fa] border-b border-black/[0.05] flex items-center justify-between gap-3">
+              <div className="inline-flex p-1 bg-black/[0.05] rounded-xl">
+                <div className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-white text-[#1c1c1e] shadow-xs">
+                  + Set Reminder
+                </div>
+              </div>
+
+              <span className="text-[11px] text-[#8e8e93] font-medium hidden sm:inline">
+                In-App + Android Push Alert
+              </span>
+            </div>
+
+            {/* Form Body */}
+            <form onSubmit={handleSaveEvent} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
+              {/* Quick Presets */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-[#1c1c1e] flex items-center gap-1.5">
+                  <Sparkles size={13} className="text-[#ff9500]" />
+                  <span>Quick Presets</span>
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { label: 'Follow-up Call', title: 'Follow-up call with candidate', type: 'CALL' as EventType, priority: 'HIGH' as EventPriority, icon: <PhoneCall size={13} /> },
+                    { label: 'Doc Verification', title: 'Verify academic & visa docs', type: 'FOLLOWUP' as EventType, priority: 'MEDIUM' as EventPriority, icon: <FileCheck size={13} /> },
+                    { label: 'Counseling Session', title: 'Admission counseling session', type: 'INTERVIEW' as EventType, priority: 'MEDIUM' as EventPriority, icon: <GraduationCap size={13} /> },
+                    { label: 'Fee Confirmation', title: 'Confirm visa processing fee receipt', type: 'REMINDER' as EventType, priority: 'HIGH' as EventPriority, icon: <CreditCard size={13} /> },
+                  ].map((p, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, title: p.title, eventType: p.type, priority: p.priority }))}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#1c1c1e] rounded-xl text-xs font-medium transition-all active:scale-95 cursor-pointer"
+                    >
+                      {p.icon}
+                      <span>{p.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Title Input */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-[#1c1c1e]">
+                  Reminder Title / Task <span className="text-[#ff3b30]">*</span>
                 </label>
                 <input
                   type="text"
                   required
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-3 py-1.5 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-[13px] text-slate-800 shadow-2xs transition-all"
+                  placeholder="e.g. Follow-up call regarding visa docs"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-xs text-slate-800 shadow-2xs transition-all"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1">
-                    Date
-                  </label>
+              {/* Date & Time Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Date Picker */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-[#1c1c1e] flex items-center gap-1.5">
+                      <CalendarIcon size={13} className="text-[#007aff]" />
+                      <span>Date</span>
+                    </label>
+                    <div className="flex items-center gap-1 text-[10px]">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const d = new Date();
+                          setFormData((prev) => ({ ...prev, eventDate: d.toISOString().split('T')[0] }));
+                        }}
+                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43] cursor-pointer"
+                      >
+                        Today
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const d = new Date();
+                          d.setDate(d.getDate() + 1);
+                          setFormData((prev) => ({ ...prev, eventDate: d.toISOString().split('T')[0] }));
+                        }}
+                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43] cursor-pointer"
+                      >
+                        Tomorrow
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const d = new Date();
+                          d.setDate(d.getDate() + 2);
+                          setFormData((prev) => ({ ...prev, eventDate: d.toISOString().split('T')[0] }));
+                        }}
+                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43] cursor-pointer"
+                      >
+                        +2d
+                      </button>
+                    </div>
+                  </div>
                   <input
                     type="date"
                     required
                     value={formData.eventDate}
                     onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
-                    className="w-full px-3 py-1.5 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-[12px] text-slate-800 shadow-2xs transition-all"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-xs text-slate-800 shadow-2xs transition-all"
                   />
                 </div>
 
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider">
-                      Time (IST)
+                {/* Time Picker */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-[#1c1c1e] flex items-center gap-1.5">
+                      <Clock size={13} className="text-[#007aff]" />
+                      <span>Time</span>
                     </label>
                     <div className="flex items-center gap-1 text-[10px]">
                       <button
                         type="button"
                         onClick={() => setFormData((prev) => ({ ...prev, eventTime: '10:00' }))}
-                        className="px-1.5 py-0.5 rounded bg-black/[0.04] hover:bg-black/[0.08] text-[#515154] font-medium transition-colors cursor-pointer"
+                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43] cursor-pointer"
                       >
                         10 AM
                       </button>
                       <button
                         type="button"
                         onClick={() => setFormData((prev) => ({ ...prev, eventTime: '14:30' }))}
-                        className="px-1.5 py-0.5 rounded bg-black/[0.04] hover:bg-black/[0.08] text-[#515154] font-medium transition-colors cursor-pointer"
+                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43] cursor-pointer"
                       >
                         2:30 PM
                       </button>
                       <button
                         type="button"
                         onClick={() => setFormData((prev) => ({ ...prev, eventTime: '17:00' }))}
-                        className="px-1.5 py-0.5 rounded bg-black/[0.04] hover:bg-black/[0.08] text-[#515154] font-medium transition-colors cursor-pointer"
+                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43] cursor-pointer"
                       >
                         5 PM
                       </button>
@@ -856,172 +924,146 @@ export default function CalendarPage() {
                   <TimePicker12Hour
                     value={formData.eventTime}
                     onChange={(t) => setFormData((prev) => ({ ...prev, eventTime: t }))}
+                    className="bg-white border-black/[0.1] px-3.5 py-1.5 text-xs rounded-xl"
                   />
                 </div>
               </div>
 
-              {/* Live Time Status Preview */}
+              {/* Live Remaining Time Preview */}
               {(() => {
                 const liveRem = getRemainingTimeInfo(formData.eventDate, formData.eventTime);
                 if (!liveRem) return null;
                 return (
                   <div
-                    className={`flex items-center gap-2 px-3 py-2 rounded-[12px] border text-[11px] transition-all ${
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-[11px] font-medium transition-all ${
                       liveRem.isPast
-                        ? 'bg-[#f2f2f7] border-black/[0.04] text-[#8e8e93]'
-                        : 'bg-[#0071e3]/[0.06] border-[#0071e3]/15 text-[#0071e3]'
+                        ? 'bg-amber-500/10 border-amber-500/20 text-amber-900'
+                        : 'bg-[#007aff]/[0.08] border-[#007aff]/20 text-[#007aff]'
                     }`}
                   >
                     <Clock size={13} className="shrink-0" />
-                    <span className="font-medium">{liveRem.text}</span>
+                    <span>{liveRem.text}</span>
                   </div>
                 );
               })()}
 
-              {/* Expandable Additional Details Section (Apple HIG Disclosure) */}
-              <div className="pt-0.5">
-                <button
-                  type="button"
-                  onClick={() => setShowMoreDetails((prev) => !prev)}
-                  className="flex items-center justify-between w-full py-2 px-3 rounded-[12px] bg-black/[0.03] hover:bg-black/[0.06] text-[#0071e3] text-[12px] font-medium transition-all cursor-pointer"
-                >
-                  <span>{showMoreDetails ? 'Hide Details' : 'More Details'}</span>
-                  <ChevronDown
-                    size={15}
-                    strokeWidth={2.4}
-                    className={`transition-transform duration-200 text-[#0071e3] ${
-                      showMoreDetails ? 'rotate-180' : ''
-                    }`}
-                  />
-                </button>
+              {/* Notification Timing & Priority */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-[#1c1c1e]">
+                    Notification Timing
+                  </label>
+                  <select
+                    value={formData.remindBeforeMinutes}
+                    onChange={(e) => setFormData({ ...formData, remindBeforeMinutes: Number(e.target.value) })}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-xs text-slate-700 shadow-2xs transition-all cursor-pointer"
+                  >
+                    <option value={0}>At scheduled time</option>
+                    <option value={15}>15 minutes before (Default)</option>
+                    <option value={30}>30 minutes before</option>
+                    <option value={60}>1 hour before</option>
+                    <option value={1440}>1 day before</option>
+                  </select>
+                </div>
 
-                {showMoreDetails && (
-                  <div className="space-y-3.5 pt-3 animate-in fade-in duration-150">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1">
-                          Type
-                        </label>
-                        <select
-                          value={formData.eventType}
-                          onChange={(e) => setFormData({ ...formData, eventType: e.target.value as EventType })}
-                          className="w-full px-3 py-1.5 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-[12px] text-slate-700 shadow-2xs transition-all cursor-pointer"
-                        >
-                          <option value="REMINDER">General Reminder</option>
-                          <option value="CALL">Candidate Callback</option>
-                          <option value="INTERVIEW">Visa Interview</option>
-                          <option value="FOLLOWUP">Doc Follow-up</option>
-                          <option value="EVENT">Meeting / Event</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1">
-                          Priority
-                        </label>
-                        <select
-                          value={formData.priority}
-                          onChange={(e) => setFormData({ ...formData, priority: e.target.value as EventPriority })}
-                          className="w-full px-3 py-1.5 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-[12px] text-slate-700 shadow-2xs transition-all cursor-pointer"
-                        >
-                          <option value="LOW">Low</option>
-                          <option value="MEDIUM">Medium</option>
-                          <option value="HIGH">High Priority</option>
-                          <option value="URGENT">Urgent (Red Alert)</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1">
-                        Candidate Link (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.candidateName}
-                        onChange={(e) => setFormData({ ...formData, candidateName: e.target.value })}
-                        className="w-full px-3 py-1.5 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-[12px] text-slate-800 shadow-2xs transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1">
-                        Notify Me Before
-                      </label>
-                      <select
-                        value={formData.remindBeforeMinutes}
-                        onChange={(e) => setFormData({ ...formData, remindBeforeMinutes: Number(e.target.value) })}
-                        className="w-full px-3 py-1.5 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-[12px] text-slate-700 shadow-2xs transition-all cursor-pointer"
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-[#1c1c1e]">
+                    Priority Level
+                  </label>
+                  <div className="grid grid-cols-3 gap-1 p-1 bg-black/[0.04] rounded-xl">
+                    {(['LOW', 'MEDIUM', 'HIGH'] as EventPriority[]).map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, priority: p })}
+                        className={`py-1.5 text-center text-[11px] font-semibold rounded-lg transition-all cursor-pointer ${
+                          formData.priority === p
+                            ? 'bg-white text-[#1c1c1e] shadow-xs'
+                            : 'text-[#8e8e93] hover:text-[#1c1c1e]'
+                        }`}
                       >
-                        <option value={0}>At time of event</option>
-                        <option value={15}>15 minutes before</option>
-                        <option value={30}>30 minutes before</option>
-                        <option value={60}>1 hour before</option>
-                        <option value={1440}>1 day before</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-1">
-                        Notes & Details
-                      </label>
-                      <textarea
-                        rows={2}
-                        value={formData.description}
-                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        className="w-full px-3 py-1.5 bg-[#f5f5f7] border border-black/[0.04] rounded-[12px] text-[12px] text-[#1d1d1f] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#0071e3]/20 transition-all resize-none"
-                      />
-                    </div>
+                        {p}
+                      </button>
+                    ))}
                   </div>
-                )}
+                </div>
+              </div>
+
+              {/* Candidate Link (Optional) */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-[#1c1c1e]">
+                  Candidate Name / Reference (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={formData.candidateName}
+                  onChange={(e) => setFormData({ ...formData, candidateName: e.target.value })}
+                  placeholder="e.g. Premkanth (SSA-Gv5ea)"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-xs text-slate-800 shadow-2xs transition-all"
+                />
+              </div>
+
+              {/* Counselor Notes / Description */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-[#1c1c1e]">
+                  Counselor Notes / Agenda (Optional)
+                </label>
+                <textarea
+                  rows={2}
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Add details, counseling notes, or agenda..."
+                  className="w-full px-3.5 py-2 bg-white border border-black/[0.1] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] transition-all resize-none"
+                />
               </div>
 
               {saveError && (
-                <div className="p-2.5 rounded-[12px] bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
-                  <AlertCircle size={14} className="shrink-0" />
+                <div className="p-3 rounded-2xl bg-black/[0.04] text-[#ff3b30] border border-black/[0.06] text-xs flex items-center gap-2">
+                  <AlertCircle size={15} className="shrink-0" />
                   <span>{saveError}</span>
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-black/[0.04]">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  disabled={isSubmitting}
-                  className="px-4 py-1.5 rounded-full text-[12px] font-medium text-[#515154] hover:bg-black/[0.04] transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
+              {/* Submit Button */}
+              <div className="pt-2">
                 <button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="px-5 py-1.5 rounded-full bg-[#0071e3] hover:bg-[#0077ED] text-white text-[12px] font-medium shadow-xs transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 cursor-pointer"
+                  disabled={isSubmitting || !formData.title.trim()}
+                  className="w-full py-3 bg-[#007aff] hover:bg-[#0062cc] active:scale-[0.99] text-white font-semibold rounded-2xl text-xs shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
-                  {isSubmitting ? (
-                    <>
-                      <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>Saving...</span>
-                    </>
-                  ) : (
-                    <span>Save Reminder</span>
-                  )}
+                  <BrandReminderIcon size={14} />
+                  <span>{isSubmitting ? 'Scheduling Reminder...' : 'Set Reminder'}</span>
                 </button>
               </div>
             </form>
+
+            {/* Footer */}
+            <div className="px-6 py-3.5 bg-white border-t border-black/[0.06] flex items-center justify-between text-xs text-[#8e8e93]">
+              <span className="text-[11px]">
+                {events.length} configured reminders
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="px-5 py-2 bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#1c1c1e] font-semibold rounded-xl transition-all cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}
-      {/* Apple iOS-Themed Small Confirmation Modal */}
+
+      {/* Confirmation Modal */}
       {successReminder && (
         <div
           className="ios-modal-backdrop animate-in fade-in duration-200 z-[70]"
           onClick={() => setSuccessReminder(null)}
         >
           <div
-            className="ios-material-thick rounded-[28px] shadow-2xl border border-black/[0.08] max-w-[340px] w-full p-6 text-center animate-in zoom-in-95 duration-200 relative overflow-hidden"
+            className="ios-material-thick rounded-3xl shadow-2xl border border-black/[0.08] max-w-[340px] w-full p-6 text-center animate-in zoom-in-95 duration-200 relative overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Top Close Button */}
             <button
               type="button"
               onClick={() => setSuccessReminder(null)}
@@ -1031,36 +1073,32 @@ export default function CalendarPage() {
               <X size={13} strokeWidth={2.5} />
             </button>
 
-            {/* Apple iOS System Icon */}
             <div className="mx-auto w-12 h-12 rounded-full bg-[#0071e3]/10 text-[#0071e3] flex items-center justify-center mb-3">
               <CheckCircle2 size={24} strokeWidth={2.2} />
             </div>
 
-            {/* Clean Apple iOS Header & Title */}
-            <h3 className="text-[17px] font-semibold text-[#1d1d1f] tracking-tight">
+            <h3 className="text-base font-semibold text-[#1d1d1f] tracking-tight">
               Reminder Scheduled
             </h3>
-            <p className="text-[13px] text-[#86868b] mt-1 font-normal line-clamp-2 px-1">
+            <p className="text-xs text-[#86868b] mt-1 font-normal line-clamp-2 px-1">
               {successReminder.title}
             </p>
 
-            {/* iOS Grouped Inset Card */}
-            <div className="mt-4 p-3.5 rounded-[16px] bg-[#f5f5f7] border border-black/[0.03]">
-              <div className="text-[13px] font-medium text-[#1d1d1f]">
+            <div className="mt-4 p-3.5 rounded-2xl bg-black/[0.03] border border-black/[0.04]">
+              <div className="text-xs font-semibold text-[#1d1d1f]">
                 {formatEventReadable(successReminder.eventDate, successReminder.eventTime)}
               </div>
-              <div className="text-[12px] font-medium text-[#0071e3] mt-1 flex items-center justify-center gap-1.5">
+              <div className="text-xs font-semibold text-[#0071e3] mt-1 flex items-center justify-center gap-1.5">
                 <Clock size={13} strokeWidth={2.2} />
-                <span>{successReminder.remainingText} remaining</span>
+                <span>{successReminder.remainingText}</span>
               </div>
             </div>
 
-            {/* Apple iOS Primary Action Button */}
             <div className="mt-5">
               <button
                 type="button"
                 onClick={() => setSuccessReminder(null)}
-                className="w-full py-2.5 px-4 rounded-full bg-[#0071e3] hover:bg-[#0077ED] text-white text-[14px] font-semibold shadow-xs transition-all active:scale-98"
+                className="w-full py-2.5 px-4 rounded-xl bg-[#0071e3] hover:bg-[#0062cc] text-white text-xs font-semibold shadow-xs transition-all active:scale-98 cursor-pointer"
               >
                 Done
               </button>
@@ -1068,17 +1106,6 @@ export default function CalendarPage() {
           </div>
         </div>
       )}
-
-      {/* Floating Action Button (FAB) at Bottom Right Corner */}
-      <button
-        type="button"
-        onClick={() => handleOpenModal()}
-        title="Create New Reminder"
-        aria-label="Create New Reminder"
-        className="fixed bottom-22 right-5 sm:bottom-8 sm:right-8 z-40 w-14 h-14 rounded-full bg-[#007aff] hover:bg-[#0062cc] active:scale-90 text-white shadow-[0_10px_25px_rgba(0,122,255,0.45)] hover:shadow-[0_14px_30px_rgba(0,122,255,0.55)] flex items-center justify-center transition-all duration-200 group focus:outline-none cursor-pointer"
-      >
-        <Plus size={28} strokeWidth={2.5} className="group-hover:rotate-90 transition-transform duration-200" />
-      </button>
     </div>
   );
 }

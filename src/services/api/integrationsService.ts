@@ -123,7 +123,11 @@ export const integrationsService = {
    * Send outbound Instagram DM reply
    */
   async sendInstagramMessage(payload: SendInstagramPayload): Promise<any> {
-    return await axiosClient.post('/api/integrations/instagram/send-message', payload);
+    const res: any = await axiosClient.post('/api/integrations/instagram/send-message', payload);
+    if (res && res.success === false) {
+      throw new Error(res.errorMessage || res.error || res.message || 'Failed to send Instagram DM.');
+    }
+    return res;
   },
 
   /**

@@ -384,11 +384,14 @@ export default function Integrations() {
     }
     setSendingDm(true);
     try {
-      await integrationsService.sendInstagramMessage({
+      const res = await integrationsService.sendInstagramMessage({
         recipientId: igRecipientId.trim(),
         message: igMessage.trim(),
         leadId: igLeadId ? Number(igLeadId) : undefined,
       });
+      if (res && res.success === false) {
+        throw new Error(res.errorMessage || res.error || 'Failed to send Instagram DM.');
+      }
       setBanner({
         type: 'success',
         text: 'Instagram DM sent successfully!',
@@ -398,7 +401,11 @@ export default function Integrations() {
     } catch (err: any) {
       setBanner({
         type: 'error',
-        text: err?.response?.data?.message || err?.message || 'Failed to send Instagram DM. Check recipient ID and permissions.',
+        text:
+          err?.response?.data?.errorMessage ||
+          err?.response?.data?.message ||
+          err?.message ||
+          'Failed to send Instagram DM. Check recipient ID and permissions.',
       });
     } finally {
       setSendingDm(false);

@@ -141,3 +141,37 @@ export function getAttributionRows(lead: Record<string, any>): AttributionRow[] 
   }
   return rows;
 }
+
+/**
+ * Returns the Instagram-scoped user ID (IGSID) if the lead can receive an outbound Instagram DM.
+ * Returns empty string for Meta Lead Ad form leads (whose externalId is a Leadgen ID, not a DM user ID).
+ */
+export function getInstagramDmRecipientId(lead?: Record<string, any> | null): string {
+  if (!lead) return '';
+  const notes = typeof lead.notes === 'string' ? lead.notes : '';
+  if (notes) {
+    const match = notes.match(
+      /(?:instagram[_\s]?(?:psid|id|user[_\s]?id)|ig[_\s]?(?:psid|id|user[_\s]?id))\s*[:\-=]\s*(\d{5,})/i
+    );
+    if (match) return match[1];
+  }
+
+  const platUp = String(lead.platform || '').toUpperCase();
+  const isIgPlatform = platUp === 'IG' || platUp === 'INSTAGRAM';
+  const isLeadAd = Boolean(
+    lead.leadFormExternalId ||
+      lead.leadFormName ||
+      lead.formExternalId ||
+      lead.formName ||
+      lead.adExternalId ||
+      lead.adName ||
+      lead.campaignExternalId ||
+      lead.metaPageId ||
+      (notes && /meta lead ads webhook/i.test(notes))
+  );
+
+  if (isIgPlatform && lead.externalId && !isLeadAd) {
+    return String(lead.externalId);
+  }
+  return '';
+}

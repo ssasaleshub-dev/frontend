@@ -153,6 +153,8 @@ export function toISTDateKey(dateOrIso?: Date | string | number | null): string 
 export function cleanNotificationTitle(rawTitle?: string): string {
   if (!rawTitle) return '';
   let cleaned = rawTitle.replace(/^(?:🔔|🎯)\s*/, '').replace(/🎯\s*/g, '').replace(/^Reminder:\s*/i, '').trim();
+  // Fix robotic "1 New Leads Received!" grammar -> "1 New Lead Received"
+  cleaned = cleaned.replace(/^1\s+New\s+Leads\s+Received!?/i, '1 New Lead Received');
   const words = cleaned.split(/\s+/);
   if (words.length === 2 && words[0].toLowerCase() === words[1].toLowerCase()) {
     return words[0];
@@ -167,6 +169,9 @@ export function cleanNotificationTitle(rawTitle?: string): string {
 export function cleanNotificationMessage(msg?: string, title?: string): string {
   if (!msg) return '';
   let cleaned = msg.trim();
+  // Strip robotic lead batch boilerplate
+  cleaned = cleaned.replace(/^Batch of 1 leads?:\s*/i, '');
+  cleaned = cleaned.replace(/^Batch of (\d+) leads?:\s*/i, '$1 leads: ');
   // Strip robotic boilerplate prefixes
   cleaned = cleaned.replace(/^Reminder for candidate\s*/i, '');
   cleaned = cleaned.replace(/^Reminder for\s*/i, '');
@@ -176,6 +181,9 @@ export function cleanNotificationMessage(msg?: string, title?: string): string {
   cleaned = cleaned.replace(/\s*scheduled (at|for) \d{1,2}:\d{2}(\s*(AM|PM))?\.?/i, '');
   cleaned = cleaned.replace(/^Reminder scheduled for \d{1,2}:\d{2}(\s*(AM|PM))?\.?/i, '');
   cleaned = cleaned.replace(/^Scheduled for \d{1,2}:\d{2}(\s*(AM|PM))?\.?/i, '');
+  // Format lead batch messages cleanly
+  cleaned = cleaned.replace(/^Batch of 1 leads?:\s*/i, 'Candidate: ');
+  cleaned = cleaned.replace(/^Batch of (\d+) leads?:\s*/i, '$1 candidates: ');
   cleaned = cleaned.trim();
   // If cleaned message is just a generic category name or identical to title, return empty string
   const lower = cleaned.toLowerCase();

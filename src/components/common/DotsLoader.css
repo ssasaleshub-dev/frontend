@@ -1,0 +1,30 @@
+.ssa-dots-loader {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ssa-dots-loader-dot {
+  border-radius: 50%;
+  background: var(--dot-c);
+  animation: ssaDotsHop 1.3s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  animation-delay: calc(var(--dot-i) * 0.15s);
+  flex-shrink: 0;
+}
+
+@keyframes ssaDotsHop {
+  0%,
+  55%,
+  100% {
+    transform: translateY(0);
+  }
+  27% {
+    transform: translateY(var(--dot-hop, -10px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ssa-dots-loader-dot {
+    animation: none !important;
+  }
+}
