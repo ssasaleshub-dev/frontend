@@ -553,58 +553,74 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
 
       {/* Pane: Notes */}
       <div className={`pane ${activeTab === 'nt' ? 'on' : ''}`} id="p-nt">
-        <section className="card">
-          <h3>Add a note</h3>
-          <div className="nin">
+        <section className="card sec" id="mobile-inline-notes-section" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 6, overflow: 'hidden' }}>
+          <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 10 }}>
             <textarea
               id="nt"
+              rows={3}
               value={newNote}
               onChange={(e) => setNewNote(e.target.value)}
-              placeholder="Write a note…"
+              placeholder="Add a note…"
+              style={{ width: '100%', padding: '10px 12px', fontSize: 13, color: 'var(--text)', border: '1px solid var(--line)', borderRadius: 4, background: '#fff', outline: 'none', resize: 'vertical' }}
             />
-            <button
-              type="button"
-              className="btn p"
-              id="ad"
-              disabled={!newNote.trim() || submittingNote}
-              onClick={async () => {
-                await handleCreateNote();
-                showToast('Note added');
-              }}
-            >
-              {submittingNote ? 'Saving…' : 'Add note'}
-            </button>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="btn p"
+                disabled={!newNote.trim() || submittingNote}
+                onClick={async () => {
+                  await handleCreateNote();
+                  showToast('Note added');
+                }}
+                style={{
+                  height: 36,
+                  padding: '0 16px',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                }}
+              >
+                {submittingNote ? 'Adding…' : 'Add Note'}
+              </button>
+            </div>
           </div>
-          <div id="nl">
-            {notesHistory.map((n, i) => (
-              <div key={i} className="n">
-                <small>
-                  {n.author} · {formatDate(n.date)}
-                </small>
-                <p>{n.note}</p>
-                <button
-                  type="button"
-                  aria-label="Delete note"
-                  onClick={() => handleDeleteRemark(i)}
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
+          <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {notesHistory.length > 0 ? (
+              notesHistory.map((n, i) => (
+                <div key={i} style={{ paddingLeft: 12, borderLeft: '2px solid #0066ff', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+                      {n.author} · {formatDate(n.date)}
+                    </div>
+                    <p style={{ margin: '3px 0 0', fontSize: 13, color: 'var(--text)', whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>
+                      {n.note}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteRemark(i)}
+                    style={{ border: 0, background: 'none', color: '#94a3b8', padding: '2px 6px', cursor: 'pointer', fontSize: 13 }}
+                    title="Delete note"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))
+            ) : (
+              <p style={{ margin: 0, padding: '24px 0', fontSize: 12, color: '#94a3b8', textAlign: 'center' }}>
+                No notes added yet
+              </p>
+            )}
           </div>
         </section>
       </div>
 
       {/* Pane: Activity */}
       <div className={`pane ${activeTab === 'ac' ? 'on' : ''}`} id="p-ac">
-        <section className="card">
-          <h3>
-            <span>Activity Logs</span>
-            <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500 }}>{activities.length}</span>
-          </h3>
-
+        <section className="card sec" id="mobile-inline-activity-section" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 6, overflow: 'hidden' }}>
           {/* Search & Filter Controls */}
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <div style={{ position: 'relative' }}>
               <Search size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
               <input
@@ -612,7 +628,7 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
                 value={activitySearch}
                 onChange={(e) => setActivitySearch(e.target.value)}
                 placeholder="Search activity logs..."
-                style={{ width: '100%', height: 36, paddingLeft: 34, paddingRight: 32, fontSize: 13, border: '1px solid var(--line)', borderRadius: 8, outline: 'none' }}
+                style={{ width: '100%', height: 36, paddingLeft: 34, paddingRight: 32, fontSize: 13, border: '1px solid var(--line)', borderRadius: 4, outline: 'none', background: '#fff' }}
               />
               {activitySearch && (
                 <button
@@ -640,15 +656,16 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
                     onClick={() => setActivityFilter(f.id)}
                     style={{
                       flex: 'none',
-                      padding: '5px 11px',
-                      borderRadius: 6,
+                      padding: '5px 12px',
+                      borderRadius: 4,
                       fontSize: 12,
                       fontWeight: 600,
                       border: '1px solid',
-                      borderColor: active ? 'var(--blue)' : 'var(--line)',
-                      background: active ? 'var(--blue)' : 'var(--card)',
+                      borderColor: active ? '#0066ff' : 'var(--line)',
+                      background: active ? '#0066ff' : '#fff',
                       color: active ? '#fff' : 'var(--text)',
                       cursor: 'pointer',
+                      transition: 'all 0.15s ease',
                     }}
                   >
                     {f.label}
@@ -659,63 +676,53 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
           </div>
 
           {/* Activities List */}
-          {(() => {
-            const filteredActivities = activities.filter((act) => {
-              if (activityFilter !== 'ALL' && act.actionType !== activityFilter) return false;
-              if (!activitySearch.trim()) return true;
-              const q = activitySearch.toLowerCase();
-              return (
-                act.userName?.toLowerCase().includes(q) ||
-                act.title?.toLowerCase().includes(q) ||
-                act.description?.toLowerCase().includes(q) ||
-                act.fieldChanged?.toLowerCase().includes(q)
-              );
-            });
+          <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {(() => {
+              const filteredActivities = activities.filter((act) => {
+                if (activityFilter !== 'ALL' && act.actionType !== activityFilter) return false;
+                if (!activitySearch.trim()) return true;
+                const q = activitySearch.toLowerCase();
+                return (
+                  act.userName?.toLowerCase().includes(q) ||
+                  act.title?.toLowerCase().includes(q) ||
+                  act.description?.toLowerCase().includes(q) ||
+                  act.fieldChanged?.toLowerCase().includes(q)
+                );
+              });
 
-            if (filteredActivities.length === 0) {
-              return (
-                <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-                  No matching activity logs found.
-                </div>
-              );
-            }
+              if (filteredActivities.length === 0) {
+                return (
+                  <p style={{ margin: 0, padding: '24px 0', fontSize: 12, color: '#94a3b8', textAlign: 'center' }}>
+                    No matching activity events found
+                  </p>
+                );
+              }
 
-            return filteredActivities.map((act) => (
-              <div key={act.id} className="f" style={{ alignItems: 'flex-start' }}>
-                <div className="v" style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--blue)' }}>
+              return filteredActivities.map((act, idx) => (
+                <div key={act.id || idx} style={{ paddingLeft: 12, borderLeft: '2px solid #0066ff', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>
                       {act.userName || 'System'}
                     </span>
-                    <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400 }}>
+                    <span style={{ fontSize: 11, color: 'var(--muted)' }}>
                       {formatDate(act.timestamp || (act as any).createdAt)}
                     </span>
                   </div>
-                  <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{act.title}</span>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{act.title}</div>
                   {act.description && (
-                    <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 400, lineHeight: 1.4 }}>
-                      {act.description}
-                    </span>
+                    <div style={{ fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.4 }}>{act.description}</div>
                   )}
                 </div>
-              </div>
-            ));
-          })()}
+              ));
+            })()}
+          </div>
         </section>
       </div>
 
       {/* Pane: Emails */}
       <div className={`pane ${activeTab === 'em' ? 'on' : ''}`} id="p-em">
         {/* Email Composer */}
-        <section className="card">
-          <h3>
-            <span>Compose Email</span>
-            {connectedGoogleEmail && (
-              <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {connectedGoogleEmail}
-              </span>
-            )}
-          </h3>
+        <section className="card sec" id="mobile-inline-emails-section" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 6, overflow: 'hidden', marginBottom: 12 }}>
           <form
             onSubmit={async (e) => {
               if (handleSendCandidateEmail) {
@@ -724,95 +731,110 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
               }
             }}
           >
-            <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4, fontWeight: 500 }}>
-                  To
-                </label>
-                <input
-                  type="email"
-                  value={emailTo}
-                  onChange={(e) => setEmailTo && setEmailTo(e.target.value)}
-                  placeholder="candidate@example.com"
-                  required
-                  style={{ width: '100%', height: 38, padding: '0 10px', fontSize: 13, border: '1px solid var(--line)', borderRadius: 8, outline: 'none' }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4, fontWeight: 500 }}>
-                  Subject
-                </label>
-                <input
-                  type="text"
-                  value={emailSubject}
-                  onChange={(e) => setEmailSubject && setEmailSubject(e.target.value)}
-                  placeholder="Subject"
-                  required
-                  style={{ width: '100%', height: 38, padding: '0 10px', fontSize: 13, border: '1px solid var(--line)', borderRadius: 8, outline: 'none' }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4, fontWeight: 500 }}>
-                  Message
-                </label>
-                <textarea
-                  value={emailBody}
-                  onChange={(e) => setEmailBody && setEmailBody(e.target.value)}
-                  placeholder="Write your email message..."
-                  rows={4}
-                  style={{ width: '100%', padding: '10px', fontSize: 13, border: '1px solid var(--line)', borderRadius: 8, outline: 'none', resize: 'vertical' }}
-                />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, paddingTop: 4 }}>
-                <button
-                  type="submit"
-                  disabled={sendingEmail || !emailTo.trim()}
-                  className="btn p"
-                >
-                  {sendingEmail ? 'Sending…' : 'Send Email'}
-                </button>
-              </div>
+            <div style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid #f1f5f9' }}>
+              <span style={{ width: 56, fontSize: 13, color: 'var(--muted)', fontWeight: 500, flexShrink: 0 }}>From</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {connectedGoogleEmail || 'Connected Gmail'}
+              </span>
+            </div>
+
+            <div style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid #f1f5f9' }}>
+              <label htmlFor="cand-email-to-mob" style={{ width: 56, fontSize: 13, color: 'var(--muted)', fontWeight: 500, flexShrink: 0 }}>
+                To
+              </label>
+              <input
+                id="cand-email-to-mob"
+                type="email"
+                value={emailTo}
+                onChange={(e) => setEmailTo && setEmailTo(e.target.value)}
+                placeholder="candidate@example.com"
+                required
+                style={{ width: '100%', fontSize: 13, color: 'var(--text)', border: 0, outline: 'none', background: 'transparent' }}
+              />
+            </div>
+
+            <div style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid #f1f5f9' }}>
+              <label htmlFor="cand-email-subj-mob" style={{ width: 56, fontSize: 13, color: 'var(--muted)', fontWeight: 500, flexShrink: 0 }}>
+                Subject
+              </label>
+              <input
+                id="cand-email-subj-mob"
+                type="text"
+                value={emailSubject}
+                onChange={(e) => setEmailSubject && setEmailSubject(e.target.value)}
+                placeholder="Subject"
+                required
+                style={{ width: '100%', fontSize: 13, color: 'var(--text)', border: 0, outline: 'none', background: 'transparent' }}
+              />
+            </div>
+
+            <div style={{ padding: '12px 16px' }}>
+              <textarea
+                value={emailBody}
+                onChange={(e) => setEmailBody && setEmailBody(e.target.value)}
+                placeholder="Write your message..."
+                rows={4}
+                style={{ width: '100%', padding: '10px 12px', fontSize: 13, color: 'var(--text)', border: '1px solid var(--line)', borderRadius: 4, outline: 'none', resize: 'vertical' }}
+              />
+            </div>
+
+            <div style={{ padding: '10px 16px', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', borderTop: '1px solid #f1f5f9' }}>
+              <button
+                type="submit"
+                disabled={sendingEmail || !emailTo.trim()}
+                className="btn p"
+                style={{
+                  height: 36,
+                  padding: '0 16px',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                }}
+              >
+                {sendingEmail ? 'Sending…' : 'Send Email'}
+              </button>
             </div>
           </form>
         </section>
 
         {/* Sent Emails History */}
-        <section className="card">
-          <h3>
-            <span>Sent Emails</span>
-            <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500 }}>{sentEmails.length}</span>
-          </h3>
-          {sentEmails.length === 0 ? (
-            <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-              No emails sent yet for this candidate.
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {sentEmails.map((em) => (
-                <div key={em.id} style={{ padding: '12px 16px', borderBottom: '1px solid var(--line)', borderLeft: '3px solid var(--blue)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-                    <b style={{ fontSize: 13, color: 'var(--text)' }}>{em.subject}</b>
-                    <small style={{ fontSize: 11, color: 'var(--muted)', flexShrink: 0 }}>{formatDate(em.sentAt)}</small>
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>To: {em.to}</div>
-                  <p style={{ margin: '6px 0 0', fontSize: 12.5, color: 'var(--text)', whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>
-                    {em.body}
-                  </p>
+        {sentEmails.length > 0 && (
+          <section className="card sec" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 6, overflow: 'hidden' }}>
+            {sentEmails.map((em, idx) => (
+              <div
+                key={em.id}
+                style={{
+                  padding: '12px 16px',
+                  paddingLeft: 18,
+                  borderLeft: '2px solid #0066ff',
+                  borderTop: idx > 0 ? '1px solid #f1f5f9' : 'none',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 3,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{em.subject}</span>
+                  <span style={{ fontSize: 11, color: 'var(--muted)' }}>{formatDate(em.sentAt)}</span>
                 </div>
-              ))}
-            </div>
-          )}
-        </section>
+                <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>To: {em.to}</div>
+                <p style={{ margin: '4px 0 0', fontSize: 12.5, color: 'var(--text)', whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>
+                  {em.body}
+                </p>
+              </div>
+            ))}
+          </section>
+        )}
       </div>
 
       {/* Pane: Documents */}
       <div className={`pane ${activeTab === 'doc' ? 'on' : ''}`} id="p-doc">
-        {/* Upload Card */}
-        <section className="card">
-          <h3>Upload Document</h3>
+        <section className="card sec" id="mobile-inline-documents-section" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 6, overflow: 'hidden' }}>
           <input
             ref={docFileInputRef}
             type="file"
+            className="hidden"
             style={{ display: 'none' }}
             onChange={async (e) => {
               if (onUploadDoc) {
@@ -821,17 +843,19 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
               }
             }}
           />
-          <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4, fontWeight: 500 }}>
+          {/* Header Row: Document Type input on left, Upload Document button on right */}
+          <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+            <div style={{ minWidth: 160, flex: 1 }}>
+              <label htmlFor="mob-cand-doc-type" style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--muted)', marginBottom: 6 }}>
                 Document Type
               </label>
               <input
+                id="mob-cand-doc-type"
                 type="text"
                 value={docTypeInput}
                 onChange={(e) => setDocTypeInput && setDocTypeInput(e.target.value)}
                 placeholder="Passport / ID"
-                style={{ width: '100%', height: 38, padding: '0 10px', fontSize: 13, border: '1px solid var(--line)', borderRadius: 8, outline: 'none' }}
+                style={{ height: 36, width: '100%', padding: '0 12px', fontSize: 13, color: 'var(--text)', border: '1px solid var(--line)', borderRadius: 4, background: '#fff', outline: 'none' }}
               />
             </div>
             <button
@@ -839,52 +863,54 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
               disabled={uploadingDoc}
               onClick={() => docFileInputRef.current?.click()}
               className="btn p"
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, height: 40 }}
+              style={{
+                height: 36,
+                padding: '0 14px',
+                fontSize: 13,
+                fontWeight: 600,
+                borderRadius: 4,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                flexShrink: 0,
+                cursor: 'pointer',
+              }}
             >
-              <Upload size={15} />
+              <Upload size={14} />
               <span>{uploadingDoc ? 'Uploading…' : 'Upload Document'}</span>
             </button>
           </div>
-        </section>
 
-        {/* Uploaded Documents List */}
-        <section className="card">
-          <h3>
-            <span>Documents</span>
-            <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500 }}>{candidateDocs.length}</span>
-          </h3>
+          {/* Document Content Area */}
           {candidateDocs.length === 0 ? (
-            <div style={{ padding: '36px 16px', textAlign: 'center' }}>
-              <div style={{ width: 44, height: 44, borderRadius: 22, background: '#f1f3f6', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px' }}>
-                <FileText size={22} />
-              </div>
-              <h4 style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
+            <div style={{ padding: '48px 20px', textAlign: 'center' }}>
+              <h4 style={{ margin: '0 0 6px', fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
                 No Documents Uploaded
               </h4>
-              <p style={{ margin: 0, fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.4, maxWidth: 320, marginLeft: 'auto', marginRight: 'auto' }}>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)', maxWidth: 360, marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.4 }}>
                 Upload passports, resumes, academic transcripts, or visa documents for this candidate.
               </p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {candidateDocs.map((doc) => (
+            <div>
+              {candidateDocs.map((doc, idx) => (
                 <div
                   key={doc.id}
                   style={{
-                    padding: '12px 14px',
-                    borderBottom: '1px solid var(--line)',
+                    padding: '12px 18px',
+                    borderTop: idx > 0 ? '1px solid #f1f5f9' : 'none',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    gap: 10,
+                    gap: 12,
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
                     <div
                       style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 8,
+                        width: 32,
+                        height: 32,
+                        borderRadius: 4,
                         background: '#f1f5f9',
                         color: '#475569',
                         display: 'flex',
@@ -893,7 +919,7 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
                         flexShrink: 0,
                       }}
                     >
-                      <FileText size={18} />
+                      <FileText size={16} />
                     </div>
                     <div style={{ minWidth: 0 }}>
                       <div
@@ -919,16 +945,18 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
                       onClick={() => onPreviewDoc && onPreviewDoc(doc)}
                       className="btn"
                       style={{
+                        height: 30,
+                        padding: '0 10px',
+                        fontSize: 12,
+                        borderRadius: 4,
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: 4,
-                        padding: '6px 10px',
-                        fontSize: 12,
                         cursor: 'pointer',
                       }}
                       title="Preview document securely inside application"
                     >
-                      <Eye size={13} />
+                      <Eye size={12} />
                       <span>View</span>
                     </button>
                     {onDeleteDoc && (
@@ -937,8 +965,10 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
                         onClick={() => onDeleteDoc(doc.id)}
                         className="btn"
                         style={{
-                          padding: '6px 8px',
-                          color: 'var(--red)',
+                          height: 30,
+                          padding: '0 8px',
+                          borderRadius: 4,
+                          color: '#e11d48',
                           cursor: 'pointer',
                         }}
                         title="Delete document"
