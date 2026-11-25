@@ -396,7 +396,22 @@
 .crm-k .sb { display: flex; align-items: center; gap: 8px; background: var(--soft); border-radius: 10px; padding: 0 12px; color: var(--muted); }
 .crm-k .sb:focus-within { box-shadow: 0 0 0 2px var(--blue) inset; background: #fff; }
 .crm-k .sb svg { width: 18px; height: 18px; }
-.crm-k .sb input { flex: 1; min-width: 0; border: 0; background: transparent; height: 42px; font: inherit; color: var(--text); outline: 0; }
+.crm-k .sb input,
+.crm-k .sb input:hover,
+.crm-k .sb input:focus,
+.crm-k .sb input:focus-visible {
+  flex: 1;
+  min-width: 0;
+  border: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  height: 42px;
+  font: inherit;
+  color: var(--text);
+  outline: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
 .crm-k .tabs { display: flex; overflow-x: auto; padding: 0 12px; border-bottom: 1px solid var(--line); scrollbar-width: none; }
 .crm-k .tabs::-webkit-scrollbar { display: none; }
 .crm-k .tab { white-space: nowrap; border: 0; background: none; padding: 11px 8px; margin: 0 6px; font-size: 14.5px; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }

@@ -2194,6 +2194,10 @@ export default function Leads() {
                   placeholder="Search name, phone or city"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  autoComplete="off"
+                  spellCheck={false}
+                  className="!outline-none !ring-0 !border-0 focus:!outline-none focus:!ring-0 focus-visible:!outline-none focus-visible:!ring-0"
+                  style={{ outline: 'none', boxShadow: 'none', border: 'none' }}
                 />
               </label>
             </div>
