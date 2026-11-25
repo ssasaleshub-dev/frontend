@@ -2350,7 +2350,7 @@ export default function CandidateDetail() {
                     )
                   }
                 >
-                  👋 Intro &amp; greeting
+                  Intro &amp; greeting
                 </button>
                 <button
                   type="button"
@@ -2362,7 +2362,7 @@ export default function CandidateDetail() {
                     )
                   }
                 >
-                  📄 Request documents
+                  Request documents
                 </button>
                 <button
                   type="button"
@@ -2374,7 +2374,7 @@ export default function CandidateDetail() {
                     )
                   }
                 >
-                  💳 Payment reminder
+                  Payment reminder
                 </button>
               </div>
             </section>
