@@ -26,6 +26,9 @@ import {
   CreditCard,
   Wallet,
   Award,
+  Upload,
+  Search,
+  ExternalLink,
 } from 'lucide-react';
 import {
   BrandActivityIcon,
@@ -40,6 +43,7 @@ import { parseRemarks, buildRemarkEntry, joinRemarks, sanitizeRemarkText, type R
 import adminService from '../services/api/adminService';
 import leadActivityService from '../services/api/leadActivityService';
 import integrationsService from '../services/api/integrationsService';
+import fileService from '../services/api/fileService';
 import notificationApiService, { CalendarEventDTO } from '../services/api/notificationService';
 import CandidateActivityLogsModal from '../components/CandidateActivityLogsModal';
 import LeadReminderModal from '../components/LeadReminderModal';
@@ -125,15 +129,43 @@ export default function CandidateDetail() {
   const [leadReminders, setLeadReminders] = useState<CalendarEventDTO[]>([]);
   const [creatingMeet, setCreatingMeet] = useState<boolean>(false);
 
-  // Direct Email (Inline Composer) & Instagram DM Modal
-  const [showEmailComposer, setShowEmailComposer] = useState<boolean>(false);
+  // Related List inline views: 'notes' | 'activity' | 'emails' | 'documents' | null
+  const [activeRelatedView, setActiveRelatedView] = useState<'notes' | 'activity' | 'emails' | 'documents' | null>(null);
   const [connectedGoogleEmail, setConnectedGoogleEmail] = useState<string>('');
   const [emailTo, setEmailTo] = useState<string>('');
   const [emailSubject, setEmailSubject] = useState<string>('');
   const [emailBody, setEmailBody] = useState<string>('');
   const [sendingEmail, setSendingEmail] = useState<boolean>(false);
   const [openingEmail, setOpeningEmail] = useState<boolean>(false);
-  const [sentEmailsCount, setSentEmailsCount] = useState<number>(0);
+  const [sentEmails, setSentEmails] = useState<
+    Array<{ id: string; from: string; to: string; subject: string; body: string; sentAt: string }>
+  >(() => {
+    try {
+      const raw = id ? localStorage.getItem(`ssa_lead_emails_${id}`) : null;
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Activity Logs inline filter & search
+  const [activityFilterType, setActivityFilterType] = useState<string>('ALL');
+  const [activitySearchQuery, setActivitySearchQuery] = useState<string>('');
+
+  // Documents inline upload & list
+  const [docTypeInput, setDocTypeInput] = useState<string>('Passport / ID');
+  const [uploadingDoc, setUploadingDoc] = useState<boolean>(false);
+  const docFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [candidateDocs, setCandidateDocs] = useState<
+    Array<{ id: string; name: string; docType: string; url: string; uploadedAt: string; size?: number }>
+  >(() => {
+    try {
+      const raw = id ? localStorage.getItem(`ssa_lead_docs_${id}`) : null;
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
 
   const [showInstagramModal, setShowInstagramModal] = useState<boolean>(false);
   const [igRecipientId, setIgRecipientId] = useState<string>('');
@@ -197,7 +229,7 @@ export default function CandidateDetail() {
       setEmailSubject(`Regarding your inquiry - SSA SalesHub`);
       setEmailBody(`Hi ${candidateName},\n\n`);
       setActiveSection('emails');
-      setShowEmailComposer(true);
+      setActiveRelatedView('emails');
     } catch (err: any) {
       showAlert({
         title: 'Gmail',
@@ -218,8 +250,28 @@ export default function CandidateDetail() {
         subject: emailSubject.trim(),
         body: emailBody,
       });
-      setSentEmailsCount((c) => c + 1);
-      setShowEmailComposer(false);
+      const newEmailEntry = {
+        id: `${Date.now()}`,
+        from: connectedGoogleEmail || 'Connected Gmail',
+        to: emailTo.trim(),
+        subject: emailSubject.trim(),
+        body: emailBody,
+        sentAt: new Date().toISOString(),
+      };
+      setSentEmails((prev) => {
+        const next = [newEmailEntry, ...prev];
+        if (id) localStorage.setItem(`ssa_lead_emails_${id}`, JSON.stringify(next));
+        return next;
+      });
+      if (lead?.id) {
+        leadActivityService.logActivity(lead.id, {
+          userName: currentUser?.login || currentUser?.firstName || 'Counselor',
+          actionType: 'OUTREACH',
+          title: `Email sent: ${emailSubject.trim()}`,
+          description: `Sent to ${emailTo.trim()}`,
+        });
+      }
+      setActiveRelatedView(null);
       setActiveSection('lead-info');
       showAlert({ title: 'Email Sent', message: `Email sent to ${emailTo.trim()}.` });
     } catch (err: any) {
@@ -230,6 +282,52 @@ export default function CandidateDetail() {
     } finally {
       setSendingEmail(false);
     }
+  };
+
+  const handleUploadCandidateDoc = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !lead) return;
+    setUploadingDoc(true);
+    try {
+      const res = await fileService.uploadFile(file, 'documents');
+      const newDoc = {
+        id: `${Date.now()}`,
+        name: res.fileName || file.name,
+        docType: docTypeInput.trim() || 'Document',
+        url: res.url,
+        uploadedAt: new Date().toISOString(),
+        size: res.fileSize || file.size,
+      };
+      setCandidateDocs((prev) => {
+        const next = [newDoc, ...prev];
+        if (id) localStorage.setItem(`ssa_lead_docs_${id}`, JSON.stringify(next));
+        return next;
+      });
+      leadActivityService.logActivity(lead.id, {
+        userName: currentUser?.login || currentUser?.firstName || 'Counselor',
+        actionType: 'DATA_MODIFY',
+        title: `Document uploaded: ${newDoc.docType}`,
+        description: newDoc.name,
+      });
+      showAlert({ title: 'Document Uploaded', message: `${newDoc.name} uploaded successfully.` });
+    } catch (err: any) {
+      showAlert({
+        title: 'Upload Failed',
+        message: err?.response?.data?.message || err?.message || 'Unable to upload document.',
+      });
+    } finally {
+      setUploadingDoc(false);
+      if (docFileInputRef.current) docFileInputRef.current.value = '';
+    }
+  };
+
+  const handleDeleteCandidateDoc = (docId: string) => {
+    if (!window.confirm('Remove this document from the candidate dossier?')) return;
+    setCandidateDocs((prev) => {
+      const next = prev.filter((d) => d.id !== docId);
+      if (id) localStorage.setItem(`ssa_lead_docs_${id}`, JSON.stringify(next));
+      return next;
+    });
   };
 
   const handleOpenInstagramComposer = () => {
@@ -1235,7 +1333,7 @@ export default function CandidateDetail() {
   const closingInfo = getClosingDateInfo(lead.createdTime || (lead as any).createdAt || (lead as any).createdDate);
 
   const scrollToSection = (id: string, sectionKey: any) => {
-    setShowEmailComposer(false);
+    setActiveRelatedView(null);
     setActiveSection(sectionKey);
     requestAnimationFrame(() => {
       const el = document.getElementById(id);
@@ -1499,14 +1597,20 @@ export default function CandidateDetail() {
             <h6>Related List</h6>
             <a
               className={activeSection === 'notes' ? 'on' : ''}
-              onClick={() => scrollToSection('notes-section', 'notes')}
+              onClick={() => {
+                setActiveSection('notes');
+                setActiveRelatedView('notes');
+              }}
             >
               <span>Notes</span>
               <small>{notesHistory.length}</small>
             </a>
             <a
-              onClick={() => setShowActivityLogsModal(true)}
-              title="Open full audit activity logs"
+              className={activeSection === 'activity' ? 'on' : ''}
+              onClick={() => {
+                setActiveSection('activity');
+                setActiveRelatedView('activity');
+              }}
             >
               <span>Activity Logs</span>
               <small>{activities.length}</small>
@@ -1516,91 +1620,326 @@ export default function CandidateDetail() {
               onClick={handleOpenEmailComposer}
             >
               <span>Emails</span>
-              <small>{sentEmailsCount}</small>
+              <small>{sentEmails.length}</small>
             </a>
             <a
+              className={activeSection === 'documents' ? 'on' : ''}
               onClick={() => {
-                showAlert({ title: 'Documents', message: 'No documents attached to this candidate dossier yet.' });
+                setActiveSection('documents');
+                setActiveRelatedView('documents');
               }}
             >
               <span>Documents</span>
-              <small>0</small>
+              <small>{candidateDocs.length}</small>
             </a>
           </aside>
 
-          {/* Center Main: Inline Email Composer or Lead Info, Payment Settlement, Eligibility */}
+          {/* Center Main: Related List Inline Views or Lead Info Sections */}
           <main>
-            {showEmailComposer ? (
-              <section className="card sec" id="emails-section">
-                <form onSubmit={handleSendCandidateEmail} className="divide-y divide-slate-200">
-                  <div className="px-5 py-3 flex items-center gap-4">
-                    <span className="w-16 shrink-0 text-[13px] text-slate-400 font-medium">From</span>
-                    <span className="text-[13px] font-semibold text-slate-900 truncate">
-                      {connectedGoogleEmail || 'Connected Gmail'}
-                    </span>
-                  </div>
+            {activeRelatedView === 'emails' ? (
+              <div className="space-y-4">
+                <section className="card sec" id="emails-section">
+                  <form onSubmit={handleSendCandidateEmail} className="divide-y divide-slate-200">
+                    <div className="px-5 py-3 flex items-center gap-4">
+                      <span className="w-16 shrink-0 text-[13px] text-slate-400 font-medium">From</span>
+                      <span className="text-[13px] font-semibold text-slate-900 truncate">
+                        {connectedGoogleEmail || 'Connected Gmail'}
+                      </span>
+                    </div>
 
-                  <div className="px-5 py-2.5 flex items-center gap-4">
-                    <label htmlFor="cand-email-to" className="w-16 shrink-0 text-[13px] text-slate-400 font-medium">
-                      To
-                    </label>
-                    <input
-                      id="cand-email-to"
-                      type="email"
-                      required
-                      value={emailTo}
-                      onChange={(e) => setEmailTo(e.target.value)}
-                      placeholder="candidate@example.com"
-                      className="flex-1 h-9 px-3 text-[13px] text-slate-900 border border-slate-200 rounded-md focus:border-blue-500 focus:outline-none bg-white"
-                    />
-                  </div>
+                    <div className="px-5 py-2.5 flex items-center gap-4">
+                      <label htmlFor="cand-email-to" className="w-16 shrink-0 text-[13px] text-slate-400 font-medium">
+                        To
+                      </label>
+                      <input
+                        id="cand-email-to"
+                        type="email"
+                        required
+                        value={emailTo}
+                        onChange={(e) => setEmailTo(e.target.value)}
+                        placeholder="candidate@example.com"
+                        className="flex-1 h-9 px-3 text-[13px] text-slate-900 border border-slate-200 rounded-md focus:border-blue-500 focus:outline-none bg-white"
+                      />
+                    </div>
 
-                  <div className="px-5 py-2.5 flex items-center gap-4">
-                    <label htmlFor="cand-email-subject" className="w-16 shrink-0 text-[13px] text-slate-400 font-medium">
-                      Subject
-                    </label>
-                    <input
-                      id="cand-email-subject"
-                      type="text"
-                      required
-                      value={emailSubject}
-                      onChange={(e) => setEmailSubject(e.target.value)}
-                      placeholder="Subject"
-                      className="flex-1 h-9 px-3 text-[13px] text-slate-900 border border-slate-200 rounded-md focus:border-blue-500 focus:outline-none bg-white"
-                    />
-                  </div>
+                    <div className="px-5 py-2.5 flex items-center gap-4">
+                      <label htmlFor="cand-email-subject" className="w-16 shrink-0 text-[13px] text-slate-400 font-medium">
+                        Subject
+                      </label>
+                      <input
+                        id="cand-email-subject"
+                        type="text"
+                        required
+                        value={emailSubject}
+                        onChange={(e) => setEmailSubject(e.target.value)}
+                        placeholder="Subject"
+                        className="flex-1 h-9 px-3 text-[13px] text-slate-900 border border-slate-200 rounded-md focus:border-blue-500 focus:outline-none bg-white"
+                      />
+                    </div>
 
-                  <div className="p-5">
-                    <textarea
-                      required
-                      rows={8}
-                      value={emailBody}
-                      onChange={(e) => setEmailBody(e.target.value)}
-                      placeholder="Write your message..."
-                      className="w-full p-3 text-[13px] text-slate-800 leading-relaxed border border-slate-200 rounded-md focus:border-blue-500 focus:outline-none resize-y bg-white"
-                    />
-                  </div>
+                    <div className="p-5">
+                      <textarea
+                        required
+                        rows={8}
+                        value={emailBody}
+                        onChange={(e) => setEmailBody(e.target.value)}
+                        placeholder="Write your message..."
+                        className="w-full p-3 text-[13px] text-slate-800 leading-relaxed border border-slate-200 rounded-md focus:border-blue-500 focus:outline-none resize-y bg-white"
+                      />
+                    </div>
 
-                  <div className="px-5 py-3.5 flex items-center justify-between bg-slate-50/50">
-                    <button
-                      type="submit"
-                      disabled={sendingEmail}
-                      className="btn p"
-                    >
-                      {sendingEmail ? 'Sending…' : 'Send Email'}
-                    </button>
+                    <div className="px-5 py-3.5 flex items-center justify-between bg-slate-50/50">
+                      <button
+                        type="submit"
+                        disabled={sendingEmail}
+                        className="btn p"
+                      >
+                        {sendingEmail ? 'Sending…' : 'Send Email'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveRelatedView(null);
+                          setActiveSection('lead-info');
+                        }}
+                        className="btn"
+                      >
+                        Discard
+                      </button>
+                    </div>
+                  </form>
+                </section>
+
+                {sentEmails.length > 0 && (
+                  <section className="card sec">
+                    <div className="divide-y divide-slate-100">
+                      {sentEmails.map((em) => (
+                        <div key={em.id} className="p-4 pl-5 border-l-2 border-blue-600 space-y-1">
+                          <div className="flex items-center justify-between text-[12px] text-slate-500">
+                            <span className="font-semibold text-slate-800">{em.subject}</span>
+                            <span>{formatDate(em.sentAt)}</span>
+                          </div>
+                          <div className="text-[12px] text-slate-500">To: {em.to}</div>
+                          <p className="text-[13px] text-slate-700 whitespace-pre-wrap pt-1">{em.body}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+              </div>
+            ) : activeRelatedView === 'notes' ? (
+              <section className="card sec" id="inline-notes-section">
+                <div className="p-5 border-b border-slate-200 space-y-3">
+                  <textarea
+                    rows={3}
+                    value={newNote}
+                    onChange={(e) => setNewNote(e.target.value)}
+                    placeholder="Add a note…"
+                    className="w-full p-3 text-[13px] text-slate-800 border border-slate-200 rounded-md focus:border-blue-500 focus:outline-none resize-y bg-white"
+                  />
+                  <div className="flex justify-end">
                     <button
                       type="button"
-                      onClick={() => {
-                        setShowEmailComposer(false);
-                        setActiveSection('lead-info');
-                      }}
-                      className="btn"
+                      className="btn p"
+                      disabled={!newNote.trim() || submittingNote}
+                      onClick={handleAddNote}
                     >
-                      Discard
+                      {submittingNote ? 'Adding…' : 'Add Note'}
                     </button>
                   </div>
-                </form>
+                </div>
+                <div className="p-5 space-y-4">
+                  {notesHistory.length > 0 ? (
+                    notesHistory.map((n, i) => (
+                      <div key={i} className="pl-3.5 border-l-2 border-blue-600 flex items-start justify-between gap-3">
+                        <div className="space-y-0.5 min-w-0">
+                          <div className="text-[12px] text-slate-500">
+                            {n.author || 'Counselor'} · {formatDate(n.date)}
+                          </div>
+                          <p className="text-[13px] text-slate-900 break-words">{n.note}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteRemark(i)}
+                          title="Delete note"
+                          className="text-slate-400 hover:text-rose-600 text-xs px-1 cursor-pointer shrink-0"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-slate-400 py-6 text-center">No notes recorded yet</p>
+                  )}
+                </div>
+              </section>
+            ) : activeRelatedView === 'activity' ? (
+              <section className="card sec" id="inline-activity-section">
+                <div className="p-4 border-b border-slate-200 space-y-3">
+                  <div className="relative">
+                    <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={activitySearchQuery}
+                      onChange={(e) => setActivitySearchQuery(e.target.value)}
+                      placeholder="Search activity logs..."
+                      className="w-full h-9 !pl-9 pr-8 text-[13px] text-slate-900 border border-slate-200 rounded-md focus:border-blue-500 focus:outline-none bg-white"
+                    />
+                    {activitySearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setActivitySearchQuery('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer"
+                      >
+                        <X size={13} />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {[
+                      { id: 'ALL', label: 'All Events' },
+                      { id: 'STATUS_CHANGE', label: 'Stage Updates' },
+                      { id: 'DATA_MODIFY', label: 'Dossier Edits' },
+                      { id: 'REMARKS_ADDED', label: 'Counselor Notes' },
+                      { id: 'OUTREACH', label: 'Outreach' },
+                    ].map((tab) => {
+                      const active = activityFilterType === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setActivityFilterType(tab.id)}
+                          className={`px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors cursor-pointer ${
+                            active
+                              ? 'bg-[#0066ff] text-white'
+                              : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="p-4 space-y-4">
+                  {(() => {
+                    const filtered = activities.filter((act) => {
+                      if (activityFilterType !== 'ALL' && act.actionType !== activityFilterType) return false;
+                      if (!activitySearchQuery.trim()) return true;
+                      const q = activitySearchQuery.toLowerCase();
+                      return (
+                        act.userName?.toLowerCase().includes(q) ||
+                        act.title?.toLowerCase().includes(q) ||
+                        act.description?.toLowerCase().includes(q) ||
+                        act.fieldChanged?.toLowerCase().includes(q)
+                      );
+                    });
+
+                    if (filtered.length === 0) {
+                      return (
+                        <p className="text-xs text-slate-400 py-8 text-center">
+                          No matching activity events found
+                        </p>
+                      );
+                    }
+
+                    return filtered.map((act, idx) => (
+                      <div key={act.id || idx} className="pl-3.5 border-l-2 border-blue-600 space-y-1">
+                        <div className="flex items-center justify-between gap-2 text-[12px]">
+                          <span className="font-semibold text-slate-900">
+                            {act.userName || 'System'}
+                          </span>
+                          <span className="text-slate-500">{formatDate(act.createdAt)}</span>
+                        </div>
+                        <div className="text-[13px] font-semibold text-slate-900">{act.title}</div>
+                        {act.description && (
+                          <div className="text-[13px] text-slate-600">{act.description}</div>
+                        )}
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </section>
+            ) : activeRelatedView === 'documents' ? (
+              <section className="card sec" id="inline-documents-section">
+                <input
+                  ref={docFileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={handleUploadCandidateDoc}
+                />
+                <div className="p-5 border-b border-slate-200 flex flex-wrap items-end justify-between gap-4">
+                  <div className="space-y-1.5">
+                    <label htmlFor="cand-doc-type" className="block text-[12px] font-medium text-slate-500">
+                      Document Type
+                    </label>
+                    <input
+                      id="cand-doc-type"
+                      type="text"
+                      value={docTypeInput}
+                      onChange={(e) => setDocTypeInput(e.target.value)}
+                      placeholder="Passport / ID"
+                      className="h-9 w-56 px-3 text-[13px] text-slate-900 border border-slate-200 rounded-md focus:border-blue-500 focus:outline-none bg-white"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={uploadingDoc}
+                    onClick={() => docFileInputRef.current?.click()}
+                    className="btn p inline-flex items-center gap-1.5"
+                  >
+                    <Upload size={14} />
+                    <span>{uploadingDoc ? 'Uploading…' : 'Upload Document'}</span>
+                  </button>
+                </div>
+
+                {candidateDocs.length === 0 ? (
+                  <div className="py-12 px-6 text-center space-y-1.5">
+                    <h4 className="text-[14px] font-semibold text-slate-900">No Documents Uploaded</h4>
+                    <p className="text-[13px] text-slate-500 max-w-md mx-auto">
+                      Upload passports, resumes, academic transcripts, or visa documents for this candidate.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-100">
+                    {candidateDocs.map((doc) => (
+                      <div key={doc.id} className="px-5 py-3.5 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-8 h-8 rounded bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+                            <FileText size={16} />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-[13px] font-semibold text-slate-900 truncate">{doc.name}</div>
+                            <div className="text-[11px] text-slate-500">
+                              {doc.docType} · {formatDate(doc.uploadedAt)}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <a
+                            href={doc.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn inline-flex items-center gap-1"
+                          >
+                            <ExternalLink size={12} />
+                            <span>View</span>
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCandidateDoc(doc.id)}
+                            className="btn text-rose-600"
+                            title="Delete document"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </section>
             ) : (
               <>
