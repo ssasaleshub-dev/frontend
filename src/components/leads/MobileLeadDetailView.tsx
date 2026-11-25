@@ -28,6 +28,9 @@ export interface MobileLeadDetailViewProps {
   submittingNote: boolean;
   onOpenEdit: () => void;
   onOpenReminder: () => void;
+  onOpenEmail: () => void;
+  onOpenInstagram: () => void;
+  onCreateGoogleMeet: () => void;
   onDelete: () => void;
   onAssignStaff: (staffLogin: string) => Promise<void>;
   assigningStaff: boolean;
@@ -54,6 +57,9 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
   submittingNote,
   onOpenEdit,
   onOpenReminder,
+  onOpenEmail,
+  onOpenInstagram,
+  onCreateGoogleMeet,
   onDelete,
   onAssignStaff,
   assigningStaff,
@@ -589,13 +595,14 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
           </svg>
           WhatsApp
         </a>
-        <a id="em" href={lead.email ? `mailto:${lead.email}` : undefined} onClick={!lead.email ? () => showToast('No email available') : undefined}>
-          <svg viewBox="0 0 24 24">
-            <rect x="3" y="5" width="18" height="14" rx="2" />
-            <path d="M3 7l9 6 9-6" />
-          </svg>
+        <button
+          type="button"
+          id="em"
+          onClick={onOpenEmail}
+        >
+          <img src="/icons/gmail-classic.png" alt="" style={{ width: '16px', height: '16px', objectFit: 'contain' }} />
           Email
-        </a>
+        </button>
       </nav>
 
       {/* Stage Sheet Modal */}
@@ -648,6 +655,42 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
             }}
           >
             Edit details
+          </button>
+          <button
+            type="button"
+            className="o"
+            style={{ paddingLeft: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}
+            onClick={() => {
+              setShowMoreSheet(false);
+              onOpenEmail();
+            }}
+          >
+            <img src="/icons/gmail-classic.png" alt="" style={{ width: '16px', height: '16px', objectFit: 'contain' }} />
+            <span>Send Email (Gmail)</span>
+          </button>
+          <button
+            type="button"
+            className="o"
+            style={{ paddingLeft: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}
+            onClick={() => {
+              setShowMoreSheet(false);
+              onOpenInstagram();
+            }}
+          >
+            <img src="/icons/instagram.png" alt="" style={{ width: '16px', height: '16px', objectFit: 'contain' }} />
+            <span>Send Instagram DM</span>
+          </button>
+          <button
+            type="button"
+            className="o"
+            style={{ paddingLeft: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}
+            onClick={() => {
+              setShowMoreSheet(false);
+              onCreateGoogleMeet();
+            }}
+          >
+            <img src="/icons/google-meet.png" alt="" style={{ width: '16px', height: '16px', objectFit: 'contain' }} />
+            <span>Create Google Meet</span>
           </button>
           <button
             type="button"

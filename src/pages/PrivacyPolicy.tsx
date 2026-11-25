@@ -79,7 +79,7 @@ export default function PrivacyPolicy() {
             <h2 className="text-lg sm:text-xl font-semibold text-slate-900 mb-3">4. Google User Data Disclosure &amp; Third-Party Services</h2>
             <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 space-y-2 mb-3">
               <p>
-                <strong>Google User Data Policy Compliance:</strong> SSA Saleshub accesses your Google Calendar to create meeting events with Google Meet links, and Google Sheets to export lead data upon your request. SSA Saleshub does not sell your Google personal data to third parties, nor do we use it for advertising or training AI models. All access tokens are securely encrypted in our database.
+                <strong>Google User Data Policy Compliance:</strong> SSA Saleshub accesses your Google Calendar to create meeting events with Google Meet links, and Google Sheets to import lead data upon your request. SSA Saleshub does not sell your Google personal data to third parties, nor do we use it for advertising or training AI models. All access tokens are securely encrypted in our database.
               </p>
               <p className="text-xs text-slate-600">
                 <strong>User Rights &amp; Revocation:</strong> Users can revoke Google integration access at any time from the Integrations page or via Google Account Security settings (<a href="https://myaccount.google.com/permissions" target="_blank" rel="noreferrer" className="text-blue-600 underline">Google Permissions Manager</a>).

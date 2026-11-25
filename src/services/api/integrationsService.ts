@@ -37,6 +37,20 @@ export interface SendTestEmailPayload {
   body: string;
 }
 
+export interface GoogleSheetItem {
+  id: string;
+  name: string;
+  modifiedTime?: string;
+}
+
+export interface GoogleSheetPreview {
+  spreadsheetId: string;
+  title?: string;
+  headers: string[];
+  rows: string[][];
+  totalRows: number;
+}
+
 export const DEFAULT_GOOGLE_CLIENT_ID = '644951238009-bgnaql1piqh8if8u80qgrvmo4vf0ko85.apps.googleusercontent.com';
 
 export const integrationsService = {
@@ -63,8 +77,16 @@ export const integrationsService = {
   /**
    * Instantly generate and schedule a Google Meet consultation link
    */
-  async createGoogleMeet(title: string = 'Client Consultation'): Promise<{ meetUrl?: string; eventId?: string; url?: string; hangoutsLink?: string }> {
-    const res = await axiosClient.post('/api/integrations/google/meet', { title });
+  async createGoogleMeet(
+    title: string = 'Client Consultation',
+    options?: { description?: string; startTime?: string; endTime?: string }
+  ): Promise<{ meetUrl?: string; eventId?: string; url?: string; hangoutsLink?: string }> {
+    const res = await axiosClient.post('/api/integrations/google/meet', {
+      title,
+      ...(options?.description ? { description: options.description } : {}),
+      ...(options?.startTime ? { startTime: options.startTime } : {}),
+      ...(options?.endTime ? { endTime: options.endTime } : {}),
+    });
     return res;
   },
 
@@ -146,6 +168,38 @@ export const integrationsService = {
         rawUrl: res.url,
       };
     }
+  },
+
+  /**
+   * List user's Google Sheets (import-only)
+   */
+  async listGoogleSheets(): Promise<GoogleSheetItem[]> {
+    const res = await axiosClient.get<GoogleSheetItem[] | { sheets?: GoogleSheetItem[] }>('/api/integrations/google/sheets');
+    if (Array.isArray(res)) return res;
+    return res?.sheets || [];
+  },
+
+  /**
+   * Preview rows from a selected Google Sheet before importing
+   */
+  async previewGoogleSheet(spreadsheetId: string): Promise<GoogleSheetPreview> {
+    return await axiosClient.get<GoogleSheetPreview>(`/api/integrations/google/sheets/${encodeURIComponent(spreadsheetId)}/preview`);
+  },
+
+  /**
+   * Import verified rows from a selected Google Sheet
+   */
+  async importGoogleSheet(spreadsheetId: string): Promise<{ importedCount: number; leadIds: number[] }> {
+    return await axiosClient.post<{ importedCount: number; leadIds: number[] }>(
+      `/api/integrations/google/sheets/${encodeURIComponent(spreadsheetId)}/import`
+    );
+  },
+
+  /**
+   * Revert a previous Google Sheet import by deleting its imported lead IDs
+   */
+  async revertGoogleSheetImport(leadIds: number[]): Promise<void> {
+    await Promise.all(leadIds.map((id) => axiosClient.delete(`/api/leads/${id}`)));
   },
 
   /**

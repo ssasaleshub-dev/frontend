@@ -16,6 +16,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import adminService, { type CreateUserData } from '../services/api/adminService';
+import { SkeletonBlock, SkeletonCircle } from '../components/common/SkeletonLoader';
 import { useAuth } from '../context/AuthContext';
 import { useAlert } from '../context/AlertContext';
 import { USER_ROLE_CONFIG, USER_ROLES } from '../config/constants';
@@ -424,9 +425,19 @@ export default function Users() {
         {/* ── MOBILE CARD LIST (shown only on small screens) ── */}
         <div className="sm:hidden divide-y divide-[rgba(60,60,67,0.06)]">
           {loading ? (
-            <div className="py-12 flex flex-col items-center gap-2 text-[#8e8e93]">
-              <RefreshCw size={18} className="animate-spin text-[#007aff]" />
-              <p className="text-xs font-medium">Loading users...</p>
+            <div className="divide-y divide-[rgba(60,60,67,0.06)]">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="p-4 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <SkeletonCircle size={36} />
+                    <div className="space-y-1.5">
+                      <SkeletonBlock className="w-32 h-3.5 rounded" />
+                      <SkeletonBlock className="w-24 h-3 rounded" />
+                    </div>
+                  </div>
+                  <SkeletonBlock className="w-16 h-6 rounded-full" />
+                </div>
+              ))}
             </div>
           ) : paginatedUsers.length === 0 ? (
             <div className="py-12 flex flex-col items-center gap-2 text-[#8e8e93]">
@@ -527,14 +538,24 @@ export default function Users() {
             </thead>
             <tbody className="divide-y divide-[rgba(60,60,67,0.06)]">
               {loading ? (
-                <tr>
-                  <td colSpan={6} className="py-12 text-center text-[#8e8e93]">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <RefreshCw size={18} className="animate-spin text-[#007aff]" />
-                      <p className="text-xs font-medium">Loading user directory...</p>
-                    </div>
-                  </td>
-                </tr>
+                Array.from({ length: 7 }).map((_, i) => (
+                  <tr key={i}>
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-2.5">
+                        <SkeletonCircle size={32} />
+                        <div className="space-y-1.5">
+                          <SkeletonBlock className="w-28 h-3.5 rounded" />
+                          <SkeletonBlock className="w-20 h-3 rounded" />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4"><SkeletonBlock className="w-36 h-3.5 rounded" /></td>
+                    <td className="py-3.5 px-4"><SkeletonBlock className="w-24 h-5 rounded-md" /></td>
+                    <td className="py-3.5 px-4"><SkeletonBlock className="w-20 h-3.5 rounded" /></td>
+                    <td className="py-3.5 px-4"><SkeletonBlock className="w-16 h-5 rounded-full" /></td>
+                    <td className="py-3.5 px-4 text-right"><SkeletonBlock className="w-16 h-7 rounded-md ml-auto" /></td>
+                  </tr>
+                ))
               ) : paginatedUsers.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-[#8e8e93]">

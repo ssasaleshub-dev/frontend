@@ -341,7 +341,7 @@ export default function Layout() {
     if (currentPath.startsWith('/users')) return { title: 'Team & Permissions', subtitle: 'Manage counselor assignments, roles, and access permissions' };
     if (currentPath.startsWith('/reports')) return { title: 'Executive Reports & Analytics' };
     if (currentPath.startsWith('/biometrics')) return { title: 'Biometric Approvals' };
-    if (currentPath.startsWith('/integrations')) return { title: 'Integrations Hub', subtitle: 'Google Workspace, Inbound Webhooks & Connectors' };
+    if (currentPath.startsWith('/integrations')) return { title: 'Integrations Hub' };
     return { title: 'SSA SalesHub CRM', subtitle: 'Work & Study Visa Consultancy' };
   };
 
@@ -350,8 +350,8 @@ export default function Layout() {
   return (
     <div
       className={`min-h-screen ${currentPath.startsWith('/notifications') || currentPath.startsWith('/chat') || currentPath.startsWith('/leads') || currentPath.startsWith('/reports')
-          ? 'bg-[#f4f5f7]'
-          : 'bg-[#f2f2f7]'
+        ? 'bg-[#f4f5f7]'
+        : 'bg-[#f2f2f7]'
         } flex flex-col md:flex-row font-sans text-slate-900 antialiased selection:bg-[#007aff] selection:text-white`}
     >
       {/* Apple HIG Real-Time In-App Notification Banner Popup */}

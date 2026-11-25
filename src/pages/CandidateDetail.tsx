@@ -39,6 +39,7 @@ import { CandidateDetailSkeleton } from '../components/common/SkeletonLoader';
 import { parseRemarks, buildRemarkEntry, joinRemarks, sanitizeRemarkText, type RemarkEntry } from '../utils/remarks';
 import adminService from '../services/api/adminService';
 import leadActivityService from '../services/api/leadActivityService';
+import integrationsService from '../services/api/integrationsService';
 import notificationApiService, { CalendarEventDTO } from '../services/api/notificationService';
 import CandidateActivityLogsModal from '../components/CandidateActivityLogsModal';
 import LeadReminderModal from '../components/LeadReminderModal';
@@ -115,6 +116,141 @@ export default function CandidateDetail() {
   // Candidate Reminders
   const [showReminderModal, setShowReminderModal] = useState<boolean>(false);
   const [leadReminders, setLeadReminders] = useState<CalendarEventDTO[]>([]);
+  const [creatingMeet, setCreatingMeet] = useState<boolean>(false);
+
+  // Direct Email & Instagram DM Modals
+  const [showEmailModal, setShowEmailModal] = useState<boolean>(false);
+  const [connectedGoogleEmail, setConnectedGoogleEmail] = useState<string>('');
+  const [emailTo, setEmailTo] = useState<string>('');
+  const [emailSubject, setEmailSubject] = useState<string>('');
+  const [emailBody, setEmailBody] = useState<string>('');
+  const [sendingEmail, setSendingEmail] = useState<boolean>(false);
+  const [openingEmail, setOpeningEmail] = useState<boolean>(false);
+
+  const [showInstagramModal, setShowInstagramModal] = useState<boolean>(false);
+  const [igRecipientId, setIgRecipientId] = useState<string>('');
+  const [igMessage, setIgMessage] = useState<string>('');
+  const [sendingIg, setSendingIg] = useState<boolean>(false);
+
+  const connectGoogleDirectly = async () => {
+    const authRes = await integrationsService.getGoogleAuthUrl();
+    window.location.href = authRes.url;
+  };
+
+  const handleCreateGoogleMeet = async () => {
+    if (!lead) return;
+    setCreatingMeet(true);
+    try {
+      const candidateName = lead.customerName || lead.fullName || 'Candidate';
+      const res = await integrationsService.createGoogleMeet(`Consultation - ${candidateName}`, {
+        description: `Candidate consultation with ${candidateName}${lead.phoneNumber ? ` (${lead.phoneNumber})` : ''}`,
+      });
+      const url = res?.meetUrl || res?.url || res?.hangoutsLink;
+      if (!url) throw new Error('No Meet link returned');
+      try {
+        await navigator.clipboard.writeText(url);
+      } catch {
+        // Ignore clipboard errors
+      }
+      window.open(url, '_blank', 'noopener,noreferrer');
+      showAlert({
+        title: 'Google Meet Created',
+        message: `Link copied to clipboard:\n${url}`,
+      });
+    } catch (err: any) {
+      if (err?.response?.status === 412) {
+        try {
+          await connectGoogleDirectly();
+          return;
+        } catch {
+          // Fall through to alert
+        }
+      }
+      showAlert({
+        title: 'Google Meet',
+        message: err?.response?.data?.error || err?.message || 'Failed to create Google Meet link.',
+      });
+    } finally {
+      setCreatingMeet(false);
+    }
+  };
+
+  const handleOpenEmailComposer = async () => {
+    setOpeningEmail(true);
+    try {
+      const status = await integrationsService.getGoogleStatus();
+      if (!status.connected) {
+        await connectGoogleDirectly();
+        return;
+      }
+      const candidateName = lead?.customerName || lead?.fullName || 'Candidate';
+      setConnectedGoogleEmail(status.googleEmail || status.email || '');
+      setEmailTo(lead?.email || '');
+      setEmailSubject(`Regarding your inquiry - SSA SalesHub`);
+      setEmailBody(`Hi ${candidateName},\n\n`);
+      setShowEmailModal(true);
+    } catch (err: any) {
+      showAlert({
+        title: 'Gmail',
+        message: err?.message || 'Unable to connect Gmail right now.',
+      });
+    } finally {
+      setOpeningEmail(false);
+    }
+  };
+
+  const handleSendCandidateEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!emailTo.trim()) return;
+    setSendingEmail(true);
+    try {
+      await integrationsService.sendTestEmail({
+        to: emailTo.trim(),
+        subject: emailSubject.trim(),
+        body: emailBody,
+      });
+      setShowEmailModal(false);
+      showAlert({ title: 'Email Sent', message: `Email sent to ${emailTo.trim()}.` });
+    } catch (err: any) {
+      showAlert({
+        title: 'Email Failed',
+        message: err?.response?.data?.error || err?.message || 'Failed to send email.',
+      });
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
+  const handleOpenInstagramComposer = () => {
+    const candidateName = lead?.customerName || lead?.fullName || 'there';
+    const prefillId =
+      lead?.platform?.toUpperCase() === 'INSTAGRAM' && lead?.externalId ? String(lead.externalId) : '';
+    setIgRecipientId(prefillId);
+    setIgMessage(`Hi ${candidateName}, thanks for reaching out to SSA SalesHub!`);
+    setShowInstagramModal(true);
+  };
+
+  const handleSendInstagramDm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!igRecipientId.trim() || !igMessage.trim()) return;
+    setSendingIg(true);
+    try {
+      await integrationsService.sendInstagramMessage({
+        recipientId: igRecipientId.trim(),
+        message: igMessage.trim(),
+        leadId: lead?.id ? Number(lead.id) : undefined,
+      });
+      setShowInstagramModal(false);
+      showAlert({ title: 'Instagram DM Sent', message: 'Direct message delivered.' });
+    } catch (err: any) {
+      showAlert({
+        title: 'Instagram DM Failed',
+        message: err?.response?.data?.error || err?.message || 'Failed to send Instagram DM.',
+      });
+    } finally {
+      setSendingIg(false);
+    }
+  };
 
   // Modals
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
@@ -1158,6 +1294,9 @@ export default function CandidateDetail() {
           submittingNote={submittingNote}
           onOpenEdit={handleOpenEdit}
           onOpenReminder={() => setShowReminderModal(true)}
+          onOpenEmail={handleOpenEmailComposer}
+          onOpenInstagram={handleOpenInstagramComposer}
+          onCreateGoogleMeet={handleCreateGoogleMeet}
           onDelete={handleDelete}
           onAssignStaff={handleAssignStaff}
           assigningStaff={assigningStaff}
@@ -1212,13 +1351,20 @@ export default function CandidateDetail() {
                 </button>
                 <button
                   type="button"
-                  className="btn"
-                  onClick={() => {
-                    if (lead.email) window.location.href = `mailto:${lead.email}`;
-                    else showAlert({ title: 'Email', message: 'No email address available' });
-                  }}
+                  className="btn inline-flex items-center gap-1.5"
+                  disabled={openingEmail}
+                  onClick={handleOpenEmailComposer}
                 >
-                  Send Email
+                  <img src="/icons/gmail-classic.png" alt="" className="w-3.5 h-3.5 object-contain shrink-0" />
+                  <span>{openingEmail ? 'Connecting…' : 'Send Email'}</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn inline-flex items-center gap-1.5"
+                  onClick={handleOpenInstagramComposer}
+                >
+                  <img src="/icons/instagram.png" alt="" className="w-3.5 h-3.5 object-contain shrink-0" />
+                  <span>Instagram</span>
                 </button>
                 <button
                   type="button"
@@ -1226,6 +1372,15 @@ export default function CandidateDetail() {
                   onClick={() => setShowReminderModal(true)}
                 >
                   Reminder
+                </button>
+                <button
+                  type="button"
+                  className="btn inline-flex items-center gap-1.5"
+                  disabled={creatingMeet}
+                  onClick={handleCreateGoogleMeet}
+                >
+                  <img src="/icons/google-meet.png" alt="" className="w-3.5 h-3.5 object-contain shrink-0" />
+                  <span>{creatingMeet ? 'Creating Meet…' : 'Google Meet'}</span>
                 </button>
                 <button
                   type="button"
@@ -1620,12 +1775,12 @@ export default function CandidateDetail() {
                 </span>
               </h3>
               {formResponses.length === 0 ? (
-                <p className="text-xs text-slate-400 py-1.5 leading-relaxed">
+                <p className="text-xs text-slate-400 px-5 py-3 leading-relaxed">
                   No form answers were captured for this lead. Leads saved before form capture was added, and leads
                   created by hand, don't have them.
                 </p>
               ) : (
-                <dl className="divide-y divide-slate-100">
+                <dl className="divide-y divide-slate-100 px-5 py-1">
                   {formResponses.map((r, i) => (
                     <div key={`${r.key}-${i}`} className="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-6">
                       <dt className="text-xs sm:text-[13px] text-slate-600 leading-snug flex-1">
@@ -2065,6 +2220,170 @@ export default function CandidateDetail() {
           candidateName={lead.customerName}
           leadId={lead.id}
         />
+      )}
+
+      {/* Direct Email Compose Modal */}
+      {showEmailModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
+          onClick={() => setShowEmailModal(false)}
+        >
+          <div
+            className="bg-white rounded-xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="bg-[#f2f6fc] px-4 py-3 flex items-center justify-between border-b border-slate-200/70">
+              <h3 className="text-[13px] font-semibold text-slate-800">New Message</h3>
+              <button
+                type="button"
+                onClick={() => setShowEmailModal(false)}
+                className="text-slate-500 hover:text-slate-800 cursor-pointer p-0.5 rounded"
+                aria-label="Close"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSendCandidateEmail}>
+              {connectedGoogleEmail && (
+                <div className="px-4 py-2.5 flex items-center border-b border-slate-100">
+                  <span className="w-16 shrink-0 text-[13px] text-slate-400">From</span>
+                  <span className="text-[13px] text-slate-700 truncate">{connectedGoogleEmail}</span>
+                </div>
+              )}
+
+              <div className="px-4 py-2.5 flex items-center border-b border-slate-100">
+                <label htmlFor="cand-email-to" className="w-16 shrink-0 text-[13px] text-slate-400">
+                  To
+                </label>
+                <input
+                  id="cand-email-to"
+                  type="email"
+                  required
+                  value={emailTo}
+                  onChange={(e) => setEmailTo(e.target.value)}
+                  placeholder="candidate@example.com"
+                  className="flex-1 text-[13px] text-slate-900 placeholder:text-slate-400 focus:outline-none bg-transparent"
+                />
+              </div>
+
+              <div className="px-4 py-2.5 flex items-center border-b border-slate-100">
+                <label htmlFor="cand-email-subject" className="w-16 shrink-0 text-[13px] text-slate-400">
+                  Subject
+                </label>
+                <input
+                  id="cand-email-subject"
+                  type="text"
+                  required
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                  placeholder="Subject"
+                  className="flex-1 text-[13px] text-slate-900 placeholder:text-slate-400 focus:outline-none bg-transparent"
+                />
+              </div>
+
+              <div className="px-4 py-3">
+                <textarea
+                  required
+                  rows={7}
+                  value={emailBody}
+                  onChange={(e) => setEmailBody(e.target.value)}
+                  placeholder="Write your message..."
+                  className="w-full text-[13px] text-slate-800 leading-relaxed placeholder:text-slate-400 focus:outline-none resize-none bg-transparent"
+                />
+              </div>
+
+              <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between">
+                <button
+                  type="submit"
+                  disabled={sendingEmail}
+                  className="h-9 px-5 text-[13px] font-medium rounded-full bg-[#0b57d0] hover:bg-[#0842a0] text-white cursor-pointer flex items-center gap-2 disabled:opacity-50 transition-colors"
+                >
+                  {sendingEmail ? <RefreshCw size={13} className="animate-spin" /> : null}
+                  <span>{sendingEmail ? 'Sending…' : 'Send'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowEmailModal(false)}
+                  className="px-2 py-1 text-[13px] text-slate-500 hover:text-slate-800 cursor-pointer"
+                >
+                  Discard
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Direct Instagram DM Modal */}
+      {showInstagramModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
+          onClick={() => setShowInstagramModal(false)}
+        >
+          <div
+            className="bg-white rounded-xl max-w-md w-full border border-slate-200 shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="bg-slate-50 px-4 py-3 flex items-center justify-between border-b border-slate-200/70">
+              <h3 className="text-[13px] font-semibold text-slate-800">Instagram Direct Message</h3>
+              <button
+                type="button"
+                onClick={() => setShowInstagramModal(false)}
+                className="text-slate-500 hover:text-slate-800 cursor-pointer p-0.5 rounded"
+                aria-label="Close"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSendInstagramDm}>
+              <div className="px-4 py-2.5 flex items-center border-b border-slate-100">
+                <label htmlFor="cand-ig-id" className="w-24 shrink-0 text-[13px] text-slate-400">
+                  IG User ID
+                </label>
+                <input
+                  id="cand-ig-id"
+                  type="text"
+                  required
+                  value={igRecipientId}
+                  onChange={(e) => setIgRecipientId(e.target.value)}
+                  placeholder="Instagram-scoped user ID"
+                  className="flex-1 text-[13px] text-slate-900 placeholder:text-slate-400 focus:outline-none bg-transparent font-mono"
+                />
+              </div>
+
+              <div className="px-4 py-3">
+                <textarea
+                  required
+                  rows={5}
+                  value={igMessage}
+                  onChange={(e) => setIgMessage(e.target.value)}
+                  placeholder="Write your Instagram message..."
+                  className="w-full text-[13px] text-slate-800 leading-relaxed placeholder:text-slate-400 focus:outline-none resize-none bg-transparent"
+                />
+              </div>
+
+              <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between">
+                <button
+                  type="submit"
+                  disabled={sendingIg}
+                  className="h-9 px-5 text-[13px] font-medium rounded-full bg-slate-900 hover:bg-slate-800 text-white cursor-pointer flex items-center gap-2 disabled:opacity-50 transition-colors"
+                >
+                  {sendingIg ? <RefreshCw size={13} className="animate-spin" /> : null}
+                  <span>{sendingIg ? 'Sending…' : 'Send DM'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowInstagramModal(false)}
+                  className="px-2 py-1 text-[13px] text-slate-500 hover:text-slate-800 cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* Candidate Reminders Modal */}

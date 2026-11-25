@@ -18,9 +18,12 @@ import {
 } from 'lucide-react';
 import integrationsService, {
   GoogleIntegrationStatus,
+  GoogleSheetItem,
+  GoogleSheetPreview,
   InstagramIntegrationStatus,
   DEFAULT_GOOGLE_CLIENT_ID,
 } from '../services/api/integrationsService';
+import { SkeletonBlock } from '../components/common/SkeletonLoader';
 
 export default function Integrations() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -74,6 +77,144 @@ export default function Integrations() {
 
   // Notification feedback banner
   const [banner, setBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Google Meet instant link generator
+  const [creatingMeet, setCreatingMeet] = useState<boolean>(false);
+  const [generatedMeetUrl, setGeneratedMeetUrl] = useState<string | null>(null);
+  const [copiedMeet, setCopiedMeet] = useState<boolean>(false);
+
+  // Google Sheets import & revert state
+  const [showSheetsModal, setShowSheetsModal] = useState<boolean>(false);
+  const [sheetsList, setSheetsList] = useState<GoogleSheetItem[]>([]);
+  const [loadingSheets, setLoadingSheets] = useState<boolean>(false);
+  const [selectedSheetId, setSelectedSheetId] = useState<string>('');
+  const [sheetPreview, setSheetPreview] = useState<GoogleSheetPreview | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState<boolean>(false);
+  const [importingSheet, setImportingSheet] = useState<boolean>(false);
+  const [revertingSheet, setRevertingSheet] = useState<boolean>(false);
+  const [sheetsError, setSheetsError] = useState<string | null>(null);
+  const [lastSheetImport, setLastSheetImport] = useState<{
+    sheetName: string;
+    importedCount: number;
+    leadIds: number[];
+    importedAt: string;
+  } | null>(() => {
+    try {
+      const raw = localStorage.getItem('ssa_last_sheet_import');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const handleOpenSheetsModal = async () => {
+    setShowSheetsModal(true);
+    setSheetsError(null);
+    setLoadingSheets(true);
+    try {
+      const items = await integrationsService.listGoogleSheets();
+      setSheetsList(items);
+    } catch (err: any) {
+      setSheetsError(
+        err?.response?.data?.error ||
+          err?.message ||
+          'Unable to load your Google Sheets. Ensure the backend Sheets endpoint is enabled.'
+      );
+    } finally {
+      setLoadingSheets(false);
+    }
+  };
+
+  const handleSelectSheet = async (sheetId: string) => {
+    setSelectedSheetId(sheetId);
+    setSheetPreview(null);
+    setSheetsError(null);
+    if (!sheetId) return;
+    setLoadingPreview(true);
+    try {
+      const preview = await integrationsService.previewGoogleSheet(sheetId);
+      setSheetPreview(preview);
+    } catch (err: any) {
+      setSheetsError(err?.response?.data?.error || err?.message || 'Failed to verify sheet data.');
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
+  const handleImportSelectedSheet = async () => {
+    if (!selectedSheetId) return;
+    setImportingSheet(true);
+    setSheetsError(null);
+    try {
+      const result = await integrationsService.importGoogleSheet(selectedSheetId);
+      const selected = sheetsList.find((s) => s.id === selectedSheetId);
+      const record = {
+        sheetName: selected?.name || sheetPreview?.title || 'Google Sheet',
+        importedCount: result.importedCount,
+        leadIds: result.leadIds || [],
+        importedAt: new Date().toLocaleTimeString(),
+      };
+      setLastSheetImport(record);
+      localStorage.setItem('ssa_last_sheet_import', JSON.stringify(record));
+      setBanner({
+        type: 'success',
+        text: `Imported ${record.importedCount} leads from "${record.sheetName}".`,
+      });
+    } catch (err: any) {
+      setSheetsError(err?.response?.data?.error || err?.message || 'Failed to import sheet data.');
+    } finally {
+      setImportingSheet(false);
+    }
+  };
+
+  const handleRevertLastImport = async () => {
+    if (!lastSheetImport || lastSheetImport.leadIds.length === 0) return;
+    setRevertingSheet(true);
+    setSheetsError(null);
+    try {
+      await integrationsService.revertGoogleSheetImport(lastSheetImport.leadIds);
+      const count = lastSheetImport.leadIds.length;
+      const name = lastSheetImport.sheetName;
+      setLastSheetImport(null);
+      localStorage.removeItem('ssa_last_sheet_import');
+      setBanner({
+        type: 'success',
+        text: `Reverted ${count} imported leads from "${name}".`,
+      });
+    } catch (err: any) {
+      setSheetsError(err?.response?.data?.error || err?.message || 'Failed to revert imported leads.');
+    } finally {
+      setRevertingSheet(false);
+    }
+  };
+
+  const handleCreateMeetLink = async () => {
+    setCreatingMeet(true);
+    setBanner(null);
+    try {
+      const res = await integrationsService.createGoogleMeet('Client Consultation');
+      const url = res?.meetUrl || res?.url || res?.hangoutsLink;
+      if (!url) {
+        throw new Error('No Google Meet URL returned');
+      }
+      setGeneratedMeetUrl(url);
+      try {
+        await navigator.clipboard.writeText(url);
+        setCopiedMeet(true);
+        setTimeout(() => setCopiedMeet(false), 2500);
+      } catch {
+        // Clipboard permission optional
+      }
+      setBanner({ type: 'success', text: `Google Meet link created: ${url}` });
+    } catch (err: any) {
+      setBanner({
+        type: 'error',
+        text: err?.response?.data?.error || err?.message || 'Failed to create Google Meet link.',
+      });
+    } finally {
+      setCreatingMeet(false);
+    }
+  };
 
   const fetchStatus = useCallback(async () => {
     setLoadingGoogle(true);
@@ -340,6 +481,33 @@ export default function Integrations() {
       </div>
 
       {/* ── 3-Column Responsive Clean Card Grid ── */}
+      {loadingGoogle ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" aria-busy="true" aria-label="Loading integrations">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col justify-between shadow-sm space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <SkeletonBlock className="w-8 h-8 rounded-lg" />
+                    <div className="space-y-1.5">
+                      <SkeletonBlock className="w-24 h-4 rounded" />
+                      <SkeletonBlock className="w-28 h-3 rounded" />
+                    </div>
+                  </div>
+                  <SkeletonBlock className="w-16 h-3.5 rounded" />
+                </div>
+                <div className="space-y-2 pt-1">
+                  <SkeletonBlock className="w-full h-3 rounded" />
+                  <SkeletonBlock className="w-5/6 h-3 rounded" />
+                </div>
+              </div>
+              <div className="pt-3 border-t border-slate-100">
+                <SkeletonBlock className="w-full h-9 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* ═════════════════════════════════════════════════════════════════════ */}
         {/* CARD 1: GMAIL INTEGRATION CARD                                      */}
@@ -363,18 +531,17 @@ export default function Integrations() {
                   </div>
                 </div>
 
-                {/* Badge */}
+                {/* Status */}
                 {googleStatus.connected ? (
                   <span
-                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60 max-w-[170px] truncate"
-                    title={`Connected as ${connectedEmail}`}
+                    className="text-xs font-medium text-emerald-700 shrink-0"
+                    title={connectedEmail ? `Connected as ${connectedEmail}` : 'Connected'}
                   >
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0" />
-                    <span className="truncate">Connected as {connectedEmail}</span>
+                    Connected
                   </span>
                 ) : (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500">
-                    Not Connected
+                  <span className="text-xs text-slate-400 shrink-0">
+                    Not connected
                   </span>
                 )}
               </div>
@@ -382,39 +549,25 @@ export default function Integrations() {
               <p className="text-[13px] text-slate-600 leading-relaxed">
                 Connect your Gmail account to send emails directly from your inbox, track email threads, and sync candidate communications.
               </p>
+
+              {googleStatus.connected && connectedEmail && (
+                <p className="text-xs text-slate-500 truncate" title={connectedEmail}>
+                  Account: <span className="font-medium text-slate-700">{connectedEmail}</span>
+                </p>
+              )}
             </div>
 
             <div className="pt-4 mt-3 border-t border-slate-100">
               {googleStatus.connected ? (
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowTestEmailModal(true)}
-                    className="flex-1 h-9 px-3 text-[13px] font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-                  >
-                    <Send size={13} />
-                    <span>Send Test Email</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleDisconnectGoogle}
-                    disabled={disconnecting}
-                    title="Disconnect Gmail Account"
-                    className="h-9 px-3 text-[13px] font-medium rounded border border-slate-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 text-slate-700 transition-colors cursor-pointer"
-                  >
-                    {disconnecting ? 'Disconnecting…' : 'Disconnect'}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowGoogleSetupModal(true)}
-                    title="OAuth Client Configuration"
-                    className="h-9 px-2.5 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded transition-colors cursor-pointer"
-                  >
-                    <Settings size={14} />
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={handleDisconnectGoogle}
+                  disabled={disconnecting}
+                  title="Disconnect Gmail Account"
+                  className="w-full h-9 px-3 text-[13px] font-medium rounded border border-slate-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 text-slate-700 transition-colors cursor-pointer"
+                >
+                  {disconnecting ? 'Disconnecting…' : 'Disconnect'}
+                </button>
               ) : (
                 <div className="flex items-center gap-1.5">
                   <button
@@ -533,21 +686,54 @@ export default function Integrations() {
               </p>
             </div>
 
-            <div className="pt-4 mt-3 border-t border-slate-100">
+            <div className="pt-4 mt-3 border-t border-slate-100 space-y-2.5">
               {googleStatus.connected ? (
-                <div className="flex items-center justify-between text-[13px]">
-                  <span className="font-mono text-xs text-slate-600 truncate max-w-[170px]" title={connectedEmail}>
-                    {connectedEmail || 'Connected'}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleDisconnectGoogle}
-                    disabled={disconnecting}
-                    className="text-[13px] text-rose-600 hover:text-rose-800 font-medium cursor-pointer"
-                  >
-                    {disconnecting ? 'Disconnecting…' : 'Disconnect'}
-                  </button>
-                </div>
+                <>
+                  {generatedMeetUrl && (
+                    <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded bg-slate-50 border border-slate-200 text-xs">
+                      <a
+                        href={generatedMeetUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline truncate font-mono"
+                        title={generatedMeetUrl}
+                      >
+                        {generatedMeetUrl}
+                      </a>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await navigator.clipboard.writeText(generatedMeetUrl);
+                          setCopiedMeet(true);
+                          setTimeout(() => setCopiedMeet(false), 2000);
+                        }}
+                        className="text-slate-500 hover:text-slate-900 shrink-0 cursor-pointer"
+                        title="Copy link"
+                      >
+                        {copiedMeet ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                      </button>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleCreateMeetLink}
+                      disabled={creatingMeet}
+                      className="flex-1 h-9 px-3 text-[13px] font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    >
+                      {creatingMeet ? <RefreshCw size={13} className="animate-spin" /> : null}
+                      <span>{creatingMeet ? 'Creating…' : 'Create Meet Link'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDisconnectGoogle}
+                      disabled={disconnecting}
+                      className="h-9 px-3 text-[13px] font-medium rounded border border-slate-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 text-slate-700 transition-colors cursor-pointer"
+                    >
+                      {disconnecting ? 'Disconnecting…' : 'Disconnect'}
+                    </button>
+                  </div>
+                </>
               ) : (
                 <button
                   type="button"
@@ -574,7 +760,7 @@ export default function Integrations() {
                   <img src="/icons/google-sheets.png" alt="Google Sheets" className="w-8 h-8 object-contain shrink-0" />
                   <div>
                     <h3 className="text-[15px] font-semibold text-slate-900">Google Sheets</h3>
-                    <span className="text-xs text-slate-400">Spreadsheet Export</span>
+                    <span className="text-xs text-slate-400">Spreadsheet Import</span>
                   </div>
                 </div>
 
@@ -589,19 +775,20 @@ export default function Integrations() {
               </div>
 
               <p className="text-[13px] text-slate-600 leading-relaxed">
-                Export candidate inquiries, customer lists, and performance reports directly to Google Sheets.
+                Import candidate inquiries and lead lists from Google Sheets directly into your CRM pipeline.
               </p>
             </div>
 
             <div className="pt-4 mt-3 border-t border-slate-100">
               {googleStatus.connected ? (
-                <a
-                  href="/leads"
-                  className="w-full h-9 px-3 text-[13px] font-medium rounded border border-slate-300 hover:bg-slate-50 text-slate-800 transition-colors flex items-center justify-center gap-1.5"
+                <button
+                  type="button"
+                  onClick={handleOpenSheetsModal}
+                  className="w-full h-9 px-3 text-[13px] font-medium rounded border border-slate-300 hover:bg-slate-50 text-slate-800 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <FileSpreadsheet size={14} />
-                  <span>Go to Leads to Export</span>
-                </a>
+                  <span>Import from Google Sheets</span>
+                </button>
               ) : (
                 <button
                   type="button"
@@ -615,7 +802,222 @@ export default function Integrations() {
             </div>
           </div>
         )}
+
+        {/* ═════════════════════════════════════════════════════════════════════ */}
+        {/* CARD 5: GOOGLE CALENDAR                                             */}
+        {/* ═════════════════════════════════════════════════════════════════════ */}
+        {(activeTab === 'ALL' || activeTab === 'GOOGLE') && (
+          <div className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col justify-between shadow-sm hover:border-slate-300 transition-all">
+            <div className="space-y-3">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2.5">
+                  <img src="/icons/google-calendar.png" alt="Google Calendar" className="w-8 h-8 object-contain shrink-0" />
+                  <div>
+                    <h3 className="text-[15px] font-semibold text-slate-900">Google Calendar</h3>
+                    <span className="text-xs text-slate-400">Consultations &amp; Reminders</span>
+                  </div>
+                </div>
+
+                {googleStatus.connected ? (
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                    Connected
+                  </span>
+                ) : (
+                  <span className="text-xs text-slate-400">Not connected</span>
+                )}
+              </div>
+
+              <p className="text-[13px] text-slate-600 leading-relaxed">
+                Schedule candidate consultations and sync follow-up reminders directly with your Google Calendar.
+              </p>
+            </div>
+
+            <div className="pt-4 mt-3 border-t border-slate-100">
+              {googleStatus.connected ? (
+                <a
+                  href="/calendar"
+                  className="w-full h-9 px-3 text-[13px] font-medium rounded border border-slate-300 hover:bg-slate-50 text-slate-800 transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <Calendar size={14} />
+                  <span>Open Calendar</span>
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleConnectGoogle()}
+                  disabled={connecting}
+                  className="w-full h-9 px-3 text-[13px] font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <span>Connect Google Calendar</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ═════════════════════════════════════════════════════════════════════ */}
+        {/* CARD 6: GOOGLE DRIVE                                                */}
+        {/* ═════════════════════════════════════════════════════════════════════ */}
+        {(activeTab === 'ALL' || activeTab === 'GOOGLE') && (
+          <div className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col justify-between shadow-sm hover:border-slate-300 transition-all">
+            <div className="space-y-3">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2.5">
+                  <img src="/icons/google-drive.png" alt="Google Drive" className="w-8 h-8 object-contain shrink-0" />
+                  <div>
+                    <h3 className="text-[15px] font-semibold text-slate-900">Google Drive</h3>
+                    <span className="text-xs text-slate-400">Spreadsheet Source</span>
+                  </div>
+                </div>
+
+                {googleStatus.connected ? (
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                    Connected
+                  </span>
+                ) : (
+                  <span className="text-xs text-slate-400">Not connected</span>
+                )}
+              </div>
+
+              <p className="text-[13px] text-slate-600 leading-relaxed">
+                Browse your Google Drive spreadsheets to verify and import lead lists into your CRM pipeline.
+              </p>
+            </div>
+
+            <div className="pt-4 mt-3 border-t border-slate-100">
+              {googleStatus.connected ? (
+                <button
+                  type="button"
+                  onClick={handleOpenSheetsModal}
+                  className="w-full h-9 px-3 text-[13px] font-medium rounded border border-slate-300 hover:bg-slate-50 text-slate-800 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <FileSpreadsheet size={14} />
+                  <span>Browse Sheets in Drive</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleConnectGoogle()}
+                  disabled={connecting}
+                  className="w-full h-9 px-3 text-[13px] font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <span>Connect Google Drive</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ═════════════════════════════════════════════════════════════════════ */}
+        {/* CARD 5: GOOGLE CALENDAR                                             */}
+        {/* ═════════════════════════════════════════════════════════════════════ */}
+        {(activeTab === 'ALL' || activeTab === 'GOOGLE') && (
+          <div className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col justify-between shadow-sm hover:border-slate-300 transition-all">
+            <div className="space-y-3">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2.5">
+                  <img src="/icons/google-calendar.png" alt="Google Calendar" className="w-8 h-8 object-contain shrink-0" />
+                  <div>
+                    <h3 className="text-[15px] font-semibold text-slate-900">Google Calendar</h3>
+                    <span className="text-xs text-slate-400">Consultations &amp; Reminders</span>
+                  </div>
+                </div>
+
+                {googleStatus.connected ? (
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                    Connected
+                  </span>
+                ) : (
+                  <span className="text-xs text-slate-400">Not connected</span>
+                )}
+              </div>
+
+              <p className="text-[13px] text-slate-600 leading-relaxed">
+                Schedule candidate consultations and sync follow-up reminders directly with your Google Calendar.
+              </p>
+            </div>
+
+            <div className="pt-4 mt-3 border-t border-slate-100">
+              {googleStatus.connected ? (
+                <a
+                  href="/calendar"
+                  className="w-full h-9 px-3 text-[13px] font-medium rounded border border-slate-300 hover:bg-slate-50 text-slate-800 transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <Calendar size={14} />
+                  <span>Open Calendar</span>
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleConnectGoogle()}
+                  disabled={connecting}
+                  className="w-full h-9 px-3 text-[13px] font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <span>Connect Google Calendar</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ═════════════════════════════════════════════════════════════════════ */}
+        {/* CARD 6: GOOGLE DRIVE                                                */}
+        {/* ═════════════════════════════════════════════════════════════════════ */}
+        {(activeTab === 'ALL' || activeTab === 'GOOGLE') && (
+          <div className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col justify-between shadow-sm hover:border-slate-300 transition-all">
+            <div className="space-y-3">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2.5">
+                  <img src="/icons/google-drive.png" alt="Google Drive" className="w-8 h-8 object-contain shrink-0" />
+                  <div>
+                    <h3 className="text-[15px] font-semibold text-slate-900">Google Drive</h3>
+                    <span className="text-xs text-slate-400">Spreadsheet Source</span>
+                  </div>
+                </div>
+
+                {googleStatus.connected ? (
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                    Connected
+                  </span>
+                ) : (
+                  <span className="text-xs text-slate-400">Not connected</span>
+                )}
+              </div>
+
+              <p className="text-[13px] text-slate-600 leading-relaxed">
+                Browse your Google Drive spreadsheets to verify and import lead lists into your CRM pipeline.
+              </p>
+            </div>
+
+            <div className="pt-4 mt-3 border-t border-slate-100">
+              {googleStatus.connected ? (
+                <button
+                  type="button"
+                  onClick={handleOpenSheetsModal}
+                  className="w-full h-9 px-3 text-[13px] font-medium rounded border border-slate-300 hover:bg-slate-50 text-slate-800 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <FileSpreadsheet size={14} />
+                  <span>Browse Sheets in Drive</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleConnectGoogle()}
+                  disabled={connecting}
+                  className="w-full h-9 px-3 text-[13px] font-medium rounded bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <span>Connect Google Drive</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
+      )}
 
       {/* ═════════════════════════════════════════════════════════════════════ */}
       {/* DIALOG 1: GMAIL TEST EMAIL MODAL                                     */}
@@ -626,88 +1028,91 @@ export default function Integrations() {
           onClick={() => setShowTestEmailModal(false)}
         >
           <div
-            className="bg-white rounded-lg max-w-md w-full p-5 space-y-4 border border-slate-200 shadow-xl"
+            className="bg-white rounded-xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center">
-                  <Mail size={16} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900">Send Test Email</h3>
-                  <span className="text-[11px] text-slate-500">
-                    From: {connectedEmail || 'Connected Gmail Account'}
-                  </span>
-                </div>
-              </div>
+            {/* Compose Header */}
+            <div className="bg-[#f2f6fc] px-4 py-3 flex items-center justify-between border-b border-slate-200/70">
+              <h3 className="text-[13px] font-semibold text-slate-800">New Message</h3>
               <button
                 type="button"
                 onClick={() => setShowTestEmailModal(false)}
-                className="text-slate-400 hover:text-slate-700 cursor-pointer"
+                className="text-slate-500 hover:text-slate-800 cursor-pointer p-0.5 rounded"
+                aria-label="Close"
               >
                 <X size={16} />
               </button>
             </div>
 
-            <form onSubmit={handleSendTestEmail} className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">
-                  Recipient Email Address
+            <form onSubmit={handleSendTestEmail}>
+              {/* From */}
+              <div className="px-4 py-2.5 flex items-center border-b border-slate-100">
+                <span className="w-16 shrink-0 text-[13px] text-slate-400">From</span>
+                <span className="text-[13px] text-slate-700 truncate">
+                  {connectedEmail || 'Connected Gmail Account'}
+                </span>
+              </div>
+
+              {/* To */}
+              <div className="px-4 py-2.5 flex items-center border-b border-slate-100">
+                <label htmlFor="test-email-to" className="w-16 shrink-0 text-[13px] text-slate-400">
+                  To
                 </label>
                 <input
+                  id="test-email-to"
                   type="email"
                   required
                   value={testEmailTo}
                   onChange={(e) => setTestEmailTo(e.target.value)}
-                  placeholder="e.g. counselor@example.com"
-                  className="w-full h-8 px-2.5 text-xs border border-slate-300 rounded focus:border-slate-900 focus:outline-none"
+                  placeholder="recipient@example.com"
+                  className="flex-1 text-[13px] text-slate-900 placeholder:text-slate-400 focus:outline-none bg-transparent"
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">
+              {/* Subject */}
+              <div className="px-4 py-2.5 flex items-center border-b border-slate-100">
+                <label htmlFor="test-email-subject" className="w-16 shrink-0 text-[13px] text-slate-400">
                   Subject
                 </label>
                 <input
+                  id="test-email-subject"
                   type="text"
                   required
                   value={testEmailSubject}
                   onChange={(e) => setTestEmailSubject(e.target.value)}
-                  placeholder="Email subject"
-                  className="w-full h-8 px-2.5 text-xs border border-slate-300 rounded focus:border-slate-900 focus:outline-none"
+                  placeholder="Subject"
+                  className="flex-1 text-[13px] text-slate-900 placeholder:text-slate-400 focus:outline-none bg-transparent"
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">
-                  Message Body
-                </label>
+              {/* Body */}
+              <div className="px-4 py-3">
                 <textarea
                   required
-                  rows={4}
+                  rows={7}
                   value={testEmailBody}
                   onChange={(e) => setTestEmailBody(e.target.value)}
-                  placeholder="Type your test message..."
-                  className="w-full p-2 text-xs border border-slate-300 rounded focus:border-slate-900 focus:outline-none resize-none"
+                  placeholder="Write your message..."
+                  className="w-full text-[13px] text-slate-800 leading-relaxed placeholder:text-slate-400 focus:outline-none resize-none bg-transparent"
                 />
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowTestEmailModal(false)}
-                  className="h-8 px-3 text-xs font-medium rounded border border-slate-300 text-slate-700 hover:bg-slate-50 cursor-pointer"
-                >
-                  Cancel
-                </button>
+              {/* Footer */}
+              <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between">
                 <button
                   type="submit"
                   disabled={sendingEmail}
-                  className="h-8 px-4 text-xs font-medium rounded bg-slate-900 hover:bg-slate-800 text-white cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                  className="h-9 px-5 text-[13px] font-medium rounded-full bg-[#0b57d0] hover:bg-[#0842a0] text-white cursor-pointer flex items-center gap-2 disabled:opacity-50 transition-colors"
                 >
-                  {sendingEmail ? <RefreshCw size={12} className="animate-spin" /> : <Send size={12} />}
-                  <span>{sendingEmail ? 'Sending…' : 'Send Test Email'}</span>
+                  {sendingEmail ? <RefreshCw size={13} className="animate-spin" /> : null}
+                  <span>{sendingEmail ? 'Sending…' : 'Send'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowTestEmailModal(false)}
+                  className="px-2 py-1 text-[13px] text-slate-500 hover:text-slate-800 cursor-pointer"
+                >
+                  Discard
                 </button>
               </div>
             </form>
@@ -915,6 +1320,152 @@ export default function Integrations() {
                 className="h-8 px-4 text-xs font-medium rounded bg-slate-900 hover:bg-slate-800 text-white disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1.5"
               >
                 <span>Save &amp; Connect Google</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {/* DIALOG 4: GOOGLE SHEETS IMPORT & REVERT MODAL                        */}
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {showSheetsModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
+          onClick={() => setShowSheetsModal(false)}
+        >
+          <div
+            className="bg-white rounded-lg max-w-2xl w-full border border-slate-200 shadow-xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-3.5 flex items-center justify-between border-b border-slate-200">
+              <div>
+                <h3 className="text-[15px] font-semibold text-slate-900">Import from Google Sheets</h3>
+                <p className="text-xs text-slate-500">Select a spreadsheet, verify its rows, and import.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSheetsModal(false)}
+                className="text-slate-400 hover:text-slate-700 cursor-pointer"
+                aria-label="Close"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              {sheetsError && (
+                <div className="px-3 py-2 rounded border border-rose-200 bg-rose-50 text-xs text-rose-800">
+                  {sheetsError}
+                </div>
+              )}
+
+              {/* Sheet Dropdown */}
+              <div>
+                <label htmlFor="google-sheet-select" className="block text-xs font-medium text-slate-700 mb-1.5">
+                  Your Google Sheets
+                </label>
+                <div className="flex items-center gap-2">
+                  <select
+                    id="google-sheet-select"
+                    value={selectedSheetId}
+                    onChange={(e) => handleSelectSheet(e.target.value)}
+                    disabled={loadingSheets}
+                    className="flex-1 h-9 px-3 text-[13px] border border-slate-300 rounded bg-white text-slate-900 focus:border-slate-900 focus:outline-none"
+                  >
+                    <option value="">
+                      {loadingSheets ? 'Loading your sheets…' : 'Select a Google Sheet'}
+                    </option>
+                    {sheetsList.map((sheet) => (
+                      <option key={sheet.id} value={sheet.id}>
+                        {sheet.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={handleOpenSheetsModal}
+                    disabled={loadingSheets}
+                    className="h-9 px-3 text-xs border border-slate-300 rounded text-slate-700 hover:bg-slate-50 cursor-pointer"
+                    title="Refresh sheet list"
+                  >
+                    <RefreshCw size={13} className={loadingSheets ? 'animate-spin' : ''} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Verification Preview Table */}
+              {loadingPreview && (
+                <div className="py-6 text-center text-xs text-slate-500">Verifying sheet columns and rows…</div>
+              )}
+
+              {sheetPreview && !loadingPreview && (
+                <div className="border border-slate-200 rounded overflow-hidden">
+                  <div className="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-xs text-slate-600">
+                    <span className="font-medium text-slate-800">Preview ({sheetPreview.totalRows} rows found)</span>
+                    <span>Verify before importing</span>
+                  </div>
+                  <div className="overflow-x-auto max-h-52">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-white">
+                          {sheetPreview.headers.map((h, idx) => (
+                            <th key={idx} className="px-3 py-2 font-medium text-slate-700 whitespace-nowrap">
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {sheetPreview.rows.slice(0, 5).map((row, rIdx) => (
+                          <tr key={rIdx}>
+                            {sheetPreview.headers.map((_, cIdx) => (
+                              <td key={cIdx} className="px-3 py-1.5 text-slate-600 whitespace-nowrap">
+                                {row[cIdx] || '—'}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Revert Last Import */}
+              {lastSheetImport && lastSheetImport.leadIds.length > 0 && (
+                <div className="px-3.5 py-2.5 rounded border border-slate-200 bg-slate-50 flex items-center justify-between gap-3">
+                  <div className="text-xs text-slate-700">
+                    Last import: <span className="font-medium">{lastSheetImport.importedCount} leads</span> from{' '}
+                    <span className="font-medium">{lastSheetImport.sheetName}</span> ({lastSheetImport.importedAt})
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRevertLastImport}
+                    disabled={revertingSheet}
+                    className="h-8 px-3 text-xs font-medium rounded border border-rose-300 text-rose-700 hover:bg-rose-50 cursor-pointer shrink-0 disabled:opacity-50"
+                  >
+                    {revertingSheet ? 'Reverting…' : 'Revert Import'}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="px-5 py-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowSheetsModal(false)}
+                className="h-9 px-3.5 text-[13px] font-medium rounded border border-slate-300 text-slate-700 hover:bg-slate-50 cursor-pointer"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={handleImportSelectedSheet}
+                disabled={!selectedSheetId || !sheetPreview || importingSheet}
+                className="h-9 px-4 text-[13px] font-medium rounded bg-slate-900 hover:bg-slate-800 text-white cursor-pointer disabled:opacity-40"
+              >
+                {importingSheet ? 'Importing…' : 'Verify & Import'}
               </button>
             </div>
           </div>

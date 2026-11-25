@@ -152,7 +152,7 @@ export function toISTDateKey(dateOrIso?: Date | string | number | null): string 
  */
 export function cleanNotificationTitle(rawTitle?: string): string {
   if (!rawTitle) return '';
-  let cleaned = rawTitle.replace(/^🔔\s*/, '').replace(/^Reminder:\s*/i, '').trim();
+  let cleaned = rawTitle.replace(/^(?:🔔|🎯)\s*/, '').replace(/🎯\s*/g, '').replace(/^Reminder:\s*/i, '').trim();
   const words = cleaned.split(/\s+/);
   if (words.length === 2 && words[0].toLowerCase() === words[1].toLowerCase()) {
     return words[0];

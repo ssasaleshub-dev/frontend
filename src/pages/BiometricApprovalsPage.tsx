@@ -19,6 +19,7 @@ import {
   Loader2,
   X,
 } from 'lucide-react';
+import { SkeletonBlock, SkeletonCircle } from '../components/common/SkeletonLoader';
 import { useAuth } from '../context/AuthContext';
 import { useAlert } from '../context/AlertContext';
 import { isAdmin as checkIsAdmin } from '../utils/rbac';
@@ -284,14 +285,28 @@ export default function BiometricApprovalsPage() {
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
               {loading ? (
-                <tr>
-                  <td colSpan={5} className="py-12 text-center text-slate-400">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <Loader2 size={24} className="animate-spin text-emerald-600" />
-                      <span className="text-xs font-medium text-slate-600">Loading biometric credentials...</span>
-                    </div>
-                  </td>
-                </tr>
+                Array.from({ length: 6 }).map((_, i) => (
+                  <tr key={i}>
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-2.5">
+                        <SkeletonCircle size={32} />
+                        <div className="space-y-1.5">
+                          <SkeletonBlock className="w-28 h-3.5 rounded" />
+                          <SkeletonBlock className="w-20 h-3 rounded" />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <div className="space-y-1.5">
+                        <SkeletonBlock className="w-36 h-3.5 rounded" />
+                        <SkeletonBlock className="w-24 h-3 rounded" />
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4"><SkeletonBlock className="w-28 h-3.5 rounded" /></td>
+                    <td className="py-3.5 px-4"><SkeletonBlock className="w-20 h-5 rounded-full" /></td>
+                    <td className="py-3.5 px-4 text-right"><SkeletonBlock className="w-20 h-7 rounded-md ml-auto" /></td>
+                  </tr>
+                ))
               ) : filteredCredentials.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-16 text-center">

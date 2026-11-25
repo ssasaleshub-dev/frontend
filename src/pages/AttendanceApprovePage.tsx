@@ -9,6 +9,7 @@ import attendanceVerificationService, {
   describeRequestSource,
 } from '../services/api/attendanceVerificationService';
 import { formatIndianTime } from '../utils/dateTimeUtils';
+import { SkeletonBlock, SkeletonCircle } from '../components/common/SkeletonLoader';
 
 type Outcome = 'approved' | 'rejected' | null;
 
@@ -106,9 +107,14 @@ export default function AttendanceApprovePage() {
 
   if (loading) {
     return shell(
-      <div className="py-10 flex flex-col items-center gap-3 text-slate-500">
-        <Loader2 size={22} className="animate-spin" />
-        <p className="text-sm">Loading check-in request…</p>
+      <div className="py-6 flex flex-col items-center gap-4">
+        <SkeletonCircle size={56} />
+        <SkeletonBlock className="w-48 h-5 rounded-md" />
+        <SkeletonBlock className="w-64 h-3.5 rounded" />
+        <div className="w-full space-y-2.5 pt-3">
+          <SkeletonBlock className="w-full h-11 rounded-xl" />
+          <SkeletonBlock className="w-full h-11 rounded-xl" />
+        </div>
       </div>
     );
   }
