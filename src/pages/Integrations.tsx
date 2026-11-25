@@ -1267,7 +1267,11 @@ export default function Integrations() {
                     className="flex-1 h-9 px-3 text-[13px] border border-slate-300 rounded bg-white text-slate-900 focus:border-slate-900 focus:outline-none"
                   >
                     <option value="">
-                      {loadingSheets ? 'Loading your sheets…' : 'Select a Google Sheet'}
+                      {loadingSheets
+                        ? 'Loading your sheets…'
+                        : sheetsList.length === 0
+                        ? 'No Google Sheets found in Drive'
+                        : 'Select a Google Sheet'}
                     </option>
                     {sheetsList.map((sheet) => (
                       <option key={sheet.id} value={sheet.id}>
@@ -1285,6 +1289,11 @@ export default function Integrations() {
                     <RefreshCw size={13} className={loadingSheets ? 'animate-spin' : ''} />
                   </button>
                 </div>
+                {!loadingSheets && !sheetsError && sheetsList.length === 0 && (
+                  <p className="mt-1.5 text-xs text-slate-500">
+                    No native Google Sheets found in {connectedEmail || 'your Google Drive'}. Open Google Drive, create or save a spreadsheet as a Google Sheet, then click Refresh.
+                  </p>
+                )}
               </div>
 
               {/* Verification Preview Table */}
