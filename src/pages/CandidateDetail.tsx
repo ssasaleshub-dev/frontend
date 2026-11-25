@@ -156,6 +156,7 @@ export default function CandidateDetail() {
   const [docTypeInput, setDocTypeInput] = useState<string>('Passport / ID');
   const [uploadingDoc, setUploadingDoc] = useState<boolean>(false);
   const docFileInputRef = useRef<HTMLInputElement | null>(null);
+  const mainScrollRef = useRef<HTMLElement | null>(null);
   const [candidateDocs, setCandidateDocs] = useState<
     Array<{ id: string; name: string; docType: string; url: string; uploadedAt: string; size?: number }>
   >(() => {
@@ -1337,14 +1338,17 @@ export default function CandidateDetail() {
     setActiveSection(sectionKey);
     requestAnimationFrame(() => {
       const el = document.getElementById(id);
-      if (el) {
-        const topOffset = 230; // offset below sticky candidate card header
-        const elementPosition = el.getBoundingClientRect().top;
-        const offsetPosition = elementPosition + window.pageYOffset - topOffset;
-        window.scrollTo({
-          top: Math.max(0, offsetPosition),
+      const container = mainScrollRef.current;
+      if (el && container) {
+        const containerRect = container.getBoundingClientRect();
+        const elRect = el.getBoundingClientRect();
+        const targetTop = container.scrollTop + (elRect.top - containerRect.top);
+        container.scrollTo({
+          top: Math.max(0, targetTop),
           behavior: 'smooth',
         });
+      } else if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     });
   };
@@ -1428,8 +1432,8 @@ export default function CandidateDetail() {
       {/* Desktop Screen Lead Detail Layout (>= 768px) */}
       <div className="hidden md:block crm-page" id="crmPage">
         <div className="wrap">
-        {/* Sticky Top Header Area (Pinned when scrolling lead details) */}
-        <div className="sticky top-[52px] z-20 bg-[#f4f5f7] pt-1 pb-3">
+        {/* Fixed Top Header Area (stays pinned while only center section scrolls) */}
+        <div className="shrink-0 bg-[#f4f5f7] pt-1 pb-2">
           <a className="crumb" onClick={() => navigate('/leads')}>
             ‹ Back to Leads
           </a>
@@ -1635,7 +1639,7 @@ export default function CandidateDetail() {
           </aside>
 
           {/* Center Main: Related List Inline Views or Lead Info Sections */}
-          <main>
+          <main ref={mainScrollRef}>
             {activeRelatedView === 'emails' ? (
               <div className="space-y-4">
                 <section className="card sec" id="emails-section">
