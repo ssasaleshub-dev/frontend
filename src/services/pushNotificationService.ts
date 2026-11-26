@@ -72,21 +72,39 @@ class PushNotificationService {
           // to eliminate duplicate notifications.
 
           import('./reminderNotificationService')
-            .then((m) => {
+            .then(async (m) => {
               const data = notification.data || {};
               const candidateName = data.candidateName || (notification.title ? notification.title.replace(/^New Lead Received:\s*/i, '').trim() : '');
               const phone = data.phoneNumber || '';
               const title = notification.title || data.title || (candidateName ? `New Lead Received: ${candidateName}` : 'SSA Notification');
               const message = notification.body || data.body || data.message || (phone ? `${phone} | Meta Ad Campaign` : '');
 
-              m.default.addNotification({
+              const candidateNotif = {
                 userId: data.userId || 'current',
                 title,
                 message,
                 type: (data.type as any) || (data.leadId ? 'NEW_LEAD' : 'SYSTEM'),
                 referenceId: data.referenceId || data.leadId || data.eventId,
                 referenceType: data.referenceType || (data.leadId ? 'LEAD' : data.eventId ? 'EVENT' : undefined),
-              }, false);
+                visaType: data.visaType,
+                targetRole: data.targetRole || data.role,
+              };
+
+              const isLeadNotif =
+                candidateNotif.referenceType === 'LEAD' ||
+                String(candidateNotif.type || '').toUpperCase() === 'NEW_LEAD' ||
+                String(candidateNotif.type || '').toUpperCase() === 'LEAD_ASSIGNED' ||
+                /new lead/i.test(String(title || ''));
+
+              if (isLeadNotif && !candidateNotif.visaType) {
+                await m.default.ensureLeadsRoleIndexLoaded(true);
+              }
+
+              if (!m.default.isNotificationAllowedForCurrentUser(candidateNotif)) {
+                return;
+              }
+
+              m.default.addNotification(candidateNotif, false);
             })
             .catch(() => {});
 
@@ -512,54 +530,72 @@ class PushNotificationService {
       }).catch(() => {});
     }
 
-    // 2. Add to internal notifications inbox
-    import('./reminderNotificationService').then((m) => {
-      m.default.addNotification({
+    // 2. Check role-based access & add to internal notifications inbox
+    import('./reminderNotificationService').then(async (m) => {
+      const candidateNotif = {
         userId: data.userId || 'current',
-        title: title,
+        title,
         message: body,
         type: (data.type as any) || 'SYSTEM',
         referenceId: data.referenceId || data.leadId || data.eventId,
         referenceType: data.referenceType || (data.leadId ? 'LEAD' : 'EVENT'),
-      });
-    }).catch(() => {});
+        visaType: data.visaType,
+        targetRole: data.targetRole || data.role,
+      };
 
-    // 3. Native browser desktop notification (visible even when user is on another tab/window)
-    if (Notification.permission === 'granted') {
-      try {
-        const desktopNotif = new Notification(title, {
-          body: body,
-          icon: '/favicon.png',
-          badge: '/favicon.png',
-          data: data,
-        });
-        desktopNotif.onclick = () => {
-          window.focus();
-          desktopNotif.close();
-          const target = resolveNotificationTarget({
-            type: data.type,
-            referenceType: data.referenceType,
-            referenceId: data.referenceId,
-            leadId: data.leadId,
-            eventId: data.eventId,
-            route: data.route,
-            url: data.url,
-            title,
-            message: body,
-          });
-          window.dispatchEvent(
-            new CustomEvent('ssa_navigate_to', {
-              detail: {
-                path: target?.path || '/notifications',
-                state: { fromNotification: true, searchName: target?.searchName },
-              },
-            })
-          );
-        };
-      } catch (e) {
-        console.warn('[PushNotifications] Browser Notification API warning:', e);
+      const isLeadNotif =
+        candidateNotif.referenceType === 'LEAD' ||
+        String(candidateNotif.type || '').toUpperCase() === 'NEW_LEAD' ||
+        String(candidateNotif.type || '').toUpperCase() === 'LEAD_ASSIGNED' ||
+        /new lead/i.test(String(title || ''));
+
+      if (isLeadNotif && !candidateNotif.visaType) {
+        await m.default.ensureLeadsRoleIndexLoaded(true);
       }
-    }
+
+      if (!m.default.isNotificationAllowedForCurrentUser(candidateNotif)) {
+        return;
+      }
+
+      m.default.addNotification(candidateNotif);
+
+      // 3. Native browser desktop notification (visible even when user is on another tab/window)
+      if (Notification.permission === 'granted') {
+        try {
+          const desktopNotif = new Notification(title, {
+            body: body,
+            icon: '/favicon.png',
+            badge: '/favicon.png',
+            data: data,
+          });
+          desktopNotif.onclick = () => {
+            window.focus();
+            desktopNotif.close();
+            const target = resolveNotificationTarget({
+              type: data.type,
+              referenceType: data.referenceType,
+              referenceId: data.referenceId,
+              leadId: data.leadId,
+              eventId: data.eventId,
+              route: data.route,
+              url: data.url,
+              title,
+              message: body,
+            });
+            window.dispatchEvent(
+              new CustomEvent('ssa_navigate_to', {
+                detail: {
+                  path: target?.path || '/notifications',
+                  state: { fromNotification: true, searchName: target?.searchName },
+                },
+              })
+            );
+          };
+        } catch (e) {
+          console.warn('[PushNotifications] Browser Notification API warning:', e);
+        }
+      }
+    }).catch(() => {});
 
     // 4. Dispatch custom event
     window.dispatchEvent(

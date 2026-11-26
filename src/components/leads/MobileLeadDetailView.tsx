@@ -6,6 +6,7 @@ import { formatIndianDate, formatIndianDateTime } from '../../utils/dateTimeUtil
 import { formatCurrencyDisplay, isAcademicScore, formatAcademicScore } from '../../utils/formatUtils';
 import { Search, X, FileText, Upload, Eye, Trash2 } from 'lucide-react';
 import DotsLoader from '../common/DotsLoader';
+import DocumentTypeSelect from '../common/DocumentTypeSelect';
 
 export interface MobileLeadDetailViewProps {
   lead: Lead;
@@ -866,13 +867,11 @@ export const MobileLeadDetailView: React.FC<MobileLeadDetailViewProps> = ({
               <label htmlFor="mob-cand-doc-type" style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--muted)', marginBottom: 6 }}>
                 Document Type
               </label>
-              <input
+              <DocumentTypeSelect
                 id="mob-cand-doc-type"
-                type="text"
                 value={docTypeInput}
-                onChange={(e) => setDocTypeInput && setDocTypeInput(e.target.value)}
-                placeholder="Passport / ID"
-                style={{ height: 36, width: '100%', padding: '0 12px', fontSize: 13, color: 'var(--text)', border: '1px solid var(--line)', borderRadius: 4, background: '#fff', outline: 'none' }}
+                onChange={(val) => setDocTypeInput && setDocTypeInput(val)}
+                style={{ height: 36, width: '100%', padding: '0 10px', fontSize: 13, color: 'var(--text)', border: '1px solid var(--line)', borderRadius: 4, background: '#fff', outline: 'none' }}
               />
             </div>
             <button

@@ -241,3 +241,65 @@ export function filterLeadsByUserRole(leads: any[] = [], currentUser: any = null
 
   return leads.filter((lead) => (lead.assignedTo || '').toLowerCase() === userLogin);
 }
+
+export const PREDEFINED_DOCUMENT_TYPE_GROUPS: Array<{ label: string; options: string[] }> = [
+  {
+    label: 'Identity & Travel Proof',
+    options: [
+      'Passport / ID',
+      'Passport (Front & Back)',
+      'Aadhaar Card',
+      'PAN Card',
+      'Driving License',
+      'Voter ID',
+      'Passport Size Photo',
+      'Birth Certificate',
+      'Marriage Certificate',
+      'Police Clearance Certificate (PCC)',
+      'Medical Fitness Certificate',
+    ],
+  },
+  {
+    label: 'Education & Academic',
+    options: [
+      '10th / SSLC Marksheet',
+      '12th / HSC Marksheet',
+      'Diploma Certificate',
+      'Bachelor Degree Certificate',
+      'Master Degree Certificate',
+      'Consolidated Marksheet / Transcripts',
+      'Provisional Degree Certificate',
+      'Bonafide / Transfer Certificate (TC)',
+      'IELTS / PTE / TOEFL Scorecard',
+      'Statement of Purpose (SOP)',
+      'Letter of Recommendation (LOR)',
+      'University Offer Letter',
+    ],
+  },
+  {
+    label: 'Work & Employment',
+    options: [
+      'Resume / CV',
+      'Work Experience Certificate',
+      'Relieving Letter',
+      'Offer / Appointment Letter',
+      'Salary Slips (3-6 Months)',
+      'Employment Contract',
+      'Trade / Skill Certificate',
+    ],
+  },
+  {
+    label: 'Financial & Visa Support',
+    options: [
+      'Bank Statement',
+      'Education Loan Sanction Letter',
+      'Income Tax Return (ITR)',
+      'Sponsorship Affidavit',
+      'Visa Copy / Approval',
+      'Flight Ticket / Travel Insurance',
+      'Payment Receipt',
+    ],
+  },
+];
+
+export const PREDEFINED_DOCUMENT_TYPES: string[] = PREDEFINED_DOCUMENT_TYPE_GROUPS.flatMap((g) => g.options);

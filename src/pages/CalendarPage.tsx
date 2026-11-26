@@ -744,88 +744,63 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* New Reminder / Event Modal (Apple HIG Frosted Sheet UI) */}
+      {/* New Reminder / Event Modal (Clean Legacy CRM Bottom Sheet on Mobile) */}
       {isModalOpen && (
-        <div className="ios-modal-backdrop animate-in fade-in duration-200">
+        <div
+          className="fixed inset-0 z-50 bg-slate-900/45 flex items-end sm:items-center justify-center sm:p-4"
+          onClick={() => setIsModalOpen(false)}
+        >
           <div
-            className="w-full max-w-xl max-h-[92vh] ios-material-thick rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.25)] border border-black/[0.08] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+            className="bg-white w-full sm:max-w-lg max-h-[88vh] rounded-t-xl sm:rounded-lg shadow-lg border-t sm:border border-slate-200 flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200"
             role="dialog"
             aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
           >
-            {/* Apple iOS Frosted Header */}
-            <div className="px-6 pt-3 pb-4 border-b border-black/[0.06] bg-white flex flex-col sticky top-0 z-10">
-              <div className="ios-sheet-grabber mb-2" />
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-black/[0.04] text-[#1c1c1e] flex items-center justify-center shadow-xs">
-                    <BrandReminderIcon size={18} />
-                  </div>
-                  <div>
-                    <h2 className="text-base font-semibold text-[#1c1c1e] tracking-tight">
-                      Schedule Reminder
-                    </h2>
-                    <p className="text-xs text-[#8e8e93] font-medium mt-0.5">
-                      In-App + Android Push Alert System
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="w-8 h-8 rounded-full bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#8e8e93] hover:text-[#1c1c1e] flex items-center justify-center transition-colors cursor-pointer"
-                  title="Close modal"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            </div>
-
-            {/* Segmented Top Bar */}
-            <div className="px-6 pt-3 pb-2 bg-[#f8f9fa] border-b border-black/[0.05] flex items-center justify-between gap-3">
-              <div className="inline-flex p-1 bg-black/[0.05] rounded-xl">
-                <div className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-white text-[#1c1c1e] shadow-xs">
-                  + Set Reminder
-                </div>
-              </div>
-
-              <span className="text-[11px] text-[#8e8e93] font-medium hidden sm:inline">
-                In-App + Android Push Alert
-              </span>
+            {/* Header */}
+            <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between shrink-0">
+              <h2 className="text-sm font-semibold text-slate-900">
+                Schedule Reminder
+              </h2>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded cursor-pointer"
+                title="Close"
+              >
+                <X size={16} />
+              </button>
             </div>
 
             {/* Form Body */}
-            <form onSubmit={handleSaveEvent} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
+            <form id="calendar-reminder-form" onSubmit={handleSaveEvent} className="flex-1 overflow-y-auto p-4 space-y-3.5">
               {/* Quick Presets */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[#1c1c1e] flex items-center gap-1.5">
-                  <Sparkles size={13} className="text-[#ff9500]" />
-                  <span>Quick Presets</span>
-                </label>
+              <div>
+                <span className="block text-[11px] font-medium text-slate-500 mb-1.5">
+                  Quick Presets
+                </span>
                 <div className="flex flex-wrap gap-1.5">
                   {[
-                    { label: 'Follow-up Call', title: 'Follow-up call with candidate', type: 'CALL' as EventType, priority: 'HIGH' as EventPriority, icon: <PhoneCall size={13} /> },
-                    { label: 'Doc Verification', title: 'Verify academic & visa docs', type: 'FOLLOWUP' as EventType, priority: 'MEDIUM' as EventPriority, icon: <FileCheck size={13} /> },
-                    { label: 'Counseling Session', title: 'Admission counseling session', type: 'INTERVIEW' as EventType, priority: 'MEDIUM' as EventPriority, icon: <GraduationCap size={13} /> },
-                    { label: 'Fee Confirmation', title: 'Confirm visa processing fee receipt', type: 'REMINDER' as EventType, priority: 'HIGH' as EventPriority, icon: <CreditCard size={13} /> },
+                    { label: 'Follow-up Call', title: 'Follow-up call with candidate', type: 'CALL' as EventType, priority: 'HIGH' as EventPriority },
+                    { label: 'Doc Verification', title: 'Verify academic & visa docs', type: 'FOLLOWUP' as EventType, priority: 'MEDIUM' as EventPriority },
+                    { label: 'Counseling Session', title: 'Admission counseling session', type: 'INTERVIEW' as EventType, priority: 'MEDIUM' as EventPriority },
+                    { label: 'Fee Confirmation', title: 'Confirm visa processing fee receipt', type: 'REMINDER' as EventType, priority: 'HIGH' as EventPriority },
                   ].map((p, idx) => (
                     <button
                       key={idx}
                       type="button"
                       onClick={() => setFormData((prev) => ({ ...prev, title: p.title, eventType: p.type, priority: p.priority }))}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#1c1c1e] rounded-xl text-xs font-medium transition-all active:scale-95 cursor-pointer"
+                      className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded text-[11px] font-medium cursor-pointer"
                     >
-                      {p.icon}
-                      <span>{p.label}</span>
+                      {p.label}
                     </button>
                   ))}
                 </div>
               </div>
 
               {/* Title Input */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[#1c1c1e]">
-                  Reminder Title / Task <span className="text-[#ff3b30]">*</span>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  Reminder Title <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -833,30 +808,24 @@ export default function CalendarPage() {
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   placeholder="e.g. Follow-up call regarding visa docs"
-                  className="w-full px-3 py-2 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-xs text-slate-800 shadow-2xs transition-all"
+                  className="w-full px-3 py-1.5 bg-white border border-slate-300 focus:border-blue-500 focus:outline-none rounded-md text-xs text-slate-900"
                 />
               </div>
 
               {/* Date & Time Row */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Date Picker */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-[#1c1c1e] flex items-center gap-1.5">
-                      <CalendarIcon size={13} className="text-[#007aff]" />
-                      <span>Date</span>
-                    </label>
-                    <div className="flex items-center gap-1 text-[10px]">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-medium text-slate-700">Date</label>
+                    <div className="flex items-center gap-1.5 text-[11px]">
                       <button
                         type="button"
-                        onClick={() => {
-                          const d = new Date();
-                          setFormData((prev) => ({ ...prev, eventDate: d.toISOString().split('T')[0] }));
-                        }}
-                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43] cursor-pointer"
+                        onClick={() => setFormData((prev) => ({ ...prev, eventDate: new Date().toISOString().split('T')[0] }))}
+                        className="text-blue-600 hover:underline cursor-pointer"
                       >
                         Today
                       </button>
+                      <span className="text-slate-300">·</span>
                       <button
                         type="button"
                         onClick={() => {
@@ -864,10 +833,11 @@ export default function CalendarPage() {
                           d.setDate(d.getDate() + 1);
                           setFormData((prev) => ({ ...prev, eventDate: d.toISOString().split('T')[0] }));
                         }}
-                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43] cursor-pointer"
+                        className="text-blue-600 hover:underline cursor-pointer"
                       >
                         Tomorrow
                       </button>
+                      <span className="text-slate-300">·</span>
                       <button
                         type="button"
                         onClick={() => {
@@ -875,7 +845,7 @@ export default function CalendarPage() {
                           d.setDate(d.getDate() + 2);
                           setFormData((prev) => ({ ...prev, eventDate: d.toISOString().split('T')[0] }));
                         }}
-                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43] cursor-pointer"
+                        className="text-blue-600 hover:underline cursor-pointer"
                       >
                         +2d
                       </button>
@@ -886,36 +856,34 @@ export default function CalendarPage() {
                     required
                     value={formData.eventDate}
                     onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-xs text-slate-800 shadow-2xs transition-all"
+                    className="w-full px-3 py-1.5 bg-white border border-slate-300 focus:border-blue-500 focus:outline-none rounded-md text-xs text-slate-900"
                   />
                 </div>
 
-                {/* Time Picker */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-[#1c1c1e] flex items-center gap-1.5">
-                      <Clock size={13} className="text-[#007aff]" />
-                      <span>Time</span>
-                    </label>
-                    <div className="flex items-center gap-1 text-[10px]">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-medium text-slate-700">Time</label>
+                    <div className="flex items-center gap-1.5 text-[11px]">
                       <button
                         type="button"
                         onClick={() => setFormData((prev) => ({ ...prev, eventTime: '10:00' }))}
-                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43] cursor-pointer"
+                        className="text-blue-600 hover:underline cursor-pointer"
                       >
                         10 AM
                       </button>
+                      <span className="text-slate-300">·</span>
                       <button
                         type="button"
                         onClick={() => setFormData((prev) => ({ ...prev, eventTime: '14:30' }))}
-                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43] cursor-pointer"
+                        className="text-blue-600 hover:underline cursor-pointer"
                       >
                         2:30 PM
                       </button>
+                      <span className="text-slate-300">·</span>
                       <button
                         type="button"
                         onClick={() => setFormData((prev) => ({ ...prev, eventTime: '17:00' }))}
-                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43] cursor-pointer"
+                        className="text-blue-600 hover:underline cursor-pointer"
                       >
                         5 PM
                       </button>
@@ -924,39 +892,31 @@ export default function CalendarPage() {
                   <TimePicker12Hour
                     value={formData.eventTime}
                     onChange={(t) => setFormData((prev) => ({ ...prev, eventTime: t }))}
-                    className="bg-white border-black/[0.1] px-3.5 py-1.5 text-xs rounded-xl"
+                    className="bg-white border-slate-300 px-3 py-1.5 text-xs rounded-md"
                   />
                 </div>
               </div>
 
-              {/* Live Remaining Time Preview */}
               {(() => {
                 const liveRem = getRemainingTimeInfo(formData.eventDate, formData.eventTime);
                 if (!liveRem) return null;
                 return (
-                  <div
-                    className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-[11px] font-medium transition-all ${
-                      liveRem.isPast
-                        ? 'bg-amber-500/10 border-amber-500/20 text-amber-900'
-                        : 'bg-[#007aff]/[0.08] border-[#007aff]/20 text-[#007aff]'
-                    }`}
-                  >
-                    <Clock size={13} className="shrink-0" />
-                    <span>{liveRem.text}</span>
-                  </div>
+                  <p className={`text-[11px] ${liveRem.isPast ? 'text-amber-700' : 'text-slate-500'}`}>
+                    {liveRem.text}
+                  </p>
                 );
               })()}
 
               {/* Notification Timing & Priority */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-[#1c1c1e]">
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">
                     Notification Timing
                   </label>
                   <select
                     value={formData.remindBeforeMinutes}
                     onChange={(e) => setFormData({ ...formData, remindBeforeMinutes: Number(e.target.value) })}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-xs text-slate-700 shadow-2xs transition-all cursor-pointer"
+                    className="w-full px-3 py-1.5 bg-white border border-slate-300 focus:border-blue-500 focus:outline-none rounded-md text-xs text-slate-800 cursor-pointer"
                   >
                     <option value={0}>At scheduled time</option>
                     <option value={15}>15 minutes before (Default)</option>
@@ -966,20 +926,20 @@ export default function CalendarPage() {
                   </select>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-[#1c1c1e]">
-                    Priority Level
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">
+                    Priority
                   </label>
-                  <div className="grid grid-cols-3 gap-1 p-1 bg-black/[0.04] rounded-xl">
+                  <div className="grid grid-cols-3 border border-slate-300 rounded-md overflow-hidden">
                     {(['LOW', 'MEDIUM', 'HIGH'] as EventPriority[]).map((p) => (
                       <button
                         key={p}
                         type="button"
                         onClick={() => setFormData({ ...formData, priority: p })}
-                        className={`py-1.5 text-center text-[11px] font-semibold rounded-lg transition-all cursor-pointer ${
+                        className={`py-1.5 text-center text-[11px] font-medium cursor-pointer border-r last:border-r-0 border-slate-200 ${
                           formData.priority === p
-                            ? 'bg-white text-[#1c1c1e] shadow-xs'
-                            : 'text-[#8e8e93] hover:text-[#1c1c1e]'
+                            ? 'bg-slate-900 text-white'
+                            : 'bg-white text-slate-600 hover:bg-slate-50'
                         }`}
                       >
                         {p}
@@ -990,8 +950,8 @@ export default function CalendarPage() {
               </div>
 
               {/* Candidate Link (Optional) */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[#1c1c1e]">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
                   Candidate Name / Reference (Optional)
                 </label>
                 <input
@@ -999,56 +959,54 @@ export default function CalendarPage() {
                   value={formData.candidateName}
                   onChange={(e) => setFormData({ ...formData, candidateName: e.target.value })}
                   placeholder="e.g. Premkanth (SSA-Gv5ea)"
-                  className="w-full px-3 py-2 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-xs text-slate-800 shadow-2xs transition-all"
+                  className="w-full px-3 py-1.5 bg-white border border-slate-300 focus:border-blue-500 focus:outline-none rounded-md text-xs text-slate-900"
                 />
               </div>
 
-              {/* Counselor Notes / Description */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[#1c1c1e]">
-                  Counselor Notes / Agenda (Optional)
+              {/* Notes */}
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  Notes (Optional)
                 </label>
                 <textarea
                   rows={2}
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Add details, counseling notes, or agenda..."
-                  className="w-full px-3.5 py-2 bg-white border border-black/[0.1] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] transition-all resize-none"
+                  placeholder="Add details or agenda..."
+                  className="w-full px-3 py-1.5 bg-white border border-slate-300 focus:border-blue-500 focus:outline-none rounded-md text-xs text-slate-900 resize-none"
                 />
               </div>
 
               {saveError && (
-                <div className="p-3 rounded-2xl bg-black/[0.04] text-[#ff3b30] border border-black/[0.06] text-xs flex items-center gap-2">
-                  <AlertCircle size={15} className="shrink-0" />
+                <div className="p-2.5 rounded-md bg-red-50 text-red-700 border border-red-200 text-xs flex items-center gap-2">
+                  <AlertCircle size={14} className="shrink-0" />
                   <span>{saveError}</span>
                 </div>
               )}
-
-              {/* Submit Button */}
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !formData.title.trim()}
-                  className="w-full py-3 bg-[#007aff] hover:bg-[#0062cc] active:scale-[0.99] text-white font-semibold rounded-2xl text-xs shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  <BrandReminderIcon size={14} />
-                  <span>{isSubmitting ? 'Scheduling Reminder...' : 'Set Reminder'}</span>
-                </button>
-              </div>
             </form>
 
             {/* Footer */}
-            <div className="px-6 py-3.5 bg-white border-t border-black/[0.06] flex items-center justify-between text-xs text-[#8e8e93]">
-              <span className="text-[11px]">
-                {events.length} configured reminders
+            <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2 shrink-0">
+              <span className="text-[11px] text-slate-500">
+                {events.length} reminders
               </span>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="px-5 py-2 bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#1c1c1e] font-semibold rounded-xl transition-all cursor-pointer"
-              >
-                Done
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-md cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  form="calendar-reminder-form"
+                  disabled={isSubmitting || !formData.title.trim()}
+                  className="px-4 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmitting ? 'Saving...' : 'Set Reminder'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

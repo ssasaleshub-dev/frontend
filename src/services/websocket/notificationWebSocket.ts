@@ -122,9 +122,6 @@ class NotificationWebSocket {
         }
       }
 
-      console.log('[NotificationWebSocket] 📨 Pure WebSocket notification received:', data);
-
-      // 1. Add directly to cached notification history in memory & localStorage (zero HTTP API polling!)
       const notifItem = {
         id: data.id || `ws-${Date.now()}`,
         userId: targetUser ? String(targetUser) : undefined,
@@ -136,25 +133,49 @@ class NotificationWebSocket {
         referenceId: data.referenceId,
         referenceType: data.referenceType,
         url: data.url,
+        visaType: data.visaType,
+        targetRole: data.targetRole || data.role,
       };
-      reminderNotificationService.addIncomingNotification(notifItem);
 
-      // 2. Trigger Apple HIG in-app notification popup banner on the web app!
-      notificationBannerService.show({
-        id: notifItem.id,
-        title: (data.title || 'Notification').replace(/^🔔\s*/, ''),
-        description: data.description || '',
-        type: data.type || 'SYSTEM',
-        timestamp: data.timestamp || 'now',
-        url: data.url,
-        referenceId: data.referenceId,
-        referenceType: data.referenceType,
-      });
+      const deliver = async () => {
+        const isLeadNotif =
+          notifItem.referenceType === 'LEAD' ||
+          String(notifItem.type || '').toUpperCase() === 'NEW_LEAD' ||
+          String(notifItem.type || '').toUpperCase() === 'LEAD_ASSIGNED' ||
+          /new lead/i.test(String(notifItem.title || ''));
 
-      // 3. Notify subscribers
-      for (const listener of this.notificationListeners) {
-        listener(data);
-      }
+        if (isLeadNotif && !notifItem.visaType) {
+          await reminderNotificationService.ensureLeadsRoleIndexLoaded(true);
+        }
+
+        if (!reminderNotificationService.isNotificationAllowedForCurrentUser(notifItem)) {
+          return;
+        }
+
+        console.log('[NotificationWebSocket] 📨 Pure WebSocket notification received:', data);
+
+        // 1. Add directly to cached notification history in memory & localStorage (zero HTTP API polling!)
+        reminderNotificationService.addIncomingNotification(notifItem);
+
+        // 2. Trigger Apple HIG in-app notification popup banner on the web app!
+        notificationBannerService.show({
+          id: notifItem.id,
+          title: (data.title || 'Notification').replace(/^🔔\s*/, ''),
+          description: data.description || '',
+          type: data.type || 'SYSTEM',
+          timestamp: data.timestamp || 'now',
+          url: data.url,
+          referenceId: data.referenceId,
+          referenceType: data.referenceType,
+        });
+
+        // 3. Notify subscribers
+        for (const listener of this.notificationListeners) {
+          listener(data);
+        }
+      };
+
+      deliver().catch(() => {});
 
       // 4. Live attendance sync if attendance event or notification arrived
       if (

@@ -61,12 +61,100 @@ function PushNotificationListener() {
   return null;
 }
 
+function MobileKeyboardManager() {
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const isTextInput = (el: EventTarget | null): el is HTMLElement => {
+      if (!(el instanceof HTMLElement)) return false;
+      const tag = el.tagName.toLowerCase();
+      if (tag === 'textarea' || tag === 'select') return true;
+      if (tag === 'input') {
+        const type = ((el as HTMLInputElement).type || 'text').toLowerCase();
+        return !['checkbox', 'radio', 'file', 'button', 'submit', 'reset', 'range', 'color', 'hidden'].includes(type);
+      }
+      return el.isContentEditable;
+    };
+
+    const isMobileViewport = () => window.innerWidth < 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    let baseHeight = window.visualViewport?.height || window.innerHeight;
+    let blurTimer: number | null = null;
+    let scrollTimer: number | null = null;
+
+    const setKeyboardOpen = (open: boolean) => {
+      document.body.classList.toggle('keyboard-open', open);
+    };
+
+    const onFocusIn = (e: FocusEvent) => {
+      if (!isMobileViewport() || !isTextInput(e.target)) return;
+      if (blurTimer) {
+        window.clearTimeout(blurTimer);
+        blurTimer = null;
+      }
+      setKeyboardOpen(true);
+
+      const targetEl = e.target;
+      if (scrollTimer) window.clearTimeout(scrollTimer);
+      scrollTimer = window.setTimeout(() => {
+        try {
+          targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } catch {}
+      }, 200);
+    };
+
+    const onFocusOut = () => {
+      if (blurTimer) window.clearTimeout(blurTimer);
+      blurTimer = window.setTimeout(() => {
+        if (!isTextInput(document.activeElement)) {
+          setKeyboardOpen(false);
+        }
+      }, 120);
+    };
+
+    const onViewportResize = () => {
+      if (!isMobileViewport()) {
+        setKeyboardOpen(false);
+        return;
+      }
+      const currentHeight = window.visualViewport?.height || window.innerHeight;
+      if (currentHeight > baseHeight) {
+        baseHeight = currentHeight;
+      }
+      const keyboardVisible = baseHeight - currentHeight > 140;
+      if (!keyboardVisible && !isTextInput(document.activeElement)) {
+        setKeyboardOpen(false);
+      } else if (keyboardVisible) {
+        setKeyboardOpen(true);
+      }
+    };
+
+    document.addEventListener('focusin', onFocusIn, true);
+    document.addEventListener('focusout', onFocusOut, true);
+    window.visualViewport?.addEventListener('resize', onViewportResize);
+    window.addEventListener('resize', onViewportResize);
+
+    return () => {
+      document.removeEventListener('focusin', onFocusIn, true);
+      document.removeEventListener('focusout', onFocusOut, true);
+      window.visualViewport?.removeEventListener('resize', onViewportResize);
+      window.removeEventListener('resize', onViewportResize);
+      if (blurTimer) window.clearTimeout(blurTimer);
+      if (scrollTimer) window.clearTimeout(scrollTimer);
+      document.body.classList.remove('keyboard-open');
+    };
+  }, []);
+
+  return null;
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <AlertProvider>
         <BrowserRouter>
           <PushNotificationListener />
+          <MobileKeyboardManager />
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />

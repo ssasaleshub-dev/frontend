@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import DotsLoader from '../components/common/DotsLoader';
+import DocumentTypeSelect from '../components/common/DocumentTypeSelect';
 import {
   ChevronLeft,
   ChevronDown,
@@ -2294,13 +2295,10 @@ export default function CandidateDetail() {
                     <label htmlFor="cand-doc-type" className="block text-[12px] font-medium text-slate-500">
                       Document Type
                     </label>
-                    <input
+                    <DocumentTypeSelect
                       id="cand-doc-type"
-                      type="text"
                       value={docTypeInput}
-                      onChange={(e) => setDocTypeInput(e.target.value)}
-                      placeholder="Passport / ID"
-                      className="h-9 w-56 px-3 text-[13px] text-slate-900 border border-slate-200 rounded-md focus:border-blue-500 focus:outline-none bg-white"
+                      onChange={setDocTypeInput}
                     />
                   </div>
                   <button
@@ -3462,89 +3460,66 @@ export default function CandidateDetail() {
         />
       )}
 
-      {/* Schedule & Confirm Google Meet Modal (Apple HIG Frosted Sheet UI) */}
+      {/* Schedule & Confirm Google Meet Modal (Clean Legacy CRM Bottom Sheet on Mobile) */}
       {showMeetScheduleModal && lead && (
-        <div className="ios-modal-backdrop animate-in fade-in duration-200">
+        <div
+          className="fixed inset-0 z-50 bg-slate-900/45 flex items-end sm:items-center justify-center sm:p-4"
+          onClick={() => setShowMeetScheduleModal(false)}
+        >
           <div
-            className="w-full max-w-xl max-h-[92vh] ios-material-thick rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.25)] border border-black/[0.08] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+            className="bg-white w-full sm:max-w-lg max-h-[88vh] rounded-t-xl sm:rounded-lg shadow-lg border-t sm:border border-slate-200 flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200"
             role="dialog"
             aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
           >
-            {/* Apple iOS Frosted Header */}
-            <div className="px-6 pt-3 pb-4 border-b border-black/[0.06] bg-white flex flex-col sticky top-0 z-10">
-              <div className="ios-sheet-grabber mb-2" />
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-black/[0.04] text-[#1c1c1e] flex items-center justify-center shadow-xs">
-                    <img src="/icons/google-meet.png" alt="Google Meet" className="w-5 h-5 object-contain" />
-                  </div>
-                  <div>
-                    <h2 className="text-base font-semibold text-[#1c1c1e] tracking-tight">
-                      Schedule Google Meet
-                    </h2>
-                    <p className="text-xs text-[#8e8e93] font-medium mt-0.5">
-                      {lead.customerName || lead.fullName || 'Candidate'} • Ref {formatMaskedLeadRef(lead.id)}
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setShowMeetScheduleModal(false)}
-                  className="w-8 h-8 rounded-full bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#8e8e93] hover:text-[#1c1c1e] flex items-center justify-center transition-colors cursor-pointer"
-                  title="Close modal"
-                >
-                  <X size={16} />
-                </button>
+            {/* Header */}
+            <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between shrink-0">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900">
+                  Schedule Google Meet
+                </h2>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  {lead.customerName || lead.fullName || 'Candidate'} · {formatMaskedLeadRef(lead.id)}
+                </p>
               </div>
+              <button
+                type="button"
+                onClick={() => setShowMeetScheduleModal(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded cursor-pointer"
+                title="Close"
+              >
+                <X size={16} />
+              </button>
             </div>
 
-            {/* Segmented Top Bar */}
-            <div className="px-6 pt-3 pb-2 bg-[#f8f9fa] border-b border-black/[0.05] flex items-center justify-between gap-3">
-              <div className="inline-flex p-1 bg-black/[0.05] rounded-xl">
-                <div className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-white text-[#1c1c1e] shadow-xs">
-                  + Schedule Meet
-                </div>
-              </div>
-
-              <span className="text-[11px] text-[#8e8e93] font-medium hidden sm:inline">
-                In-App + Automated Link Dispatch
-              </span>
-            </div>
-
-            {/* Content Body */}
-            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3.5">
               {/* Quick Presets */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[#1c1c1e] flex items-center gap-1.5">
-                  <Sparkles size={13} className="text-[#ff9500]" />
-                  <span>Quick Presets</span>
-                </label>
+              <div>
+                <span className="block text-[11px] font-medium text-slate-500 mb-1.5">
+                  Quick Presets
+                </span>
                 <div className="flex flex-wrap gap-1.5">
                   {[
                     {
                       label: 'Follow-up Call',
                       title: `Follow-up call with ${lead.customerName || lead.fullName || 'Candidate'}`,
                       duration: 30,
-                      icon: <PhoneCall size={13} />,
                     },
                     {
                       label: 'Doc Verification',
                       title: `Verify academic & visa docs for ${lead.customerName || lead.fullName || 'Candidate'}`,
                       duration: 30,
-                      icon: <FileCheck size={13} />,
                     },
                     {
                       label: 'Counseling Session',
                       title: `Admission counseling session with ${lead.customerName || lead.fullName || 'Candidate'}`,
                       duration: 45,
-                      icon: <GraduationCap size={13} />,
                     },
                     {
                       label: 'Fee Confirmation',
                       title: `Confirm visa processing fee receipt for ${lead.customerName || lead.fullName || 'Candidate'}`,
                       duration: 30,
-                      icon: <CreditCard size={13} />,
                     },
                   ].map((preset, idx) => (
                     <button
@@ -3554,19 +3529,18 @@ export default function CandidateDetail() {
                         setMeetTitle(preset.title);
                         setMeetDuration(preset.duration);
                       }}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#1c1c1e] rounded-xl text-xs font-medium transition-all active:scale-95 cursor-pointer"
+                      className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded text-[11px] font-medium cursor-pointer"
                     >
-                      {preset.icon}
-                      <span>{preset.label}</span>
+                      {preset.label}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Title Input */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[#1c1c1e]">
-                  Meeting Title / Task <span className="text-[#ff3b30]">*</span>
+              {/* Title */}
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  Meeting Title <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -3574,31 +3548,24 @@ export default function CandidateDetail() {
                   onChange={(e) => setMeetTitle(e.target.value)}
                   required
                   placeholder={`Consultation - ${lead.customerName || lead.fullName || 'Candidate'}`}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-xs text-slate-800 shadow-2xs transition-all"
+                  className="w-full px-3 py-1.5 bg-white border border-slate-300 focus:border-blue-500 focus:outline-none rounded-md text-xs text-slate-900"
                 />
               </div>
 
-              {/* Date & Time Row */}
+              {/* Date & Time */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Date Picker */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-[#1c1c1e] flex items-center gap-1.5">
-                      <Calendar size={13} className="text-[#007aff]" />
-                      <span>Date</span>
-                    </label>
-                    {/* Quick Date Pills */}
-                    <div className="flex items-center gap-1 text-[10px]">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-medium text-slate-700">Date</label>
+                    <div className="flex items-center gap-1.5 text-[11px]">
                       <button
                         type="button"
-                        onClick={() => {
-                          const d = new Date();
-                          setMeetDate(d.toISOString().split('T')[0]);
-                        }}
-                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43] cursor-pointer"
+                        onClick={() => setMeetDate(new Date().toISOString().split('T')[0])}
+                        className="text-blue-600 hover:underline cursor-pointer"
                       >
                         Today
                       </button>
+                      <span className="text-slate-300">·</span>
                       <button
                         type="button"
                         onClick={() => {
@@ -3606,10 +3573,11 @@ export default function CandidateDetail() {
                           d.setDate(d.getDate() + 1);
                           setMeetDate(d.toISOString().split('T')[0]);
                         }}
-                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43] cursor-pointer"
+                        className="text-blue-600 hover:underline cursor-pointer"
                       >
                         Tomorrow
                       </button>
+                      <span className="text-slate-300">·</span>
                       <button
                         type="button"
                         onClick={() => {
@@ -3617,7 +3585,7 @@ export default function CandidateDetail() {
                           d.setDate(d.getDate() + 2);
                           setMeetDate(d.toISOString().split('T')[0]);
                         }}
-                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43] cursor-pointer"
+                        className="text-blue-600 hover:underline cursor-pointer"
                       >
                         +2d
                       </button>
@@ -3628,37 +3596,34 @@ export default function CandidateDetail() {
                     value={meetDate}
                     onChange={(e) => setMeetDate(e.target.value)}
                     required
-                    className="w-full px-3 py-2 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-xs text-slate-800 shadow-2xs transition-all"
+                    className="w-full px-3 py-1.5 bg-white border border-slate-300 focus:border-blue-500 focus:outline-none rounded-md text-xs text-slate-900"
                   />
                 </div>
 
-                {/* Time Picker */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-[#1c1c1e] flex items-center gap-1.5">
-                      <Clock size={13} className="text-[#007aff]" />
-                      <span>Time</span>
-                    </label>
-                    {/* Quick Time Pills */}
-                    <div className="flex items-center gap-1 text-[10px]">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-medium text-slate-700">Time</label>
+                    <div className="flex items-center gap-1.5 text-[11px]">
                       <button
                         type="button"
                         onClick={() => setMeetTime('10:00')}
-                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43] cursor-pointer"
+                        className="text-blue-600 hover:underline cursor-pointer"
                       >
                         10 AM
                       </button>
+                      <span className="text-slate-300">·</span>
                       <button
                         type="button"
                         onClick={() => setMeetTime('14:30')}
-                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43] cursor-pointer"
+                        className="text-blue-600 hover:underline cursor-pointer"
                       >
                         2:30 PM
                       </button>
+                      <span className="text-slate-300">·</span>
                       <button
                         type="button"
                         onClick={() => setMeetTime('17:00')}
-                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43] cursor-pointer"
+                        className="text-blue-600 hover:underline cursor-pointer"
                       >
                         5 PM
                       </button>
@@ -3667,83 +3632,61 @@ export default function CandidateDetail() {
                   <TimePicker12Hour
                     value={meetTime}
                     onChange={setMeetTime}
-                    className="bg-white border-black/[0.1] px-3.5 py-1.5 text-xs rounded-xl"
+                    className="bg-white border-slate-300 px-3 py-1.5 text-xs rounded-md"
                   />
                 </div>
               </div>
 
-              {/* Live Remaining Time Preview */}
               {(() => {
                 const liveRem = getMeetRemainingTime(meetDate, meetTime);
                 if (!liveRem) return null;
                 return (
-                  <div
-                    className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-[11px] font-medium transition-all ${
-                      liveRem.isPast
-                        ? 'bg-amber-500/10 border-amber-500/20 text-amber-900'
-                        : 'bg-[#007aff]/[0.08] border-[#007aff]/20 text-[#007aff]'
-                    }`}
-                  >
-                    <Clock size={13} className="shrink-0" />
-                    <span>{liveRem.text}</span>
-                  </div>
+                  <p className={`text-[11px] ${liveRem.isPast ? 'text-amber-700' : 'text-slate-500'}`}>
+                    {liveRem.text}
+                  </p>
                 );
               })()}
 
-              {/* Duration & Dispatch Channels Row */}
+              {/* Duration & Send Via */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Meeting Duration */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-[#1c1c1e]">
-                    Meeting Duration
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">
+                    Duration
                   </label>
                   <select
                     value={meetDuration}
                     onChange={(e) => setMeetDuration(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-xs text-slate-700 shadow-2xs transition-all cursor-pointer"
+                    className="w-full px-3 py-1.5 bg-white border border-slate-300 focus:border-blue-500 focus:outline-none rounded-md text-xs text-slate-800 cursor-pointer"
                   >
                     <option value={15}>15 minutes</option>
-                    <option value={30}>30 minutes (Standard)</option>
+                    <option value={30}>30 minutes</option>
                     <option value={45}>45 minutes</option>
                     <option value={60}>60 minutes (1 hour)</option>
                   </select>
                 </div>
 
-                {/* Dispatch Channels */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-[#1c1c1e]">
-                    Auto-Dispatch Link To
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">
+                    Send Link Via
                   </label>
-                  <div className="grid grid-cols-2 gap-2 pt-0.5">
-                    <label
-                      className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl border text-xs font-semibold cursor-pointer transition-all ${
-                        meetSendWhatsApp
-                          ? 'bg-[#25D366]/10 border-[#25D366]/40 text-[#128C7E]'
-                          : 'bg-black/[0.02] border-black/[0.08] text-[#8e8e93] hover:bg-black/[0.04]'
-                      } ${!lead.phoneNumber ? 'opacity-40 cursor-not-allowed' : ''}`}
-                    >
+                  <div className="flex items-center gap-3 h-[30px]">
+                    <label className={`inline-flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer ${!lead.phoneNumber ? 'opacity-40 cursor-not-allowed' : ''}`}>
                       <input
                         type="checkbox"
                         checked={meetSendWhatsApp}
                         disabled={!lead.phoneNumber}
                         onChange={(e) => setMeetSendWhatsApp(e.target.checked)}
-                        className="hidden"
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                       />
                       <span>WhatsApp</span>
                     </label>
-                    <label
-                      className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl border text-xs font-semibold cursor-pointer transition-all ${
-                        meetSendEmail
-                          ? 'bg-[#ea4335]/10 border-[#ea4335]/40 text-[#c5221f]'
-                          : 'bg-black/[0.02] border-black/[0.08] text-[#8e8e93] hover:bg-black/[0.04]'
-                      } ${!lead.email ? 'opacity-40 cursor-not-allowed' : ''}`}
-                    >
+                    <label className={`inline-flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer ${!lead.email ? 'opacity-40 cursor-not-allowed' : ''}`}>
                       <input
                         type="checkbox"
                         checked={meetSendEmail}
                         disabled={!lead.email}
                         onChange={(e) => setMeetSendEmail(e.target.checked)}
-                        className="hidden"
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                       />
                       <span>Email</span>
                     </label>
@@ -3751,54 +3694,48 @@ export default function CandidateDetail() {
                 </div>
               </div>
 
-              {/* Counselor Notes / Agenda */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[#1c1c1e]">
-                  Counselor Notes / Agenda (Optional)
+              {/* Notes */}
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  Notes (Optional)
                 </label>
                 <textarea
                   rows={2}
                   value={meetCustomNotes}
                   onChange={(e) => setMeetCustomNotes(e.target.value)}
                   placeholder="Add meeting agenda or notes..."
-                  className="w-full px-3.5 py-2 bg-white border border-black/[0.1] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] transition-all resize-none"
+                  className="w-full px-3 py-1.5 bg-white border border-slate-300 focus:border-blue-500 focus:outline-none rounded-md text-xs text-slate-900 resize-none"
                 />
-              </div>
-
-              {/* Submit Action Button */}
-              <div className="pt-2">
-                <button
-                  type="button"
-                  disabled={schedulingMeet || !meetTitle.trim() || (!meetSendWhatsApp && !meetSendEmail && !lead.phoneNumber && !lead.email)}
-                  onClick={handleConfirmAndSendMeet}
-                  className="w-full py-3 bg-[#007aff] hover:bg-[#0062cc] active:scale-[0.99] text-white font-semibold rounded-2xl text-xs shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {schedulingMeet ? (
-                    <RefreshCw size={14} className="animate-spin" />
-                  ) : (
-                    <img src="/icons/google-meet.png" alt="" className="w-4 h-4 object-contain brightness-0 invert" />
-                  )}
-                  <span>{schedulingMeet ? 'Scheduling & Dispatching Link...' : 'Schedule & Send Link'}</span>
-                </button>
               </div>
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-3.5 bg-white border-t border-black/[0.06] flex items-center justify-between text-xs text-[#8e8e93]">
-              <span className="text-[11px]">
+            <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2 shrink-0">
+              <span className="text-[11px] text-slate-500 truncate">
                 {meetSendWhatsApp && lead.phoneNumber
-                  ? `WhatsApp to ${lead.phoneNumber}`
+                  ? `WhatsApp: ${lead.phoneNumber}`
                   : meetSendEmail && lead.email
-                  ? `Email to ${lead.email}`
-                  : 'Manual dispatch'}
+                  ? `Email: ${lead.email}`
+                  : 'Manual'}
               </span>
-              <button
-                type="button"
-                onClick={() => setShowMeetScheduleModal(false)}
-                className="px-5 py-2 bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#1c1c1e] font-semibold rounded-xl transition-all cursor-pointer"
-              >
-                Done
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowMeetScheduleModal(false)}
+                  className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-md cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={schedulingMeet || !meetTitle.trim() || (!meetSendWhatsApp && !meetSendEmail && !lead.phoneNumber && !lead.email)}
+                  onClick={handleConfirmAndSendMeet}
+                  className="px-4 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5"
+                >
+                  {schedulingMeet && <RefreshCw size={12} className="animate-spin" />}
+                  <span>{schedulingMeet ? 'Scheduling...' : 'Schedule & Send Link'}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

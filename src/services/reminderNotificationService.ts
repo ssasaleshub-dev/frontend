@@ -15,6 +15,15 @@ import pushNotificationService from './pushNotificationService';
 import notificationBannerService from './banner/notificationBannerService';
 import { format12HourTime, IST_TIMEZONE, cleanNotificationMessage } from '../utils/dateTimeUtils';
 import { resolveNotificationTarget } from '../utils/notificationNavigation';
+import {
+  filterLeadsByUserRole,
+  isStudyVisaType,
+  isWorkVisaType,
+  isDomesticAdmissionType,
+  isOtherVisaType,
+  USER_ROLES,
+} from '../config/constants';
+import { isAdmin } from '../utils/rbac';
 
 export type { CalendarEventDTO as CalendarEvent, NotificationDTO as NotificationItem, EventType, EventPriority, NotificationType };
 
@@ -307,6 +316,167 @@ class ReminderNotificationService {
     return 'admin';
   }
 
+  public getCurrentUserObj(): any | null {
+    try {
+      const stored = localStorage.getItem('ssa_user') || localStorage.getItem('user');
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch {}
+    return null;
+  }
+
+  private leadsById = new Map<string, any>();
+  private leadsByName = new Map<string, any[]>();
+  private lastLeadsIndexTime = 0;
+  private inFlightLeadsIndex: Promise<void> | null = null;
+
+  public indexLeadsForRoleCheck(leads: any[]): void {
+    if (!Array.isArray(leads)) return;
+    for (const lead of leads) {
+      if (!lead) continue;
+      if (lead.id != null) {
+        this.leadsById.set(String(lead.id), lead);
+      }
+      const rawName = (lead.customerName || lead.fullName || lead.customer?.fullName || '').trim().toLowerCase();
+      if (rawName) {
+        const existing = this.leadsByName.get(rawName) || [];
+        if (!existing.some((e) => String(e.id) === String(lead.id))) {
+          existing.push(lead);
+          this.leadsByName.set(rawName, existing);
+        }
+      }
+    }
+    this.lastLeadsIndexTime = Date.now();
+  }
+
+  public async ensureLeadsRoleIndexLoaded(force = false): Promise<void> {
+    const user = this.getCurrentUserObj();
+    if (!user || isAdmin(user)) return;
+    if (!force && this.leadsById.size > 0 && Date.now() - this.lastLeadsIndexTime < 60000) {
+      return;
+    }
+    if (!force && this.inFlightLeadsIndex) {
+      return this.inFlightLeadsIndex;
+    }
+    this.inFlightLeadsIndex = (async () => {
+      try {
+        const crmModule = await import('./api/crmService');
+        const detailed = await crmModule.default.getDetailedLeads();
+        if (Array.isArray(detailed) && detailed.length > 0) {
+          this.indexLeadsForRoleCheck(detailed);
+          return;
+        }
+        const pageRes = await crmModule.default.getLeads(0, 100, 'id,desc');
+        const leads = Array.isArray(pageRes) ? pageRes : (pageRes as any)?.content || [];
+        this.indexLeadsForRoleCheck(leads);
+      } catch {
+        // Ignore network errors while indexing leads
+      } finally {
+        this.inFlightLeadsIndex = null;
+      }
+    })();
+    return this.inFlightLeadsIndex;
+  }
+
+  private matchesUserVisaType(visaType: string | undefined, user: any): boolean {
+    if (!visaType || !user || isAdmin(user)) return true;
+    const authorities: string[] = user.authorities || [];
+    if (authorities.includes(USER_ROLES.STUDY_VISA_COUNSELOR)) return isStudyVisaType(visaType);
+    if (authorities.includes(USER_ROLES.WORK_VISA_COUNSELOR)) return isWorkVisaType(visaType);
+    if (authorities.includes(USER_ROLES.DOMESTIC_COLLEGE_ADMISSION)) return isDomesticAdmissionType(visaType);
+    if (authorities.includes(USER_ROLES.OTHER_VISA_COUNSELOR)) return isOtherVisaType(visaType);
+    return false;
+  }
+
+  public isNotificationAllowedForCurrentUser(n: any): boolean {
+    if (!n) return false;
+    const user = this.getCurrentUserObj();
+    if (!user || isAdmin(user)) return true;
+
+    const currentLogin = String(user.login || '').toLowerCase().trim();
+    const authorities: string[] = user.authorities || [];
+
+    // 1. Target user check if explicitly targeted to a specific user login
+    const targetUser = n.targetUserId || n.targetUserLogin || n.userId;
+    if (targetUser) {
+      const t = String(targetUser).toLowerCase().trim();
+      if (t && t !== 'all' && t !== 'current' && t !== 'system' && t !== 'admin' && currentLogin && t !== currentLogin) {
+        return false;
+      }
+    }
+
+    // 2. Explicit role / targetRole check on notification payload
+    const targetRole = n.targetRole || n.role;
+    if (targetRole && typeof targetRole === 'string') {
+      const r = targetRole.toUpperCase().trim();
+      if (r.startsWith('ROLE_') && !authorities.includes(r)) {
+        return false;
+      }
+    }
+
+    // 3. Explicit visaType / desk check on notification payload
+    const explicitVisa = n.visaType || n.desk || n.data?.visaType;
+    if (explicitVisa && !this.matchesUserVisaType(String(explicitVisa), user)) {
+      return false;
+    }
+
+    // 4. Lead-based notification check (NEW_LEAD, LEAD_ASSIGNED, referenceType === 'LEAD', or "New Lead Received")
+    const titleStr = String(n.title || '');
+    const msgStr = String(n.message || n.description || '');
+    const typeStr = String(n.type || '').toUpperCase();
+    const isLeadNotif =
+      n.referenceType === 'LEAD' ||
+      typeStr === 'NEW_LEAD' ||
+      typeStr === 'LEAD_ASSIGNED' ||
+      /new lead/i.test(titleStr);
+
+    if (isLeadNotif) {
+      // 4a. Check by referenceId in indexed leads
+      const refId = n.referenceId || n.leadId || n.data?.leadId;
+      if (refId != null) {
+        const matchedLead = this.leadsById.get(String(refId));
+        if (matchedLead) {
+          return filterLeadsByUserRole([matchedLead], user).length > 0;
+        }
+      }
+
+      // 4b. Check by candidate name(s) in message or title (handles "1 New Lead Received: Name" or "2 leads: Name1, Name2")
+      const candidateText = msgStr.replace(/^\d+\s+leads?:\s*/i, '').trim() ||
+        titleStr.replace(/^New Lead Received:\s*/i, '').trim();
+      if (candidateText && this.leadsByName.size > 0) {
+        const names = candidateText
+          .split(',')
+          .map((s) => s.trim().toLowerCase())
+          .filter(Boolean);
+        const matchedLeads: any[] = [];
+        for (const nm of names) {
+          const found = this.leadsByName.get(nm);
+          if (found && found.length > 0) {
+            matchedLeads.push(...found);
+          }
+        }
+        if (matchedLeads.length > 0) {
+          return filterLeadsByUserRole(matchedLeads, user).length > 0;
+        }
+      }
+
+      // 4c. Check explicit visa keyword in notification text
+      const combinedLower = `${titleStr} ${msgStr}`.toLowerCase();
+      if (authorities.includes(USER_ROLES.STUDY_VISA_COUNSELOR)) {
+        if ((combinedLower.includes('work visa') || combinedLower.includes('work_visa')) && !combinedLower.includes('study visa')) {
+          return false;
+        }
+      } else if (authorities.includes(USER_ROLES.WORK_VISA_COUNSELOR)) {
+        if ((combinedLower.includes('study visa') || combinedLower.includes('study_visa')) && !combinedLower.includes('work visa')) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
   // --- INTERNAL NOTIFICATIONS (DYNAMIC API WITH FALLBACK & DEDUPLICATION) ---
 
   public getDeletedNotificationIds(): Set<string> {
@@ -503,7 +673,10 @@ class ReminderNotificationService {
 
     const fetchPromise = (async () => {
       try {
-        const serverNotifs = await notificationApiService.getNotifications(targetUser);
+        const [serverNotifs] = await Promise.all([
+          notificationApiService.getNotifications(targetUser),
+          this.ensureLeadsRoleIndexLoaded(),
+        ]);
         if (Array.isArray(serverNotifs)) {
           this.lastFetchNotificationsTime = Date.now();
           // 1. Process server notifications and track current active server IDs
@@ -514,7 +687,7 @@ class ReminderNotificationService {
               try {
                 notificationApiService.deleteNotification(n.id);
               } catch {}
-            } else {
+            } else if (this.isNotificationAllowedForCurrentUser(n)) {
               n.isServerBacked = true;
               currentServerIds.add(String(n.id));
               validServerNotifs.push(n);
@@ -604,7 +777,10 @@ class ReminderNotificationService {
         } catch {}
       }
 
-      const recentLeads = leads.slice(0, 40);
+      this.indexLeadsForRoleCheck(leads);
+      const roleFilteredLeads = filterLeadsByUserRole(leads, this.getCurrentUserObj());
+
+      const recentLeads = roleFilteredLeads.slice(0, 40);
       for (const lead of recentLeads) {
         if (!lead || !lead.id) continue;
         const strId = String(lead.id);
@@ -741,6 +917,7 @@ class ReminderNotificationService {
       const deduped: NotificationDTO[] = [];
       for (const item of list) {
         if (this.isDeletedNotification(item)) continue;
+        if (!this.isNotificationAllowedForCurrentUser(item)) continue;
         const existingIdx = deduped.findIndex((d) => this.isSameNotification(d, item));
         if (existingIdx === -1) {
           deduped.push({ ...item });
@@ -777,6 +954,9 @@ class ReminderNotificationService {
     showBanner = true
   ): NotificationDTO | null {
     if (this.isDeletedNotification(notification as any)) {
+      return null;
+    }
+    if (!this.isNotificationAllowedForCurrentUser(notification)) {
       return null;
     }
 
@@ -1027,6 +1207,9 @@ class ReminderNotificationService {
    */
   public addIncomingNotification(notification: NotificationDTO): void {
     if (this.isDeletedNotification(notification)) {
+      return;
+    }
+    if (!this.isNotificationAllowedForCurrentUser(notification)) {
       return;
     }
     notification.isServerBacked = true;

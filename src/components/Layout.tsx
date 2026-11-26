@@ -682,7 +682,7 @@ export default function Layout() {
       )}
 
       {/* ── Mobile Bottom Navigation Bar (Docked Edge-to-Edge) ── */}
-      <nav className={`md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-black/[0.08] shadow-[0_-2px_10px_rgba(0,0,0,0.03)] ${isChatOpen ? '!hidden pointer-events-none' : ''}`}>
+      <nav className={`mobile-bottom-nav md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-black/[0.08] shadow-[0_-2px_10px_rgba(0,0,0,0.03)] ${isChatOpen ? '!hidden pointer-events-none' : ''}`}>
         <div
           className="flex items-center justify-around px-0.5 pt-1.5"
           style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}

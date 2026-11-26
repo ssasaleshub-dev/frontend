@@ -226,170 +226,132 @@ export default function LeadReminderModal({
   const pendingCount = reminders.filter((r) => !r.isCompleted).length;
 
   return (
-    <div className="ios-modal-backdrop animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-50 bg-slate-900/45 flex items-end sm:items-center justify-center sm:p-4"
+      onClick={onClose}
+    >
       <div
-        className="w-full max-w-xl max-h-[92vh] ios-material-thick rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.25)] border border-black/[0.08] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+        className="bg-white w-full sm:max-w-lg max-h-[88vh] rounded-t-xl sm:rounded-lg shadow-lg border-t sm:border border-slate-200 flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200"
         role="dialog"
         aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Apple iOS Frosted Header */}
-        <div className="px-6 pt-3 pb-4 border-b border-black/[0.06] bg-white flex flex-col sticky top-0 z-10">
-          <div className="ios-sheet-grabber mb-2" />
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-black/[0.04] text-[#1c1c1e] flex items-center justify-center shadow-xs">
-              <BrandReminderIcon size={18} />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <h2 className="text-base font-semibold text-[#1c1c1e] tracking-tight">
-                  Candidate Reminders
-                </h2>
-                {pendingCount > 0 && (
-                  <span className="text-xs text-[#8e8e93] font-normal">
-                    ({pendingCount})
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-[#8e8e93] font-medium mt-0.5">
-                {candidateName} • Ref {formatMaskedLeadRef(candidateId)}
-              </p>
-            </div>
+        {/* Header */}
+        <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between shrink-0">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-900">
+              Candidate Reminders {pendingCount > 0 ? `(${pendingCount})` : ''}
+            </h2>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              {candidateName} · {formatMaskedLeadRef(candidateId)}
+            </p>
           </div>
-
           <button
+            type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#8e8e93] hover:text-[#1c1c1e] flex items-center justify-center transition-colors cursor-pointer"
-            title="Close modal"
+            className="p-1 text-slate-400 hover:text-slate-600 rounded cursor-pointer"
+            title="Close"
           >
             <X size={16} />
           </button>
         </div>
-      </div>
 
-        {/* Segmented Top Toggle (New Reminder vs Active Reminders) */}
-        <div className="px-6 pt-3 pb-2 bg-[#f8f9fa] border-b border-black/[0.05] flex items-center justify-between gap-3">
-          <div className="inline-flex p-1 bg-black/[0.05] rounded-xl">
-            <button
-              onClick={() => setActiveTab('NEW')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'NEW'
-                  ? 'bg-white text-[#1c1c1e] shadow-xs'
-                  : 'text-[#8e8e93] hover:text-[#1c1c1e]'
-              }`}
-            >
-              + Set Reminder
-            </button>
-            <button
-              onClick={() => setActiveTab('LIST')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'LIST'
-                  ? 'bg-white text-[#1c1c1e] shadow-xs'
-                  : 'text-[#8e8e93] hover:text-[#1c1c1e]'
-              }`}
-            >
-              <span>Reminders List</span>
-              {reminders.length > 0 && (
-                <span className="text-xs text-[#8e8e93] font-normal">
-                  ({reminders.length})
-                </span>
-              )}
-            </button>
-          </div>
-
-          <span className="text-[11px] text-[#8e8e93] font-medium hidden sm:inline">
-            In-App + Android Push Alert
-          </span>
+        {/* Clean Underline Tabs */}
+        <div className="px-4 border-b border-slate-200 flex items-center gap-5 bg-white shrink-0">
+          <button
+            type="button"
+            onClick={() => setActiveTab('NEW')}
+            className={`py-2.5 text-xs font-medium border-b-2 transition-colors cursor-pointer ${
+              activeTab === 'NEW'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            Set Reminder
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('LIST')}
+            className={`py-2.5 text-xs font-medium border-b-2 transition-colors cursor-pointer ${
+              activeTab === 'LIST'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            Reminders ({reminders.length})
+          </button>
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 space-y-3.5">
           {/* Feedback Banner */}
           {feedback && (
             <div
-              className={`p-3.5 rounded-2xl text-xs font-medium flex items-center gap-2.5 transition-all ${
+              className={`p-2.5 rounded-md text-xs font-medium flex items-center gap-2 border ${
                 feedback.type === 'success'
-                  ? 'bg-black/[0.04] text-[#1c1c1e] border border-black/[0.06]'
-                  : 'bg-black/[0.04] text-[#ff3b30] border border-black/[0.06]'
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  : 'bg-red-50 text-red-700 border-red-200'
               }`}
             >
               {feedback.type === 'success' ? (
-                <CheckCircle2 size={16} className="shrink-0" />
+                <CheckCircle2 size={14} className="shrink-0" />
               ) : (
-                <AlertCircle size={16} className="shrink-0" />
+                <AlertCircle size={14} className="shrink-0" />
               )}
               <span>{feedback.message}</span>
             </div>
           )}
 
           {activeTab === 'NEW' ? (
-            /* New Reminder Form */
-            <form onSubmit={handleSaveReminder} className="space-y-4">
-              {/* Quick Preset Buttons */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[#1c1c1e] flex items-center gap-1.5">
-                  <Sparkles size={13} className="text-[#ff9500]" />
-                  <span>Quick Presets</span>
-                </label>
+            <form id="lead-reminder-form" onSubmit={handleSaveReminder} className="space-y-3.5">
+              {/* Quick Presets */}
+              <div>
+                <span className="block text-[11px] font-medium text-slate-500 mb-1.5">
+                  Quick Presets
+                </span>
                 <div className="flex flex-wrap gap-1.5">
                   {PRESETS.map((p, idx) => (
                     <button
                       key={idx}
                       type="button"
                       onClick={() => handleApplyPreset(p)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#1c1c1e] rounded-xl text-xs font-medium transition-all active:scale-95 cursor-pointer"
+                      className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded text-[11px] font-medium cursor-pointer"
                     >
-                      {p.icon}
-                      <span>{p.label}</span>
+                      {p.label}
                     </button>
                   ))}
                 </div>
               </div>
 
               {/* Title Input */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[#1c1c1e]">
-                  Reminder Title / Task <span className="text-[#ff3b30]">*</span>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  Reminder Title <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   required
-                  className="w-full px-3 py-2 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-xs text-slate-800 shadow-2xs transition-all"
+                  className="w-full px-3 py-1.5 bg-white border border-slate-300 focus:border-blue-500 focus:outline-none rounded-md text-xs text-slate-900"
                 />
               </div>
 
               {/* Date & Time Row */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Date Picker */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-[#1c1c1e] flex items-center gap-1.5">
-                      <Calendar size={13} className="text-[#007aff]" />
-                      <span>Date</span>
-                    </label>
-                    {/* Quick Date Pills */}
-                    <div className="flex items-center gap-1 text-[10px]">
-                      <button
-                        type="button"
-                        onClick={() => handleQuickDate(0)}
-                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43]"
-                      >
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-medium text-slate-700">Date</label>
+                    <div className="flex items-center gap-1.5 text-[11px]">
+                      <button type="button" onClick={() => handleQuickDate(0)} className="text-blue-600 hover:underline cursor-pointer">
                         Today
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => handleQuickDate(1)}
-                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43]"
-                      >
+                      <span className="text-slate-300">·</span>
+                      <button type="button" onClick={() => handleQuickDate(1)} className="text-blue-600 hover:underline cursor-pointer">
                         Tomorrow
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => handleQuickDate(2)}
-                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43]"
-                      >
+                      <span className="text-slate-300">·</span>
+                      <button type="button" onClick={() => handleQuickDate(2)} className="text-blue-600 hover:underline cursor-pointer">
                         +2d
                       </button>
                     </div>
@@ -399,38 +361,23 @@ export default function LeadReminderModal({
                     value={eventDate}
                     onChange={(e) => setEventDate(e.target.value)}
                     required
-                    className="w-full px-3 py-2 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-xs text-slate-800 shadow-2xs transition-all"
+                    className="w-full px-3 py-1.5 bg-white border border-slate-300 focus:border-blue-500 focus:outline-none rounded-md text-xs text-slate-900"
                   />
                 </div>
 
-                {/* Time Picker */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-[#1c1c1e] flex items-center gap-1.5">
-                      <Clock size={13} className="text-[#007aff]" />
-                      <span>Time</span>
-                    </label>
-                    {/* Quick Time Pills */}
-                    <div className="flex items-center gap-1 text-[10px]">
-                      <button
-                        type="button"
-                        onClick={() => setEventTime('10:00')}
-                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43]"
-                      >
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-medium text-slate-700">Time</label>
+                    <div className="flex items-center gap-1.5 text-[11px]">
+                      <button type="button" onClick={() => setEventTime('10:00')} className="text-blue-600 hover:underline cursor-pointer">
                         10 AM
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => setEventTime('14:30')}
-                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43]"
-                      >
+                      <span className="text-slate-300">·</span>
+                      <button type="button" onClick={() => setEventTime('14:30')} className="text-blue-600 hover:underline cursor-pointer">
                         2:30 PM
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => setEventTime('17:00')}
-                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[#3c3c43]"
-                      >
+                      <span className="text-slate-300">·</span>
+                      <button type="button" onClick={() => setEventTime('17:00')} className="text-blue-600 hover:underline cursor-pointer">
                         5 PM
                       </button>
                     </div>
@@ -438,40 +385,31 @@ export default function LeadReminderModal({
                   <TimePicker12Hour
                     value={eventTime}
                     onChange={setEventTime}
-                    className="bg-white border-black/[0.1] px-3.5 py-1.5 text-xs rounded-xl"
+                    className="bg-white border-slate-300 px-3 py-1.5 text-xs rounded-md"
                   />
                 </div>
               </div>
 
-              {/* Live Remaining Time Preview */}
               {(() => {
                 const liveRem = getRemainingTimeInfo(eventDate, eventTime);
                 if (!liveRem) return null;
                 return (
-                  <div
-                    className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-[11px] font-medium transition-all ${
-                      liveRem.isPast
-                        ? 'bg-amber-500/10 border-amber-500/20 text-amber-900'
-                        : 'bg-[#007aff]/[0.08] border-[#007aff]/20 text-[#007aff]'
-                    }`}
-                  >
-                    <Clock size={13} className="shrink-0" />
-                    <span>{liveRem.text}</span>
-                  </div>
+                  <p className={`text-[11px] ${liveRem.isPast ? 'text-amber-700' : 'text-slate-500'}`}>
+                    {liveRem.text}
+                  </p>
                 );
               })()}
 
               {/* Remind Before & Priority Row */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Remind Before */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-[#1c1c1e]">
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">
                     Notification Timing
                   </label>
                   <select
                     value={remindBeforeMinutes}
                     onChange={(e) => setRemindBeforeMinutes(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-500 rounded-md text-xs text-slate-700 shadow-2xs transition-all cursor-pointer"
+                    className="w-full px-3 py-1.5 bg-white border border-slate-300 focus:border-blue-500 focus:outline-none rounded-md text-xs text-slate-800 cursor-pointer"
                   >
                     <option value={0}>At scheduled time</option>
                     <option value={15}>15 minutes before (Default)</option>
@@ -481,21 +419,20 @@ export default function LeadReminderModal({
                   </select>
                 </div>
 
-                {/* Priority */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-[#1c1c1e]">
-                    Priority Level
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">
+                    Priority
                   </label>
-                  <div className="grid grid-cols-3 gap-1 p-1 bg-black/[0.04] rounded-xl">
+                  <div className="grid grid-cols-3 border border-slate-300 rounded-md overflow-hidden">
                     {(['LOW', 'MEDIUM', 'HIGH'] as EventPriority[]).map((p) => (
                       <button
                         key={p}
                         type="button"
                         onClick={() => setPriority(p)}
-                        className={`py-1.5 text-center text-[11px] font-semibold rounded-lg transition-all cursor-pointer ${
+                        className={`py-1.5 text-center text-[11px] font-medium cursor-pointer border-r last:border-r-0 border-slate-200 ${
                           priority === p
-                            ? 'bg-white text-[#1c1c1e] shadow-xs'
-                            : 'text-[#8e8e93] hover:text-[#1c1c1e]'
+                            ? 'bg-slate-900 text-white'
+                            : 'bg-white text-slate-600 hover:bg-slate-50'
                         }`}
                       >
                         {p}
@@ -505,138 +442,83 @@ export default function LeadReminderModal({
                 </div>
               </div>
 
-              {/* Description / Counselor Notes */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[#1c1c1e]">
-                  Counselor Notes / Agenda (Optional)
+              {/* Description / Notes */}
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  Notes (Optional)
                 </label>
                 <textarea
                   rows={2}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-white border border-black/[0.1] rounded-xl text-xs text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] transition-all resize-none"
+                  placeholder="Add details or agenda..."
+                  className="w-full px-3 py-1.5 bg-white border border-slate-300 focus:border-blue-500 focus:outline-none rounded-md text-xs text-slate-900 resize-none"
                 />
-              </div>
-
-              {/* Submit Button */}
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full py-3 bg-[#007aff] hover:bg-[#0062cc] active:scale-[0.99] text-white font-semibold rounded-2xl text-xs shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  <BrandReminderIcon size={14} />
-                  <span>{isSubmitting ? 'Scheduling Reminder...' : 'Set Reminder'}</span>
-                </button>
               </div>
             </form>
           ) : (
             /* Reminders List View */
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {loading ? (
-                <div className="py-12 text-center text-xs text-[#8e8e93]">
-                  Loading candidate reminders...
+                <div className="py-10 text-center text-xs text-slate-500">
+                  Loading reminders...
                 </div>
               ) : reminders.length === 0 ? (
-                <div className="py-14 text-center space-y-2">
-                  <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
-                    <BrandReminderIcon size={20} />
-                  </div>
-                  <h3 className="text-sm font-semibold text-[#1c1c1e]">No Reminders Set</h3>
-                  <p className="text-xs text-[#8e8e93] max-w-xs mx-auto">
-                    Schedule follow-up calls, document checks, or counseling alerts for {candidateName}.
+                <div className="py-10 text-center space-y-2">
+                  <p className="text-xs font-medium text-slate-700">No Reminders Set</p>
+                  <p className="text-[11px] text-slate-500">
+                    Schedule follow-up calls or document checks for {candidateName}.
                   </p>
-                  <div className="pt-2">
-                    <button
-                      onClick={() => setActiveTab('NEW')}
-                      className="px-4 py-2 bg-[#007aff] text-white rounded-xl text-xs font-semibold cursor-pointer"
-                    >
-                      + Create First Reminder
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('NEW')}
+                    className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-xs font-medium cursor-pointer"
+                  >
+                    + Set Reminder
+                  </button>
                 </div>
               ) : (
-                <div className="space-y-2.5">
+                <div className="divide-y divide-slate-200 border border-slate-200 rounded-md">
                   {reminders.map((r) => (
-                    <div
-                      key={r.id}
-                      className={`p-3.5 rounded-2xl border transition-all flex items-start justify-between gap-3 ${
-                        r.isCompleted
-                          ? 'bg-slate-50 border-black/[0.04] opacity-75'
-                          : 'bg-[#f8f9fa] border-black/[0.06] hover:bg-white hover:border-black/[0.12] shadow-2xs'
-                      }`}
-                    >
-                      {/* Checkbox */}
+                    <div key={r.id} className="p-3 flex items-start justify-between gap-3 bg-white">
                       <button
                         type="button"
                         onClick={() => handleToggleComplete(r.id)}
-                        className={`mt-0.5 w-5 h-5 rounded-lg border flex items-center justify-center transition-all cursor-pointer ${
+                        className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center cursor-pointer shrink-0 ${
                           r.isCompleted
-                            ? 'bg-[#34c759] border-[#34c759] text-white'
-                            : 'border-black/[0.2] hover:border-[#007aff]'
+                            ? 'bg-emerald-600 border-emerald-600 text-white'
+                            : 'border-slate-300 hover:border-blue-500'
                         }`}
                         title={r.isCompleted ? 'Mark incomplete' : 'Mark completed'}
                       >
-                        {r.isCompleted && <Check size={12} strokeWidth={3} />}
+                        {r.isCompleted && <Check size={11} strokeWidth={3} />}
                       </button>
 
-                      {/* Reminder Details */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p
-                            className={`text-xs font-semibold truncate ${
-                              r.isCompleted ? 'line-through text-[#8e8e93]' : 'text-[#1c1c1e]'
-                            }`}
-                          >
+                          <p className={`text-xs font-medium truncate ${r.isCompleted ? 'line-through text-slate-400' : 'text-slate-900'}`}>
                             {r.title}
                           </p>
-                          {r.priority === 'HIGH' || r.priority === 'URGENT' ? (
-                            <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-black/[0.04] text-[#ff3b30] border border-black/[0.06]">
+                          {(r.priority === 'HIGH' || r.priority === 'URGENT') && (
+                            <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-red-50 text-red-700 border border-red-200">
                               {r.priority}
                             </span>
-                          ) : null}
-                        </div>
-
-                        {/* Date & Time */}
-                        <div className="flex items-center gap-2 mt-1 text-[11px] text-[#8e8e93] flex-wrap">
-                          <span className="flex items-center gap-1 font-medium">
-                            <Calendar size={11} />
-                            {r.eventDate}
-                          </span>
-                          {r.eventTime && (
-                            <span className="flex items-center gap-1 font-medium">
-                              <Clock size={11} />
-                              {format12HourTime(r.eventTime)}
-                            </span>
-                          )}
-                          {!r.isCompleted && (() => {
-                            const rem = getRemainingTimeInfo(r.eventDate, r.eventTime);
-                            if (!rem || rem.isPast) return null;
-                            return (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.2 rounded-full text-[10px] font-medium bg-amber-500/10 text-amber-800 border border-amber-500/20">
-                                <Clock size={10} />
-                                {rem.text}
-                              </span>
-                            );
-                          })()}
-                          {r.isCompleted && (
-                            <span className="text-[#34c759] font-semibold">Completed</span>
                           )}
                         </div>
-
-                        {/* Description */}
+                        <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-500 flex-wrap">
+                          <span>{r.eventDate}</span>
+                          {r.eventTime && <span>· {format12HourTime(r.eventTime)}</span>}
+                          {r.isCompleted && <span className="text-emerald-600 font-medium">· Completed</span>}
+                        </div>
                         {r.description && (
-                          <p className="text-[11px] text-[#3c3c43] mt-1.5 leading-relaxed">
-                            {r.description}
-                          </p>
+                          <p className="text-[11px] text-slate-600 mt-1">{r.description}</p>
                         )}
                       </div>
 
-                      {/* Delete Action */}
                       <button
                         type="button"
                         onClick={() => handleDeleteReminder(r.id)}
-                        className="p-1.5 text-slate-400 hover:text-[#ff3b30] rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                        className="p-1 text-slate-400 hover:text-red-600 rounded cursor-pointer"
                         title="Delete reminder"
                       >
                         <Trash2 size={13} />
@@ -650,16 +532,29 @@ export default function LeadReminderModal({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3.5 bg-white border-t border-black/[0.06] flex items-center justify-between text-xs text-[#8e8e93]">
-          <span className="text-[11px]">
-            {pendingCount} pending {pendingCount === 1 ? 'reminder' : 'reminders'}
+        <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2 shrink-0">
+          <span className="text-[11px] text-slate-500">
+            {pendingCount} pending
           </span>
-          <button
-            onClick={onClose}
-            className="px-5 py-2 bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#1c1c1e] font-semibold rounded-xl transition-all cursor-pointer"
-          >
-            Done
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-md cursor-pointer"
+            >
+              Cancel
+            </button>
+            {activeTab === 'NEW' && (
+              <button
+                type="submit"
+                form="lead-reminder-form"
+                disabled={isSubmitting || !title.trim()}
+                className="px-4 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md cursor-pointer disabled:opacity-50"
+              >
+                {isSubmitting ? 'Saving...' : 'Set Reminder'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

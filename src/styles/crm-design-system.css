@@ -1590,7 +1590,8 @@ aside nav {
   max-width: 480px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   gap: 6px;
   padding: 8px 10px;
   background: var(--card);
@@ -1726,4 +1727,25 @@ aside nav {
   z-index: 99999;
   pointer-events: none;
   transition: opacity 0.2s ease, transform 0.15s ease-out;
+}
+
+/* Mobile Keyboard Handling: Hide fixed bottom nav/action bars & keep active inputs visible */
+@media (max-width: 767px) {
+  body.keyboard-open .mobile-bottom-nav,
+  body.keyboard-open .crm-l .acts,
+  body.keyboard-open .crm-k .fab,
+  body.keyboard-open .mobile-hide-on-keyboard {
+    display: none !important;
+  }
+
+  body.keyboard-open main {
+    padding-bottom: 12px !important;
+  }
+
+  input,
+  textarea,
+  select {
+    scroll-margin-top: 84px;
+    scroll-margin-bottom: 120px;
+  }
 }
