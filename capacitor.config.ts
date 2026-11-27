@@ -12,6 +12,9 @@ const config: CapacitorConfig = {
     CapacitorHttp: {
       enabled: true,
     },
+    SystemBars: {
+      insetsHandling: 'disable',
+    },
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert'],
       iconColor: '#029858',

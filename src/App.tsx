@@ -126,6 +126,14 @@ function MobileKeyboardManager() {
         setKeyboardOpen(false);
       } else if (keyboardVisible) {
         setKeyboardOpen(true);
+        if (isTextInput(document.activeElement)) {
+          const active = document.activeElement;
+          window.setTimeout(() => {
+            try {
+              active.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } catch {}
+          }, 80);
+        }
       }
     };
 
